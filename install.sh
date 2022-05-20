@@ -63,9 +63,6 @@ function setup_go() {
 
 set -e
 (
-  # Browse to the home path to make sure that the dotfiles are installed correctly
-  cd $HOME
-  
   get_package_manager
   # general package array
   declare -a packages=('vim' 'git' 'tree' 'htop' 'wget' 'curl')
@@ -123,7 +120,5 @@ set -e
     echo "Reloading session"
     exec zsh
   fi
-
-  cd -
 
 )
