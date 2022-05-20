@@ -76,23 +76,22 @@ function download_dotfiles () {
     echo "Found dotfiles location. Running in Codespaces..."
     mkdir -p "$TARGET"
     cp -nrf $CODESPACES_DOTFILES_PATH $TARGET
-    return;
-  fi
-
-  if is_executable "git"; then
-    CMD="git clone $SOURCE $TARGET"
-  elif is_executable "curl"; then
-    CMD="curl -#L $TARBALL | $TAR_CMD"
-  elif is_executable "wget"; then
-    CMD="wget --no-check-certificate -O - $TARBALL | $TAR_CMD"
-  fi
-
-  if [ -z "$CMD" ]; then
-    echo "No git, curl or wget available. Aborting."
   else
-    echo "Installing dotfiles..."
-    mkdir -p "$TARGET"
-    eval "$CMD"
+    if is_executable "git"; then
+      CMD="git clone $SOURCE $TARGET"
+    elif is_executable "curl"; then
+      CMD="curl -#L $TARBALL | $TAR_CMD"
+    elif is_executable "wget"; then
+      CMD="wget --no-check-certificate -O - $TARBALL | $TAR_CMD"
+    fi
+
+    if [ -z "$CMD" ]; then
+      echo "No git, curl or wget available. Aborting."
+    else
+      echo "Installing dotfiles..."
+      mkdir -p "$TARGET"
+      eval "$CMD"
+    fi
   fi
 }
 
@@ -121,11 +120,11 @@ function move_dotfiles () {
     [ -f "$DOTFILE" ] && . "$DOTFILE"
   done
 
-  if is-macos; then
-    for DOTFILE in "$DOTFILES_DIR"/system/.{env,alias,function,path}.macos; do
-      [ -f "$DOTFILE" ] && . "$DOTFILE"
-    done
-  fi
+  # if is-macos; then
+  #   for DOTFILE in "$DOTFILES_DIR"/system/.{env,alias,function,path}.macos; do
+  #     [ -f "$DOTFILE" ] && . "$DOTFILE"
+  #   done
+  # fi
 }
 
 set -e
