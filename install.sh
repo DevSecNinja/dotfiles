@@ -114,7 +114,7 @@ set -e
     source ~/.bashrc
   elif [[ $LOGIN_SHELL == 'zsh' ]] ; then
     echo "Changing shells to ZSH"
-    chsh -s /bin/zsh
+    # chsh -s /bin/zshd - requires a password
 
     echo "Operating System setup complete."
     echo "Reloading session"
