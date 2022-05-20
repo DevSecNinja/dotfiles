@@ -74,8 +74,8 @@ function download_dotfiles () {
 
   if [ -d "$CODESPACES_DOTFILES_PATH" ]; then
     echo "Found dotfiles location. Running in Codespaces..."
-    mkdir -p "$TARGET"
     cp -nrfT $CODESPACES_DOTFILES_PATH $TARGET
+    ls -a $TARGET
   else
     if is_executable "git"; then
       CMD="git clone $SOURCE $TARGET"
