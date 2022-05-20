@@ -103,8 +103,10 @@ function move_dotfiles () {
   if [[ -n $CURRENT_SCRIPT && -x readlink ]]; then
     SCRIPT_PATH=$(readlink -n $CURRENT_SCRIPT)
     DOTFILES_DIR="${PWD}/$(dirname $(dirname $SCRIPT_PATH))"
+    echo "Set DOTFILES_DIR to $DOTFILES_DIR"
   elif [ -d "$HOME/.dotfiles" ]; then
     DOTFILES_DIR="$HOME/.dotfiles"
+    echo "Set DOTFILES_DIR to $DOTFILES_DIR"
   else
     echo "Unable to find dotfiles, exiting."
     return
