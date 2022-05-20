@@ -91,7 +91,7 @@ set -e
     echo "You are running apt-get"
     echo "Using apt-get to install packages...."
     sudo apt-get update
-    sudo apt-get install "${packages[@]}"
+    sudo apt-get -y install "${packages[@]}"
   else
     echo "Could not determine OS. Exiting..."
     exit 1

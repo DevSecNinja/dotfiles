@@ -1,0 +1,4 @@
+# Find a string in files from a directory
+Find-String () {
+    grep -R $1 $2
+}
