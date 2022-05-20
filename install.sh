@@ -77,6 +77,7 @@ function download_dotfiles () {
     mkdir -p "$TARGET"
     cp -nrf $CODESPACES_DOTFILES_PATH $TARGET
     return;
+  fi
 
   if is_executable "git"; then
     CMD="git clone $SOURCE $TARGET"
