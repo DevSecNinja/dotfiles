@@ -171,6 +171,7 @@ set -e
     setup_zsh
   fi
 
+  download_dotfiles
   move_dotfiles
   setup_git
   setup_go
