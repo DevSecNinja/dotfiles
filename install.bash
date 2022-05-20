@@ -43,6 +43,24 @@ function setup_git() {
   git config --global color.branch auto
 }
 
+function setup_go() {
+  # set PATH so it includes Go binaries
+  if [ -d "/usr/local/go/bin" ] ; then
+      echo 'Setting up Go'
+      
+      PATH="/usr/local/go/bin:$PATH"
+      GOPATH="/workspaces/go"
+
+      if [ ! -d "$GOPATH" ] ; then
+          mkdir $GOPATH
+      fi
+
+      if [ ! -d "$GOPATH/bin" ] ; then
+          mkdir "$GOPATH/bin"
+      fi
+  fi
+}
+
 set -e
 (
   get_package_manager
@@ -87,6 +105,7 @@ set -e
   fi
 
   setup_git
+  setup_go
 
   if [[ $LOGIN_SHELL == 'bash' ]] ; then
     echo "Operating System setup complete."
