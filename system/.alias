@@ -1,0 +1,18 @@
+# Shortcuts
+
+alias reload="source ~/.bash_profile"
+
+# List declared aliases, functions, paths
+
+alias aliases="alias | sed 's/=.*//'"
+alias functions="declare -f | grep '^[a-z].* ()' | sed 's/{$//'"
+alias paths='echo -e ${PATH//:/\\n}'
+
+# Network
+
+alias external_ip="curl -s ipinfo.io | jq -r '.ip'"
+alias local_ip="ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'"
+
+# Miscellaneous
+
+alias week="date +%V"
