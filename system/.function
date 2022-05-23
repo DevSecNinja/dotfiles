@@ -6,5 +6,5 @@ Find-String () {
 # Compares two binary files and displays them with color differences
 # https://superuser.com/a/968863
 Compare-Binary() {
-     colordiff -y <(xxd $1) <(xxd $2)
+     colordiff -y <(xxd $1) <(xxd $2) -W180
 }
