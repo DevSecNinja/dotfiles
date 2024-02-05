@@ -160,7 +160,13 @@ install_dotfiles () {
 }
 
 make_zsh_default_shell
-setup_gitconfig
+
+if [ -z "$PS1" ]; then
+  echo "Skipping Git configuration since we are running non-interactive"
+else
+  setup_gitconfig
+fi
+
 install_dotfiles
 
 # If we're on a Mac, let's install and setup homebrew.
