@@ -38,7 +38,7 @@ while test $# -gt 0; do
 	shift
 done
 
-export ZSH=$HOME/.dotfiles
+export ZSH="$(dirname $(dirname "$(readlink -f "$0")"))"
 
 if [ "$(uname -s)" == "Darwin" ]
 then
