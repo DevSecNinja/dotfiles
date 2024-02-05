@@ -4,11 +4,12 @@ tap 'homebrew/bundle'
 
 brew 'bc'
 brew 'jq'
-#brew 'imagemagick'
-brew 'spaceman-diff'
-brew 'spark'
-#brew 'stripe/stripe-cli/stripe'
 brew 'wget'
+
+#brew 'imagemagick'
+#brew 'spaceman-diff'
+#brew 'spark'
+#brew 'stripe/stripe-cli/stripe'
 #brew 'yt-dlp'
 
 #cask 'airtable'
