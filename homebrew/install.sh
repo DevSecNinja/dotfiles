@@ -13,10 +13,16 @@ then
   # Install the correct homebrew for each OS type
   if test "$(uname)" = "Darwin"
   then
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    brewRepo="Homebrew"
   elif test "$(expr substr $(uname -s) 1 5)" = "Linux"
   then
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
+    brewRepo="Linuxbrew"
+  fi
+
+  if [[ $(command -v ruby) == "" ]]; then
+    CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$brewRepo/install/HEAD/install.sh)"
+  else
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/$brewRepo/install/master/install)"
   fi
 
 fi
