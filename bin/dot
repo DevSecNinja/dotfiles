@@ -40,11 +40,16 @@ done
 
 export ZSH=$HOME/.dotfiles
 
-# Set macOS defaults
-$ZSH/macos/set-defaults.sh
+if [ "$(uname -s)" == "Darwin" ]
+then
+  info "setting up macOS"
+  
+  # Set macOS defaults
+  $ZSH/macos/set-defaults.sh
 
-# Set macOS hostname
-$ZSH/macos/set-hostname.sh
+  # Set macOS hostname
+  $ZSH/macos/set-hostname.sh
+fi
 
 # Install homebrew
 $ZSH/homebrew/install.sh 2>&1

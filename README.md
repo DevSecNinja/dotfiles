@@ -53,7 +53,6 @@ Run this:
 git clone git@github.com:DevSecNinja/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 script/bootstrap
-script/install
 ```
 
 This will symlink the appropriate files in `.dotfiles` to your home directory.
