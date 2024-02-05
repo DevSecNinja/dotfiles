@@ -27,6 +27,28 @@ fail () {
   exit
 }
 
+make_zsh_default_shell () {
+	# Check zsh is not already the default shell	
+	if ! grep -q "^$USER.*$HOME:$(which zsh)$" /etc/passwd
+	then
+		# Check zsh is installed, if not exit with warning
+		if ! which zsh &> /dev/null
+		then
+			fail "Zsh is needed. Please install it via your prefered package manager."
+		fi
+
+		# If zsh is not listed as a shell, list it
+		if ! grep -q "^$(which zsh)$" /etc/shells
+		then
+			info "Adding zsh to the list of shells (/etc/shells)"
+			sudo sh -c 'echo /usr/local/bin/zsh >> /etc/shells'
+		fi
+
+		info "Making zsh default shell"
+    sudo chsh -s $(which zsh) $(whoami)
+	fi
+}
+
 setup_gitconfig () {
   if ! [ -f git/gitconfig.local.symlink ]
   then
@@ -137,6 +159,7 @@ install_dotfiles () {
   done
 }
 
+make_zsh_default_shell
 setup_gitconfig
 install_dotfiles
 
