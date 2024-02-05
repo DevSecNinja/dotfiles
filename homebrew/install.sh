@@ -20,9 +20,9 @@ then
   fi
 
   if [[ $(command -v ruby) == "" ]]; then
-    CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$brewRepo/install/HEAD/install.sh)"
-  else
     ruby -e "$(curl -fsSL https://raw.githubusercontent.com/$brewRepo/install/master/install)"
+  else
+    CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/$brewRepo/install/HEAD/install.sh)"
   fi
 
 fi
