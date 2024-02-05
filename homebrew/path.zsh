@@ -4,5 +4,5 @@ then
   export PATH="/opt/homebrew/bin:$PATH"
 elif test "$(expr substr $(uname -s) 1 5)" = "Linux"
 then
-  export PATH="/home/linuxbrew/.linuxbrew/bin/brew:$PATH"
+  export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 fi
