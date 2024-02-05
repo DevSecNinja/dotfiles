@@ -4,6 +4,21 @@
 
 set -e
 
+# Install Brew if not installed
+if [[ $(command -v brew) == "" ]]; then
+    echo "Installing Homebrew"
+    CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Add brew to path
+    (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/$USER/.bashrc
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+    # Install dependencies
+    #sudo apt-get install build-essential # To determine if useful. Lots of packages will be installed
+    brew install gcc
+else
+    echo "Brew already installed, proceeding..."
+fi
+
 cd "$(dirname $0)"/..
 
 echo "› brew bundle"
