@@ -1,0 +1,23 @@
+# Downloads a folder from a remote machine
+download-folder {
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    echo "Usage: download-folder <server_name> <remote_folder>"
+    echo "Example: download-folder user@server.example.com \"/path/to/folder\""
+    return 0
+  fi
+
+  if [[ $# -ne 2 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  server_name="$1"
+  remote_folder="$2"
+  local_folder="/tmp/$(uuidgen)"
+
+  mkdir -p "${local_folder}"
+  scp -r "${server_name}:${remote_folder}" "${local_folder}"
+
+  echo "Folder downloaded to: ${local_folder}"
+}

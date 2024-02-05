@@ -1,0 +1,4 @@
+# Find a string in files from a directory
+find-string () {
+    grep -R $1 $2
+}

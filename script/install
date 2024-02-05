@@ -26,3 +26,14 @@ brew bundle
 
 # find the installers and run them iteratively
 find . -name install.sh | while read installer ; do sh -c "${installer}" ; done
+
+# set default shell to zsh
+if [[ $(command -v zsh) == "" ]]; then
+    echo "zsh currently not installed. Installing now..."
+    brew install zsh
+else
+    echo "zsh already installed, proceeding..."
+fi
+
+echo "Setting zsh as default shell"
+sudo chsh -s $(which zsh) $(whoami)

@@ -8,3 +8,14 @@ then
   alias ll="gls -l --color"
   alias la='gls -A --color'
 fi
+
+# List declared aliases, functions, paths
+alias aliases="alias | sed 's/=.*//'"
+alias functions="declare -f | grep '^[a-z].* ()' | sed 's/{$//'"
+alias paths='echo -e ${PATH//:/\\n}'
+
+# Network
+alias external_ip="curl -s ipinfo.io | jq -r '.ip'"
+
+# Misc
+alias week="date +%V"
