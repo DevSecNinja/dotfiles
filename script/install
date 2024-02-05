@@ -4,21 +4,6 @@
 
 set -e
 
-# # Install Brew if not installed
-# if [[ $(command -v brew) == "" ]]; then
-#     echo "Installing Homebrew"
-#     CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-#     # Add brew to path
-#     (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/$USER/.bashrc
-#     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-#     # Install dependencies
-#     #sudo apt-get install build-essential # To determine if useful. Lots of packages will be installed
-#     brew install gcc
-# else
-#     echo "Brew already installed, proceeding..."
-# fi
-
 cd "$(dirname $0)"/..
 
 echo "› brew bundle"
@@ -26,14 +11,3 @@ brew bundle
 
 # find the installers and run them iteratively
 find . -name install.sh | while read installer ; do sh -c "${installer}" ; done
-
-# # set default shell to zsh
-# if [[ $(command -v zsh) == "" ]]; then
-#     echo "zsh currently not installed. Installing now..."
-#     brew install zsh
-# else
-#     echo "zsh already installed, proceeding..."
-# fi
-
-# echo "Setting zsh as default shell"
-# sudo chsh -s $(which zsh) $(whoami)
