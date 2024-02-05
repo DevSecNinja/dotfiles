@@ -10,11 +10,11 @@ if test ! $(which brew)
 then
   echo "  Installing Homebrew for you."
 
-  if $(command -v ruby) == ""
+  if ! command -v ruby &> /dev/null
   then
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-  else
     CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  else
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   fi
 
 fi
