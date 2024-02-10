@@ -1,5 +1,5 @@
 # Stolen from
-#   https://github.com/sstephenson/rbenv/blob/master/completions/rbenv.zsh
+#   https://github.com/sstephenson/rbenv/blob/HEAD/completions/rbenv.zsh
 
 if [[ ! -o interactive ]]; then
     return

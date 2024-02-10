@@ -1,4 +1,4 @@
-disk_resize {
+disk-resize {
     # Original source: https://codenotary.com/blog/enlarge-a-disk-and-partition-of-any-linux-vm-without-a-reboot
     # Tested on Debian 12 Bookworm
 
@@ -9,8 +9,8 @@ disk_resize {
     NEEDREBOOT=0
 
     if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
-        echo "Usage: disk_resize <disk> <partition number>"
-        echo "Example: disk_resize /dev/sda 1"
+        echo "Usage: disk-resize <disk> <partition number>"
+        echo "Example: disk-resize /dev/sda 1"
         exit 1
     fi
 
@@ -35,7 +35,7 @@ disk_resize {
     dotlockfile -r 0 $LOCKFILE || exit 1
 
     echo 1 > /sys/class/block/sda/device/rescan
-    echo "Sleeping 5 seconds..."    
+    echo "Sleeping 5 seconds..."
     sleep 5
     GROWPART_OUT=`growpart $1 $2`
     if [ $? -eq 0 ]; then

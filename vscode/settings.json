@@ -1,4 +1,10 @@
 {
-    "files.autoSave": "onWindowChange",
-    "terminal.integrated.defaultProfile.linux": "zsh"
+	"files.autoSave": "onWindowChange",
+	"terminal.integrated.defaultProfile.linux": "zsh",
+	"files.associations": {
+		"*.lock.hcl": "terraform",
+		"*.symlink": "shell",
+		"*.tf.archive": "terraform",
+		"*.tf.orig": "terraform"
+	}
 }

@@ -38,30 +38,43 @@ while test $# -gt 0; do
 	shift
 done
 
-export ZSH="$(dirname $(dirname "$(readlink -f "$0")"))"
+export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
+
+# TODO: Fix ZSH variable path for SSH
+# ZSH var works fine in local but not over SSH
+if [[ $DOTFILES == "." ]]
+then
+  export DOTFILES="$(realpath $HOME/.dotfiles)"
+fi
 
 if [ "$(uname -s)" == "Darwin" ]
 then
   info "setting up macOS"
-  
+
   # Set macOS defaults
-  $ZSH/macos/set-defaults.sh
+  $DOTFILES/macos/set-defaults.sh
 
   # Set macOS hostname
-  $ZSH/macos/set-hostname.sh
+  $DOTFILES/macos/set-hostname.sh
 fi
 
 # Install homebrew
 if test ! $(which brew)
 then
-	$ZSH/homebrew/install.sh 2>&1
-	source $ZSH/homebrew/path.zsh
+	$DOTFILES/homebrew/install.sh 2>&1
+	source $DOTFILES/homebrew/path.zsh
 fi
 
-# Upgrade homebrew
-echo "› brew update"
-brew update
+# Install Oh My ZSH
+$DOTFILES/zsh/install.sh 2>&1
 
-# Install software
-echo "› script/install"
-$ZSH/script/install
+# Upgrade homebrew
+if test $(which brew)
+then
+  echo "› brew update"
+  brew update
+
+  # Install software
+  echo "› script/install"
+  $DOTFILES/script/install
+fi

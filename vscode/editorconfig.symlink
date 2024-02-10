@@ -1,0 +1,24 @@
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines at the bottom of every file
+[*]
+end_of_line = lf
+charset = utf-8
+
+indent_style = space
+indent_size = 2
+
+# Make sure every file has a blank line at the end
+insert_final_newline = true
+
+# Remove any whitespace characters preceding newline characters
+trim_trailing_whitespace = true
+
+[*.{bash,py,sh, Dockerfile}]
+indent_style = space
+indent_size = 4
+
+[*.json]
+indent_style = tab
+indent_size = 4

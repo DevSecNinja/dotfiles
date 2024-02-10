@@ -1,3 +1,8 @@
+# Trash
 .DS_Store
+Thumbs.db
 *~
 *.swp
+
+# SOPS Decrypted Secrets
+.decrypted~*.sops.yml

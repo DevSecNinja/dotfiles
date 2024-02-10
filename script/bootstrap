@@ -28,7 +28,7 @@ fail () {
 }
 
 make_zsh_default_shell () {
-	# Check zsh is not already the default shell	
+	# Check zsh is not already the default shell
 	if ! grep -q "^$USER.*$HOME:$(which zsh)$" /etc/passwd
 	then
 		# Check zsh is installed, if not exit with warning
@@ -96,7 +96,7 @@ link_file () {
         user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
         [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
 
-        if [ -z "$PS1" ]; then
+        if [ -o interactive ]; then
           echo "... backing up since we are running non-interactively"
           action=b
         else
@@ -165,15 +165,39 @@ install_dotfiles () {
   done
 }
 
+install_vscodefiles () {
+  info 'installing vscode files'
+
+  local overwrite_all=false backup_all=false skip_all=false
+
+  for src in $(find -H "$DOTFILES_ROOT/vscode" -maxdepth 1 -name '*.json' -not -path '*.git*')
+  do
+    if test "$(uname)" = "Darwin"
+    then
+      mkdir -p "$HOME/Library/Application\ Support/Code/User/"
+      dst="$HOME/Library/Application\ Support/Code/User/$(basename "${src}")"
+      link_file "$src" "$dst"
+    elif test "$(expr substr $(uname -s) 1 5)" = "Linux"
+    then
+      mkdir -p "$HOME/.config/Code/User/"
+      dst="$HOME/.config/Code/User/$(basename "${src}")"
+      link_file "$src" "$dst"
+    else
+      echo "No compatible OS found to apply VS Code settings"
+    fi
+  done
+}
+
 make_zsh_default_shell
 
-if [ -z "$PS1" ]; then
+if [ -o interactive ]; then
   echo "Skipping Git configuration since we are running non-interactive"
 else
   setup_gitconfig
 fi
 
 install_dotfiles
+install_vscodefiles
 
 # If we're on a Mac, let's install and setup homebrew.
 if [ "$(uname -s)" == "Darwin" ] || [ "$(uname -s)" == "Linux" ]

@@ -1,6 +1,6 @@
 autoload colors && colors
 # cheers, @ehrenmurdick
-# http://github.com/ehrenmurdick/config/blob/master/zsh/prompt.zsh
+# http://github.com/ehrenmurdick/config/blob/HEAD/zsh/prompt.zsh
 
 if (( $+commands[git] ))
 then
@@ -62,7 +62,7 @@ battery_status() {
 
   if [[ $(sysctl -n hw.model) == *"Book"* ]]
   then
-    $ZSH/bin/battery-status
+    $DOTFILES/bin/battery-status
   fi
 }
 

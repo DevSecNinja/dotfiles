@@ -5,6 +5,7 @@ tap 'homebrew/bundle'
 brew 'bc'
 brew 'jq'
 brew 'wget'
+brew "git"
 
 #brew 'imagemagick'
 #brew 'spaceman-diff'
