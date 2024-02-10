@@ -20,24 +20,24 @@ update-forked-repo() {
   # Show information and prompt for confirmation
   echo "Current branch: ${current_branch}"
   echo "Upstream remote: ${upstream_remote_name}"
-  echo "Rebase branch: ${upstream_remote_name}/${current_branch}"
-  echo "Are you sure you want to rebase? [y/N]"
+  echo "Merge branch: ${upstream_remote_name}/${current_branch}"
+  echo "Are you sure you want to merge? [y/N]"
   read -r confirm
   if [[ ! "${confirm}" =~ ^[Yy] ]]; then
-    echo "Rebase cancelled."
+    echo "Merge cancelled."
     return 1
   fi
 
-  # Rebase the current branch on top of the upstream remote branch
-  git rebase "${upstream_remote_name}/${current_branch}"
+  # Merge the current branch on top of the upstream remote branch
+  git merge "${upstream_remote_name}/${current_branch}"
 
-  echo "Confirm rebase was successful. Force push to ${current_branch}? [y/N]"
+  echo "Confirm merge was successful. Push to ${current_branch}? [y/N]"
   read -r confirm
   if [[ ! "${confirm}" =~ ^[Yy] ]]; then
-    echo "Force push cancelled."
+    echo "Push cancelled."
     return 1
   fi
 
   # Force push branch
-  git push origin "${current_branch}" --force
+  git push origin "${current_branch}"
 }
