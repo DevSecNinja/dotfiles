@@ -19,13 +19,13 @@ else
 fi
 
 # Check for Homebrew & if not running interactively
-if test ! $(which brew) && [ ! -o interactive ]
+if test ! $(which brew) && ! [ -z "$PS1" ]
 then
   echo "  Installing Homebrew for you."
 
   if ! command -v ruby &> /dev/null
   then
-    if $can_sudo = 0
+    if [ $can_sudo = 0 ];
     then
       CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     else
