@@ -53,7 +53,7 @@ setup_gitconfig () {
   git_local_config_file="git/gitconfig.local.symlink"
   git_local_config_file_example="git/gitconfig.local.symlink.example"
 
-  if ! [ -f $git_local_config_file ]
+  if ! [ -f $git_local_config_file ] && ! [ -o interactive ]
   then
     info 'setup gitconfig'
 
