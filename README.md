@@ -52,6 +52,9 @@ Run this:
 ```sh
 # If you are running WSL with 1Password SSH Auth, make sure to run
 # git config --global core.sshCommand ssh.exe
+# Make sure the dependencies are installed via your favorite package manager
+apt update
+apt install git curl zsh
 git clone git@github.com:DevSecNinja/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 script/bootstrap
