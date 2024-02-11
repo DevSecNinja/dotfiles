@@ -210,7 +210,7 @@ install_vscodefiles () {
 
 make_zsh_default_shell
 
-if ! [ -z "$PS1" ]; then
+if [ -z "$PS1" ]; then
   echo "Skipping Git configuration since we are running non-interactive"
 else
   setup_gitconfig
