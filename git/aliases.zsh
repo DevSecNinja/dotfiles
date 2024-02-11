@@ -6,13 +6,6 @@ then
   alias git=$hub_path
 fi
 
-# When using WSL, make sure to use ssh.exe
-if [[ $(grep -i Microsoft /proc/version) ]];
-then
-  echo "Running on WSL, therefore setting ssh to ssh.exe to support 1Password SSH Auth"
-  git config --global core.sshCommand ssh.exe
-fi
-
 # The rest of my fun git aliases
 alias gl='git pull --prune'
 alias glog="git log --graph --pretty=format:'%Cred%h%Creset %an: %s - %Creset %C(yellow)%d%Creset %Cgreen(%cr)%Creset' --abbrev-commit --date=relative"

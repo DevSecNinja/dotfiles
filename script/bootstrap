@@ -50,7 +50,10 @@ make_zsh_default_shell () {
 }
 
 setup_gitconfig () {
-  if ! [ -f git/gitconfig.local.symlink ]
+  git_local_config_file="git/gitconfig.local.symlink"
+  git_local_config_file_example="git/gitconfig.local.symlink.example"
+
+  if ! [ -f $git_local_config_file ]
   then
     info 'setup gitconfig'
 
@@ -65,7 +68,24 @@ setup_gitconfig () {
     user ' - What is your GitHub author email?'
     read -p "> " -e git_authoremail
 
-    sed -e "s/AUTHORNAME/$git_authorname/g" -e "s/AUTHOREMAIL/$git_authoremail/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" git/gitconfig.local.symlink.example > git/gitconfig.local.symlink
+    sed -e "s/AUTHORNAME/$git_authorname/g" -e "s/AUTHOREMAIL/$git_authoremail/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" $git_local_config_file_example > $git_local_config_file
+
+    # When using WSL, make sure to use ssh.exe
+    if grep -q -i "Microsoft" "/proc/version"
+    then
+      echo "Running on WSL, therefore setting ssh to ssh.exe to support 1Password SSH Auth"
+
+      if ! $(grep -q "^\[core\]$" $git_local_config_file); then
+        echo -e "\n[core]" >> $git_local_config_file
+      fi
+
+      if ! $(grep -q "^\s*sshCommand" $git_local_config_file); then
+        sed -i -e '/^\[core\]$/a\\tsshCommand = ssh.exe' $git_local_config_file
+      else
+        sed -i -e 's/^\s*sshCommand.*/\tsshCommand = ssh.exe/' $git_local_config_file
+      fi
+
+    fi
 
     success 'gitconfig'
   fi
