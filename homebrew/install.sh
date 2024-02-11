@@ -5,8 +5,8 @@
 # This installs some of the common dependencies needed (or at least desired)
 # using Homebrew.
 
-# Check for Homebrew
-if test ! $(which brew) && [ -z "$PS1" ]
+# Check for Homebrew & if not running interactively
+if test ! $(which brew) && [ ! -o interactive ]
 then
   echo "  Installing Homebrew for you."
 
