@@ -53,7 +53,7 @@ setup_gitconfig () {
   git_local_config_file="git/gitconfig.local.symlink"
   git_local_config_file_example="git/gitconfig.local.symlink.example"
 
-  if ! [ -f $git_local_config_file ] && ! [ -z "$PS1" ]
+  if ! [ -f $git_local_config_file ]
   then
     info 'setup gitconfig'
 
@@ -116,7 +116,7 @@ link_file () {
         user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
         [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
 
-        if [ -o interactive ]; then
+        if [ -z "$PS1" ]; then
           echo "... backing up since we are running non-interactively"
           action=b
         else
@@ -210,7 +210,7 @@ install_vscodefiles () {
 
 make_zsh_default_shell
 
-if [ -o interactive ]; then
+if ! [ -z "$PS1" ]; then
   echo "Skipping Git configuration since we are running non-interactive"
 else
   setup_gitconfig
