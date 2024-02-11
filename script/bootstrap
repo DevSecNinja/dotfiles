@@ -183,6 +183,8 @@ install_dotfiles () {
     dst="$HOME/.$(basename "${src%.*}")"
     link_file "$src" "$dst"
   done
+
+  success 'installed dotfiles'
 }
 
 install_vscodefiles () {
@@ -194,18 +196,22 @@ install_vscodefiles () {
   do
     if test "$(uname)" = "Darwin"
     then
+      info 'installing macOS VS Code files'
       mkdir -p "$HOME/Library/Application\ Support/Code/User/"
       dst="$HOME/Library/Application\ Support/Code/User/$(basename "${src}")"
       link_file "$src" "$dst"
     elif test "$(expr substr $(uname -s) 1 5)" = "Linux"
     then
+      info 'installing linux VS Code files'
       mkdir -p "$HOME/.config/Code/User/"
       dst="$HOME/.config/Code/User/$(basename "${src}")"
       link_file "$src" "$dst"
     else
-      echo "No compatible OS found to apply VS Code settings"
+      info "no compatible OS found to apply VS Code settings"
     fi
   done
+
+  success 'installed vscode files'
 }
 
 make_zsh_default_shell
