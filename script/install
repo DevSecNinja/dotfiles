@@ -6,6 +6,9 @@ set -e
 
 cd "$(dirname $0)"/..
 
+echo "> check brew installation"
+find ./homebrew -name install.sh | while read installer ; do sh -c "${installer}" ; done
+
 echo "› brew bundle"
 brew bundle
 

@@ -50,6 +50,8 @@ There's a few special files in the hierarchy.
 Run this:
 
 ```sh
+# If you are running WSL with 1Password SSH Auth, make sure to run
+# git config --global core.sshCommand ssh.exe
 git clone git@github.com:DevSecNinja/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 script/bootstrap
