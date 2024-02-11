@@ -25,7 +25,8 @@ then
 
   if ! command -v ruby &> /dev/null
   then
-    if [ $can_sudo = 0 ]; then
+    if $can_sudo = 0
+    then
       CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     else
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
