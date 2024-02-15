@@ -2,6 +2,8 @@ disk-resize {
     # Original source: https://codenotary.com/blog/enlarge-a-disk-and-partition-of-any-linux-vm-without-a-reboot
     # Tested on Debian 12 Bookworm
 
+    set -e
+
     LOGFILE=/tmp/resize.log
     LOCKFILE=/tmp/enlarge.lock
     export PATH=/usr/sbin:/usr/bin:/sbin:/bin
@@ -27,6 +29,12 @@ disk-resize {
 
     echo "Attempting to resize disk $1 with partition number $2. Press enter to continue..."
     read
+
+    PARTITION_EXISTS=$(lsblk -no name $1 | grep -w "$1$2")
+    if [ -z "$PARTITION_EXISTS" ]; then
+        echo "Error: Partition $1$2 does not exist."
+        exit 1
+    fi
 
     echo "[+] Installing liblockfile dependency"
     apt install liblockfile-bin
