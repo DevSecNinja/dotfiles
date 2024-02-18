@@ -57,5 +57,5 @@ setopt HIST_EXPIRE_DUPS_FIRST
 bindkey '\e[A' history-search-backward
 bindkey '\e[B' history-search-forward
 
-# never beep
+# never beep on wrong commands
 setopt NO_BEEP
