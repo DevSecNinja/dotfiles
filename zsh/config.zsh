@@ -39,3 +39,23 @@ bindkey '^[[5D' beginning-of-line
 bindkey '^[[5C' end-of-line
 bindkey '^[[3~' delete-char
 bindkey '^?' backward-delete-char
+
+#
+# Custom added by @DevSecNinja
+#
+
+# AUTOCOMPLETION
+
+# initialize autocompletion
+autoload -U compinit && compinit
+
+# history setup
+setopt SHARE_HISTORY
+setopt HIST_EXPIRE_DUPS_FIRST
+
+# autocompletion using arrow keys (based on history)
+bindkey '\e[A' history-search-backward
+bindkey '\e[B' history-search-forward
+
+# never beep
+setopt NO_BEEP
