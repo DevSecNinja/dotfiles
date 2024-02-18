@@ -196,13 +196,13 @@ install_vscodefiles () {
   do
     if test "$(uname)" = "Darwin"
     then
-      info 'installing macOS VS Code files'
+      # info "installing macOS VS Code file: ${src} to ${dst}"
       mkdir -p "$HOME/Library/Application\ Support/Code/User/"
       dst="$HOME/Library/Application\ Support/Code/User/$(basename "${src}")"
       link_file "$src" "$dst"
     elif test "$(expr substr $(uname -s) 1 5)" = "Linux"
     then
-      info 'installing linux VS Code files'
+      # info "installing linux VS Code file: ${src} to ${dst}"
       mkdir -p "$HOME/.config/Code/User/"
       dst="$HOME/.config/Code/User/$(basename "${src}")"
       link_file "$src" "$dst"
@@ -217,7 +217,7 @@ install_vscodefiles () {
 make_zsh_default_shell
 
 if [ -z "$PS1" ]; then
-  echo "Skipping Git configuration since we are running non-interactive"
+  success "skipping Git configuration since we are running non-interactive"
 else
   setup_gitconfig
 fi
