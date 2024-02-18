@@ -57,9 +57,9 @@ set_dotfiles_dir() {
 
 export DOTFILES=$(set_dotfiles_dir)
 
-if $DOTFILES
+if [ -n "${DOTFILES}" ];
 then
-  echo "Setting dotfiles dir to: ${DOTFILES}"
+  echo "Configured dotfiles dir to: ${DOTFILES}"
 else
   echo "Couldn't determine dotfiles dir"
   exit 1

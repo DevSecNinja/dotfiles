@@ -107,12 +107,28 @@ source $ZSH/oh-my-zsh.sh
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/git
 
+set_dotfiles_dir () {
+  VS_CODE_DIR="/workspaces/.codespaces/.persistedshare/dotfiles"
+  LOCAL_DIR="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
+  DEFAULT_DIR=$(realpath $HOME/.dotfiles)
+
+  if test -d $VS_CODE_DIR;
+  then
+    echo $VS_CODE_DIR
+  elif [[ $LOCAL_DIR != "." ]]
+  then
+    echo $LOCAL_DIR
+  else
+    echo $DEFAULT_DIR
+  fi
+}
+
 # shortcut to this dotfiles path is $DOTFILES
 export DOTFILES=$(set_dotfiles_dir)
 
-if $DOTFILES
+if [ -n "${DOTFILES}" ];
 then
-  echo "Setting dotfiles dir to: ${DOTFILES}"
+  echo "Configured dotfiles dir to: ${DOTFILES}"
 else
   echo "Couldn't determine dotfiles dir"
   exit 1
