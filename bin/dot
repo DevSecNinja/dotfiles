@@ -45,6 +45,13 @@ export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
 if [[ $DOTFILES == "." ]]
 then
   export DOTFILES="$(realpath $HOME/.dotfiles)"
+elif [[ $DOTFILES == "/workspaces" ]]
+then
+  # Fixes codespaces path
+  # Taken from DOTFILES_ROOT
+  export DOTFILES=$(pwd -P)
+  echo "Dotfiles var is"
+  echo $DOTFILES
 fi
 
 if [ "$(uname -s)" == "Darwin" ]
