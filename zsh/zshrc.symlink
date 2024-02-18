@@ -108,14 +108,8 @@ source $ZSH/oh-my-zsh.sh
 export PROJECTS=~/git
 
 # shortcut to this dotfiles path is $DOTFILES
-export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
-
-# TODO: Fix DOTFILES variable path for SSH
-# ZSH var works fine in local but not over SSH
-if [[ $DOTFILES == "." ]]
-then
-  export DOTFILES="$(realpath $HOME/.dotfiles)"
-fi
+export DOTFILES=$(set_dotfiles_dir)
+echo "Setting dotfiles dir to: ${DOTFILES}"
 
 ### Config Files
 # all of our zsh files
@@ -143,16 +137,6 @@ done
 if [[ -a ~/.localrc ]]
 then
   source ~/.localrc
-fi
-
-# shortcut to this dotfiles path is $DOTFILES
-export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
-
-# TODO: Fix ZSH variable path for SSH
-# ZSH var works fine in local but not over SSH
-if [[ $DOTFILES == "." ]]
-then
-  export DOTFILES="$(realpath $HOME/.dotfiles)"
 fi
 
 # Load Brew environment variables
