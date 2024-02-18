@@ -110,7 +110,7 @@ export PROJECTS=~/git
 # shortcut to this dotfiles path is $DOTFILES
 export DOTFILES=$(set_dotfiles_dir)
 
-if DOTFILES
+if $DOTFILES
 then
   echo "Setting dotfiles dir to: ${DOTFILES}"
 else

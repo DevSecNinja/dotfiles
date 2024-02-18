@@ -57,7 +57,7 @@ set_dotfiles_dir() {
 
 export DOTFILES=$(set_dotfiles_dir)
 
-if DOTFILES
+if $DOTFILES
 then
   echo "Setting dotfiles dir to: ${DOTFILES}"
 else
