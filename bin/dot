@@ -47,9 +47,9 @@ set_dotfiles_dir() {
   if test -d $VS_CODE_DIR;
   then
     echo $VS_CODE_DIR
-  elif [[ $LOCAL_DIR != "." ]]
-  then
-    echo $LOCAL_DIR
+#   elif [[ $LOCAL_DIR != "." ]]
+#   then
+#     echo $LOCAL_DIR
   else
     echo $DEFAULT_DIR
   fi
@@ -59,9 +59,9 @@ export DOTFILES=$(set_dotfiles_dir)
 
 if [ -n "${DOTFILES}" ];
 then
-  echo "Configured dotfiles dir to: ${DOTFILES}"
+  echo "configured dotfiles dir to: ${DOTFILES}"
 else
-  echo "Couldn't determine dotfiles dir"
+  echo "couldn't determine dotfiles dir"
   exit 1
 fi
 
