@@ -162,4 +162,17 @@ then
 fi
 
 # Finally
+## Run Git Pull & bootstrap in the background to get the latest artifacts
+background_job() {
+  cd $DOTFILES
+  echo "----------------------------------------" >> /tmp/zshrc-post.log
+  echo "$(date +'%d/%m/%Y %H:%M:%S') - Running Git Pull" >> /tmp/zshrc-post.log
+  git pull >> /tmp/zshrc-post.log
+  echo "$(date +'%d/%m/%Y %H:%M:%S') - Running Bootstrap" >> /tmp/zshrc-post.log
+  script/bootstrap >> /tmp/zshrc-post.log
+  echo "$(date +'%d/%m/%Y %H:%M:%S') - Background Jobs Finished" >> /tmp/zshrc-post.log
+}
+
+silent_background background_job
+
 unset config_files
