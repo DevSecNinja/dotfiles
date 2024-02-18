@@ -109,7 +109,14 @@ export PROJECTS=~/git
 
 # shortcut to this dotfiles path is $DOTFILES
 export DOTFILES=$(set_dotfiles_dir)
-echo "Setting dotfiles dir to: ${DOTFILES}"
+
+if DOTFILES
+then
+  echo "Setting dotfiles dir to: ${DOTFILES}"
+else
+  echo "Couldn't determine dotfiles dir"
+  exit 1
+fi
 
 ### Config Files
 # all of our zsh files
