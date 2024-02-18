@@ -104,6 +104,39 @@ source $ZSH/oh-my-zsh.sh
 # Custom added by @DevSecNinja
 #
 
+# your project folder that we can `c [tab]` to
+export PROJECTS=~/git
+
+# shortcut to this dotfiles path is $DOTFILES
+export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
+
+# TODO: Fix DOTFILES variable path for SSH
+# ZSH var works fine in local but not over SSH
+if [[ $DOTFILES == "." ]]
+then
+  export DOTFILES="$(realpath $HOME/.dotfiles)"
+fi
+
+### Config Files
+# all of our zsh files
+typeset -U config_files
+config_files=($DOTFILES/**/*.zsh)
+
+# load the path files
+for file in ${(M)config_files:#*/path.zsh}
+do
+  # echo "Importing file: ${file}"
+  source $file
+done
+
+# load everything but the path and completion files
+for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}
+do
+  # echo "Importing file: ${file}"
+  source $file
+done
+### Config Files
+
 # Stash your environment variables in ~/.localrc. This means they'll stay out
 # of your main dotfiles repository (which may be public, like this one), but
 # you'll have access to them in your scripts.
@@ -127,3 +160,6 @@ if [[ -a /home/linuxbrew/.linuxbrew/bin/brew ]]
 then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
+
+# Finally
+unset config_files

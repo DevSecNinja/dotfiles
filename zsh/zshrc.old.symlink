@@ -1,40 +1,3 @@
-# # shortcut to this dotfiles path is $DOTFILES
-# export DOTFILES="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
-
-# # TODO: Fix ZSH variable path for SSH
-# # ZSH var works fine in local but not over SSH
-# if [[ $DOTFILES == "." ]]
-# then
-#   export DOTFILES="$(realpath $HOME/.dotfiles)"
-# fi
-
-# # your project folder that we can `c [tab]` to
-# export PROJECTS=~/git
-
-# # Stash your environment variables in ~/.localrc. This means they'll stay out
-# # of your main dotfiles repository (which may be public, like this one), but
-# # you'll have access to them in your scripts.
-# if [[ -a ~/.localrc ]]
-# then
-#   source ~/.localrc
-# fi
-
-# all of our zsh files
-typeset -U config_files
-config_files=($DOTFILES/**/*.zsh)
-
-# load the path files
-for file in ${(M)config_files:#*/path.zsh}
-do
-  source $file
-done
-
-# load everything but the path and completion files
-for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}
-do
-  source $file
-done
-
 # Oh My Zsh could be installed somewhere out of dotfiles directory tree, e.g.
 # into  ~/.oh-my-zsh; the configuration file created by Oh My Zsh installer
 # should be moved as follows: {.zshrc => $DOTFILES/zsh/oh-my-zshrc}.
@@ -55,8 +18,6 @@ for file in ${(M)config_files:#*/completion.zsh}
 do
   source $file
 done
-
-unset config_files
 
 # Better history
 # Credits to https://coderwall.com/p/jpj_6q/zsh-better-history-searching-with-arrow-keys
