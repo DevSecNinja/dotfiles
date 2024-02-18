@@ -225,7 +225,7 @@ fi
 install_dotfiles
 install_vscodefiles
 
-# If we're on a Mac, let's install and setup homebrew.
+# If we're on a Mac or Linux, let's install and setup homebrew.
 if [ "$(uname -s)" == "Darwin" ] || [ "$(uname -s)" == "Linux" ]
 then
   info "installing dependencies"
