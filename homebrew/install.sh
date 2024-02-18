@@ -23,16 +23,11 @@ if test ! $(which brew) && ! [ -z "$PS1" ]
 then
   echo "  Installing Homebrew for you."
 
-  if ! command -v ruby &> /dev/null
+  if [ $can_sudo = 0 ];
   then
-    if [ $can_sudo = 0 ];
-    then
-      CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    else
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    fi
+    CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   else
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
 fi

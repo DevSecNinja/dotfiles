@@ -66,7 +66,7 @@ then
 fi
 
 # Upgrade homebrew
-if test $(which brew) && [ $BACKGROUND_JOB != true ]
+if test $(which brew) && [ "$BACKGROUND_JOB" != true ]
 then
   echo "› brew update"
   brew update
@@ -74,7 +74,7 @@ then
   # Install software
   echo "› script/install"
   $DOTFILES/script/install
-elif [ $BACKGROUND_JOB == true ]
+elif [ "$BACKGROUND_JOB" == true ]
 then
   success "skipping brew update & install since we are running in background job"
 fi
