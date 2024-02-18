@@ -126,11 +126,9 @@ set_dotfiles_dir () {
 # shortcut to this dotfiles path is $DOTFILES
 export DOTFILES=$(set_dotfiles_dir)
 
-if [ -n "${DOTFILES}" ];
+if ! [ -n "${DOTFILES}" ];
 then
-  echo "configured dotfiles dir to: ${DOTFILES}"
-else
-  echo "couldn't determine dotfiles dir"
+  echo "Couldn't determine dotfiles dir"
   exit 1
 fi
 
