@@ -1,9 +1,4 @@
 #!/bin/zsh
 # Install Oh My Zsh
-if ! test omz # command -v doesn't seem to work for some reason via script in zsh
-then
-  echo "installing Oh My ZSH"
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/HEAD/tools/install.sh)" "" --unattended --keep-zshrc
-else
-  echo "oh my zsh already installed"
-fi
+echo "installing Oh My ZSH"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/HEAD/tools/install.sh)" "" --unattended --keep-zshrc
