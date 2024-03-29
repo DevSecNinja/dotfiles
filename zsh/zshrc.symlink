@@ -166,6 +166,12 @@ then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
+# Load direnv hook for ZSH
+if [[ -a /home/linuxbrew/.linuxbrew/bin/direnv ]]
+then
+  eval "$(direnv hook zsh)"
+fi
+
 # Finally
 ## Run Git Pull & bootstrap in the background to get the latest artifacts
 background_job() {
