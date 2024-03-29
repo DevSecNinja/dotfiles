@@ -13,4 +13,6 @@
 #   $ e .
 #   $ e /usr/local
 #   # => opens the specified directory in your editor
+#EDITOR=${EDITOR//" --wait"/}
+EDITOR=$(echo $EDITOR | sed s/" --wait"//)
 exec "$EDITOR" "${1:-.}"

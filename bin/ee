@@ -1,5 +1,7 @@
 #!/bin/sh
 #
 # vscode requires `--wait` if you're editing interactively in a prompt.
+# As we have already set our editor to include --wait, we don't
+# have to remove it like we do with e
 #
-EDITOR="$EDITOR --wait" $@
+EDITOR="$EDITOR" $@
