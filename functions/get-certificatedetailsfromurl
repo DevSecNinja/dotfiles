@@ -1,0 +1,23 @@
+function get-certificatedetailsfromurl () {
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    echo "Usage: get-certificatedetailsfromurl <fqdn> <port (optional)>"
+    echo "Example: get-certificatedetailsfromurl microsoft.com 443"
+    echo "Example: get-certificatedetailsfromurl microsoft.com"
+    return 0
+  fi
+
+  if [[ $# < 1 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  fqdn="$1"
+  port="$2"
+
+  if [[ ! "$port" ]]; then
+    port="443"
+  fi
+
+  echo | openssl s_client -showcerts -servername "$fqdn" -connect "$fqdn:$port" 2>/dev/null | openssl x509 -inform pem -noout -text
+}
