@@ -1,5 +1,5 @@
 # Downloads a folder from a remote machine
-download-folder {
+download-folder() {
   if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
     echo "Usage: download-folder <server_name> <remote_folder>"
     echo "Example: download-folder user@server.example.com \"/path/to/folder\""

@@ -1,3 +1,4 @@
+# EDITOR
 if command -v code &> /dev/null
 then
   # vscode requires `--wait` if you're editing interactively in a prompt.
