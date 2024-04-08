@@ -2,9 +2,11 @@ cask_args appdir: '/Applications'
 
 tap 'homebrew/bundle'
 
-brew 'jq'
-brew 'wget'
+brew 'azure-cli'
 brew "git"
+brew 'jq'
+brew "terraform"
+brew 'wget'
 
 #brew 'bc'
 #brew 'imagemagick'
