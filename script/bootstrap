@@ -260,21 +260,19 @@ add_key_value() {
     VALUE="$2"
     FILE="$3"
 
-    echo "Adding key ${KEY} with value ${VALUE} to file ${FILE}"
-
     # Check if the file exists, if not, create it
     if [ ! -f "${FILE}" ]; then
-        echo "The file '${FILE}' does not exist. Creating the file."
+        info "The file '${FILE}' does not exist. Creating the file."
         touch "${FILE}"
     fi
 
     # Check if the key exists in the file
     if grep -q "^${KEY}=" "${FILE}"; then
-        echo "The key '${KEY}' already exists in the file '${FILE}'. Updating its value."
+        info "The key '${KEY}' already exists in the file '${FILE}'. Updating its value to: ${VALUE}"
         # Update the value
         sed -i "s/^${KEY}=.*/${KEY}=${VALUE}/" "${FILE}"
     else
-        echo "The key '${KEY}' does not exist in the file '${FILE}'. Adding the key-value pair."
+        info "The key '${KEY}' does not exist in the file '${FILE}'. Adding value: ${VALUE}"
         # Add the key-value pair
         echo "${KEY}=${VALUE}" >> "${FILE}"
     fi
@@ -293,7 +291,11 @@ set_tattoo () {
   success 'tattoo set'
 }
 
-set_tattoo
+if [ -z ${DOTFILES_INSTALL_MODE+x} ]; then
+  set_tattoo
+else
+  success 'tattoo already set before'
+fi
 
 echo ''
 echo '  All installed!'

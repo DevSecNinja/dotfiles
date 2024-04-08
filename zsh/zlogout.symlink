@@ -1,0 +1,13 @@
+if command -v az &> /dev/null
+then
+  echo "Logging off from Azure"
+  az logout
+fi
+
+if command -v terraform &> /dev/null
+then
+  echo "Logging off from Terraform"
+  terraform logout
+fi
+
+echo "Bye! Have a great $(date +'%A')!"
