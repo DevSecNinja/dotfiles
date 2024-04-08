@@ -10,4 +10,4 @@ then
   terraform logout
 fi
 
-echo "Bye! Have a great $(date +'%A')!"
+echo "Bye! 👋 Have a great $(date +'%A')!"
