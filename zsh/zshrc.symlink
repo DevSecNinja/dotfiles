@@ -104,6 +104,11 @@ source $ZSH/oh-my-zsh.sh
 # Custom added by @DevSecNinja
 #
 
+# Import variables from .env
+set -o allexport
+source ~/.env
+set +o allexport
+
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/git
 

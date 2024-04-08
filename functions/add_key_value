@@ -1,0 +1,26 @@
+#!/bin/bash
+
+add_key_value() {
+    KEY="$1"
+    VALUE="$2"
+    FILE="$3"
+
+    echo "Adding key ${KEY} with value ${VALUE} to file ${FILE}"
+
+    # Check if the file exists, if not, create it
+    if [ ! -f "${FILE}" ]; then
+        echo "The file '${FILE}' does not exist. Creating the file."
+        touch "${FILE}"
+    fi
+
+    # Check if the key exists in the file
+    if grep -q "^${KEY}=" "${FILE}"; then
+        echo "The key '${KEY}' already exists in the file '${FILE}'. Updating its value."
+        # Update the value
+        sed -i "s/^${KEY}=.*/${KEY}=${VALUE}/" "${FILE}"
+    else
+        echo "The key '${KEY}' does not exist in the file '${FILE}'. Adding the key-value pair."
+        # Add the key-value pair
+        echo "${KEY}=${VALUE}" >> "${FILE}"
+    fi
+}
