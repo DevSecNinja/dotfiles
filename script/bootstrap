@@ -49,6 +49,24 @@ make_zsh_default_shell () {
 	fi
 }
 
+get_dotfiles_install_mode () {
+  if [ -z "$PS1" ]; then
+    # Always install minimal version when running non-interactive
+    echo "minimal"
+  elif [[ $OSTYPE == 'darwin'* ]]; then
+    # Install complete version with MacOS
+    echo "complete"
+  elif [[ $HOST == 'SVL'* ]]; then
+    # Install complete version on servers
+    echo "minimal"
+  else
+    # Install complete if we are unsure
+    echo "complete"
+  fi
+}
+
+DOTFILES_INSTALL_MODE=$(get_dotfiles_install_mode)
+
 setup_gitconfig () {
   git_local_config_file="git/gitconfig.local.symlink"
   git_local_config_file_example="git/gitconfig.local.symlink.example"
@@ -264,7 +282,7 @@ add_key_value() {
 
 set_tattoo () {
   info 'setting the tattoo'
-  add_key_value "DOTFILES_INSTALL_MODE" "full" "$HOME/.env"
+  add_key_value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
   if [ -z "$PS1" ]; then
     add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "true" "$HOME/.env"
   else
