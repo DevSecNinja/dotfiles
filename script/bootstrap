@@ -320,7 +320,8 @@ set_tattoo () {
   success 'tattoo set'
 }
 
-if [ $(get_key_value DOTFILES_INSTALL_DATE ~/.env) = 1 ]; then
+VALUE=$(get_key_value DOTFILES_INSTALL_DATE ~/.env)
+if [ $? = 1 ]; then
   set_tattoo
 else
   success 'tattoo already set before'
