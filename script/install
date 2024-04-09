@@ -6,11 +6,17 @@ set -e
 
 cd "$(dirname $0)"/..
 
-echo "> check brew installation"
-find ./homebrew -name install.sh | while read installer ; do sh -c "${installer}" ; done
+# Install homebrew
+if test $(which brew) && [ "$BACKGROUND_JOB" != true ] && [ "$DOTFILES_INSTALL_MODE" == "complete" ]
+then
+  echo "> check brew installation"
+  find ./homebrew -name install.sh | while read installer ; do sh -c "${installer}" ; done
 
-echo "› brew bundle"
-brew bundle
+  echo "› brew bundle"
+  brew bundle
+else
+  success "skipping brew install since we are running in background job or install mode is not complete"
+fi
 
 # find the installers and run them iteratively
 find . -name install.sh | while read installer ; do sh -c "${installer}" ; done
