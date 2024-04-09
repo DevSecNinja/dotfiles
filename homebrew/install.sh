@@ -19,7 +19,7 @@ else
 fi
 
 # Check for Homebrew & if not running interactively
-if test ! $(which brew) && ! [ -z "$PS1" ] && [ "$DOTFILES_INSTALL_MODE" == "complete" ]
+if test ! $(which brew) && ! [ -z "$PS1" ] && [ "$DOTFILES_INSTALL_MODE" = "complete" ]
 then
   echo "  Installing Homebrew for you."
 

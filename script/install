@@ -8,7 +8,7 @@ cd "$(dirname $0)"/..
 
 # Install homebrew
 # TODO: Move these checks to the brew install scripts & simplify
-if test $(which brew) && [ "$BACKGROUND_JOB" != true ] && [ "$DOTFILES_INSTALL_MODE" == "complete" ]
+if test $(which brew) && [ "$BACKGROUND_JOB" != true ] && [ "$DOTFILES_INSTALL_MODE" = "complete" ]
 then
   echo "> check brew installation"
   find ./homebrew -name install.sh | while read installer ; do sh -c "${installer}" ; done
