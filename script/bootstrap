@@ -300,7 +300,7 @@ get_key_value() {
         echo $VALUE
         return 0
     else
-        info "The key '${KEY}' does not exist in the file '${FILE}'"
+        info "The key '${KEY}' was not found in the file '${FILE}'"
         return 1
     fi
 }
@@ -320,10 +320,14 @@ set_tattoo () {
   success 'tattoo set'
 }
 
+set +e # Temp undo set -e so that we can catch the error
 VALUE=$(get_key_value DOTFILES_INSTALL_DATE ~/.env)
+
 if [ $? = 1 ]; then
+  set -e
   set_tattoo
 else
+  set -e
   success 'tattoo already set before'
   add_key_value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
 fi
