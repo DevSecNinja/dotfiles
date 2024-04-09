@@ -21,7 +21,7 @@ fi
 # Check for Homebrew & if not running interactively
 if test ! $(which brew) && ! [ -z "$PS1" ] && [ "$DOTFILES_INSTALL_MODE" = "complete" ]
 then
-  echo "  Installing Homebrew for you."
+  echo "  Installing Homebrew."
 
   if [ $can_sudo = 0 ];
   then
