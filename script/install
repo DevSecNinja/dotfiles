@@ -16,7 +16,7 @@ then
   echo "› brew bundle"
   brew bundle
 else
-  success "skipping brew install since we are running in background job or install mode is not complete"
+  echo "skipping brew install since we are running in background job or install mode is not complete"
 fi
 
 # find the installers and run them iteratively
