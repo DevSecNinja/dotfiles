@@ -72,7 +72,10 @@ ZSH_THEME="robbyrussell"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git)
 
-source $ZSH/oh-my-zsh.sh
+if test -f $ZSH/oh-my-zsh.sh
+then
+  source $ZSH/oh-my-zsh.sh
+fi
 
 # User configuration
 
@@ -105,9 +108,12 @@ source $ZSH/oh-my-zsh.sh
 #
 
 # Import variables from .env
-set -o allexport
-source ~/.env
-set +o allexport
+if test -f ~/.env
+then
+  set -o allexport
+  source ~/.env
+  set +o allexport
+fi
 
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/git
