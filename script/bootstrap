@@ -284,6 +284,27 @@ add_key_value() {
     fi
 }
 
+get_key_value() {
+    KEY="$1"
+    FILE="$2"
+
+    # Check if the file exists, if not, create it
+    if [ ! -f "${FILE}" ]; then
+        info "The file '${FILE}' does not exist. Therefore, we can't find key '${KEY}'"
+        return 1
+    fi
+
+    # Check if the key exists in the file
+    if grep -q "^${KEY}=" "${FILE}"; then
+        VALUE=$(sed -n "s/^${KEY}=//p" "${FILE}")
+        echo $VALUE
+        return 0
+    else
+        info "The key '${KEY}' does not exist in the file '${FILE}'"
+        return 1
+    fi
+}
+
 set_tattoo () {
   info 'setting the tattoo'
   add_key_value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
@@ -299,7 +320,7 @@ set_tattoo () {
   success 'tattoo set'
 }
 
-if [ -z ${DOTFILES_INSTALL_MODE+x} ]; then
+if [ $(get_key_value DOTFILES_INSTALL_DATE ~/.env) = 1 ]; then
   set_tattoo
 else
   success 'tattoo already set before'
