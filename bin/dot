@@ -88,11 +88,18 @@ if test $(which brew) && [ "$BACKGROUND_JOB" != true ]
 then
   echo "› brew update"
   brew update
+elif [ "$BACKGROUND_JOB" == true ]
+then
+  success "skipping brew update since we are running in background job or brew is not installed"
+fi
 
+# Install software
+if [ "$BACKGROUND_JOB" != true ]
+then
   # Install software
   echo "› script/install"
   $DOTFILES/script/install
 elif [ "$BACKGROUND_JOB" == true ]
 then
-  success "skipping brew update & install since we are running in background job"
+  success "skipping software install since we are running in background job"
 fi
