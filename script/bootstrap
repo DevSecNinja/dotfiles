@@ -202,6 +202,12 @@ install_dotfiles () {
     link_file "$src" "$dst"
   done
 
+  if command -v zsh &> /dev/null
+  then
+    info 'cleaning up old dead symlinks (checking for matches):'
+    zsh -c "cd $HOME && rm -- *(-@D)" || true
+  fi
+
   success 'installed dotfiles'
 }
 
@@ -289,6 +295,7 @@ set_tattoo () {
   add_key_value "DOTFILES_UPDATE_ON_LOGIN" "false" "$HOME/.env"
 
   add_key_value "DOTFILES_INSTALL_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
+  add_key_value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
   success 'tattoo set'
 }
 
@@ -296,6 +303,7 @@ if [ -z ${DOTFILES_INSTALL_MODE+x} ]; then
   set_tattoo
 else
   success 'tattoo already set before'
+  add_key_value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
 fi
 
 echo ''
