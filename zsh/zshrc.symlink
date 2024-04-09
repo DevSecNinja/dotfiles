@@ -191,6 +191,8 @@ background_job() {
   unset BACKGROUND_JOB
 }
 
-silent_background background_job
+if [ "${DOTFILES_UPDATE_ON_LOGIN:-false}" = "true" ]; then
+  silent_background background_job
+fi
 
 unset config_files

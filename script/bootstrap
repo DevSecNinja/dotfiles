@@ -286,6 +286,7 @@ set_tattoo () {
   else
     add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "false" "$HOME/.env"
   fi
+  add_key_value "DOTFILES_UPDATE_ON_LOGIN" "false" "$HOME/.env"
 
   add_key_value "DOTFILES_INSTALL_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
   success 'tattoo set'
