@@ -12,24 +12,24 @@ class TestFunctionsHelp(unittest.TestCase):
                 if not '.' in filename and not filename.startswith('_'):
                     with open(os.path.join(folder_dir, filename), 'r') as f:
                         function_content = f.read()
-                    yield filename, function_content
+                    yield folder, filename, function_content
 
     def test_help_parameters(self):
-        for function_name, function_content in self.get_functions():
-            with self.subTest(function_name=function_name):
+        for folder, function_name, function_content in self.get_functions():
+            with self.subTest(function_name=function_name, folder_name=folder):
                 help_param_present = ('-h' in function_content or
                                       '--help' in function_content)
                 self.assertTrue(help_param_present, f"{function_name} is missing help parameter.")
 
     def test_shebang_line(self):
-        for function_name, function_content in self.get_functions():
-            with self.subTest(function_name=function_name):
+        for folder, function_name, function_content in self.get_functions():
+            with self.subTest(function_name=function_name, folder_name=folder):
                 shebang_line_present = function_content.startswith("#!")
                 self.assertTrue(shebang_line_present, f"{function_name} is missing a shebang line.")
 
     def test_filename_hyphens(self):
-        for function_name, function_content in self.get_functions():
-            with self.subTest(function_name=function_name):
+        for folder, function_name, function_content in self.get_functions():
+            with self.subTest(function_name=function_name, folder_name=folder):
                 underscore_present = '_' in function_name
                 self.assertFalse(underscore_present, f"{function_name} contains underscore(s) instead of hyphen(s).")
 
