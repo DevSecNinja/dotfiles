@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set-dotfiles-dir () {
   VS_CODE_DIR="/workspaces/.codespaces/.persistedshare/dotfiles"
   LOCAL_DIR="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null

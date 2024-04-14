@@ -1,3 +1,5 @@
+#!/bin/bash
+
 update-forked-repo() {
   if [ "$#" -ne 1 ]; then
     echo "Usage: update-forked-repo <upstream_remote_name>"

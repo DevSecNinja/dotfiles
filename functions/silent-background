@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Run the command given by "$@" in the background
 # https://superuser.com/a/1334617
 silent-background() {

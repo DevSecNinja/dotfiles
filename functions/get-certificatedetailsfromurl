@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function get-certificatedetailsfromurl () {
   if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
     echo "Usage: get-certificatedetailsfromurl <fqdn> <port (optional)>"

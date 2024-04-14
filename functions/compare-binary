@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Compares two binary files and displays them with color differences
 # https://superuser.com/a/968863
 compare-binary() {

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 disk-resize {
     # Original source: https://codenotary.com/blog/enlarge-a-disk-and-partition-of-any-linux-vm-without-a-reboot
     # Tested on Debian 12 Bookworm
