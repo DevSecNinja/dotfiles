@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Original source: https://superuser.com/a/1486681
+
+confirm() {
+    if [ -f $1 ]; then
+        echo -n "Continue? ([y]es or [n]o): "
+    else
+        echo -n "$1 ([y]es or [n]o): "
+    fi
+    read REPLY
+    case $REPLY in
+    [Yy]) return 0 ;;
+    [Nn]) return 1 ;;
+    # Here are a few optional options to choose between
+    # Any other answer:
+
+    # 1. Repeat the question
+    *) confirm $1 ;;
+
+    # 2. ignore
+    # *) ;;
+
+    # 3. Exit terminal
+    # *) exit ;;
+
+    esac
+    # REPLY=''
+}
