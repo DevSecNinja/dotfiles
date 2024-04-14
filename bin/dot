@@ -38,7 +38,7 @@ while test $# -gt 0; do
 	shift
 done
 
-set_dotfiles_dir() {
+set-dotfiles-dir() {
   # Copied from functions folder
   VS_CODE_DIR="/workspaces/.codespaces/.persistedshare/dotfiles"
   LOCAL_DIR="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
@@ -55,7 +55,7 @@ set_dotfiles_dir() {
   fi
 }
 
-export DOTFILES=$(set_dotfiles_dir)
+export DOTFILES=$(set-dotfiles-dir)
 
 if [ -n "${DOTFILES}" ];
 then

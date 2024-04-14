@@ -264,7 +264,7 @@ then
   fi
 fi
 
-add_key_value() {
+add-key-value() {
     KEY="$1"
     VALUE="$2"
     FILE="$3"
@@ -287,7 +287,7 @@ add_key_value() {
     fi
 }
 
-get_key_value() {
+get-key-value() {
     KEY="$1"
     FILE="$2"
 
@@ -310,21 +310,21 @@ get_key_value() {
 
 set_tattoo () {
   info 'setting the tattoo'
-  add_key_value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
+  add-key-value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
   if [[ $- == *i* ]]; then
-    add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "true" "$HOME/.env"
+    add-key-value "DOTFILES_INSTALL_NONINTERACTIVE" "true" "$HOME/.env"
   else
-    add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "false" "$HOME/.env"
+    add-key-value "DOTFILES_INSTALL_NONINTERACTIVE" "false" "$HOME/.env"
   fi
-  add_key_value "DOTFILES_UPDATE_ON_LOGIN" "false" "$HOME/.env"
+  add-key-value "DOTFILES_UPDATE_ON_LOGIN" "false" "$HOME/.env"
 
-  add_key_value "DOTFILES_INSTALL_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
-  add_key_value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
+  add-key-value "DOTFILES_INSTALL_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
+  add-key-value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
   success 'tattoo set'
 }
 
 set +e # Temp undo set -e so that we can catch the error
-VALUE=$(get_key_value DOTFILES_INSTALL_DATE ~/.env)
+VALUE=$(get-key-value DOTFILES_INSTALL_DATE ~/.env)
 
 if [ $? = 1 ]; then
   set -e
@@ -332,7 +332,7 @@ if [ $? = 1 ]; then
 else
   set -e
   success 'tattoo already set before'
-  add_key_value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
+  add-key-value "DOTFILES_UPDATED_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%:z")" "$HOME/.env"
 fi
 
 echo ''

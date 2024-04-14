@@ -1,6 +1,6 @@
 #!/bin/bash
 
-add_key_value() {
+add-key-value() {
     KEY="$1"
     VALUE="$2"
     FILE="$3"

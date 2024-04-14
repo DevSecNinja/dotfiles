@@ -118,7 +118,7 @@ fi
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/git
 
-set_dotfiles_dir () {
+set-dotfiles-dir () {
   VS_CODE_DIR="/workspaces/.codespaces/.persistedshare/dotfiles"
   LOCAL_DIR="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
   DEFAULT_DIR=$(realpath $HOME/.dotfiles)
@@ -135,7 +135,7 @@ set_dotfiles_dir () {
 }
 
 # shortcut to this dotfiles path is $DOTFILES
-export DOTFILES=$(set_dotfiles_dir)
+export DOTFILES=$(set-dotfiles-dir)
 
 if ! [ -n "${DOTFILES}" ];
 then
@@ -198,7 +198,7 @@ background_job() {
 }
 
 if [ "${DOTFILES_UPDATE_ON_LOGIN:-false}" = "true" ]; then
-  silent_background background_job
+  silent-background background_job
 fi
 
 unset config_files

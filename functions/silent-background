@@ -1,6 +1,6 @@
 # Run the command given by "$@" in the background
 # https://superuser.com/a/1334617
-silent_background() {
+silent-background() {
   if [[ -n $ZSH_VERSION ]]; then  # zsh:  https://superuser.com/a/1285272/365890
     setopt NO_NOTIFY NO_MONITOR
     # We'd use &| to background and disown, but incompatible with bash, so:
