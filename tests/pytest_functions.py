@@ -2,12 +2,14 @@ import os
 import pytest
 
 def get_functions():
-    functions_dir = os.path.join(os.path.dirname(__file__), '..', 'functions')
-    for filename in os.listdir(functions_dir):
-        if not '.' in filename and not filename.startswith('_'):
-            with open(os.path.join(functions_dir, filename), 'r') as f:
-                function_content = f.read()
-            yield filename, function_content
+        root_dir = os.path.join(os.path.dirname(__file__), '..')
+        for folder in ['functions', 'bin']:
+            folder_dir = os.path.join(root_dir, folder)
+            for filename in os.listdir(folder_dir):
+                if not '.' in filename and not filename.startswith('_'):
+                    with open(os.path.join(folder_dir, filename), 'r') as f:
+                        function_content = f.read()
+                    yield filename, function_content
 
 @pytest.mark.parametrize("function_name,function_content", get_functions())
 def test_help_parameters(function_name, function_content):
