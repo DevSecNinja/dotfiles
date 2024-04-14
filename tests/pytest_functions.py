@@ -1,0 +1,26 @@
+import os
+import pytest
+
+def get_functions():
+    functions_dir = os.path.join(os.path.dirname(__file__), '..', 'functions')
+    for filename in os.listdir(functions_dir):
+        if not '.' in filename and not filename.startswith('_'):
+            with open(os.path.join(functions_dir, filename), 'r') as f:
+                function_content = f.read()
+            yield filename, function_content
+
+@pytest.mark.parametrize("function_name,function_content", get_functions())
+def test_help_parameters(function_name, function_content):
+    help_param_present = ('-h' in function_content or
+                          '--help' in function_content)
+    assert help_param_present, f"{function_name} is missing help parameter."
+
+@pytest.mark.parametrize("function_name,function_content", get_functions())
+def test_shebang_line(function_name, function_content):
+    shebang_line_present = function_content.startswith("#!")
+    assert shebang_line_present, f"{function_name} is missing a shebang line."
+
+@pytest.mark.parametrize("function_name,function_content", get_functions())
+def test_filename_hyphens(function_name, function_content):
+    underscore_present = '_' in function_name
+    assert not underscore_present, f"{function_name} contains underscore(s) instead of hyphen(s)."
