@@ -50,9 +50,12 @@ make_zsh_default_shell () {
 }
 
 get_dotfiles_install_mode () {
-  if [ -z "$PS1" ]; then
+  if [[ $- == *i* ]]; then
     # Always install minimal version when running non-interactive
     echo "minimal"
+  elif [[ $(systemd-detect-virt) == 'wsl' ]]; then
+    # Install complete version with WSL
+    echo "complete"
   elif [[ $OSTYPE == 'darwin'* ]]; then
     # Install complete version with MacOS
     echo "complete"
@@ -66,6 +69,7 @@ get_dotfiles_install_mode () {
 }
 
 DOTFILES_INSTALL_MODE=$(get_dotfiles_install_mode)
+success "Install mode is $DOTFILES_INSTALL_MODE"
 
 setup_gitconfig () {
   git_local_config_file="git/gitconfig.local.symlink"
@@ -89,8 +93,7 @@ setup_gitconfig () {
     sed -e "s/AUTHORNAME/$git_authorname/g" -e "s/AUTHOREMAIL/$git_authoremail/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" $git_local_config_file_example > $git_local_config_file
 
     # When using WSL, make sure to use ssh.exe
-    if grep -q -i "Microsoft" "/proc/version"
-    then
+    if [[ $(systemd-detect-virt) == 'wsl' ]]; then
       echo "Running on WSL, therefore setting ssh to ssh.exe to support 1Password SSH Auth"
 
       if ! $(grep -q "^\[core\]$" $git_local_config_file); then
@@ -134,7 +137,7 @@ link_file () {
         user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
         [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
 
-        if [ -z "$PS1" ]; then
+        if [[ $- == *i* ]]; then
           echo "... backing up since we are running non-interactively"
           action=b
         else
@@ -240,7 +243,7 @@ install_vscodefiles () {
 
 make_zsh_default_shell
 
-if [ -z "$PS1" ]; then
+if [[ $- == *i* ]]; then
   success "skipping Git configuration since we are running non-interactive"
 else
   setup_gitconfig
@@ -308,7 +311,7 @@ get_key_value() {
 set_tattoo () {
   info 'setting the tattoo'
   add_key_value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
-  if [ -z "$PS1" ]; then
+  if [[ $- == *i* ]]; then
     add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "true" "$HOME/.env"
   else
     add_key_value "DOTFILES_INSTALL_NONINTERACTIVE" "false" "$HOME/.env"
