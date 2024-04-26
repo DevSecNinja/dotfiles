@@ -70,6 +70,27 @@ choice() {
     done
 }
 
+get-key-value() {
+    KEY="$1"
+    FILE="$2"
+
+    # Check if the file exists, if not, create it
+    if [ ! -f "${FILE}" ]; then
+        info "The file '${FILE}' does not exist. Therefore, we can't find key '${KEY}'"
+        return 1
+    fi
+
+    # Check if the key exists in the file
+    if grep -q "^${KEY}=" "${FILE}"; then
+        VALUE=$(sed -n "s/^${KEY}=//p" "${FILE}")
+        echo $VALUE
+        return 0
+    else
+        info "The key '${KEY}' was not found in the file '${FILE}'"
+        return 1
+    fi
+}
+
 get_dotfiles_install_mode () {
   shopt -s nocasematch
   set +e # Temp undo set -e so that we can catch the error
@@ -319,27 +340,6 @@ add-key-value() {
         info "The key '${KEY}' does not exist in the file '${FILE}'. Adding value: ${VALUE}"
         # Add the key-value pair
         echo "${KEY}=${VALUE}" >> "${FILE}"
-    fi
-}
-
-get-key-value() {
-    KEY="$1"
-    FILE="$2"
-
-    # Check if the file exists, if not, create it
-    if [ ! -f "${FILE}" ]; then
-        info "The file '${FILE}' does not exist. Therefore, we can't find key '${KEY}'"
-        return 1
-    fi
-
-    # Check if the key exists in the file
-    if grep -q "^${KEY}=" "${FILE}"; then
-        VALUE=$(sed -n "s/^${KEY}=//p" "${FILE}")
-        echo $VALUE
-        return 0
-    else
-        info "The key '${KEY}' was not found in the file '${FILE}'"
-        return 1
     fi
 }
 
