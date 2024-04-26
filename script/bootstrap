@@ -72,6 +72,17 @@ choice() {
 
 get_dotfiles_install_mode () {
   shopt -s nocasematch
+  set +e # Temp undo set -e so that we can catch the error
+  VALUE=$(get-key-value DOTFILES_INSTALL_MODE ~/.env)
+  if [ $? != 1 ]; then
+    set -e
+    echo $VALUE
+    return $?
+  fi
+
+  # Reset error handling
+  set -e
+
   if [[ $- == *i* ]]; then
     # Always install minimal version when running non-interactive
     echo "minimal"
