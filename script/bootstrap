@@ -49,6 +49,27 @@ make_zsh_default_shell () {
 	fi
 }
 
+choice() {
+    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+      echo "Usage: choice <options>"
+      echo "Example: choice apple pear"
+      return 0
+    fi
+
+    if [[ $# < 2 ]]; then
+      echo "Error: Invalid number of choices."
+      echo "Use -h or --help flag for usage information."
+      return 1
+    fi
+
+    select opt in "$@"; do
+      if [[ -n $opt ]]; then
+          echo "$opt"
+          break
+      fi
+    done
+}
+
 get_dotfiles_install_mode () {
   shopt -s nocasematch
   if [[ $- == *i* ]]; then
