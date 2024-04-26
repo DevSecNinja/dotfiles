@@ -267,8 +267,8 @@ install_vscodefiles () {
 
 make_zsh_default_shell
 
-if [[ $- == *i* ]]; then
-  success "skipping Git configuration since we are running non-interactive"
+if [[ $- == *i* ]] || [ "$DOTFILES_INSTALL_MODE" = "minimal" ] ; then
+  success "skipping Git configuration since we are running non-interactive or minimal"
 else
   setup_gitconfig
 fi
