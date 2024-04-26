@@ -50,6 +50,7 @@ make_zsh_default_shell () {
 }
 
 get_dotfiles_install_mode () {
+  shopt -s nocasematch
   if [[ $- == *i* ]]; then
     # Always install minimal version when running non-interactive
     echo "minimal"
