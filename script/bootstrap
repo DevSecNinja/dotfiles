@@ -64,11 +64,13 @@ get_dotfiles_install_mode () {
     # Install complete version on servers
     echo "minimal"
   else
-    # Install complete if we are unsure
-    echo "complete"
+    # Let the user choose
+    choice "minimal" "complete"
+    return $?
   fi
 }
 
+info "Configuring install mode"
 DOTFILES_INSTALL_MODE=$(get_dotfiles_install_mode)
 success "Install mode is $DOTFILES_INSTALL_MODE"
 
