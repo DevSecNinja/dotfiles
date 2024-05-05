@@ -1,2 +1,2 @@
-echo Hello $USER!
+echo "👋 Hello ${(C)USER}!"
 cd $(get-startdirectory)
