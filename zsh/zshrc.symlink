@@ -201,4 +201,7 @@ if [ "${DOTFILES_UPDATE_ON_LOGIN:-false}" = "true" ]; then
   silent-background background_job
 fi
 
+# Add hostname to prompt
+PROMPT="%{$fg[green]%}%m%{$reset_color%} ${PROMPT}"
+
 unset config_files

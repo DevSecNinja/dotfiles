@@ -1,0 +1,25 @@
+#!/bin/bash
+
+display_system_info() {
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    echo "Usage: display_system_info"
+    echo "Output: returns the CPU and memory information of the system"
+    return 0
+  fi
+
+  if [[ $# > 0 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  # Display CPU usage information
+  top -b -n1 | grep "Cpu(s)" | awk '{print "⚙️ CPU Usage: " $2+$4+$6 "%"}'
+
+  # Display memory information
+  free -h | awk '/^Mem:/ {print "🧠 Memory Total: " $2 ", Used: " $3 ", Free: " $4}'
+
+  # Display uptime
+  echo -n "⏱️ Uptime: "
+  uptime -p
+}
