@@ -1,0 +1,28 @@
+#!/bin/bash
+
+function get-startdirectory () {
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    echo "Usage: get-startdirectory"
+    echo "Output: returns the directory the shell should start from"
+    return 0
+  fi
+
+  if [[ $# > 0 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  # List of directories to check
+  directories=("/srv/docker" "$HOME/git/home" "$HOME/git" "$HOME")
+
+  for dir in "${directories[@]}"
+  do
+    if [[ -d "$dir" ]]; then
+      echo $dir
+      return 0
+    fi
+  done
+  echo "None of the provided directories exist."
+  return 1
+}
