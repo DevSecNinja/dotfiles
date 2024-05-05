@@ -17,7 +17,10 @@ display_system_info() {
   top -b -n1 | grep "Cpu(s)" | awk '{print "⚙️ CPU Usage: " $2+$4+$6 "%"}'
 
   # Display memory information
-  free -h | awk '/^Mem:/ {print "🧠 Memory Total: " $2 ", Used: " $3 ", Free: " $4}'
+  free -h | awk '/^Mem:/ {print "🧠 Memory Total: " $2 ", Used: " $3 ", Available: " $4}'
+
+  # Display free space on /
+  df -h / | awk 'NR==2 {print "📁 Free Space on /: Total: " $2 ", Used: " $3 ", Available: " $4}'
 
   # Display uptime
   echo -n "⏱️ Uptime: "
