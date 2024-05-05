@@ -1,0 +1,2 @@
+echo Hello $USER!
+cd $(get-startdirectory)
