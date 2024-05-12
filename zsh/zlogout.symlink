@@ -1,13 +1,21 @@
 if command -v az &> /dev/null
 then
-  echo "Logging off from Azure"
-  az logout
+    echo "[+] Logging off from Azure"
+    output=$(az logout 2>&1)
+    if [ "$output" != "ERROR: There are no active accounts." ]
+    then
+        echo "$output"
+    fi
 fi
 
 if command -v terraform &> /dev/null
 then
-  echo "Logging off from Terraform"
-  terraform logout
+    echo "[+] Logging off from Terraform"
+    output=$(terraform logout)
+    if [ "$output" != "No credentials for app.terraform.io are stored." ]
+    then
+        echo "$output"
+    fi
 fi
 
-echo "Bye! Have a great $(date +'%A')!"
+echo "👋  Bye! Have a great $(date +'%A')!"
