@@ -1,6 +1,15 @@
 #!/bin/bash
 
 display_system_info() {
+  # Define some colors
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  NC='\033[0m' # No Color
+
+  # Define thresholds
+  memory_threshold_value=2048    # Memory threshold value in MB
+  disk_threshold=2048            # Disk space threshold in MB
+
   if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
     echo "Usage: display_system_info"
     echo "Output: returns the CPU and memory information of the system"
@@ -17,10 +26,10 @@ display_system_info() {
   top -b -n1 | grep "Cpu(s)" | awk '{print "⚙️ CPU Usage: " $2+$4+$6 "%"}'
 
   # Display memory information
-  free -h | awk '/^Mem:/ {print "🧠 Memory Total: " $2 ", Used: " $3 ", Available: " $4}'
+  free --mega | awk -v red="${RED}" -v green="${GREEN}" -v nc="${NC}" -v mem_unit="${memory_threshold_unit}" -v mem_value="${memory_threshold_value}" '/^Mem:/ {color = ($7 < mem_value ? red : green); printf "🧠 Memory Total: %.2fGi, Used: %.2fGi, Available: " color "%.2fGi" nc "\n", $2/1024, $3/1024, $7/1024}'
 
   # Display free space on /
-  df -h / | awk 'NR==2 {print "📁 Free Space on /: Total: " $2 ", Used: " $3 ", Available: " $4}'
+  df -BM / | awk -v red="${RED}" -v green="${GREEN}" -v nc="${NC}" -v disk_thres="${disk_threshold}" 'NR==2 {available = $4; gsub(/[a-zA-Z]*/, "", available); color = (available < disk_thres ? red : green); printf "📁 Free Space on /: Total: %.2fGi, Used: %.2fGi, Available: " color "%.2fGi" nc "\n", $2/1024, $3/1024, available/1024}'
 
   # Display uptime
   echo -n "⏱️ Uptime: "
