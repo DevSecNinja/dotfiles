@@ -125,12 +125,6 @@ set-dotfiles-dir () {
   VS_CODE_DIR="/workspaces/.codespaces/.persistedshare/dotfiles"
   LOCAL_DIR="$(dirname $(dirname "$(readlink -f "$0")"))" 2> /dev/null
   DEFAULT_DIR=$(realpath $HOME/.dotfiles)
-  FIRST_USER=$(awk -F: '{ if ($3 >= 1000 && $3 < 60000) print $1}' /etc/passwd | head -n 1)
-
-  if [ "$DEFAULT_DIR" = "/root/.dotfiles" ]
-  then
-    DEFAULT_DIR="/home/$FIRST_USER/.dotfiles"
-  fi
 
   if test -d $VS_CODE_DIR;
   then
