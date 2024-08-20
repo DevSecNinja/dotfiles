@@ -127,9 +127,9 @@ set-dotfiles-dir () {
   DEFAULT_DIR=$(realpath $HOME/.dotfiles)
   FIRST_USER=$(awk -F: '{ if ($3 >= 1000 && $3 < 60000) print $1}' /etc/passwd | head -n 1)
 
-  if [ "$DEFAULT_DIR" = "/root" ]
+  if [ "$DEFAULT_DIR" = "/root/.dotfiles" ]
   then
-    DEFAULT_DIR="/home/$FIRST_USER"
+    DEFAULT_DIR="/home/$FIRST_USER/.dotfiles"
   fi
 
   if test -d $VS_CODE_DIR;
