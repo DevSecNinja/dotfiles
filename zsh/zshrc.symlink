@@ -186,6 +186,10 @@ then
   eval "$(direnv hook zsh)"
 fi
 
+# Load Kubernetes & flux autocompletion
+command -v flux >/dev/null && . <(flux completion zsh)
+command -v kubectl >/dev/null && . <(kubectl completion zsh)
+
 # Finally
 ## Run Git Pull & bootstrap in the background to get the latest artifacts
 background_job() {
