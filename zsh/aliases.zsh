@@ -7,4 +7,4 @@ alias cls='clear' # Good 'ol Clear Screen command
 alias root-and-load='sudo -E su -p'
 
 # Gets the token for the Kubernetes Dashboard
-alias get-kubedash-token='kubectl -n observability get secret kubernetes-dashboard -o jsonpath='{.data.token}' | base64 -d'
+alias get-kubedash-token='kubectl -n observability create token kubernetes-dashboard'
