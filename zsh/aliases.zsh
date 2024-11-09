@@ -8,3 +8,4 @@ alias root-and-load='sudo -E su -p'
 
 # Gets the token for the Kubernetes Dashboard
 alias get-kubedash-token='kubectl -n observability create token kubernetes-dashboard --duration=24h'
+alias git-rebase='git pull --rebase origin main && echo "==> Now run git push origin --force on your branch after resolving potential conflicts"'
