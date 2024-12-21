@@ -14,7 +14,13 @@ then
   find ./homebrew -name install.sh | while read installer ; do sh -c "${installer}" ; done
 
   echo "› brew bundle"
-  brew bundle
+
+  if [ "$(uname -s)" == "Darwin" ]
+  then
+    brew bundle --file=Brewfile-desktop
+  else
+    brew bundle
+  fi
 else
   echo "skipping brew install since we are running in background job or install mode is not complete"
 fi

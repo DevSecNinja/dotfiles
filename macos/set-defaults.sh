@@ -7,35 +7,44 @@
 #
 # Run ./set-defaults.sh and you'll be good to go.
 
-# Disable press-and-hold for keys in favor of key repeat.
+echo "[+] Disable press-and-hold for keys in favor of key repeat."
 defaults write -g ApplePressAndHoldEnabled -bool false
 
-# Use AirDrop over every interface. srsly this should be a default.
+echo "[+] Use AirDrop over every interface. srsly this should be a default."
 defaults write com.apple.NetworkBrowser BrowseAllInterfaces 1
 
-# Always open everything in Finder's list view. This is important.
+echo "[+] Always open everything in Finder's list view. This is important."
 defaults write com.apple.Finder FXPreferredViewStyle Nlsv
 
-# Show the ~/Library folder.
+echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
-# Set a really fast key repeat.
+echo "[+] Set a really fast key repeat."
 defaults write NSGlobalDomain KeyRepeat -int 1
 
-# Set the Finder prefs for showing a few different volumes on the Desktop.
+echo "[+] Set the Finder prefs for showing a few different volumes on the Desktop."
 defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
 defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool true
 
-# Run the screensaver if we're in the bottom-left hot corner.
+# echo "[+] Run the screensaver if we're in the bottom-left hot corner."
 # defaults write com.apple.dock wvous-bl-corner -int 5
 # defaults write com.apple.dock wvous-bl-modifier -int 0
 
-# Hide Safari's bookmark bar.
-# defaults write com.apple.Safari.plist ShowFavoritesBar -bool false
+echo "[+] Enable Safari's bookmark bar."
+defaults write com.apple.Safari.plist ShowFavoritesBar -bool true
 
-# Set up Safari for development.
+echo "[+] Set up Safari for development."
 defaults write com.apple.Safari.SandboxBroker ShowDevelopMenu -bool true
 defaults write com.apple.Safari.plist IncludeDevelopMenu -bool true
 defaults write com.apple.Safari.plist WebKitDeveloperExtrasEnabledPreferenceKey -bool true
 defaults write com.apple.Safari.plist "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
+
+current_effect=$(defaults read com.apple.dock mineffect 2>/dev/null)
+if [ "$current_effect" != "scale" ]; then
+    echo "${COLOR_GREEN}[+] Set Dock to scale effect and restart Dock${COLOR_RESET}"
+    defaults write com.apple.dock "mineffect" -string "scale"
+    killall Dock # Required to apply changes
+else
+    echo "${COLOR_BLUE}[~] Dock mineffect is already set to scale${COLOR_RESET}"
+fi

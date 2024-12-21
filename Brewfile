@@ -5,7 +5,6 @@ tap 'homebrew/bundle'
 brew 'azure-cli'
 brew "git"
 brew 'jq'
-brew "terraform"
 brew 'wget'
 
 #brew 'bc'
@@ -22,6 +21,7 @@ brew 'wget'
 #cask 'plex'
 #cask 'sonos'
 #cask 'raycast'
+#brew "terraform"
 #cask 'warp'
 #cask 'visual-studio-code'
 #cask 'vlc'

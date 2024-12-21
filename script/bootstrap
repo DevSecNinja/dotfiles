@@ -44,8 +44,12 @@ make_zsh_default_shell () {
 			sudo sh -c 'echo /usr/local/bin/zsh >> /etc/shells'
 		fi
 
-		info "Making zsh default shell"
-    sudo chsh -s $(which zsh) $(whoami)
+    if [ "$SHELL" != "$(which zsh)" ]; then
+      info "Making zsh default shell"
+      sudo chsh -s $(which zsh) $(whoami)
+    else
+      info "zsh is already the default shell"
+    fi
 	fi
 }
 
@@ -107,17 +111,17 @@ get_dotfiles_install_mode () {
   if [[ $- == *i* ]]; then
     # Always install minimal version when running non-interactive
     echo "minimal"
+  elif [[ $OSTYPE == 'darwin'* ]]; then
+    # Install complete version with MacOS
+    echo "complete"
   elif ! command -v systemd-detect-virt &> /dev/null; then
     # systemd-detect-virt is not available
     echo "minimal"
   elif [[ $(systemd-detect-virt) == 'wsl' ]]; then
     # Install complete version with WSL
     echo "complete"
-  elif [[ $OSTYPE == 'darwin'* ]]; then
-    # Install complete version with MacOS
-    echo "complete"
   elif [[ $HOST == 'SVL'* ]]; then
-    # Install complete version on servers
+    # Install minimal version on servers
     echo "minimal"
   else
     # Let the user choose

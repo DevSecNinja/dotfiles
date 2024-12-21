@@ -1,0 +1,48 @@
+cask_args appdir: '/Applications'
+
+tap 'homebrew/bundle'
+tap "buo/cask-upgrade" # Allows us to run 'brew cu' to update casks
+tap "homebrew/cask-fonts"
+
+brew 'azure-cli'
+brew 'fastfetch'
+brew "git"
+brew 'ollama'
+brew 'jq'
+brew 'podman'
+brew 'wget'
+
+#brew 'bc'
+#brew 'imagemagick'
+#brew 'spaceman-diff'
+#brew 'spark'
+#brew 'stripe/stripe-cli/stripe'
+#brew 'yt-dlp'
+
+cask '1password'
+#cask 'airtable'
+#cask 'arq'
+#cask 'handbrake'
+cask 'iterm2'
+#cask 'notion-calendar'
+cask 'podman-desktop'
+#cask 'plex'
+#cask 'sonos'
+cask 'raycast'
+cask 'signal'
+cask 'spotify'
+#brew "terraform"
+#cask 'warp'
+cask 'visual-studio-code'
+cask 'vmware-fusion'
+#cask 'vlc'
+#cask 'zed'
+
+# Apple App Store apps
+mas "Home Assistant", id: 1099568401
+mas "Kindle", id: 302584613
+mas "Mela", id: 1568924476
+mas "Microsoft 365", id: 1450038993
+mas "Notability", id: 360593530
+mas "Windows", id: 1295203466
+mas "WireGuard", id: 1451685025

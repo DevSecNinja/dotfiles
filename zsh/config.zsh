@@ -44,6 +44,14 @@ bindkey '^?' backward-delete-char
 # Custom added by @DevSecNinja
 #
 
+# COLORS
+export COLOR_GREEN="\033[32m"
+export COLOR_BLUE="\033[34m"
+export COLOR_RESET="\033[0m"
+
+# Get username from Git config if available and otherwise fallback to variable
+export USER_NAME=$(git config --global user.name || echo $USER)
+
 # AUTOCOMPLETION
 
 # initialize autocompletion
