@@ -2,7 +2,6 @@ cask_args appdir: '/Applications'
 
 tap 'homebrew/bundle'
 tap "buo/cask-upgrade" # Allows us to run 'brew cu' to update casks
-tap "homebrew/cask-fonts"
 
 brew 'azure-cli'
 brew 'fastfetch'
@@ -39,6 +38,7 @@ cask 'vmware-fusion'
 #cask 'zed'
 
 # Apple App Store apps
+mas "1Password for Safari", id: 1569813296
 mas "Home Assistant", id: 1099568401
 mas "Kindle", id: 302584613
 mas "Mela", id: 1568924476
