@@ -13,8 +13,17 @@ defaults write -g ApplePressAndHoldEnabled -bool false
 echo "[+] Use AirDrop over every interface. srsly this should be a default."
 defaults write com.apple.NetworkBrowser BrowseAllInterfaces 1
 
-echo "[+] Always open everything in Finder's list view. This is important."
+echo "[+] Finder: Always open everything in Finder's list view. This is important."
 defaults write com.apple.Finder FXPreferredViewStyle Nlsv
+
+echo "[+] Finder: show all filename extensions"
+defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+
+echo "[+] Finder: Disable the warning when changing a file extension"
+defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+
+echo "[+] Finder: When performing a search, search the current folder by default"
+defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 
 echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
@@ -40,6 +49,30 @@ defaults write com.apple.Safari.plist WebKitDeveloperExtrasEnabledPreferenceKey 
 defaults write com.apple.Safari.plist "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
 
+echo "[+] Safari: prevent opening 'safe' files automatically after downloading"
+defaults write com.apple.Safari.plist AutoOpenSafeDownloads -bool true
+
+echo "[+] Safari: disable autofill"
+defaults write com.apple.Safari.plist AutoFillPasswords -bool true
+
+echo "[+] Mac App Store: Enable Automatic Update check"
+defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+
+echo "[+] Mac App Store: Check for updates daily"
+defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 1
+
+echo "[+] Mac App Store: Download updates automatically in the background"
+defaults write com.apple.SoftwareUpdate AutomaticDownload -int 1
+
+echo "[+] Mac App Store: Install System data files & security updates"
+defaults write com.apple.SoftwareUpdate CriticalUpdateInstall -int 1
+
+echo "[+] Mac App Store: Automatically download apps purchased on other Macs"
+defaults write com.apple.SoftwareUpdate ConfigDataInstall -int 1
+
+echo "[+] Mac OS: Enable Auto Update"
+defaults write com.apple.commerce AutoUpdate -bool true
+
 current_effect=$(defaults read com.apple.dock mineffect 2>/dev/null)
 if [ "$current_effect" != "scale" ]; then
     echo "${COLOR_GREEN}[+] Set Dock to scale effect and restart Dock${COLOR_RESET}"
@@ -48,3 +81,20 @@ if [ "$current_effect" != "scale" ]; then
 else
     echo "${COLOR_BLUE}[~] Dock mineffect is already set to scale${COLOR_RESET}"
 fi
+
+# # Improve coding experience
+# echo "[+] Disable automatic capitalization"
+# defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
+
+# echo "[+] Disable smart dashes"
+# defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+
+# echo "[+] Disable automatic period substitution"
+# defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
+
+# echo "[+] Disable smart quotes"
+# defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
+
+# echo "[+] Disable auto-correct"
+# defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+
