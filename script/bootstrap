@@ -313,7 +313,8 @@ else
 fi
 
 install_dotfiles
-install_vscodefiles
+# VS Code files are conflicting with the settings sync.
+#install_vscodefiles
 
 # If we're on a Mac or Linux, let's install and setup homebrew.
 if [ "$(uname -s)" == "Darwin" ] || [ "$(uname -s)" == "Linux" ]
