@@ -55,7 +55,7 @@ echo "[+] Safari: prevent opening 'safe' files automatically after downloading"
 defaults write com.apple.Safari.plist AutoOpenSafeDownloads -bool true
 
 echo "[+] Safari: disable autofill"
-defaults write com.apple.Safari.plist AutoFillPasswords -bool true
+defaults write com.apple.Safari.plist AutoFillPasswords -bool false
 
 echo "[+] Mac App Store: Enable Automatic Update check"
 defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
