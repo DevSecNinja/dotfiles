@@ -28,8 +28,10 @@ defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
-echo "[+] Set a really fast key repeat."
-defaults write NSGlobalDomain KeyRepeat -int 1
+echo "[+] Set key repeat settings."
+# Get your favorite value here: https://mac-key-repeat.zaymon.dev
+defaults write -g InitialKeyRepeat -int 13
+defaults write -g KeyRepeat -int 2
 
 echo "[+] Set the Finder prefs for showing a few different volumes on the Desktop."
 defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
@@ -80,6 +82,15 @@ if [ "$current_effect" != "scale" ]; then
     killall Dock # Required to apply changes
 else
     echo "${COLOR_BLUE}[~] Dock mineffect is already set to scale${COLOR_RESET}"
+fi
+
+current_trash=$(defaults read com.apple.finder "FXRemoveOldTrashItems" 2>/dev/null)
+if [ "$current_trash" != 1 ]; then
+    echo "${COLOR_GREEN}[+] Set auto remove trash after 30 days to true${COLOR_RESET}"
+    defaults write com.apple.finder "FXRemoveOldTrashItems" -bool "true"
+    killall Finder # Required to apply changes
+else
+    echo "${COLOR_BLUE}[~] Trash already getting removed after 30 days${COLOR_RESET}"
 fi
 
 # # Improve coding experience

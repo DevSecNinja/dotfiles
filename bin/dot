@@ -72,6 +72,9 @@ then
   # Set macOS defaults
   $DOTFILES/macos/set-defaults.sh
 
+  # Set macOS key bindings
+  $DOTFILES/macos/set-keybindings.sh
+
   # Set macOS hostname
   $DOTFILES/macos/set-hostname.sh
 fi

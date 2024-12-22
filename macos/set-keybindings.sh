@@ -9,4 +9,5 @@ fi
 # Copy the DefaultKeyBinding.dict file to the ~/Library/KeyBindings/ folder
 # TODO: Check if this can be linked instead of copied with link_file function
 echo "[+] Copy DefaultKeyBinding.dict to ~/Library/KeyBindings/"
-cp DefaultKeyBinding.dict ~/Library/KeyBindings/
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+cp $SCRIPT_DIR/DefaultKeyBinding.dict ~/Library/KeyBindings/
