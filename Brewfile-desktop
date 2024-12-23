@@ -28,7 +28,7 @@ cask 'microsoft-edge'
 cask 'podman-desktop'
 #cask 'plex'
 #cask 'sonos'
-cask 'raycast'
+#cask 'raycast' # Raycast still doesn't support sandboxing for extensions: https://github.com/raycast/extensions/issues/200
 cask 'signal'
 cask 'spotify'
 #brew "terraform"
