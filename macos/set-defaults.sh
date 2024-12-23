@@ -25,6 +25,9 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 echo "[+] Finder: When performing a search, search the current folder by default"
 defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 
+echo "[+] Finder: Show Path Bar / Breadcrumb"
+defaults write com.apple.finder ShowPathbar -bool true
+
 echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
