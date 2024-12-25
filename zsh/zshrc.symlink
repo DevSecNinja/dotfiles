@@ -213,3 +213,6 @@ fi
 PROMPT="%{$fg[green]%}%m%{$reset_color%} ${PROMPT}"
 
 unset config_files
+
+# Mise
+eval "$(~/.local/bin/mise activate zsh)"
