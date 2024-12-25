@@ -1,8 +1,8 @@
 #!/bin/bash
 
-update-forked-repo() {
+git-update-forked-repo() {
   if [ "$#" -ne 1 ]; then
-    echo "Usage: update-forked-repo <upstream_remote_name>"
+    echo "Usage: git-update-forked-repo <upstream_remote_name>"
     return 1
   fi
 
