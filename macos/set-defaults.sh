@@ -31,6 +31,10 @@ defaults write com.apple.finder ShowPathbar -bool true
 echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
+# Prevent Mac mini from suddenly waking up
+echo "[+] Power Management: Disable Wake on LAN"
+defaults write /Library/Preferences/com.apple.PowerManagement "AC Power" -dict-add "Wake On LAN" -int 0
+
 echo "[+] Set key repeat settings."
 # Get your favorite value here: https://mac-key-repeat.zaymon.dev
 defaults write -g InitialKeyRepeat -int 13
