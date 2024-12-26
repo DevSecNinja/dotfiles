@@ -35,6 +35,13 @@ chflags nohidden ~/Library
 echo "[+] Power Management: Disable Wake on LAN"
 defaults write /Library/Preferences/com.apple.PowerManagement "AC Power" -dict-add "Wake On LAN" -int 0
 
+# Enable Firewall
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setblockall off
+# Disable built-in and downloaded code-signed apps by default
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned on
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
+
 echo "[+] Set key repeat settings."
 # Get your favorite value here: https://mac-key-repeat.zaymon.dev
 defaults write -g InitialKeyRepeat -int 13
