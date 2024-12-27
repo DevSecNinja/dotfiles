@@ -41,7 +41,8 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setblockall off
 # Disable built-in and downloaded code-signed apps by default
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned on
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
+# TODO: [afw] Troubleshoot why allowsignedapp=off stops Spotify Connect from working
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp on
 
 echo "[+] Set key repeat settings."
 # Get your favorite value here: https://mac-key-repeat.zaymon.dev
