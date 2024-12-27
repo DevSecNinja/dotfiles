@@ -32,8 +32,9 @@ echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
 # Prevent Mac mini from suddenly waking up
-echo "[+] Power Management: Disable Wake on LAN"
-defaults write /Library/Preferences/com.apple.PowerManagement "AC Power" -dict-add "Wake On LAN" -int 0
+# echo "[+] Power Management: Disable Wake on LAN"
+# NOTE: Didn't fix the issue of macOS waking up from DarkWake
+#defaults write /Library/Preferences/com.apple.PowerManagement "AC Power" -dict-add "Wake On LAN" -int 0
 
 # Enable Firewall
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
