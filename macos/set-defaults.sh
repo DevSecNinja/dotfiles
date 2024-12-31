@@ -28,6 +28,9 @@ defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 echo "[+] Finder: Show Path Bar / Breadcrumb"
 defaults write com.apple.finder ShowPathbar -bool true
 
+echo "[+] Dock: Minimize windows into their application’s icon"
+defaults write com.apple.dock minimize-to-application -bool true
+
 echo "[+] Show the ~/Library folder."
 chflags nohidden ~/Library
 
