@@ -114,6 +114,9 @@ get_dotfiles_install_mode () {
   elif [[ $OSTYPE == 'darwin'* ]]; then
     # Install complete version with MacOS
     echo "complete"
+  elif [[ $CODESPACES == true ]]; then
+    # Install minimal version on Codespaces
+    echo "minimal"
   elif ! command -v systemd-detect-virt &> /dev/null; then
     # systemd-detect-virt is not available
     echo "minimal"
