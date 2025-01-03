@@ -134,14 +134,15 @@ get_dotfiles_install_mode () {
   # Reset error handling
   set -e
 
-  if [[ $- == *i* ]]; then
+  if ! is_interactive_shell; then
     # Always install minimal version when running non-interactive
     echo "minimal"
   elif [[ $OSTYPE == 'darwin'* ]]; then
     # Install complete version with MacOS
     echo "complete"
   elif [[ $CODESPACES == true ]]; then
-    # Install minimal version on Codespaces
+    # Install minimal version on Codespaces.
+    # Normally this shouldn't hit as dotfiles get installed non-interactively.
     echo "minimal"
   elif ! command -v systemd-detect-virt &> /dev/null; then
     # systemd-detect-virt is not available
@@ -229,7 +230,7 @@ link_file () {
         user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
         [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
 
-        if [[ $- == *i* ]]; then
+        if ! is_interactive_shell; then
           echo "... backing up since we are running non-interactively"
           action=b
         else
@@ -335,7 +336,7 @@ install_vscodefiles () {
 
 make_zsh_default_shell
 
-if [[ $- == *i* ]] || [ "$DOTFILES_INSTALL_MODE" = "minimal" ] ; then
+if ! is_interactive_shell || [ "$DOTFILES_INSTALL_MODE" = "minimal" ] ; then
   success "skipping Git configuration since we are running non-interactive or minimal"
 else
   setup_gitconfig
@@ -383,7 +384,7 @@ add-key-value() {
 set_tattoo () {
   info 'setting the tattoo'
   add-key-value "DOTFILES_INSTALL_MODE" $DOTFILES_INSTALL_MODE "$HOME/.env"
-  if [[ $- == *i* ]]; then
+  if ! is_interactive_shell; then
     add-key-value "DOTFILES_INSTALL_NONINTERACTIVE" "true" "$HOME/.env"
   else
     add-key-value "DOTFILES_INSTALL_NONINTERACTIVE" "false" "$HOME/.env"
