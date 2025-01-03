@@ -191,6 +191,9 @@ command -v flux >/dev/null && . <(flux completion zsh)
 command -v helm >/dev/null && . <(helm completion zsh)
 command -v kubectl >/dev/null && . <(kubectl completion zsh)
 
+# Run mise
+command -v ~/.local/bin/mise >/dev/null && eval "$(~/.local/bin/mise activate zsh)"
+
 # Finally
 ## Run Git Pull & bootstrap in the background to get the latest artifacts
 background_job() {
@@ -209,10 +212,11 @@ if [ "${DOTFILES_UPDATE_ON_LOGIN:-false}" = "true" ]; then
   silent-background background_job
 fi
 
-# Add hostname to prompt
-PROMPT="%{$fg[green]%}%m%{$reset_color%} ${PROMPT}"
+# Add hostname or GitHub username to prompt
+if [[ $CODESPACES == true ]]; then
+  PROMPT="%{$fg[green]%}@$GITHUB_USER%{$reset_color%} ${PROMPT}"
+else
+  PROMPT="%{$fg[green]%}%m%{$reset_color%} ${PROMPT}"
+fi
 
 unset config_files
-
-# Mise
-eval "$(~/.local/bin/mise activate zsh)"
