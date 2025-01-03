@@ -27,6 +27,32 @@ fail () {
   exit
 }
 
+# Check if the current shell session is interactive using multiple detection methods
+is_interactive_shell() {
+    # Method 1: Check if stdin is a terminal AND shell has interactive flag
+    if [ -t 0 ] && [[ $- == *i* ]]; then
+        return 0  # true, is interactive
+    fi
+
+    # Method 2: Check for presence of PS1 (prompt string) AND shell has interactive flag
+    if [[ -n "${PS1-}" ]] && [[ $- == *i* ]]; then
+        return 0  # true, is interactive
+    fi
+
+    # Method 3: Check parent process for common interactive shell indicators
+    if [[ "$(ps -o comm= -p $PPID)" =~ (bash|zsh|fish) ]]; then
+        return 0  # true, is interactive
+    fi
+
+    return 1  # false, not interactive
+}
+
+if is_interactive_shell; then
+    info "Running in an interactive shell"
+else
+    info "Running in an non-interactive shell"
+fi
+
 make_zsh_default_shell () {
 	# Check zsh is not already the default shell
 	if ! grep -q "^$USER.*$HOME:$(which zsh)$" /etc/passwd
