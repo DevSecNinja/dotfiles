@@ -27,7 +27,7 @@ cask 'iterm2'
 cask 'microsoft-edge'
 cask 'podman-desktop'
 #cask 'plex'
-cask rekordbox
+cask 'rekordbox'
 #cask 'sonos'
 #cask 'raycast' # Raycast still doesn't support sandboxing for extensions: https://github.com/raycast/extensions/issues/200
 cask 'signal'
@@ -48,3 +48,4 @@ mas "Microsoft 365", id: 1450038993
 mas "Notability", id: 360593530
 mas "Windows", id: 1295203466
 mas "WireGuard", id: 1451685025
+mas "Xcode", id: 497799835
