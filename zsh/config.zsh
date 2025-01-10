@@ -49,8 +49,15 @@ export COLOR_GREEN="\033[32m"
 export COLOR_BLUE="\033[34m"
 export COLOR_RESET="\033[0m"
 
+# IDENTITY
+
 # Get username from Git config if available and otherwise fallback to variable
 export USER_NAME=$(git config --global user.name || echo $USER)
+
+# Set GitHub Username variable
+if [ -z $GITHUB_USER ]; then
+  export GITHUB_USER='DevSecNinja'
+fi
 
 # AUTOCOMPLETION
 
