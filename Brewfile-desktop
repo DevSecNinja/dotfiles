@@ -31,6 +31,7 @@ brew "git"
 #cask 'zed'
 
 cask '1password'
+cask 'chatgpt'
 cask 'claude'
 cask 'iterm2'
 cask 'microsoft-edge'
