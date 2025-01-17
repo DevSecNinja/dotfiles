@@ -1,0 +1,27 @@
+#!/bin/bash
+
+brewup() {
+  echo "=== Running brew update ==="
+  brew update
+  echo "\n=== Regular cask updates ==="
+  brew upgrade --cask
+  echo "\n=== Additional updates requiring --greedy flag ==="
+
+  # Store the dry-run output to check if there are updates
+  greedy_updates=$(brew upgrade --cask --greedy --dry-run)
+
+  # Only proceed with confirmation if there are updates
+  if [[ -n "$greedy_updates" ]]; then
+    echo "$greedy_updates"
+    echo "\n=== Would you like to proceed with greedy updates? (y/n) ==="
+    read -r response
+
+    if [ "$response" = "y" ]; then
+      brew upgrade --cask --greedy
+    else
+      echo "Greedy updates skipped"
+    fi
+  else
+    echo "No additional updates available with --greedy"
+  fi
+}
