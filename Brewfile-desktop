@@ -3,41 +3,44 @@ cask_args appdir: '/Applications'
 tap 'homebrew/bundle'
 tap "buo/cask-upgrade" # Allows us to run 'brew cu' to update casks
 
-brew 'azure-cli'
-brew 'fastfetch'
-brew "git"
-brew 'ollama'
-brew 'jq'
-brew 'podman'
-brew 'wget'
-
 #brew 'bc'
 #brew 'imagemagick'
 #brew 'spaceman-diff'
 #brew 'spark'
 #brew 'stripe/stripe-cli/stripe'
 #brew 'yt-dlp'
+#brew "terraform"
 
-cask '1password'
+brew 'azure-cli'
+brew 'fastfetch'
+brew 'jq'
+brew 'ollama'
+brew 'podman'
+brew 'wget'
+brew "git"
+
 #cask 'airtable'
 #cask 'arq'
 #cask 'handbrake'
-cask 'iterm2'
 #cask 'notion-calendar'
+#cask 'plex'
+#cask 'raycast' # Raycast still doesn't support sandboxing for extensions: https://github.com/raycast/extensions/issues/200
+#cask 'sonos'
+#cask 'vlc'
+#cask 'warp'
+#cask 'zed'
+
+cask '1password'
+cask 'chatgpt'
+cask 'claude'
+cask 'iterm2'
 cask 'microsoft-edge'
 cask 'podman-desktop'
-#cask 'plex'
-cask rekordbox
-#cask 'sonos'
-#cask 'raycast' # Raycast still doesn't support sandboxing for extensions: https://github.com/raycast/extensions/issues/200
+cask 'rekordbox'
 cask 'signal'
 cask 'spotify'
-#brew "terraform"
-#cask 'warp'
 cask 'visual-studio-code'
 cask 'vmware-fusion'
-#cask 'vlc'
-#cask 'zed'
 
 # Apple App Store apps
 mas "1Password for Safari", id: 1569813296
@@ -48,3 +51,4 @@ mas "Microsoft 365", id: 1450038993
 mas "Notability", id: 360593530
 mas "Windows", id: 1295203466
 mas "WireGuard", id: 1451685025
+mas "Xcode", id: 497799835
