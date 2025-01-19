@@ -16,6 +16,7 @@ brew 'fastfetch'
 brew 'jq'
 brew 'ollama'
 brew 'podman'
+brew 'smartmontools'
 brew 'wget'
 brew "git"
 
