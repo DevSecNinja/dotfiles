@@ -1,0 +1,35 @@
+#!/bin/bash
+
+get-disk-temperature() {
+    # Check if smartctl is installed
+    if ! command -v smartctl &> /dev/null; then
+        echo "smartctl not found. Please install smartmontools first:"
+        echo "brew install smartmontools"
+        return 1
+    fi
+
+    # Get list of physical disks
+    local disks=$(diskutil list | grep -E '^/dev/disk[0-9]+' | grep 'physical' | awk '{print $1}')
+
+    echo "$disks" | while IFS= read -r disk ; do
+      echo "Checking $disk..."
+
+      # Try to detect if it's an NVMe drive
+      if smartctl -a "$disk" 2>&1 | grep -q "NVMe"; then
+          # NVMe drive
+          temp=$(smartctl -a "$disk" -d nvme 2>/dev/null | grep -i "temperature:" | awk '{print $2}')
+          model=$(smartctl -a "$disk" -d nvme 2>/dev/null | grep -i "model number:" | cut -d: -f2- | xargs)
+          if [ ! -z "$temp" ]; then
+              echo "    $disk (NVMe) ($model): $temp°C\n"
+          fi
+      else
+          # Regular SATA drive
+          # Untested since I only have NVMe drives...
+          temp=$(smartctl -a "$disk" 2>/dev/null | grep -i "temperature" | head -n1 | awk '{print $10}')
+          model=$(smartctl -a "$disk" -d nvme 2>/dev/null | grep -i "model number:" | cut -d: -f2- | xargs)
+          if [ ! -z "$temp" ]; then
+              echo "    $disk (SATA) ($model): $temp°C\n"
+          fi
+      fi
+    done
+}
