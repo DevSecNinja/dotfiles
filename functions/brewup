@@ -5,6 +5,8 @@ brewup() {
   brew update
   echo "\n=== Regular cask updates ==="
   brew upgrade --cask
+  echo "\n=== Regular brew updates ==="
+  brew upgrade
   echo "\n=== Additional updates requiring --greedy flag ==="
 
   # Store the dry-run output to check if there are updates
