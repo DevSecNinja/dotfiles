@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Useful function to compare two redemption options and show which gives better value per point/mile
+# Usage: calculate-points-value <points_option1> <euros_option1> <points_option2> <euros_option2>
+
+calculate-points-value() {
+    if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+        echo "Usage: calculate-points-value <points_option1> <euros_option1> <points_option2> <euros_option2>"
+        echo "Example: calculate-points-value 8000 180 25000 268"
+        echo "Will compare two redemption options and show which gives better value per point/mile"
+        return 0
+    fi
+
+    if [[ $# -ne 4 ]]; then
+        echo "Error: Invalid number of arguments."
+        echo "Use -h or --help flag for usage information."
+        return 1
+    fi
+
+    points1="$1"
+    euros1="$2"
+    points2="$3"
+    euros2="$4"
+
+    # Calculate values per point (multiply by 10000 to handle 4 decimal places in pure bash)
+    value1=$(( (euros1 * 10000) / points1 ))
+    value2=$(( (euros2 * 10000) / points2 ))
+
+    echo "Points/miles value analysis:"
+    echo "-------------------------"
+    echo "Option 1: €0.$(printf "%04d" $value1) per point ($points1 points for €$euros1)"
+    echo "Option 2: €0.$(printf "%04d" $value2) per point ($points2 points for €$euros2)"
+
+    echo -e "\nComparison between options:"
+    if (( value1 > value2 )); then
+        percent_better=$(( ((value1 * 100) / value2) - 100 ))
+        echo "Option 1 offers better value"
+        echo "It's ${percent_better}% better value than Option 2"
+    else
+        percent_better=$(( ((value2 * 100) / value1) - 100 ))
+        echo "Option 2 offers better value"
+        echo "It's ${percent_better}% better value than Option 1"
+    fi
+}
