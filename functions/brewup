@@ -2,11 +2,11 @@
 
 brewup() {
   echo "=== Running brew update ==="
-  brew update
+  brew update || { echo "brew update failed"; return 1; }
   echo "\n=== Regular cask updates ==="
-  brew upgrade --cask
+  brew upgrade --cask || { echo "brew cask update failed"; return 1; }
   echo "\n=== Regular brew updates ==="
-  brew upgrade
+  brew upgrade || { echo "brew upgrade failed"; return 1; }
   echo "\n=== Additional updates requiring --greedy flag ==="
 
   # Store the dry-run output to check if there are updates
@@ -18,8 +18,8 @@ brewup() {
     echo "\n=== Would you like to proceed with greedy updates? (y/n) ==="
     read -r response
 
-    if [ "$response" = "y" ]; then
-      brew upgrade --cask --greedy
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      brew upgrade --cask --greedy || { echo "brew greedy upgrade failed"; return 1; }
     else
       echo "Greedy updates skipped"
     fi
