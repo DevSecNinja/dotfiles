@@ -1,6 +1,9 @@
 #!/bin/bash
 
 brewup() {
+  # Spotify auto-updater is fast & solid, 1Password auto-updater experience is less intrusive
+  local excluded_casks="spotify|1password"
+
   echo "=== Running brew update ==="
   brew update || { echo "brew update failed"; return 1; }
   echo "\n=== Regular cask updates ==="
@@ -9,17 +12,24 @@ brewup() {
   brew upgrade || { echo "brew upgrade failed"; return 1; }
   echo "\n=== Additional updates requiring --greedy flag ==="
 
-  # Store the dry-run output to check if there are updates
+  # Store the dry-run output
   greedy_updates=$(brew upgrade --cask --greedy --dry-run)
 
-  # Only proceed with confirmation if there are updates
-  if [[ -n "$greedy_updates" ]]; then
-    echo "$greedy_updates"
-    echo "\n=== Would you like to proceed with greedy updates? (y/n) ==="
+  # Filter out Spotify and 1Password
+  filtered_updates=$(echo "$greedy_updates" | grep -vE "$excluded_casks")
+
+  if [[ -n "$filtered_updates" ]]; then
+    echo "$filtered_updates"
+    echo "\n=== Would you like to proceed with greedy updates (excluding $excluded_casks)? (y/n) ==="
     read -r response
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
-      brew upgrade --cask --greedy || { echo "brew greedy upgrade failed"; return 1; }
+      # List casks, filter out Spotify and 1Password, and upgrade the rest
+      casks_to_upgrade=$(brew outdated --cask --greedy | grep -vE "$excluded_casks")
+
+      while IFS= read -r cask; do
+        brew upgrade --cask "$cask" || { echo "Failed to upgrade $cask"; return 1; }
+      done <<< "$casks_to_upgrade"
     else
       echo "Greedy updates skipped"
     fi
