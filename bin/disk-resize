@@ -3,6 +3,9 @@
 # Original source: https://codenotary.com/blog/enlarge-a-disk-and-partition-of-any-linux-vm-without-a-reboot
 # Tested on Debian 12 Bookworm
 
+echo "This script is deprecated and will be removed in the future. Use the 'expand-disk' function instead."
+exit 0
+
 # Comment if script kills prematurely
 set -e
 
