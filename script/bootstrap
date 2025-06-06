@@ -60,7 +60,7 @@ make_zsh_default_shell () {
 		# Check zsh is installed, if not exit with warning
 		if ! which zsh &> /dev/null
 		then
-			fail "Zsh is needed. Please install it via your prefered package manager."
+                        fail "Zsh is needed. Please install it via your preferred package manager."
 		fi
 
 		# If zsh is not listed as a shell, list it
