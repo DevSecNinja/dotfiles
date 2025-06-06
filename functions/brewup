@@ -2,7 +2,11 @@
 
 brewup() {
   # Spotify auto-updater is fast & solid, 1Password auto-updater experience is less intrusive
-  local excluded_casks="spotify|1password"
+  local excluded_casks=(
+    "spotify"
+    "1password"
+  )
+  local excluded_pattern=$(IFS="|"; echo "${excluded_casks[*]}")
 
   echo "=== Running brew update ==="
   brew update || { echo "brew update failed"; return 1; }
@@ -12,11 +16,11 @@ brewup() {
   brew upgrade || { echo "brew upgrade failed"; return 1; }
   echo "\n=== Additional updates requiring --greedy flag ==="
 
-  casks_to_upgrade=$(brew outdated --cask --greedy | grep -vE "$excluded_casks" | awk '!/^==>/ && NF')
+  casks_to_upgrade=$(brew outdated --cask --greedy | grep -vE "$excluded_pattern" | awk '!/^==>/ && NF')
 
   if [[ -n "$casks_to_upgrade" ]]; then
     echo "$casks_to_upgrade"
-    echo "\n=== Would you like to proceed with greedy updates (excluding $excluded_casks)? (y/n) ==="
+    echo "\n=== Would you like to proceed with greedy updates (excluding $(IFS=","; echo "${excluded_casks[*]}")? (y/n) ==="
     read -r response
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
