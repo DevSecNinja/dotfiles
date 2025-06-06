@@ -19,3 +19,6 @@ alias external_ip="curl -s ipinfo.io | jq -r '.ip'"
 
 # Misc
 alias week="date +%V"
+
+alias ff="fastfetch"
+alias sysinfo="fastfetch"

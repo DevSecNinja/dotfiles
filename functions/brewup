@@ -12,24 +12,15 @@ brewup() {
   brew upgrade || { echo "brew upgrade failed"; return 1; }
   echo "\n=== Additional updates requiring --greedy flag ==="
 
-  # Store the dry-run output
-  greedy_updates=$(brew upgrade --cask --greedy --dry-run)
+  casks_to_upgrade=$(brew outdated --cask --greedy | grep -vE "$excluded_casks" | awk '!/^==>/ && NF')
 
-  # Filter out Spotify and 1Password
-  filtered_updates=$(echo "$greedy_updates" | grep -vE "$excluded_casks")
-
-  if [[ -n "$filtered_updates" ]]; then
-    echo "$filtered_updates"
+  if [[ -n "$casks_to_upgrade" ]]; then
+    echo "$casks_to_upgrade"
     echo "\n=== Would you like to proceed with greedy updates (excluding $excluded_casks)? (y/n) ==="
     read -r response
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
-      # List casks, filter out Spotify and 1Password, and upgrade the rest
-      casks_to_upgrade=$(brew outdated --cask --greedy | grep -vE "$excluded_casks")
-
-      while IFS= read -r cask; do
-        brew upgrade --cask "$cask" || { echo "Failed to upgrade $cask"; return 1; }
-      done <<< "$casks_to_upgrade"
+      echo "$casks_to_upgrade" | xargs -n1 brew upgrade --cask || { echo "Failed to upgrade one or more casks"; return 1; }
     else
       echo "Greedy updates skipped"
     fi

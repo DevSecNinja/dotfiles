@@ -1,0 +1,73 @@
+#!/bin/bash
+
+expand-disk() {
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: expand-disk <disk> <partition_number> [--dry-run]"
+    echo "Example: expand-disk /dev/sda 1"
+    echo ""
+    echo "⚠️  Note: This function is made for a standard Debian setup:"
+    echo "- ext4 root filesystem"
+    echo "- No LVM"
+    echo "- No separate /boot partition (but /boot/efi is fine)"
+    echo ""
+    echo "It won't work for LVM or more complex partition schemes."
+    echo ""
+    echo "Use --dry-run to simulate the steps without making changes."
+    return 0
+  fi
+
+  if [[ $# -lt 2 || $# -gt 3 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  disk="$1"
+  partition_number="$2"
+  dry_run=false
+  [[ "$3" == "--dry-run" ]] && dry_run=true
+
+  part="${disk}${partition_number}"
+  # Handle NVMe naming (e.g., /dev/nvme0n1p1)
+  if [[ "$disk" == *"nvme"* ]]; then
+    part="${disk}p${partition_number}"
+  fi
+
+  if [[ ! -b "$disk" || ! -b "$part" ]]; then
+    echo "Error: Disk '$disk' or partition '$part' is not a valid block device."
+    return 2
+  fi
+
+  echo "📊 Current disk usage:"
+  df -h /
+
+  echo "📦 Expanding partition ${part} on disk ${disk}..."
+
+  if ! command -v growpart &>/dev/null; then
+    echo "🔧 Installing cloud-guest-utils..."
+    if [[ "$dry_run" == false ]]; then
+      sudo apt update && sudo apt install -y cloud-guest-utils || return 3
+    else
+      echo "DRY RUN: sudo apt update && sudo apt install -y cloud-guest-utils"
+    fi
+  fi
+
+  echo "🔄 Step: Grow partition"
+  if [[ "$dry_run" == true ]]; then
+    echo "DRY RUN: sudo growpart $disk $partition_number"
+  else
+    sudo growpart "$disk" "$partition_number" || return 4
+  fi
+
+  echo "📁 Step: Resize ext4 filesystem"
+  if [[ "$dry_run" == true ]]; then
+    echo "DRY RUN: sudo resize2fs $part"
+  else
+    sudo resize2fs "$part" || return 5
+  fi
+
+  echo "✅ Final disk usage:"
+  df -h /
+
+  return 0
+}
