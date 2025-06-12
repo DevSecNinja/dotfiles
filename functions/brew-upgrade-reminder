@@ -24,7 +24,7 @@ brew-upgrade-reminder() {
     days_since=$(( ( $(date +%s) - last_ts ) / 86400 ))
 
     # echo -e "🧃 ${BLUE}${BOLD}brewup${RESET} was last run on ${UNDERLINE}$last_date${RESET} (${BOLD}$days_since${RESET} days ago)."
-    echo -e "🧃 ${BLUE}${BOLD}brewup${RESET} was last run ${BOLD}$days_since${RESET} days ago."
+    echo -e -n "🧃 ${BLUE}${BOLD}brewup${RESET} was last run ${BOLD}$days_since${RESET} days ago. "
 
     if (( days_since > threshold_days )); then
       echo -e "🔔 ${RED}${BOLD}Time to upgrade!${RESET} 🚀 Run ${YELLOW}brewup${RESET} to stay fresh."

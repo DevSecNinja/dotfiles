@@ -8,8 +8,9 @@ else
     echo "------------------------------------------------------------"
 fi
 
-if command -v brew-upgrade-reminder &> /dev/null
+if command -v brew &> /dev/null && command -v brew-upgrade-reminder &> /dev/null
 then
+    echo ""
     brew-upgrade-reminder
 fi
 
