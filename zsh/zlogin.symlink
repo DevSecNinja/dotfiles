@@ -7,4 +7,10 @@ else
     display-system-info
     echo "------------------------------------------------------------"
 fi
+
+if command -v brew-upgrade-reminder &> /dev/null
+then
+    brew-upgrade-reminder
+fi
+
 cd $(get-startdirectory)

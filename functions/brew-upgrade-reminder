@@ -1,0 +1,37 @@
+#!/bin/bash
+
+brew-upgrade-reminder() {
+  local threshold_days=14
+  local hist_file="$HOME/.zsh_history"
+  local last_ts
+
+  # Color codes
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local BLUE='\033[1;34m'
+  local BOLD='\033[1m'
+  local UNDERLINE='\033[4m'
+  local RESET='\033[0m'
+
+  last_ts=$(grep ';brewup' "$hist_file" | tail -n1 | awk -F':' '{print $2}')
+
+  if [[ -n "$last_ts" ]]; then
+    local last_date
+    local days_since
+
+    last_date=$(date -r "$last_ts" +"%Y-%m-%d")
+    days_since=$(( ( $(date +%s) - last_ts ) / 86400 ))
+
+    # echo -e "🧃 ${BLUE}${BOLD}brewup${RESET} was last run on ${UNDERLINE}$last_date${RESET} (${BOLD}$days_since${RESET} days ago)."
+    echo -e "🧃 ${BLUE}${BOLD}brewup${RESET} was last run ${BOLD}$days_since${RESET} days ago."
+
+    if (( days_since > threshold_days )); then
+      echo -e "🔔 ${RED}${BOLD}Time to upgrade!${RESET} 🚀 Run ${YELLOW}brewup${RESET} to stay fresh."
+    else
+      echo -e "✅ ${GREEN}You're all up to date!${RESET} 🎉"
+    fi
+  else
+    echo -e "⚠️  ${YELLOW}No 'brewup' command found in your zsh history.${RESET}"
+  fi
+}
