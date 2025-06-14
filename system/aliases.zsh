@@ -22,3 +22,4 @@ alias week="date +%V"
 
 alias ff="fastfetch"
 alias sysinfo="fastfetch"
+alias motd="fastfetch"
