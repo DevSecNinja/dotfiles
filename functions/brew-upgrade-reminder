@@ -1,6 +1,11 @@
 #!/bin/bash
 
 brew-upgrade-reminder() {
+  # # Run only on macOS
+  # if [[ "$(uname)" != "Darwin" ]]; then
+  #   return
+  # fi
+
   local threshold_days=14
   local hist_file="$HOME/.zsh_history"
   local last_ts
@@ -14,7 +19,7 @@ brew-upgrade-reminder() {
   local UNDERLINE='\033[4m'
   local RESET='\033[0m'
 
-  last_ts=$(grep ';brewup' "$hist_file" | tail -n1 | awk -F':' '{print $2}')
+  last_ts=$(grep ';brewup' "$hist_file" | tail -n1 | awk -F':' '{gsub(/^[ \t]+/, "", $2); print $2}')
 
   if [[ -n "$last_ts" ]]; then
     local last_date
