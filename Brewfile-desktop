@@ -27,7 +27,6 @@ brew "git"
 #cask 'plex'
 #cask 'raycast' # Raycast still doesn't support sandboxing for extensions: https://github.com/raycast/extensions/issues/200
 #cask 'sonos'
-#cask 'vlc'
 #cask 'warp'
 #cask 'zed'
 
@@ -36,11 +35,13 @@ cask 'chatgpt'
 cask 'claude'
 cask 'iterm2'
 cask 'microsoft-edge'
+#cask 'obsidian'
 cask 'podman-desktop'
 cask 'rekordbox'
 cask 'signal'
 cask 'spotify'
 cask 'visual-studio-code'
+cask 'vlc'
 cask 'vmware-fusion'
 
 # Apple App Store apps
@@ -50,6 +51,7 @@ mas "Kindle", id: 302584613
 mas "Mela", id: 1568924476
 mas "Microsoft 365", id: 1450038993
 mas "Notability", id: 360593530
+#mas "Obsidian Web Clipper", id: 6720708363
 mas "Windows", id: 1295203466
 mas "WireGuard", id: 1451685025
 mas "Xcode", id: 497799835
