@@ -1,0 +1,24 @@
+#!/bin/bash
+
+get-external-ip() {
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: get-external-ip"
+    echo "Example: get-external-ip"
+    return 0
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  ip=$(curl -s https://api.ipify.org)
+  if [[ -z "$ip" ]]; then
+    echo "Error: Unable to retrieve external IP address."
+    return 2
+  fi
+  echo "$ip"
+
+  return 0
+}

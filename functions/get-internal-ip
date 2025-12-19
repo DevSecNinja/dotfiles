@@ -1,0 +1,24 @@
+#!/bin/bash
+
+get-internal-ip() {
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: get-internal-ip"
+    echo "Example: get-internal-ip"
+    return 0
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    echo "Error: Invalid number of arguments."
+    echo "Use -h or --help flag for usage information."
+    return 1
+  fi
+
+  ip=$(hostname -I | awk '{print $1}')
+  if [[ -z "$ip" ]]; then
+    echo "Error: Unable to retrieve internal IP address."
+    return 2
+  fi
+  echo "$ip"
+
+  return 0
+}
