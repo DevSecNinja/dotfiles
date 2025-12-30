@@ -1,7 +1,4 @@
-#!/bin/bash
-
 git-release() {
-    # Determine previous tag
     local PREV_TAG
     PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
     if [ -z "$PREV_TAG" ]; then
@@ -18,14 +15,14 @@ git-release() {
         return 0
     fi
 
-    # Strip leading 'v' and prerelease suffix
-    local STRIPPED=${PREV_TAG#v}
-    STRIPPED=${STRIPPED%%-*}
+    # Split tag into numeric and prerelease parts
+    local NUM_PART PRERELEASE
+    NUM_PART=${PREV_TAG#v}
+    PRERELEASE=${NUM_PART#*[0-9].[0-9].[0-9]}  # Will be empty if no prerelease
+    NUM_PART=${NUM_PART%%-*}  # numeric only
 
-    # Split numeric parts
-    IFS='.' read -r MAJOR MINOR PATCH <<< "$STRIPPED"
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$NUM_PART"
 
-    # Validate numeric parts
     if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
         echo "Error: Could not parse previous tag '$PREV_TAG'"
         return 1
@@ -35,19 +32,17 @@ git-release() {
     local NEW_PRERELEASE
     local MSG
 
-    # Detect if first argument is a bump type or prerelease
     if [[ "$1" == "major" || "$1" == "minor" || "$1" == "patch" ]]; then
         BUMP_TYPE="$1"
         NEW_PRERELEASE="$2"
         MSG="$3"
     else
-        # First argument is prerelease
         BUMP_TYPE=""
         NEW_PRERELEASE="$1"
         MSG="$2"
     fi
 
-    # If bump type is provided, increment version
+    # Only increment numeric version if not a prerelease
     if [[ -n "$BUMP_TYPE" ]]; then
         case "$BUMP_TYPE" in
             major)
@@ -60,25 +55,24 @@ git-release() {
                 PATCH=0
                 ;;
             patch)
-                ((PATCH++))
+                # Only increment patch if previous tag had no prerelease
+                if [[ -z "$PRERELEASE" ]]; then
+                    ((PATCH++))
+                fi
                 ;;
         esac
     fi
 
-    # Construct new tag
     local NEW_TAG="v$MAJOR.$MINOR.$PATCH"
     [ -n "$NEW_PRERELEASE" ] && NEW_TAG="$NEW_TAG-$NEW_PRERELEASE"
 
-    # Default message
     MSG="${MSG:-Release $NEW_TAG}"
 
-    # Check if tag already exists locally or remotely
     if git rev-parse "$NEW_TAG" >/dev/null 2>&1 || git ls-remote --tags origin "$NEW_TAG" | grep -q "$NEW_TAG"; then
         echo "Error: Tag '$NEW_TAG' already exists!"
         return 1
     fi
 
-    # Confirmation prompt
     echo -n "Create and push tag '$NEW_TAG'? [y/N]: "
     read CONFIRM
     if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
@@ -86,11 +80,7 @@ git-release() {
         return 1
     fi
 
-    # Create annotated tag
     git tag -a "$NEW_TAG" -m "$MSG"
-
-    # Push tag
     git push origin "$NEW_TAG"
-
     echo "Tag $NEW_TAG created and pushed!"
 }
