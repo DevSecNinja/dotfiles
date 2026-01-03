@@ -6,6 +6,7 @@ brew 'azure-cli'
 brew "git"
 brew 'jq'
 brew 'wget'
+brew 'fish'
 
 #brew 'bc'
 #brew 'imagemagick'

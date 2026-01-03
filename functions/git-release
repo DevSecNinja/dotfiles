@@ -1,3 +1,5 @@
+#!/bin/bash
+
 git-release() {
     local PREV_TAG
     PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
@@ -18,8 +20,12 @@ git-release() {
     # Split tag into numeric and prerelease parts
     local NUM_PART PRERELEASE
     NUM_PART=${PREV_TAG#v}
-    PRERELEASE=${NUM_PART#*[0-9].[0-9].[0-9]}  # Will be empty if no prerelease
-    NUM_PART=${NUM_PART%%-*}  # numeric only
+    if [[ "$NUM_PART" == *-* ]]; then
+        PRERELEASE=${NUM_PART#*-}
+        NUM_PART=${NUM_PART%%-*}
+    else
+        PRERELEASE=""
+    fi
 
     IFS='.' read -r MAJOR MINOR PATCH <<< "$NUM_PART"
 
