@@ -17,6 +17,26 @@ git-release() {
         return 0
     fi
 
+    # Check if we're on main branch
+    local CURRENT_BRANCH
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$CURRENT_BRANCH" != "main" ]]; then
+        echo "Error: You must be on the 'main' branch to create a release (currently on '$CURRENT_BRANCH')"
+        return 1
+    fi
+
+    # Check if main is up-to-date with origin
+    echo "Checking if main is up-to-date with origin..."
+    git fetch origin main --quiet
+    local LOCAL_HASH REMOTE_HASH
+    LOCAL_HASH=$(git rev-parse main)
+    REMOTE_HASH=$(git rev-parse origin/main)
+    if [[ "$LOCAL_HASH" != "$REMOTE_HASH" ]]; then
+        echo "Error: Your main branch is not up-to-date with origin/main"
+        echo "Please pull the latest changes before creating a release."
+        return 1
+    fi
+
     # Split tag into numeric and prerelease parts
     local NUM_PART PRERELEASE
     NUM_PART=${PREV_TAG#v}
