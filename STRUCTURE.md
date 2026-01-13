@@ -80,7 +80,7 @@ dotfiles-new/
 │
 ├── ⚙️ Chezmoi Configuration
 │   ├── .chezmoi.yaml.tmpl           # Chezmoi config (prompts for name/email)
-│   ├── .chezmoiignore.tmpl          # Files to not copy to home (template)
+│   ├── .chezmoiignore               # Files to not copy to home (supports templates)
 │   ├── .pre-commit-config.yaml      # Pre-commit hooks configuration
 │   ├── requirements.txt             # Python dependencies (pre-commit)
 │   ├── install.sh                   # Installation script (Unix)
@@ -196,7 +196,7 @@ chezmoi init --data=false
 | `AppData/.../settings.json` | `%LOCALAPPDATA%/.../settings.json` |
 | `run_once_*.ps1.tmpl` | Executed once, not copied |
 
-**Note**: Platform-specific files are filtered via `.chezmoiignore.tmpl` (processed at runtime by chezmoi).
+**Note**: Platform-specific files are filtered via `.chezmoiignore` (supports templates natively).
 
 ## 🎓 Learning Resources
 

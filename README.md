@@ -44,7 +44,7 @@ dotfiles-new/
 ├── run_once_install-packages.sh.tmpl     # Development tools (Unix)
 ├── run_once_install-packages.ps1.tmpl    # Development tools (Windows)
 ├── .chezmoi.yaml.tmpl            # Chezmoi configuration
-├── .chezmoiignore.tmpl           # Files to exclude (template)
+├── .chezmoiignore                # Files to exclude (with templates)
 ├── install.sh                     # Installation script (Unix)
 └── install.ps1                    # Installation script (Windows)
 ```
