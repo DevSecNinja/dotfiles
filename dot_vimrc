@@ -1,0 +1,42 @@
+" Basic Vim Configuration
+" Syntax and colors
+syntax on
+set background=dark
+
+" Line numbers
+set number
+set relativenumber
+
+" Indentation
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set autoindent
+set smartindent
+
+" Search
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase
+
+" Display
+set showmatch
+set showcmd
+set wildmenu
+set cursorline
+
+" Files
+set noswapfile
+set nobackup
+set undofile
+set undodir=~/.vim/undo
+
+" Performance
+set lazyredraw
+
+" Misc
+set mouse=a
+set encoding=utf-8
+
+echo "✅ Vim configured"

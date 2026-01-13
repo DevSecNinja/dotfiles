@@ -1,0 +1,3 @@
+# Configuration snippets that are automatically sourced
+# Files here are loaded in alphabetical order before config.fish
+# Use this for organizing configuration into logical modules

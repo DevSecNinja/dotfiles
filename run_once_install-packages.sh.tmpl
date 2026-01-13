@@ -1,0 +1,34 @@
+#!/bin/bash
+# This script installs common development tools
+# Customize based on your needs
+
+set -e
+
+echo "🔧 Installing common development tools..."
+
+{{- if eq .chezmoi.os "linux" }}
+    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+# Ubuntu/Debian packages
+PACKAGES="git vim tmux curl wget tree htop"
+
+if command -v apt-get >/dev/null 2>&1; then
+    for pkg in $PACKAGES; do
+        if ! dpkg -l | grep -q "^ii  $pkg "; then
+            echo "Installing $pkg..."
+            sudo apt-get install -y "$pkg"
+        else
+            echo "✅ $pkg already installed"
+        fi
+    done
+fi
+    {{- end }}
+{{- else if eq .chezmoi.os "darwin" }}
+# macOS with Homebrew
+if command -v brew >/dev/null 2>&1; then
+    brew install git vim tmux tree htop
+else
+    echo "⚠️  Homebrew not found. Skipping package installation."
+fi
+{{- end }}
+
+echo "✅ Development tools installation complete!"

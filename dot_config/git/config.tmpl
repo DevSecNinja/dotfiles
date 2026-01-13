@@ -1,0 +1,37 @@
+[user]
+	name = {{ .name }}
+	email = {{ .email }}
+
+[core]
+	editor = vim
+	autocrlf = input
+	excludesfile = ~/.config/git/ignore
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = false
+
+[push]
+	default = simple
+	autoSetupRemote = true
+
+[color]
+	ui = auto
+
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	visual = log --oneline --graph --all
+	amend = commit --amend --no-edit
+
+[diff]
+	colorMoved = zebra
+
+[merge]
+	conflictstyle = diff3

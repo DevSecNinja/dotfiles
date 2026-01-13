@@ -1,0 +1,14 @@
+#!/bin/bash
+# This script runs once after chezmoi init
+# Use it for initial system setup
+
+set -e
+
+echo "🚀 Running initial setup..."
+
+# Create necessary directories
+mkdir -p "$HOME/.vim/undo"
+mkdir -p "$HOME/bin"
+mkdir -p "$HOME/projects"
+
+echo "✅ Initial setup complete!"

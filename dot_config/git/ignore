@@ -1,0 +1,22 @@
+# Global Git ignore file
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Build artifacts
+node_modules/
+.env
+.env.local
+*.log

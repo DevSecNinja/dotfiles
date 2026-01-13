@@ -1,0 +1,3 @@
+# This folder contains custom Fish functions
+# Each function should be in its own file named after the function
+# Example: myfunction.fish contains the 'myfunction' definition

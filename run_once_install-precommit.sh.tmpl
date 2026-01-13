@@ -1,0 +1,69 @@
+#!/bin/bash
+# This script installs pre-commit for code quality checks
+# Runs once per installation
+
+set -e
+
+if command -v pre-commit >/dev/null 2>&1; then
+    echo "✅ pre-commit already installed"
+    exit 0
+fi
+
+echo "📦 Installing pre-commit..."
+
+{{- if eq .chezmoi.os "linux" }}
+    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+# Ubuntu/Debian
+# First ensure pip is available
+if ! command -v pip3 >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y python3-pip
+fi
+
+# Install from requirements.txt if available
+if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
+    pip3 install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
+else
+    pip3 install --user pre-commit
+fi
+    {{- else if eq .chezmoi.osRelease.id "fedora" }}
+# Fedora
+if ! command -v pip3 >/dev/null 2>&1; then
+    sudo dnf install -y python3-pip
+fi
+if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
+    pip3 install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
+else
+    pip3 install --user pre-commit
+fi
+    {{- else if eq .chezmoi.osRelease.id "arch" }}
+# Arch Linux
+if ! command -v pip >/dev/null 2>&1; then
+    sudo pacman -S --noconfirm python-pip
+fi
+if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
+    pip install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
+else
+    pip install --user pre-commit
+fi
+    {{- end }}
+{{- else if eq .chezmoi.os "darwin" }}
+# macOS - prefer pipx or brew
+if command -v pipx >/dev/null 2>&1; then
+    pipx install pre-commit
+elif command -v brew >/dev/null 2>&1; then
+    brew install pre-commit
+else
+    if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
+        pip3 install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
+    else
+        pip3 install --user pre-commit
+    fi
+fi
+{{- end }}
+
+# Ensure .local/bin is in PATH
+export PATH="$HOME/.local/bin:$PATH"
+
+echo "✅ pre-commit installed successfully!"
+echo "💡 To enable hooks, run: pre-commit install"
