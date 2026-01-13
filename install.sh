@@ -22,19 +22,35 @@ is_interactive() {
 }
 
 if ! chezmoi="$(command -v chezmoi)"; then
-	bin_dir="${HOME}/.local/bin"
-	chezmoi="${bin_dir}/chezmoi"
-	echo "Installing chezmoi to '${chezmoi}'" >&2
-	if command -v curl >/dev/null; then
-		chezmoi_install_script="$(curl -fsSL https://chezmoi.io/get)"
-	elif command -v wget >/dev/null; then
-		chezmoi_install_script="$(wget -qO- https://chezmoi.io/get)"
+	echo "chezmoi not found, attempting to install..." >&2
+
+	# Try brew first
+	if command -v brew >/dev/null; then
+		echo "Installing chezmoi with brew..." >&2
+		brew install chezmoi
+		chezmoi="$(command -v chezmoi)"
+	# Try mise second
+	elif command -v mise >/dev/null; then
+		echo "Installing chezmoi with mise..." >&2
+		# TODO: Check if Renovate picks up this Chezmoi version
+		mise use --global chezmoi@2.69.1
+		chezmoi="$(command -v chezmoi)"
+	# Fall back to install script
 	else
-		echo "To install chezmoi, you must have curl or wget installed." >&2
-		exit 1
+		bin_dir="${HOME}/.local/bin"
+		chezmoi="${bin_dir}/chezmoi"
+		echo "Installing chezmoi to '${chezmoi}'" >&2
+		if command -v curl >/dev/null; then
+			chezmoi_install_script="$(curl -fsLS get.chezmoi.io)"
+		elif command -v wget >/dev/null; then
+			chezmoi_install_script="$(wget -qO- get.chezmoi.io)"
+		else
+			echo "To install chezmoi, you must have curl or wget installed." >&2
+			exit 1
+		fi
+		sh -c "${chezmoi_install_script}" -- -b "${bin_dir}"
+		unset chezmoi_install_script bin_dir
 	fi
-	sh -c "${chezmoi_install_script}" -- -b "${bin_dir}"
-	unset chezmoi_install_script bin_dir
 fi
 
 # POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188

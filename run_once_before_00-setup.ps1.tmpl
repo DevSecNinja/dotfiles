@@ -1,0 +1,31 @@
+# PowerShell script that runs once after chezmoi init on Windows
+# Use it for initial system setup
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "🚀 Running initial Windows setup..." -ForegroundColor Cyan
+
+# Create necessary directories
+$directories = @(
+    "$env:USERPROFILE\bin",
+    "$env:USERPROFILE\projects"
+)
+
+foreach ($dir in $directories) {
+    if (-not (Test-Path $dir)) {
+        Write-Host "Creating directory: $dir" -ForegroundColor Yellow
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    else {
+        Write-Host "✅ Directory already exists: $dir" -ForegroundColor Green
+    }
+}
+
+# Create symbolic link for config files if in WSL scenario
+# (This helps when you want to share configs between WSL and Windows)
+$wslConfigPath = "$env:USERPROFILE\.wslconfig"
+if (-not (Test-Path $wslConfigPath)) {
+    Write-Host "💡 Consider creating .wslconfig for WSL 2 optimization" -ForegroundColor Yellow
+}
+
+Write-Host "✅ Initial Windows setup complete!" -ForegroundColor Green

@@ -115,3 +115,70 @@ jobs:
 
       - name: Test dev server installation
         run: ./.github/scripts/test-dev-server.sh
+
+  test-windows:
+    name: Test Windows Installation
+    runs-on: windows-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Windows install script
+        shell: pwsh
+        run: |
+          .\install.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Install script failed"
+            exit 1
+          }
+
+          # Find and add chezmoi to PATH for subsequent steps
+          $chezmoiExe = Get-Command chezmoi -ErrorAction SilentlyContinue
+          if ($chezmoiExe) {
+            $chezmoiDir = Split-Path -Parent $chezmoiExe.Source
+            echo "$chezmoiDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Write-Host "✅ Added chezmoi to GitHub Actions PATH: $chezmoiDir"
+          } else {
+            Write-Warning "⚠️ Chezmoi not found in current session"
+          }
+
+      - name: Verify Chezmoi installation
+        shell: pwsh
+        run: |
+          $chezmoi = Get-Command chezmoi -ErrorAction SilentlyContinue
+          if (-not $chezmoi) {
+            Write-Error "❌ Chezmoi not found in PATH"
+            exit 1
+          }
+          Write-Host "✅ Chezmoi installed successfully at $($chezmoi.Source)"
+
+      - name: Verify PowerShell profile
+        shell: pwsh
+        run: |
+          $profilePath = "$env:USERPROFILE\.config\powershell\profile.ps1"
+          if (-not (Test-Path $profilePath)) {
+            Write-Error "❌ PowerShell profile not found"
+            exit 1
+          }
+          Write-Host "✅ PowerShell profile applied"
+
+      - name: Display Chezmoi status
+        shell: pwsh
+        run: |
+          Write-Host "📊 Chezmoi managed files:"
+          chezmoi managed
+          Write-Host ""
+          Write-Host "📋 Chezmoi data:"
+          chezmoi data
+
+      - name: Verify Git configuration
+        shell: pwsh
+        run: |
+          $gitConfigPath = "$env:USERPROFILE\.config\git\config"
+          if (-not (Test-Path $gitConfigPath)) {
+            Write-Error "❌ Git config not found"
+            exit 1
+          }
+          Write-Host "✅ Git configuration applied"

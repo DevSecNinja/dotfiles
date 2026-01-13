@@ -1,0 +1,11 @@
+{
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "copyOnSelect": false,
+    "copyFormatting": "none",
+    "profiles": {
+        "defaults": {
+            "cursorShape": "bar"
+        }
+    }
+}
