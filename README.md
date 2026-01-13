@@ -54,7 +54,7 @@ dotfiles-new/
 ### Install on Linux/macOS
 
 ```bash
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
 ```
 
 Or clone and install locally:
@@ -87,7 +87,7 @@ cd dotfiles-new
 Use the Linux installation method inside your WSL distribution:
 
 ```bash
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
 ```
 
 The dotfiles will automatically detect WSL and apply appropriate configurations.

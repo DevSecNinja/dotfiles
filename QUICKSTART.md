@@ -5,7 +5,7 @@ Get up and running with your dotfiles in minutes!
 ## One-Line Install
 
 ```bash
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
 ```
 
 This will:

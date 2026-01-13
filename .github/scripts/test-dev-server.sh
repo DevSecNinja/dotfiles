@@ -26,7 +26,7 @@ echo ""
 # Install chezmoi if not present
 if ! command -v chezmoi >/dev/null 2>&1; then
 	echo "Installing chezmoi..."
-	sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "${HOME}/.local/bin"
+	sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "${HOME}/.local/bin"
 fi
 
 # Run chezmoi init and apply
