@@ -264,7 +264,7 @@ All scripts follow standard exit code conventions:
 Scripts automatically install missing dependencies when possible:
 
 - **Chezmoi**: Auto-installed if missing
-- **Fish**: Auto-installed on Ubuntu/Debian/Fedora/Arch/macOS
+- **Fish**: Auto-installed on Ubuntu/Debian/macOS
 - **Standard tools**: sh, bash, curl, find, grep (usually pre-installed)
 
 ---

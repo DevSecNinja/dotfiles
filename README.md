@@ -8,7 +8,7 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Git Configuration**: Pre-configured with templates for user info
 - **Vim & Tmux**: Basic but functional configurations
 - **Automated Setup**: Scripts to install tools and create directories
-- **Cross-Platform**: Works on Linux (Ubuntu/Debian/Fedora/Arch) and macOS
+- **Cross-Platform**: Works on Linux (Ubuntu/Debian) and macOS
 
 ## 📁 Structure
 

@@ -112,7 +112,7 @@ Access Chezmoi data in `.tmpl` files:
 ```yaml
 # Available variables
 {{ .chezmoi.os }}              # "linux", "darwin", "windows"
-{{ .chezmoi.osRelease.id }}    # "ubuntu", "debian", "fedora"
+{{ .chezmoi.osRelease.id }}    # "ubuntu", "debian"
 {{ .chezmoi.hostname }}        # Hostname
 {{ .chezmoi.username }}        # Current user
 {{ .name }}                    # User's name (from prompts)

@@ -9,7 +9,7 @@ echo "🔧 Installing common development tools..."
 {{- if eq .chezmoi.os "linux" }}
     {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
 # Ubuntu/Debian packages
-PACKAGES="git vim tmux curl wget tree htop python3-venv"
+PACKAGES="git vim tmux curl wget tree htop python3-venv fish"
 
 if command -v apt-get >/dev/null 2>&1; then
     for pkg in $PACKAGES; do
@@ -25,9 +25,10 @@ fi
 {{- else if eq .chezmoi.os "darwin" }}
 # macOS with Homebrew
 if command -v brew >/dev/null 2>&1; then
-    brew install git vim tmux tree htop
+    brew install git vim tmux tree htop fish
 else
-    echo "⚠️  Homebrew not found. Skipping package installation."
+    echo "❌ Homebrew not found. Please install Homebrew first."
+    exit 1
 fi
 {{- end }}
 
