@@ -28,4 +28,36 @@ if (-not (Test-Path $wslConfigPath)) {
     Write-Host "💡 Consider creating .wslconfig for WSL 2 optimization" -ForegroundColor Yellow
 }
 
+# Create symbolic link for PowerShell profile
+$profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
+$profileTarget = $PROFILE
+
+if (Test-Path $profileSource) {
+    # Create profile directory if it doesn't exist
+    $profileDir = Split-Path -Parent $profileTarget
+    if (-not (Test-Path $profileDir)) {
+        Write-Host "Creating PowerShell profile directory: $profileDir" -ForegroundColor Yellow
+        New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+    }
+
+    # Create or update symbolic link
+    if (Test-Path $profileTarget) {
+        $existingItem = Get-Item $profileTarget
+        if ($existingItem.LinkType -eq "SymbolicLink" -and $existingItem.Target -eq $profileSource) {
+            Write-Host "✅ PowerShell profile already linked correctly" -ForegroundColor Green
+        } else {
+            Write-Host "Removing existing profile and creating symbolic link..." -ForegroundColor Yellow
+            Remove-Item $profileTarget -Force
+            New-Item -ItemType SymbolicLink -Path $profileTarget -Target $profileSource -Force | Out-Null
+            Write-Host "✅ PowerShell profile linked to $profileSource" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "Creating PowerShell profile symbolic link..." -ForegroundColor Yellow
+        New-Item -ItemType SymbolicLink -Path $profileTarget -Target $profileSource -Force | Out-Null
+        Write-Host "✅ PowerShell profile linked to $profileSource" -ForegroundColor Green
+    }
+} else {
+    Write-Host "⚠️  PowerShell profile source not found at $profileSource" -ForegroundColor Yellow
+}
+
 Write-Host "✅ Initial Windows setup complete!" -ForegroundColor Green
