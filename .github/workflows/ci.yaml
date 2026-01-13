@@ -134,6 +134,16 @@ jobs:
             exit 1
           }
 
+          # Find and add chezmoi to PATH for subsequent steps
+          $chezmoiExe = Get-Command chezmoi -ErrorAction SilentlyContinue
+          if ($chezmoiExe) {
+            $chezmoiDir = Split-Path -Parent $chezmoiExe.Source
+            echo "$chezmoiDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Write-Host "✅ Added chezmoi to GitHub Actions PATH: $chezmoiDir"
+          } else {
+            Write-Warning "⚠️ Chezmoi not found in current session"
+          }
+
       - name: Verify Chezmoi installation
         shell: pwsh
         run: |

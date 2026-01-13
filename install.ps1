@@ -53,18 +53,6 @@ if (-not $chezmoiExists) {
         }
 
         Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
-
-        # Refresh path environment variable for current session
-        Write-Host "Refreshing path environment variable..." -ForegroundColor Cyan
-        $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-        if ($machinePath -and $userPath) {
-            $env:Path = $machinePath + ";" + $userPath
-        }
-        elseif ($machinePath) {
-            $env:Path = $machinePath
-        }
     }
     catch {
         Write-Error "Failed to install chezmoi: $_"
