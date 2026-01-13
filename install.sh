@@ -32,8 +32,7 @@ if ! chezmoi="$(command -v chezmoi)"; then
 	# Try mise second
 	elif command -v mise >/dev/null; then
 		echo "Installing chezmoi with mise..." >&2
-		# TODO: Check if Renovate picks up this Chezmoi version
-		mise use --global chezmoi@2.69.1
+		mise use --global chezmoi@latest
 		chezmoi="$(command -v chezmoi)"
 	# Fall back to install script
 	else
