@@ -6,8 +6,19 @@ set -eu
 
 # Check if running in interactive mode
 is_interactive() {
-  # Check if stdin is a terminal
-  [ -t 0 ]
+  # Return false (non-interactive) if:
+  # - CI environment variable is set
+  # - DEBIAN_FRONTEND is set to noninteractive
+  # - Running in a devcontainer (REMOTE_CONTAINERS or CODESPACES env vars)
+  # - stdin is not a terminal
+  if [ "${CI:-}" = "true" ] || \
+     [ "${DEBIAN_FRONTEND:-}" = "noninteractive" ] || \
+     [ -n "${REMOTE_CONTAINERS:-}" ] || \
+     [ -n "${CODESPACES:-}" ] || \
+     ! [ -t 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 if ! chezmoi="$(command -v chezmoi)"; then
