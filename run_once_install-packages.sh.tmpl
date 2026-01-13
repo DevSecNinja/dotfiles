@@ -9,7 +9,7 @@ echo "🔧 Installing common development tools..."
 {{- if eq .chezmoi.os "linux" }}
     {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
 # Ubuntu/Debian packages
-PACKAGES="git vim tmux curl wget tree htop"
+PACKAGES="git vim tmux curl wget tree htop python3-venv"
 
 if command -v apt-get >/dev/null 2>&1; then
     for pkg in $PACKAGES; do
