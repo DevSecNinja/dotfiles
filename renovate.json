@@ -46,8 +46,8 @@
     "enabled": true
   },
   "pip_requirements": {
-    "fileMatch": [
-      "(^|/)requirements\\.txt$"
+    "managerFilePatterns": [
+      "/(^|/)requirements\\.txt$/"
     ]
   }
 }
