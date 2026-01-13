@@ -11,7 +11,7 @@ SOURCE_DIR="${1:-.}"
 
 # Find and check all shell scripts
 TEMP_FILE="$(mktemp)"
-trap "rm -f '${TEMP_FILE}'" EXIT
+trap 'rm -f "${TEMP_FILE}"' EXIT
 
 find "${SOURCE_DIR}" \( -name "*.sh" -o -name "*.sh.tmpl" \) | grep -v node_modules | sort >"${TEMP_FILE}"
 

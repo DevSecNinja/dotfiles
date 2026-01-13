@@ -34,7 +34,7 @@ echo ""
 
 # Find and validate all Fish files
 TEMP_FILE="$(mktemp)"
-trap "rm -f '${TEMP_FILE}'" EXIT
+trap 'rm -f "${TEMP_FILE}"' EXIT
 
 find "${SOURCE_DIR}" -name "*.fish" -type f | sort >"${TEMP_FILE}"
 

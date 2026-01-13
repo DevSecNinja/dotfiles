@@ -179,6 +179,7 @@ chezmoi init --data=false
 ## 📦 What Gets Applied Where
 
 ### Unix/Linux/macOS/WSL
+
 | Source File | Target Location |
 |-------------|----------------|
 | `dot_vimrc` | `~/.vimrc` |
@@ -188,6 +189,7 @@ chezmoi init --data=false
 | `run_once_*.sh.tmpl` | Executed once, not copied |
 
 ### Windows
+
 | Source File | Target Location |
 |-------------|----------------|
 | `dot_config/powershell/profile.ps1` | `~/.config/powershell/profile.ps1` |
@@ -200,9 +202,9 @@ chezmoi init --data=false
 
 ## 🎓 Learning Resources
 
-- **Chezmoi Docs**: https://www.chezmoi.io/
-- **Fish Shell Docs**: https://fishshell.com/docs/current/
-- **Chezmoi Templates**: https://www.chezmoi.io/reference/templates/
+- **Chezmoi Docs**: <https://www.chezmoi.io/>
+- **Fish Shell Docs**: <https://fishshell.com/docs/current/>
+- **Chezmoi Templates**: <https://www.chezmoi.io/reference/templates/>
 
 ---
 
