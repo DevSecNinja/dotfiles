@@ -1,11 +1,18 @@
 #!/bin/bash
 # This script installs pre-commit for code quality checks
 # Runs once per installation
+# Only runs in devcontainer environments
 
 set -e
 
 if command -v pre-commit >/dev/null 2>&1; then
     echo "✅ pre-commit already installed"
+    exit 0
+fi
+
+# Check if running in a devcontainer
+if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ] && [ ! -f "/.dockerenv" ]; then
+    echo "ℹ️  Skipping pre-commit installation (not in a devcontainer)"
     exit 0
 fi
 
