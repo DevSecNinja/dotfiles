@@ -221,11 +221,11 @@ These scripts are used in `.github/workflows/ci.yaml`:
    ```bash
    #!/bin/bash
    set -e
-   
+
    echo "🔍 Running custom validation..."
-   
+
    # Your validation logic here
-   
+
    echo "✅ Validation passed!"
    ```
 

@@ -15,7 +15,7 @@
    ```bash
    # Dry run to see what would happen
    chezmoi apply --dry-run --source=.
-   
+
    # Apply locally for testing
    chezmoi apply --source=.
    ```

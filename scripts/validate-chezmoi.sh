@@ -8,9 +8,9 @@ echo "🔍 Validating Chezmoi configuration..."
 
 # Check if chezmoi is available
 if ! command -v chezmoi >/dev/null 2>&1; then
-    echo "⚠️  Chezmoi not found, installing..."
-    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "${HOME}/.local/bin"
-    export PATH="${HOME}/.local/bin:${PATH}"
+	echo "⚠️  Chezmoi not found, installing..."
+	sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "${HOME}/.local/bin"
+	export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
 # Get the source directory (current directory if not specified)

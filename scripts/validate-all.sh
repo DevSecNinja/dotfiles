@@ -18,23 +18,23 @@ PASSED_CHECKS=0
 FAILED_CHECKS=0
 
 run_check() {
-    local name="$1"
-    local script="$2"
-    
-    TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "Running: ${name}"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    if bash "${SCRIPT_DIR}/${script}" "${SOURCE_DIR}"; then
-        PASSED_CHECKS=$((PASSED_CHECKS + 1))
-        echo "✅ ${name} passed"
-    else
-        FAILED_CHECKS=$((FAILED_CHECKS + 1))
-        echo "❌ ${name} failed"
-        return 1
-    fi
+	local name="$1"
+	local script="$2"
+
+	TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+	echo ""
+	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	echo "Running: ${name}"
+	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+	if bash "${SCRIPT_DIR}/${script}" "${SOURCE_DIR}"; then
+		PASSED_CHECKS=$((PASSED_CHECKS + 1))
+		echo "✅ ${name} passed"
+	else
+		FAILED_CHECKS=$((FAILED_CHECKS + 1))
+		echo "❌ ${name} failed"
+		return 1
+	fi
 }
 
 # Run all validation checks (continue even if one fails)
@@ -53,8 +53,8 @@ echo "Failed:        ${FAILED_CHECKS}"
 echo ""
 
 if [ "${FAILED_CHECKS}" -gt 0 ]; then
-    echo "❌ Some checks failed"
-    exit 1
+	echo "❌ Some checks failed"
+	exit 1
 fi
 
 echo "✅ All validation checks passed!"

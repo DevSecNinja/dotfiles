@@ -25,23 +25,23 @@ echo ""
 echo "Checking expected files..."
 
 for file in ${EXPECTED_FILES}; do
-    if [ -n "${file}" ]; then
-        if [ -f "${file}" ]; then
-            echo "  ✅ ${file}"
-            FOUND_COUNT=$((FOUND_COUNT + 1))
-        else
-            echo "  ❌ ${file} (missing)"
-            MISSING_COUNT=$((MISSING_COUNT + 1))
-        fi
-    fi
+	if [ -n "${file}" ]; then
+		if [ -f "${file}" ]; then
+			echo "  ✅ ${file}"
+			FOUND_COUNT=$((FOUND_COUNT + 1))
+		else
+			echo "  ❌ ${file} (missing)"
+			MISSING_COUNT=$((MISSING_COUNT + 1))
+		fi
+	fi
 done
 
 echo ""
 echo "📊 Results: ${FOUND_COUNT} found, ${MISSING_COUNT} missing"
 
 if [ "${MISSING_COUNT}" -gt 0 ]; then
-    echo "❌ Some expected dotfiles are missing"
-    exit 1
+	echo "❌ Some expected dotfiles are missing"
+	exit 1
 fi
 
 echo "✅ All expected dotfiles are present!"
