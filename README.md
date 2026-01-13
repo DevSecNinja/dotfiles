@@ -196,7 +196,6 @@ Windows Terminal settings are managed at:
 Features:
 - PowerShell 7 as default profile
 - WSL integration
-- Nerd Font support
 - Useful keyboard shortcuts
 
 ### Adding Scripts
@@ -248,7 +247,6 @@ chezmoi verify
 
 ### Windows
 - **Set PowerShell 7 as default**: Open Windows Terminal settings and set PowerShell 7 as default profile
-- **Install Nerd Font**: Download and install [CaskaydiaCove Nerd Font](https://www.nerdfonts.com/) for best Terminal Icons experience
 - **PowerShell modules**: Type `aliases` to see all available shortcuts
 
 ### Cross-Platform

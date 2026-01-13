@@ -6,10 +6,6 @@
     "copyFormatting": "none",
     "profiles": {
         "defaults": {
-            "font": {
-                "face": "CaskaydiaCove Nerd Font",
-                "size": 11
-            },
             "cursorShape": "bar"
         },
         "list": [
