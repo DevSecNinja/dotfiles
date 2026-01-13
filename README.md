@@ -187,11 +187,15 @@ The repository includes validation and testing scripts in the [scripts/](scripts
 ./scripts/validate-shell-scripts.sh # Validate shell syntax
 ./scripts/validate-fish-config.sh   # Validate Fish config
 ./scripts/test-chezmoi-apply.sh     # Dry-run apply
-
-# Test installation scenarios
-./scripts/test-light-server.sh      # Test light server installation
-./scripts/test-dev-server.sh        # Test dev server installation
 ```
+
+### CI Testing
+
+The CI pipeline automatically tests both installation scenarios:
+- **Light server** (hostname `SVLPROD01`): Minimal toolset
+- **Dev server** (hostname `SVLDEV01`): Full toolset
+
+These tests run only in GitHub Actions with specific container hostname configuration.
 
 ### Pre-commit Hooks
 

@@ -104,48 +104,6 @@ Tests Fish shell configuration.
 
 ---
 
-#### `test-light-server.sh`
-Tests light server installation scenario.
-
-```bash
-./scripts/test-light-server.sh
-```
-
-**What it does:**
-- Simulates installation on a light server (hostname SVL*)
-- Creates temporary test environment
-- Verifies only essential tools are installed
-- Checks dev-only files are excluded
-- Validates installType is set to "light"
-
-**Example:**
-```bash
-./scripts/test-light-server.sh
-```
-
----
-
-#### `test-dev-server.sh`
-Tests dev server installation scenario.
-
-```bash
-./scripts/test-dev-server.sh
-```
-
-**What it does:**
-- Simulates installation on a dev server (hostname SVLDEV*)
-- Creates temporary test environment
-- Verifies all development tools are installed
-- Checks all config files are included
-- Validates installType is set to "full"
-
-**Example:**
-```bash
-./scripts/test-dev-server.sh
-```
-
----
-
 #### `verify-dotfiles.sh`
 Verifies dotfiles were applied correctly.
 
@@ -220,15 +178,6 @@ Runs all validation checks in sequence.
 ./scripts/validate-chezmoi.sh
 ./scripts/validate-shell-scripts.sh
 ./scripts/validate-fish-config.sh
-```
-
-### Installation Scenario Testing
-```bash
-# Test light server installation
-./scripts/test-light-server.sh
-
-# Test dev server installation
-./scripts/test-dev-server.sh
 ```
 
 ### Pre-commit Checks

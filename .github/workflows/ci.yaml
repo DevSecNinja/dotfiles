@@ -88,16 +88,16 @@ jobs:
     needs: validate
     container:
       image: mcr.microsoft.com/devcontainers/base:debian-12
+      options: --hostname SVLPROD01
       env:
         CODESPACES: true
-        HOSTNAME: SVLPROD01
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Test light server installation
-        run: ./scripts/test-light-server.sh
+        run: ./.github/scripts/test-light-server.sh
 
   test-dev-server:
     name: Test Dev Server Installation
@@ -105,13 +105,13 @@ jobs:
     needs: validate
     container:
       image: mcr.microsoft.com/devcontainers/base:debian-12
+      options: --hostname SVLDEV01
       env:
         CODESPACES: true
-        HOSTNAME: SVLDEV01
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Test dev server installation
-        run: ./scripts/test-dev-server.sh
+        run: ./.github/scripts/test-dev-server.sh

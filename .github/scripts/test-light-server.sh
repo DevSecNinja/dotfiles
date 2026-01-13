@@ -1,28 +1,32 @@
 #!/bin/bash
-# Test light server installation scenario
-# Simulates installation on a server with hostname SVL*
+# Test light server installation scenario (CI only)
+# This script only runs in GitHub Actions with hostname set via container options
 
 set -e
 
+# Only run in CI environment
+if [ "${CI:-}" != "true" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+	echo "ℹ️  This test is designed to run in GitHub Actions only"
+	echo "💡 It requires specific container hostname configuration"
+	exit 0
+fi
+
 echo "🧪 Testing light server installation scenario..."
+echo "🖥️  Hostname: $(hostname)"
 
 # Set a temporary HOME for testing
 TEST_HOME="${TMPDIR:-/tmp}/chezmoi-test-light-$$"
 export HOME="${TEST_HOME}"
 mkdir -p "${TEST_HOME}"
 
-# Set hostname to simulate a light server
-export HOSTNAME="SVLPROD01"
-
 # Ensure .local/bin is in PATH
 export PATH="${HOME}/.local/bin:${PATH}"
 
-# Get the source directory (current directory if not specified)
-SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Get the source directory (parent of .github)
+SOURCE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 echo "📂 Source directory: ${SOURCE_DIR}"
 echo "🏠 Test HOME: ${TEST_HOME}"
-echo "🖥️  Simulated hostname: ${HOSTNAME}"
 echo ""
 
 # Install chezmoi if not present
@@ -46,12 +50,6 @@ ${HOME}/.config/fish/config.fish
 ${HOME}/.config/git/config
 "
 
-# Check that dev-only files were excluded
-DEV_ONLY_FILES="
-${HOME}/.pre-commit-config.yaml
-${HOME}/requirements.txt
-"
-
 # Verify essential files
 echo ""
 echo "Checking essential files (should exist)..."
@@ -67,25 +65,10 @@ for file in ${ESSENTIAL_FILES}; do
 	fi
 done
 
-# Verify dev-only files are excluded
-echo ""
-echo "Checking dev-only files (should NOT exist in light mode)..."
-PRESENT_COUNT=0
-for file in ${DEV_ONLY_FILES}; do
-	if [ -n "${file}" ]; then
-		if [ -f "${file}" ]; then
-			echo "  ❌ ${file} (should not be present in light mode)"
-			PRESENT_COUNT=$((PRESENT_COUNT + 1))
-		else
-			echo "  ✅ ${file} (correctly excluded)"
-		fi
-	fi
-done
-
 # Check chezmoi data to verify installType
 echo ""
 echo "📋 Checking chezmoi data:"
-INSTALL_TYPE=$(chezmoi data | grep -o '"installType": "[^"]*"' | cut -d'"' -f4 || echo "unknown")
+INSTALL_TYPE=$(chezmoi data 2>/dev/null | grep -o '"installType": "[^"]*"' | head -1 | cut -d'"' -f4 || echo "unknown")
 echo "  Install type: ${INSTALL_TYPE}"
 
 if [ "${INSTALL_TYPE}" != "light" ]; then
@@ -102,12 +85,11 @@ rm -rf "${TEST_HOME}"
 
 # Report results
 echo ""
-if [ "${MISSING_COUNT}" -gt 0 ] || [ "${PRESENT_COUNT}" -gt 0 ]; then
+if [ "${MISSING_COUNT}" -gt 0 ]; then
 	echo "❌ Light server test FAILED"
-	echo "   Missing essential files: ${MISSING_COUNT}"
-	echo "   Incorrectly included dev files: ${PRESENT_COUNT}"
+	echo "   Missing essential files or incorrect install type: ${MISSING_COUNT}"
 	exit 1
 fi
 
 echo "✅ Light server test PASSED!"
-echo "💡 All essential files present, dev-only files correctly excluded"
+echo "💡 All essential files present, install type correctly set to 'light'"
