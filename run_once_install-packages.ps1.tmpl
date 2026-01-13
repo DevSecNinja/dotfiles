@@ -5,12 +5,12 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔧 Installing development tools ({{ .installType }} mode)..." -ForegroundColor Cyan
+Write-Host "Installing development tools ({{ .installType }} mode)..." -ForegroundColor Cyan
 
 # Check if winget is available (Windows 10 1809+ with App Installer)
 $useWinget = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
 
 if (-not $useWinget) {
-    Write-Error "⚠️ winget not found."
+    Write-Error "winget not found."
     exit 1
 }
