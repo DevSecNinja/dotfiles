@@ -194,7 +194,6 @@ Windows Terminal settings are managed at:
 - [AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json](AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json)
 
 Features:
-- Custom color scheme (One Half Dark)
 - PowerShell 7 as default profile
 - WSL integration
 - Nerd Font support

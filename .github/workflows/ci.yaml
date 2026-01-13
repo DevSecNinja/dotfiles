@@ -115,3 +115,61 @@ jobs:
 
       - name: Test dev server installation
         run: ./.github/scripts/test-dev-server.sh
+
+  test-windows:
+    name: Test Windows Installation
+    runs-on: windows-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Windows install script
+        shell: pwsh
+        run: |
+          .\install.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Install script failed"
+            exit 1
+          }
+
+      - name: Verify Chezmoi installation
+        shell: pwsh
+        run: |
+          $chezmoiPath = "$env:LOCALAPPDATA\bin\chezmoi.exe"
+          if (-not (Test-Path $chezmoiPath)) {
+            Write-Error "❌ Chezmoi not found at $chezmoiPath"
+            exit 1
+          }
+          Write-Host "✅ Chezmoi installed successfully at $chezmoiPath"
+
+      - name: Verify PowerShell profile
+        shell: pwsh
+        run: |
+          $profilePath = "$env:USERPROFILE\.config\powershell\profile.ps1"
+          if (-not (Test-Path $profilePath)) {
+            Write-Error "❌ PowerShell profile not found"
+            exit 1
+          }
+          Write-Host "✅ PowerShell profile applied"
+
+      - name: Display Chezmoi status
+        shell: pwsh
+        run: |
+          $env:Path = "$env:LOCALAPPDATA\bin;$env:Path"
+          Write-Host "📊 Chezmoi managed files:"
+          chezmoi managed
+          Write-Host ""
+          Write-Host "📋 Chezmoi data:"
+          chezmoi data
+
+      - name: Verify Git configuration
+        shell: pwsh
+        run: |
+          $gitConfigPath = "$env:USERPROFILE\.config\git\config"
+          if (-not (Test-Path $gitConfigPath)) {
+            Write-Error "❌ Git config not found"
+            exit 1
+          }
+          Write-Host "✅ Git configuration applied"
