@@ -68,9 +68,6 @@ done
 # Check chezmoi data to verify installType
 echo ""
 echo "📋 Checking chezmoi data:"
-echo "  Shell hostname: $(hostname)"
-echo "  Chezmoi hostname: $(chezmoi data 2>/dev/null | grep -o '"hostname": "[^"]*"' | head -1 | cut -d'"' -f4 || echo "unknown")"
-echo "  Chezmoi fqdnHostname: $(chezmoi data 2>/dev/null | grep -o '"fqdnHostname": "[^"]*"' | head -1 | cut -d'"' -f4 || echo "unknown")"
 INSTALL_TYPE=$(chezmoi data 2>/dev/null | grep -o '"installType": "[^"]*"' | head -1 | cut -d'"' -f4 || echo "unknown")
 echo "  Install type: ${INSTALL_TYPE}"
 

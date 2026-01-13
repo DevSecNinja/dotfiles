@@ -26,8 +26,8 @@
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- $hostname := .chezmoi.hostname -}}
-{{- if hasPrefix $hostname "SVL" -}}
-{{-   if hasPrefix $hostname "SVLDEV" -}}
+{{- if $hostname | hasPrefix "SVL" -}}
+{{-   if $hostname | hasPrefix "SVLDEV" -}}
 {{-     $installType = "full" -}}
 {{-     if $interactive -}}
 {{-       writeToStdout "🖥️  Dev server detected - installing full dotfiles\n" -}}

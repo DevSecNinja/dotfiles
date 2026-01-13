@@ -96,12 +96,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Debug hostname
-        run: |
-          echo "Hostname from command: $(hostname)"
-          echo "Hostname from env: ${HOSTNAME:-not set}"
-          echo "FQDN: $(hostname -f)"
-
       - name: Test light server installation
         run: ./.github/scripts/test-light-server.sh
 
@@ -118,12 +112,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
-      - name: Debug hostname
-        run: |
-          echo "Hostname from command: $(hostname)"
-          echo "Hostname from env: ${HOSTNAME:-not set}"
-          echo "FQDN: $(hostname -f)"
 
       - name: Test dev server installation
         run: ./.github/scripts/test-dev-server.sh
