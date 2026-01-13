@@ -9,7 +9,7 @@ This directory contains PowerShell profile configuration managed by chezmoi.
 
 ## Installation
 
-The profile is automatically linked by the `run_once_before_00-setup.ps1.tmpl` script during chezmoi initialization. If you need to manually create the symbolic link:
+The profile is automatically linked by the `run_once_after_setup-powershell-profile.ps1.tmpl` script during chezmoi initialization. If you need to manually create the symbolic link:
 
 ### PowerShell 7+ (pwsh)
 ```powershell
