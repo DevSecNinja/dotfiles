@@ -20,16 +20,6 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
     Set-PSReadLineKeyHandler -Key Tab -Function Complete
 }
 
-# Posh-Git for Git integration
-if (Get-Module -ListAvailable -Name posh-git) {
-    Import-Module posh-git
-}
-
-# Terminal-Icons for file icons in ls
-if (Get-Module -ListAvailable -Name Terminal-Icons) {
-    Import-Module Terminal-Icons
-}
-
 # Load aliases
 . $PSScriptRoot\aliases.ps1
 

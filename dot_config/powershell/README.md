@@ -24,8 +24,6 @@ New-Item -ItemType SymbolicLink -Path $PROFILE -Target "$HOME\.config\powershell
 ## Features
 
 - **PSReadLine** - Enhanced command-line editing with history search
-- **posh-git** - Git integration in prompt
-- **Terminal-Icons** - File icons in directory listings
 - **Custom aliases** - Unix-like shortcuts (ll, gs, gp, etc.)
 - **Git-aware prompt** - Shows current branch
 
