@@ -18,6 +18,9 @@ alias gc 'git commit'
 alias gp 'git push'
 alias gl 'git log --oneline --graph'
 
+# Pre-commit shortcuts
+alias pc 'pre-commit run --all-files'
+
 # Safety
 alias rm 'rm -i'
 alias cp 'cp -i'
