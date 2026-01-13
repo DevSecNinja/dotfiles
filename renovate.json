@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":automergeDigest",
+    ":automergeBranch"
+  ],
+  "timezone": "UTC",
+  "schedule": [
+    "before 6am on Monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assigneesFromCodeOwners": true,
+  "reviewersFromCodeOwners": true,
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Group Python dependencies",
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "groupName": "Python dependencies"
+    },
+    {
+      "description": "Group pre-commit hooks",
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "groupName": "pre-commit hooks",
+      "automerge": true
+    }
+  ],
+  "pre-commit": {
+    "enabled": true
+  },
+  "pip_requirements": {
+    "fileMatch": [
+      "(^|/)requirements\\.txt$"
+    ]
+  }
+}
