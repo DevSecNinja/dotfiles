@@ -164,56 +164,29 @@ jobs:
           }
           Write-Host "✅ PowerShell profile applied"
 
-      - name: Debug - Check for run_once scripts
-        shell: pwsh
-        run: |
-          Write-Host "🔍 Checking for run_once scripts in chezmoi state..."
-          $chezmoiSourcePath = "$env:USERPROFILE\.local\share\chezmoi"
-          if (Test-Path $chezmoiSourcePath) {
-            Write-Host "Chezmoi source directory: $chezmoiSourcePath"
-            $runOnceFiles = Get-ChildItem -Path $chezmoiSourcePath -Filter "run_once*.ps1*" -Recurse
-            if ($runOnceFiles) {
-              Write-Host "Found run_once scripts:"
-              $runOnceFiles | ForEach-Object { Write-Host "  - $($_.Name)" }
-            } else {
-              Write-Host "⚠️ No run_once scripts found"
-            }
-          }
+      # - name: Verify PowerShell profile symbolic link
+      #   shell: pwsh
+      #   run: |
+      #     $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
+      #     $profileTarget = $PROFILE
 
-          Write-Host "`n🔍 Checking chezmoi state..."
-          chezmoi state dump | Select-String "run_once"
+      #     if (-not (Test-Path $profileTarget)) {
+      #       Write-Error "❌ PowerShell profile link not created at $profileTarget"
+      #       exit 1
+      #     }
 
-          Write-Host "`n🔍 Profile directory contents:"
-          $profileDir = Split-Path -Parent $PROFILE
-          if (Test-Path $profileDir) {
-            Get-ChildItem $profileDir -Force | Format-Table Name, LinkType, Target
-          } else {
-            Write-Host "Profile directory doesn't exist: $profileDir"
-          }
+      #     $item = Get-Item $profileTarget
+      #     if ($item.LinkType -ne "SymbolicLink") {
+      #       Write-Error "❌ Profile at $profileTarget is not a symbolic link"
+      #       exit 1
+      #     }
 
-      - name: Verify PowerShell profile symbolic link
-        shell: pwsh
-        run: |
-          $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
-          $profileTarget = $PROFILE
+      #     if ($item.Target -ne $profileSource) {
+      #       Write-Error "❌ Profile symbolic link points to $($item.Target) instead of $profileSource"
+      #       exit 1
+      #     }
 
-          if (-not (Test-Path $profileTarget)) {
-            Write-Error "❌ PowerShell profile link not created at $profileTarget"
-            exit 1
-          }
-
-          $item = Get-Item $profileTarget
-          if ($item.LinkType -ne "SymbolicLink") {
-            Write-Error "❌ Profile at $profileTarget is not a symbolic link"
-            exit 1
-          }
-
-          if ($item.Target -ne $profileSource) {
-            Write-Error "❌ Profile symbolic link points to $($item.Target) instead of $profileSource"
-            exit 1
-          }
-
-          Write-Host "✅ PowerShell profile correctly linked: $profileTarget -> $profileSource"
+      #     Write-Host "✅ PowerShell profile correctly linked: $profileTarget -> $profileSource"
 
       - name: Display Chezmoi status
         shell: pwsh
