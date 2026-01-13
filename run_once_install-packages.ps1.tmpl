@@ -1,6 +1,5 @@
 # PowerShell script to install common development tools on Windows
 # Uses winget (modern, built-in) as primary package manager
-# Falls back to Chocolatey if preferred
 # For light servers, only installs essential tools
 # For full installation, installs complete development toolset
 
@@ -11,27 +10,7 @@ Write-Host "🔧 Installing development tools ({{ .installType }} mode)..." -For
 # Check if winget is available (Windows 10 1809+ with App Installer)
 $useWinget = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
 
-# Check if Chocolatey is available
-$useChoco = $null -ne (Get-Command choco -ErrorAction SilentlyContinue)
-
-if (-not $useWinget -and -not $useChoco) {
-    Write-Host "⚠️  Neither winget nor Chocolatey found." -ForegroundColor Yellow
-    Write-Host "Installing Chocolatey..." -ForegroundColor Yellow
-
-    # Install Chocolatey
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
-    $useChoco = $true
-    # Refresh environment to get choco command
-    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-    if ($machinePath -and $userPath) {
-        $env:Path = $machinePath + ";" + $userPath
-    }
-    elseif ($machinePath) {
-        $env:Path = $machinePath
-    }
+if (-not $useWinget) {
+    Write-Error "⚠️ winget not found." -ForegroundColor Yellow
+    exit 1
 }

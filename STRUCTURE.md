@@ -64,7 +64,7 @@ dotfiles-new/
 │   │
 │   └── Windows:
 │       ├── run_once_before_00-setup.ps1.tmpl      # Initial directory creation
-│       └── run_once_install-packages.ps1.tmpl     # Development tools (winget/choco)
+│       └── run_once_install-packages.ps1.tmpl     # Development tools (winget)
 │
 ├── 🧪 Validation & Testing Scripts
 │   └── scripts/

@@ -3,5 +3,9 @@
     "git.autofetchPeriod": 180,
     "git.postCommitCommand": "sync",
     "git.enableSmartCommit": true,
-    "git.confirmSync": false
+    "git.confirmSync": false,
+    "files.associations": {
+        "*.ps1.tmpl": "powershell",
+        "*.sh.tmpl": "shellscript"
+    }
 }
