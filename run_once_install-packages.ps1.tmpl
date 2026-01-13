@@ -11,6 +11,6 @@ Write-Host "🔧 Installing development tools ({{ .installType }} mode)..." -For
 $useWinget = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
 
 if (-not $useWinget) {
-    Write-Error "⚠️ winget not found." -ForegroundColor Yellow
+    Write-Error "⚠️ winget not found."
     exit 1
 }
