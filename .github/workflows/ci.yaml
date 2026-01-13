@@ -164,6 +164,30 @@ jobs:
           }
           Write-Host "✅ PowerShell profile applied"
 
+      - name: Verify PowerShell profile symbolic link
+        shell: pwsh
+        run: |
+          $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
+          $profileTarget = $PROFILE
+
+          if (-not (Test-Path $profileTarget)) {
+            Write-Error "❌ PowerShell profile link not created at $profileTarget"
+            exit 1
+          }
+
+          $item = Get-Item $profileTarget
+          if ($item.LinkType -ne "SymbolicLink") {
+            Write-Error "❌ Profile at $profileTarget is not a symbolic link"
+            exit 1
+          }
+
+          if ($item.Target -ne $profileSource) {
+            Write-Error "❌ Profile symbolic link points to $($item.Target) instead of $profileSource"
+            exit 1
+          }
+
+          Write-Host "✅ PowerShell profile correctly linked: $profileTarget -> $profileSource"
+
       - name: Display Chezmoi status
         shell: pwsh
         run: |
