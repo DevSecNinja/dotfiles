@@ -12,6 +12,10 @@ echo "🔧 Installing common development tools..."
 PACKAGES="git vim tmux curl wget tree htop python3-venv fish"
 
 if command -v apt-get >/dev/null 2>&1; then
+    # Update package lists first
+    echo "📦 Updating package lists..."
+    sudo apt-get update
+
     for pkg in $PACKAGES; do
         if ! dpkg -l | grep -q "^ii  $pkg "; then
             echo "Installing $pkg..."
