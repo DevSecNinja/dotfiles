@@ -52,9 +52,6 @@ if (-not $chezmoiExists) {
             throw "winget install failed with exit code $LASTEXITCODE"
         }
 
-        # Refresh environment variables to pick up the newly installed chezmoi
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-
         Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
     }
     catch {
