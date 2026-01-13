@@ -4,6 +4,12 @@
 # -u: exit on unset variables
 set -eu
 
+# Check if running in interactive mode
+is_interactive() {
+  # Check if stdin is a terminal
+  [ -t 0 ]
+}
+
 if ! chezmoi="$(command -v chezmoi)"; then
   bin_dir="${HOME}/.local/bin"
   chezmoi="${bin_dir}/chezmoi"
@@ -23,7 +29,12 @@ fi
 # POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188
 script_dir="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" && pwd -P)"
 
-set -- init --apply --source="${script_dir}"
+# Add --no-tty flag if not running interactively
+if is_interactive; then
+  set -- init --apply --source="${script_dir}"
+else
+  set -- init --apply --no-tty --source="${script_dir}"
+fi
 
 echo "Running 'chezmoi $*'" >&2
 # exec: replace current process with chezmoi
