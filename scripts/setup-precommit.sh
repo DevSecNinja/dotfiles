@@ -12,41 +12,27 @@ if command -v pre-commit >/dev/null 2>&1; then
 else
     echo "📦 Installing pre-commit..."
     
-    # Check for requirements.txt
-    if [ -f requirements.txt ]; then
-        # Try pipx first (best practice for tools)
-        if command -v pipx >/dev/null 2>&1; then
-            echo "Using pipx to install pre-commit..."
-            pipx install pre-commit
-        # Then try pip3
-        elif command -v pip3 >/dev/null 2>&1; then
-            echo "Using pip3 to install from requirements.txt..."
-            # In containers/CI: install directly
-            # Locally: use --user flag
-            if [ -f /.dockerenv ] || [ "${CI}" = "true" ]; then
-                pip3 install -r requirements.txt
-            else
-                pip3 install --user -r requirements.txt
-            fi
-        elif command -v pip >/dev/null 2>&1; then
-            echo "Using pip to install from requirements.txt..."
-            if [ -f /.dockerenv ] || [ "${CI}" = "true" ]; then
-                pip install -r requirements.txt
-            else
-                pip install --user -r requirements.txt
-            fi
-        else
-            echo "❌ pip not found. Please install Python and pip first."
-            exit 1
-        fi
-    else
-        echo "⚠️  requirements.txt not found, installing pre-commit directly..."
-        if command -v pip3 >/dev/null 2>&1; then
-            pip3 install --user pre-commit
-        else
-            pip install --user pre-commit
-        fi
+    # Install in a dedicated venv
+    VENV_DIR="$HOME/.local/venvs/pre-commit"
+    
+    if [ ! -d "$VENV_DIR" ]; then
+        echo "Creating venv for pre-commit..."
+        python3 -m venv "$VENV_DIR"
     fi
+    
+    echo "Installing pre-commit in venv..."
+    "$VENV_DIR/bin/pip" install --upgrade pip
+    
+    if [ -f requirements.txt ]; then
+        "$VENV_DIR/bin/pip" install -r requirements.txt
+    else
+        "$VENV_DIR/bin/pip" install pre-commit
+    fi
+    
+    # Create symlink to make pre-commit available
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
+    export PATH="$HOME/.local/bin:$PATH"
     
     # Add to PATH if needed
     export PATH="$HOME/.local/bin:$PATH"

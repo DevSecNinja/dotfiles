@@ -12,41 +12,26 @@ fi
 echo "📦 Installing pre-commit..."
 
 {{- if eq .chezmoi.os "linux" }}
-    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
-# Ubuntu/Debian
-# First ensure pip is available
-if ! command -v pip3 >/dev/null 2>&1; then
-    sudo apt-get update
-    sudo apt-get install -y python3-pip
+# Linux - install pre-commit in a venv
+VENV_DIR="$HOME/.local/venvs/pre-commit"
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating venv for pre-commit..."
+    python3 -m venv "$VENV_DIR"
 fi
 
-# Install from requirements.txt if available
+echo "Installing pre-commit in venv..."
+"$VENV_DIR/bin/pip" install --upgrade pip
 if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
-    pip3 install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
+    "$VENV_DIR/bin/pip" install -r "{{ .chezmoi.sourceDir }}/requirements.txt"
 else
-    pip3 install --user pre-commit
+    "$VENV_DIR/bin/pip" install pre-commit
 fi
-    {{- else if eq .chezmoi.osRelease.id "fedora" }}
-# Fedora
-if ! command -v pip3 >/dev/null 2>&1; then
-    sudo dnf install -y python3-pip
-fi
-if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
-    pip3 install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
-else
-    pip3 install --user pre-commit
-fi
-    {{- else if eq .chezmoi.osRelease.id "arch" }}
-# Arch Linux
-if ! command -v pip >/dev/null 2>&1; then
-    sudo pacman -S --noconfirm python-pip
-fi
-if [ -f "{{ .chezmoi.sourceDir }}/requirements.txt" ]; then
-    pip install --user -r "{{ .chezmoi.sourceDir }}/requirements.txt"
-else
-    pip install --user pre-commit
-fi
-    {{- end }}
+
+# Create symlink to make pre-commit available
+mkdir -p "$HOME/.local/bin"
+ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
+export PATH="$HOME/.local/bin:$PATH"
 {{- else if eq .chezmoi.os "darwin" }}
 # macOS - prefer pipx or brew
 if command -v pipx >/dev/null 2>&1; then
