@@ -6,10 +6,7 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$ChezmoiVersion = "latest",
-
-    [Parameter()]
-    [string]$BinDir = "$env:LOCALAPPDATA\bin"
+    [string]$ChezmoiVersion = "latest"
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,45 +28,32 @@ function Test-Interactive {
 
 $isInteractive = Test-Interactive
 
-# Create bin directory if it doesn't exist
-if (-not (Test-Path $BinDir)) {
-    Write-Host "Creating bin directory: $BinDir" -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
+# Check if winget is available
+$wingetPath = Get-Command winget -ErrorAction SilentlyContinue
+if (-not $wingetPath) {
+    Write-Error "winget is not available. Please install Windows Package Manager (winget) first."
+    exit 1
 }
 
 # Check if chezmoi is already installed
-$chezmoiPath = "$BinDir\chezmoi.exe"
-$chezmoiExists = Test-Path $chezmoiPath
+$chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
 
 if (-not $chezmoiExists) {
-    Write-Host "Installing chezmoi to '$chezmoiPath'..." -ForegroundColor Cyan
-
-    # Determine architecture
-    $arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "i386" }
-
-    # Download chezmoi
-    $downloadUrl = if ($ChezmoiVersion -eq "latest") {
-        "https://github.com/twpayne/chezmoi/releases/latest/download/chezmoi_windows_$arch.zip"
-    } else {
-        "https://github.com/twpayne/chezmoi/releases/download/v$ChezmoiVersion/chezmoi_windows_$arch.zip"
-    }
-
-    $tempZip = Join-Path $env:TEMP "chezmoi.zip"
-    $tempExtract = Join-Path $env:TEMP "chezmoi_extract"
+    Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
 
     try {
-        Write-Host "Downloading from $downloadUrl..." -ForegroundColor Yellow
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip -UseBasicParsing
-
-        # Extract chezmoi
-        if (Test-Path $tempExtract) {
-            Remove-Item -Path $tempExtract -Recurse -Force
+        if ($ChezmoiVersion -eq "latest") {
+            winget install --id twpayne.chezmoi --silent --accept-source-agreements --accept-package-agreements
+        } else {
+            winget install --id twpayne.chezmoi --version $ChezmoiVersion --silent --accept-source-agreements --accept-package-agreements
         }
-        New-Item -ItemType Directory -Path $tempExtract -Force | Out-Null
-        Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
 
-        # Move chezmoi.exe to bin directory
-        Move-Item -Path "$tempExtract\chezmoi.exe" -Destination $chezmoiPath -Force
+        if ($LASTEXITCODE -ne 0) {
+            throw "winget install failed with exit code $LASTEXITCODE"
+        }
+
+        # Refresh environment variables to pick up the newly installed chezmoi
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
         Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
     }
@@ -77,27 +61,9 @@ if (-not $chezmoiExists) {
         Write-Error "Failed to install chezmoi: $_"
         exit 1
     }
-    finally {
-        # Clean up temporary files
-        if (Test-Path $tempZip) {
-            Remove-Item -Path $tempZip -Force
-        }
-        if (Test-Path $tempExtract) {
-            Remove-Item -Path $tempExtract -Recurse -Force
-        }
-    }
-
-    # Add to PATH if not already there
-    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($userPath -notlike "*$BinDir*") {
-        Write-Host "Adding $BinDir to user PATH..." -ForegroundColor Yellow
-        [Environment]::SetEnvironmentVariable("Path", "$userPath;$BinDir", "User")
-        $env:Path = "$env:Path;$BinDir"
-        Write-Host "✅ Added to PATH (restart shell for persistence)" -ForegroundColor Green
-    }
 }
 else {
-    Write-Host "Chezmoi already installed at '$chezmoiPath'" -ForegroundColor Green
+    Write-Host "Chezmoi already installed" -ForegroundColor Green
 }
 
 # Get the source directory (script's directory)
@@ -116,7 +82,7 @@ if ($sourceDir) {
 
 # Run chezmoi
 Write-Host "`nRunning: chezmoi $($chezmoiArgs -join ' ')" -ForegroundColor Cyan
-& $chezmoiPath $chezmoiArgs
+chezmoi $chezmoiArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Chezmoi init failed with exit code $LASTEXITCODE"

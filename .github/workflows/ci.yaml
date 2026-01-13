@@ -137,12 +137,12 @@ jobs:
       - name: Verify Chezmoi installation
         shell: pwsh
         run: |
-          $chezmoiPath = "$env:LOCALAPPDATA\bin\chezmoi.exe"
-          if (-not (Test-Path $chezmoiPath)) {
-            Write-Error "❌ Chezmoi not found at $chezmoiPath"
+          $chezmoi = Get-Command chezmoi -ErrorAction SilentlyContinue
+          if (-not $chezmoi) {
+            Write-Error "❌ Chezmoi not found in PATH"
             exit 1
           }
-          Write-Host "✅ Chezmoi installed successfully at $chezmoiPath"
+          Write-Host "✅ Chezmoi installed successfully at $($chezmoi.Source)"
 
       - name: Verify PowerShell profile
         shell: pwsh
@@ -157,7 +157,6 @@ jobs:
       - name: Display Chezmoi status
         shell: pwsh
         run: |
-          $env:Path = "$env:LOCALAPPDATA\bin;$env:Path"
           Write-Host "📊 Chezmoi managed files:"
           chezmoi managed
           Write-Host ""
