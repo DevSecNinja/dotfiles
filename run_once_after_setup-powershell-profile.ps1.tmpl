@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔗 Setting up PowerShell profile symbolic link..." -ForegroundColor Cyan
+Write-Host "Setting up PowerShell profile symbolic link..." -ForegroundColor Cyan
 
 # Create symbolic link for PowerShell profile
 $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
@@ -21,19 +21,19 @@ if (Test-Path $profileSource) {
     if (Test-Path $profileTarget) {
         $existingItem = Get-Item $profileTarget
         if ($existingItem.LinkType -eq "SymbolicLink" -and $existingItem.Target -eq $profileSource) {
-            Write-Host "✅ PowerShell profile already linked correctly" -ForegroundColor Green
+            Write-Host "PowerShell profile already linked correctly" -ForegroundColor Green
         } else {
             Write-Host "Removing existing profile and creating symbolic link..." -ForegroundColor Yellow
             Remove-Item $profileTarget -Force
             New-Item -ItemType SymbolicLink -Path $profileTarget -Target $profileSource -Force | Out-Null
-            Write-Host "✅ PowerShell profile linked to $profileSource" -ForegroundColor Green
+            Write-Host "PowerShell profile linked to $profileSource" -ForegroundColor Green
         }
     } else {
         Write-Host "Creating PowerShell profile symbolic link..." -ForegroundColor Yellow
         New-Item -ItemType SymbolicLink -Path $profileTarget -Target $profileSource -Force | Out-Null
-        Write-Host "✅ PowerShell profile linked to $profileSource" -ForegroundColor Green
+        Write-Host "PowerShell profile linked to $profileSource" -ForegroundColor Green
     }
 } else {
-    Write-Host "⚠️  PowerShell profile source not found at $profileSource" -ForegroundColor Yellow
-    Write-Host "    This may be normal if PowerShell configs were excluded for this system." -ForegroundColor Yellow
+    Write-Host "PowerShell profile source not found at $profileSource" -ForegroundColor Yellow
+    Write-Host "This may be normal if PowerShell configs were excluded for this system." -ForegroundColor Yellow
 }
