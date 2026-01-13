@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     container:
-      image: mcr.microsoft.com/vscode/devcontainers/base:ubuntu
+      image: mcr.microsoft.com/devcontainers/base:debian-12
       env:
         CODESPACES: true
 
