@@ -21,7 +21,7 @@ Chezmoi uses special prefixes in filenames to determine how files are managed:
 ```
 dotfiles-new/
 │
-├── 🐠 Fish Shell Configuration
+├── 🐠 Fish Shell Configuration (Linux/macOS/WSL)
 │   └── dot_config/fish/
 │       ├── config.fish              # Main Fish configuration
 │       ├── conf.d/                  # Auto-loaded configuration snippets
@@ -32,6 +32,18 @@ dotfiles-new/
 │       │   └── .gitkeep
 │       └── completions/             # Custom completions
 │           └── .gitkeep
+│
+├── 💻 PowerShell Configuration (Windows)
+│   └── dot_config/powershell/
+│       ├── profile.ps1              # Main PowerShell profile
+│       ├── aliases.ps1              # Command aliases and functions
+│       └── README.md                # PowerShell configuration guide
+│
+├── 🪟 Windows Terminal Configuration
+│   └── AppData/Local/Packages/
+│       └── Microsoft.WindowsTerminal_8wekyb3d8bbwe/
+│           └── LocalState/
+│               └── settings.json    # Windows Terminal settings
 │
 ├── 🔧 Git Configuration
 │   └── dot_config/git/
@@ -44,10 +56,15 @@ dotfiles-new/
 │   └── dot_config/shell/.gitkeep    # Future bash/zsh configs
 │
 ├── 🚀 Setup Scripts (run on chezmoi apply)
-│   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
-│   ├── run_once_install-fish.sh.tmpl          # Fish shell installation
-│   ├── run_once_install-packages.sh.tmpl      # Development tools
-│   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks
+│   ├── Unix/Linux/macOS/WSL:
+│   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
+│   │   ├── run_once_install-fish.sh.tmpl          # Fish shell installation
+│   │   ├── run_once_install-packages.sh.tmpl      # Development tools
+│   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks
+│   │
+│   └── Windows:
+│       ├── run_once_before_00-setup.ps1.tmpl      # Initial directory creation
+│       └── run_once_install-packages.ps1.tmpl     # Development tools (winget/choco)
 │
 ├── 🧪 Validation & Testing Scripts
 │   └── scripts/
@@ -66,7 +83,8 @@ dotfiles-new/
 │   ├── .chezmoiignore               # Files to not copy to home
 │   ├── .pre-commit-config.yaml      # Pre-commit hooks configuration
 │   ├── requirements.txt             # Python dependencies (pre-commit)
-│   └── install.sh                   # Installation script
+│   ├── install.sh                   # Installation script (Unix)
+│   └── install.ps1                  # Installation script (Windows)
 │
 ├── 📚 Documentation
 │   ├── README.md                    # Main documentation
@@ -112,11 +130,12 @@ Access Chezmoi data in `.tmpl` files:
 ```yaml
 # Available variables
 {{ .chezmoi.os }}              # "linux", "darwin", "windows"
-{{ .chezmoi.osRelease.id }}    # "ubuntu", "debian"
+{{ .chezmoi.osRelease.id }}    # "ubuntu", "debian" (Linux only)
 {{ .chezmoi.hostname }}        # Hostname
 {{ .chezmoi.username }}        # Current user
 {{ .name }}                    # User's name (from prompts)
 {{ .email }}                   # User's email (from prompts)
+{{ .installType }}             # "light" or "full" (auto-detected)
 ```
 
 ### Conditional Configuration
@@ -126,6 +145,15 @@ Access Chezmoi data in `.tmpl` files:
 # macOS-specific config
 {{- else if eq .chezmoi.os "linux" }}
 # Linux-specific config
+{{- else if eq .chezmoi.os "windows" }}
+# Windows-specific config
+{{- end }}
+
+# Installation mode
+{{- if eq .installType "light" }}
+# Light server installation
+{{- else }}
+# Full installation
 {{- end }}
 ```
 
@@ -150,6 +178,7 @@ chezmoi init --data=false
 
 ## 📦 What Gets Applied Where
 
+### Unix/Linux/macOS/WSL
 | Source File | Target Location |
 |-------------|----------------|
 | `dot_vimrc` | `~/.vimrc` |
@@ -157,6 +186,17 @@ chezmoi init --data=false
 | `dot_config/fish/config.fish` | `~/.config/fish/config.fish` |
 | `dot_config/git/config.tmpl` | `~/.config/git/config` |
 | `run_once_*.sh.tmpl` | Executed once, not copied |
+
+### Windows
+| Source File | Target Location |
+|-------------|----------------|
+| `dot_config/powershell/profile.ps1` | `~/.config/powershell/profile.ps1` |
+| `dot_config/powershell/aliases.ps1` | `~/.config/powershell/aliases.ps1` |
+| `dot_config/git/config.tmpl` | `~/.config/git/config` |
+| `AppData/.../settings.json` | `%LOCALAPPDATA%/.../settings.json` |
+| `run_once_*.ps1.tmpl` | Executed once, not copied |
+
+**Note**: Platform-specific files are filtered via `.chezmoiignore`.
 
 ## 🎓 Learning Resources
 

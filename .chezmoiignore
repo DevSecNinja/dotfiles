@@ -1,6 +1,18 @@
 .github/
-install.sh
 LICENSE
 README.md
 .pre-commit-config.yaml
 requirements.txt
+
+{{- if eq .chezmoi.os "windows" }}
+# Ignore Unix-specific files on Windows
+install.sh
+run_once_*.sh.tmpl
+dot_config/fish/
+{{- else }}
+# Ignore Windows-specific files on Unix systems
+install.ps1
+run_once_*.ps1.tmpl
+dot_config/powershell/
+AppData/
+{{- end }}

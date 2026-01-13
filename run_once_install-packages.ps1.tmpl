@@ -1,0 +1,116 @@
+# PowerShell script to install common development tools on Windows
+# Uses winget (modern, built-in) as primary package manager
+# Falls back to Chocolatey if preferred
+# For light servers, only installs essential tools
+# For full installation, installs complete development toolset
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "🔧 Installing development tools ({{ .installType }} mode)..." -ForegroundColor Cyan
+
+# Check if winget is available (Windows 10 1809+ with App Installer)
+$useWinget = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
+
+# Check if Chocolatey is available
+$useChoco = $null -ne (Get-Command choco -ErrorAction SilentlyContinue)
+
+if (-not $useWinget -and -not $useChoco) {
+    Write-Host "⚠️  Neither winget nor Chocolatey found." -ForegroundColor Yellow
+    Write-Host "Installing Chocolatey..." -ForegroundColor Yellow
+
+    # Install Chocolatey
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+    $useChoco = $true
+    # Refresh environment to get choco command
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+}
+
+{{- if eq .installType "light" }}
+# Light installation: Only essential tools
+$packages = @(
+    "git",
+    "vim",
+    "curl",
+    "wget"
+)
+{{- else }}
+# Full installation: All development tools
+$packages = @(
+    "git",
+    "vim",
+    "curl",
+    "wget",
+    "7zip",
+    "python3",
+    "nodejs",
+    "vscode",
+    "powershell-core"
+)
+{{- end }}
+
+# Install packages
+foreach ($package in $packages) {
+    if ($useWinget) {
+        Write-Host "Checking $package..." -ForegroundColor Yellow
+        # Check if already installed
+        $installed = winget list --id $package 2>&1 | Select-String -Pattern $package -Quiet
+        if ($installed) {
+            Write-Host "✅ $package already installed" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Installing $package via winget..." -ForegroundColor Yellow
+            winget install --id $package --silent --accept-source-agreements --accept-package-agreements
+        }
+    }
+    elseif ($useChoco) {
+        Write-Host "Checking $package..." -ForegroundColor Yellow
+        $installed = choco list --local-only $package --exact 2>&1 | Select-String -Pattern "1 packages installed" -Quiet
+        if ($installed) {
+            Write-Host "✅ $package already installed" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Installing $package via Chocolatey..." -ForegroundColor Yellow
+            choco install $package -y
+        }
+    }
+}
+
+{{- if eq .installType "full" }}
+# Additional setup for full installation
+Write-Host "`n📦 Setting up additional development tools..." -ForegroundColor Cyan
+
+# Install Windows Terminal if not present (winget only, as it's a Store app)
+if ($useWinget) {
+    $wtInstalled = winget list --id Microsoft.WindowsTerminal 2>&1 | Select-String -Pattern "WindowsTerminal" -Quiet
+    if (-not $wtInstalled) {
+        Write-Host "Installing Windows Terminal..." -ForegroundColor Yellow
+        winget install --id Microsoft.WindowsTerminal --silent --accept-source-agreements --accept-package-agreements
+    }
+    else {
+        Write-Host "✅ Windows Terminal already installed" -ForegroundColor Green
+    }
+}
+
+# Install PowerShell modules (cross-platform)
+$psModules = @(
+    "posh-git",
+    "Terminal-Icons",
+    "PSReadLine"
+)
+
+foreach ($module in $psModules) {
+    if (Get-Module -ListAvailable -Name $module) {
+        Write-Host "✅ PowerShell module $module already installed" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Installing PowerShell module: $module" -ForegroundColor Yellow
+        Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber
+    }
+}
+{{- end }}
+
+Write-Host "`n✅ Development tools installation complete ({{ .installType }} mode)!" -ForegroundColor Green
+Write-Host "💡 You may need to restart your shell for changes to take effect" -ForegroundColor Yellow

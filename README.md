@@ -4,11 +4,11 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 
 ## ✨ Features
 
-- **Fish Shell**: Modern shell with sensible defaults and useful aliases
+- **Fish Shell** (Linux/macOS) & **PowerShell** (Windows): Modern shell configurations with sensible defaults and useful aliases
 - **Git Configuration**: Pre-configured with templates for user info
 - **Vim & Tmux**: Basic but functional configurations
 - **Automated Setup**: Scripts to install tools and create directories
-- **Cross-Platform**: Works on Linux (Ubuntu/Debian) and macOS
+- **Cross-Platform**: Works on Linux (Ubuntu/Debian), macOS, and Windows (PowerShell/WSL)
 - **Smart Installation**: Automatically detects server type and installs appropriate version
   - **Light mode** for servers (SVL*): Essential tools only
   - **Full mode** for dev servers (SVLDEV*) and workstations: All development tools
@@ -18,30 +18,40 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 ```
 dotfiles-new/
 ├── dot_config/                    # XDG config directory (~/.config/)
-│   ├── fish/                      # Fish shell configuration
+│   ├── fish/                      # Fish shell configuration (Linux/macOS)
 │   │   ├── config.fish           # Main Fish config
 │   │   ├── conf.d/               # Configuration snippets (auto-loaded)
 │   │   │   └── aliases.fish      # Command aliases
 │   │   ├── functions/            # Custom Fish functions
 │   │   │   └── fish_greeting.fish
 │   │   └── completions/          # Custom completions
+│   ├── powershell/                # PowerShell configuration (Windows)
+│   │   ├── profile.ps1           # Main PowerShell profile
+│   │   └── aliases.ps1           # Command aliases
 │   ├── git/                       # Git configuration
 │   │   ├── config.tmpl           # Git config with templating
 │   │   └── ignore                # Global gitignore
 │   └── shell/                     # Other shell configs (bash, zsh)
+├── AppData/                       # Windows-specific application data
+│   └── Local/Packages/
+│       └── Microsoft.WindowsTerminal_.../
+│           └── LocalState/
+│               └── settings.json  # Windows Terminal settings
 ├── dot_vimrc                      # Vim configuration
 ├── dot_tmux.conf                  # Tmux configuration
-├── run_once_before_00-setup.sh.tmpl      # Initial directory setup
-├── run_once_install-fish.sh.tmpl         # Fish shell installation
-├── run_once_install-packages.sh.tmpl     # Development tools
+├── run_once_before_00-setup.sh.tmpl      # Initial directory setup (Unix)
+├── run_once_before_00-setup.ps1.tmpl     # Initial directory setup (Windows)
+├── run_once_install-packages.sh.tmpl     # Development tools (Unix)
+├── run_once_install-packages.ps1.tmpl    # Development tools (Windows)
 ├── .chezmoi.yaml.tmpl            # Chezmoi configuration
 ├── .chezmoiignore                # Files to exclude
-└── install.sh                     # Installation script
+├── install.sh                     # Installation script (Unix)
+└── install.ps1                    # Installation script (Windows)
 ```
 
 ## 🚀 Quick Start
 
-### Install on a new machine
+### Install on Linux/macOS
 
 ```bash
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
@@ -55,22 +65,52 @@ cd dotfiles-new
 ./install.sh
 ```
 
+### Install on Windows (PowerShell)
+
+**Option 1: Direct from GitHub (PowerShell 5.1+ or PowerShell 7+)**
+
+```powershell
+# Using the official chezmoi installer (recommended)
+(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja/dotfiles-new
+```
+
+**Option 2: Clone and install locally**
+
+```powershell
+git clone https://github.com/DevSecNinja/dotfiles-new.git
+cd dotfiles-new
+.\install.ps1
+```
+
+### Install on WSL (Windows Subsystem for Linux)
+
+Use the Linux installation method inside your WSL distribution:
+
+```bash
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+```
+
+The dotfiles will automatically detect WSL and apply appropriate configurations.
+
 ### What happens during installation
 
 1. Installs Chezmoi (if not present)
-2. Detects the system type based on hostname:
+2. Detects the system type based on hostname and OS:
    - **Light Server Mode** (hostname starts with `SVL` but not `SVLDEV`):
-     - Installs only essential tools: git, vim, tmux, curl, wget, fish
+     - **Linux/macOS**: Installs only essential tools: git, vim, tmux, curl, wget, fish
+     - **Windows**: Installs only essential tools: git, vim, curl, wget
      - Skips pre-commit hooks and dev-only tools
      - Excludes development configuration files
    - **Full Mode** (hostname starts with `SVLDEV` or any other name):
-     - Installs all development tools: tree, htop, python3-venv, etc.
+     - **Linux/macOS**: Installs all development tools: tree, htop, python3-venv, etc.
+     - **Windows**: Installs all development tools: 7zip, python3, nodejs, vscode, PowerShell 7
      - Installs pre-commit hooks (in devcontainer environments)
      - Includes all configuration files
 3. Prompts for your name and email (for Git config)
 4. Runs initial setup scripts:
-   - Creates necessary directories (~/.vim/undo, ~/bin, ~/projects)
-   - Installs Fish shell (if not present)
+   - **Linux/macOS**: Creates directories (~/.vim/undo, ~/bin, ~/projects)
+   - **Windows**: Creates directories (%USERPROFILE%\bin, %USERPROFILE%\projects)
+   - Installs Fish shell (Linux/macOS) or PowerShell modules (Windows)
    - Installs packages based on installation mode
 5. Applies all dotfiles to your home directory
 
@@ -102,6 +142,10 @@ On first run, Chezmoi will prompt for:
 
 To re-enter this information:
 ```bash
+# Linux/macOS/WSL
+chezmoi init --data=false
+
+# Windows PowerShell
 chezmoi init --data=false
 ```
 
@@ -109,12 +153,20 @@ chezmoi init --data=false
 
 1. **Add an existing file**:
    ```bash
+   # Linux/macOS/WSL
    chezmoi add ~/.bashrc
+
+   # Windows PowerShell
+   chezmoi add $PROFILE
    ```
 
 2. **Edit a managed file**:
    ```bash
+   # Linux/macOS/WSL
    chezmoi edit ~/.config/fish/config.fish
+
+   # Windows PowerShell
+   chezmoi edit ~/.config/powershell/profile.ps1
    ```
 
 3. **Apply changes**:
@@ -122,20 +174,47 @@ chezmoi init --data=false
    chezmoi apply
    ```
 
-### Fish Shell Customization
+### Shell Customization
+
+#### Fish Shell (Linux/macOS/WSL)
 
 - **Aliases**: Edit [dot_config/fish/conf.d/aliases.fish](dot_config/fish/conf.d/aliases.fish)
 - **Functions**: Add files to [dot_config/fish/functions/](dot_config/fish/functions/)
 - **Config snippets**: Add files to [dot_config/fish/conf.d/](dot_config/fish/conf.d/)
 
+#### PowerShell (Windows)
+
+- **Profile**: Edit [dot_config/powershell/profile.ps1](dot_config/powershell/profile.ps1)
+- **Aliases**: Edit [dot_config/powershell/aliases.ps1](dot_config/powershell/aliases.ps1)
+- **View all aliases**: Type `aliases` in PowerShell
+
+### Windows Terminal Configuration
+
+Windows Terminal settings are managed at:
+- [AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json](AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json)
+
+Features:
+- Custom color scheme (One Half Dark)
+- PowerShell 7 as default profile
+- WSL integration
+- Nerd Font support
+- Useful keyboard shortcuts
+
 ### Adding Scripts
 
-Create scripts in the root directory:
+Create scripts in the root directory with platform-specific extensions:
+
+**Unix (Linux/macOS/WSL)**:
 - `run_once_*.sh`: Runs once after installation
 - `run_onchange_*.sh`: Runs when file content changes
 - `run_*.sh`: Runs on every apply
 
-Use `.tmpl` extension to use Chezmoi templating.
+**Windows**:
+- `run_once_*.ps1`: Runs once after installation
+- `run_onchange_*.ps1`: Runs when file content changes
+- `run_*.ps1`: Runs on every apply
+
+Use `.tmpl` extension to use Chezmoi templating (e.g., `run_once_setup.sh.tmpl`).
 
 ## 📝 Common Commands
 
@@ -164,13 +243,26 @@ chezmoi verify
 
 ## 🎯 Tips
 
+### Unix (Linux/macOS/WSL)
 - **Set Fish as default shell**: `chsh -s $(which fish)`
+- **Preview changes**: Always run `chezmoi diff` before `chezmoi apply`
+
+### Windows
+- **Set PowerShell 7 as default**: Open Windows Terminal settings and set PowerShell 7 as default profile
+- **Install Nerd Font**: Download and install [CaskaydiaCove Nerd Font](https://www.nerdfonts.com/) for best Terminal Icons experience
+- **PowerShell modules**: Type `aliases` to see all available shortcuts
+
+### Cross-Platform
 - **Preview changes**: Always run `chezmoi diff` before `chezmoi apply`
 - **Templates**: Use `.tmpl` extension to access Chezmoi variables like `{{ .name }}`
 - **Platform-specific config**: Use Chezmoi's conditional templating:
   ```
   {{- if eq .chezmoi.os "darwin" }}
   # macOS-specific config
+  {{- else if eq .chezmoi.os "linux" }}
+  # Linux-specific config
+  {{- else if eq .chezmoi.os "windows" }}
+  # Windows-specific config
   {{- end }}
   ```
 
