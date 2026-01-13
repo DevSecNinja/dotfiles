@@ -14,11 +14,6 @@ fi
 echo "🧪 Testing dev server installation scenario..."
 echo "🖥️  Hostname: $(hostname)"
 
-# Set a temporary HOME for testing
-TEST_HOME="${TMPDIR:-/tmp}/chezmoi-test-dev-$$"
-export HOME="${TEST_HOME}"
-mkdir -p "${TEST_HOME}"
-
 # Ensure .local/bin is in PATH
 export PATH="${HOME}/.local/bin:${PATH}"
 
@@ -26,7 +21,6 @@ export PATH="${HOME}/.local/bin:${PATH}"
 SOURCE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 echo "📂 Source directory: ${SOURCE_DIR}"
-echo "🏠 Test HOME: ${TEST_HOME}"
 echo ""
 
 # Install chezmoi if not present
@@ -77,11 +71,6 @@ if [ "${INSTALL_TYPE}" != "full" ]; then
 else
 	echo "  ✅ Install type is correctly set to 'full'"
 fi
-
-# Clean up
-echo ""
-echo "🧹 Cleaning up test environment..."
-rm -rf "${TEST_HOME}"
 
 # Report results
 echo ""
