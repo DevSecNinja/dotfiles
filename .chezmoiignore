@@ -2,3 +2,5 @@
 install.sh
 LICENSE
 README.md
+.pre-commit-config.yaml
+requirements.txt

@@ -23,8 +23,30 @@
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 
+{{- /* Determine installation type based on hostname */ -}}
+{{- $installType := "full" -}}
+{{- $hostname := .chezmoi.hostname -}}
+{{- if $hostname | hasPrefix "SVL" -}}
+{{-   if $hostname | hasPrefix "SVLDEV" -}}
+{{-     $installType = "full" -}}
+{{-     if $interactive -}}
+{{-       writeToStdout "🖥️  Dev server detected - installing full dotfiles\n" -}}
+{{-     end -}}
+{{-   else -}}
+{{-     $installType = "light" -}}
+{{-     if $interactive -}}
+{{-       writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
+{{-     end -}}
+{{-   end -}}
+{{- else -}}
+{{-   if $interactive -}}
+{{-     writeToStdout "💻 Workstation detected - installing full dotfiles\n" -}}
+{{-   end -}}
+{{- end -}}
+
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
   name: {{ $name | quote }}
   email: {{ $email | quote }}
+  installType: {{ $installType | quote }}

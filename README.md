@@ -9,6 +9,9 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Vim & Tmux**: Basic but functional configurations
 - **Automated Setup**: Scripts to install tools and create directories
 - **Cross-Platform**: Works on Linux (Ubuntu/Debian) and macOS
+- **Smart Installation**: Automatically detects server type and installs appropriate version
+  - **Light mode** for servers (SVL*): Essential tools only
+  - **Full mode** for dev servers (SVLDEV*) and workstations: All development tools
 
 ## 📁 Structure
 
@@ -55,12 +58,39 @@ cd dotfiles-new
 ### What happens during installation
 
 1. Installs Chezmoi (if not present)
-2. Prompts for your name and email (for Git config)
-3. Runs initial setup scripts:
+2. Detects the system type based on hostname:
+   - **Light Server Mode** (hostname starts with `SVL` but not `SVLDEV`):
+     - Installs only essential tools: git, vim, tmux, curl, wget, fish
+     - Skips pre-commit hooks and dev-only tools
+     - Excludes development configuration files
+   - **Full Mode** (hostname starts with `SVLDEV` or any other name):
+     - Installs all development tools: tree, htop, python3-venv, etc.
+     - Installs pre-commit hooks (in devcontainer environments)
+     - Includes all configuration files
+3. Prompts for your name and email (for Git config)
+4. Runs initial setup scripts:
    - Creates necessary directories (~/.vim/undo, ~/bin, ~/projects)
    - Installs Fish shell (if not present)
-   - Installs common development tools
-4. Applies all dotfiles to your home directory
+   - Installs packages based on installation mode
+5. Applies all dotfiles to your home directory
+
+### Installation Modes
+
+The dotfiles automatically detect the system type:
+
+- **🔧 Light Server** (`SVL*`): Minimal installation for production servers
+  - Example hostnames: `SVLPROD01`, `SVLWEB02`, `SVLDB03`
+  - Only essential tools installed
+  - No dev-only tools like pre-commit, tree, htop
+
+- **🖥️ Dev Server** (`SVLDEV*`): Full installation for development servers
+  - Example hostnames: `SVLDEV01`, `SVLDEV-STAGING`
+  - All development tools installed
+  - Includes pre-commit hooks and dev tools
+
+- **💻 Workstation** (any other hostname): Full installation
+  - Your local machine, laptop, or desktop
+  - All tools and features enabled
 
 ## 🔧 Customization
 
@@ -158,6 +188,14 @@ The repository includes validation and testing scripts in the [scripts/](scripts
 ./scripts/validate-fish-config.sh   # Validate Fish config
 ./scripts/test-chezmoi-apply.sh     # Dry-run apply
 ```
+
+### CI Testing
+
+The CI pipeline automatically tests both installation scenarios:
+- **Light server** (hostname `SVLPROD01`): Minimal toolset
+- **Dev server** (hostname `SVLDEV01`): Full toolset
+
+These tests run only in GitHub Actions with specific container hostname configuration.
 
 ### Pre-commit Hooks
 
