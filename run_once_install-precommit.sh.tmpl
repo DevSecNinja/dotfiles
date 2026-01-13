@@ -1,9 +1,15 @@
 #!/bin/bash
 # This script installs pre-commit for code quality checks
 # Runs once per installation
-# Only runs in devcontainer environments
+# Only runs in devcontainer environments OR on dev servers (SVLDEV*)
+# Skipped on light servers (SVL*)
 
 set -e
+
+{{- if eq .installType "light" }}
+echo "ℹ️  Skipping pre-commit installation (light server mode)"
+exit 0
+{{- end }}
 
 if command -v pre-commit >/dev/null 2>&1; then
     echo "✅ pre-commit already installed"

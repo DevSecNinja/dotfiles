@@ -1,15 +1,23 @@
 #!/bin/bash
 # This script installs common development tools
 # Customize based on your needs
+# For light servers (SVL*), only installs essential tools
+# For dev servers (SVLDEV*) and workstations, installs full toolset
 
 set -e
 
-echo "🔧 Installing common development tools..."
+echo "🔧 Installing development tools ({{ .installType }} mode)..."
 
 {{- if eq .chezmoi.os "linux" }}
     {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
 # Ubuntu/Debian packages
+{{- if eq .installType "light" }}
+# Light installation: Only essential tools for servers
+PACKAGES="git vim tmux curl wget fish"
+{{- else }}
+# Full installation: All development tools
 PACKAGES="git vim tmux curl wget tree htop python3-venv fish"
+{{- end }}
 
 if command -v apt-get >/dev/null 2>&1; then
     # Update package lists first
@@ -29,11 +37,15 @@ fi
 {{- else if eq .chezmoi.os "darwin" }}
 # macOS with Homebrew
 if command -v brew >/dev/null 2>&1; then
+{{- if eq .installType "light" }}
+    brew install git vim tmux fish
+{{- else }}
     brew install git vim tmux tree htop fish
+{{- end }}
 else
     echo "❌ Homebrew not found. Please install Homebrew first."
     exit 1
 fi
 {{- end }}
 
-echo "✅ Development tools installation complete!"
+echo "✅ Development tools installation complete ({{ .installType }} mode)!"

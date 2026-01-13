@@ -2,3 +2,10 @@
 install.sh
 LICENSE
 README.md
+
+{{- /* Light server mode: exclude development-only files */ -}}
+{{- if eq .installType "light" }}
+# Light server - exclude development tools
+.pre-commit-config.yaml
+requirements.txt
+{{- end }}

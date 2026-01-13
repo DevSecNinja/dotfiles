@@ -81,3 +81,37 @@ jobs:
 
       - name: Test Fish configuration
         run: ./scripts/test-fish-config.sh
+
+  test-light-server:
+    name: Test Light Server Installation
+    runs-on: ubuntu-latest
+    needs: validate
+    container:
+      image: mcr.microsoft.com/devcontainers/base:debian-12
+      env:
+        CODESPACES: true
+        HOSTNAME: SVLPROD01
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Test light server installation
+        run: ./scripts/test-light-server.sh
+
+  test-dev-server:
+    name: Test Dev Server Installation
+    runs-on: ubuntu-latest
+    needs: validate
+    container:
+      image: mcr.microsoft.com/devcontainers/base:debian-12
+      env:
+        CODESPACES: true
+        HOSTNAME: SVLDEV01
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Test dev server installation
+        run: ./scripts/test-dev-server.sh
