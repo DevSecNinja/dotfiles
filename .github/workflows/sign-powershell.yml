@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Sign PowerShell scripts
-        shell: powershell
+        shell: pwsh
         env:
           CERT_BASE64: ${{ secrets.CODE_SIGNING_CERT }}
           CERT_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
