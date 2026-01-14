@@ -17,16 +17,16 @@
     and will prompt securely if not provided on the command line.
 
 .EXAMPLE
-    .\New-SigninCert.ps1
+    .\New-SigningCert.ps1
     Prompts for password securely (SubjectName uses chezmoi default).
 
 .EXAMPLE
-    .\New-SigninCert.ps1 -SubjectName "John Doe"
+    .\New-SigningCert.ps1 -SubjectName "John Doe"
     Creates a certificate for "John Doe" and prompts for password.
 
 .EXAMPLE
     $securePass = ConvertTo-SecureString "MyStrongPassword123!" -AsPlainText -Force
-    .\New-SigninCert.ps1 -SubjectName "John Doe" -Password $securePass
+    .\New-SigningCert.ps1 -SubjectName "John Doe" -Password $securePass
     Creates a certificate with provided subject name and password (non-interactive).
 
 .NOTES
@@ -105,8 +105,8 @@ try {
 
     # Export paths
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $pfxPath = Join-Path $PSScriptRoot "CodeSigningCert-$timestamp.pfx"
-    $base64Path = Join-Path $PSScriptRoot "cert-base64-$timestamp.txt"
+    $pfxPath = Join-Path . "CodeSigningCert-$timestamp.pfx"
+    $base64Path = Join-Path . "cert-base64-$timestamp.txt"
 
     # Export as PFX
     Write-Host "Exporting certificate to PFX..."
