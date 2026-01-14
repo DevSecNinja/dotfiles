@@ -149,7 +149,8 @@ AfterAll {
     if ($IsWindows -and $script:TestCertThumbprint -and $env:PESTER_CI -ne 'true') {
         try {
             if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
-                Remove-Item "Cert:\CurrentUser\Root\$script:TestCertThumbprint" -Force -ErrorAction SilentlyContinue
+            # Use certutil.exe which works reliably in PowerShell Core
+            $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
             }
         }
         catch {
