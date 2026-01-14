@@ -6,19 +6,6 @@
 # Set UTF-8 encoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# PSReadLine configuration for better command line editing
-if (Get-Module -ListAvailable -Name PSReadLine) {
-    Import-Module PSReadLine
-    Set-PSReadLineOption -PredictionSource History
-    Set-PSReadLineOption -PredictionViewStyle ListView
-    Set-PSReadLineOption -EditMode Windows
-    Set-PSReadLineOption -BellStyle None
-
-    # Key bindings
-    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
-    Set-PSReadLineKeyHandler -Key Tab -Function Complete
-}
 
 # Load aliases
 . $PSScriptRoot\aliases.ps1
