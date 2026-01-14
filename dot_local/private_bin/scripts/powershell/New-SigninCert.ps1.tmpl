@@ -8,9 +8,26 @@
     scripts in GitHub Actions. It exports the certificate as a PFX file and converts it
     to base64 for easy storage in GitHub Secrets.
 
+.PARAMETER SubjectName
+    The subject name for the certificate (e.g., "Your Name" or "CN=Your Name").
+    If not provided, uses the chezmoi configured name or prompts for input.
+
+.PARAMETER Password
+    The password to protect the certificate (minimum 8 characters). This parameter is mandatory
+    and will prompt securely if not provided on the command line.
+
 .EXAMPLE
-    .\create-signing-cert.ps1
-    Creates a certificate and exports it with user-provided details.
+    .\New-SigninCert.ps1
+    Prompts for password securely (SubjectName uses chezmoi default).
+
+.EXAMPLE
+    .\New-SigninCert.ps1 -SubjectName "John Doe"
+    Creates a certificate for "John Doe" and prompts for password.
+
+.EXAMPLE
+    $securePass = ConvertTo-SecureString "MyStrongPassword123!" -AsPlainText -Force
+    .\New-SigninCert.ps1 -SubjectName "John Doe" -Password $securePass
+    Creates a certificate with provided subject name and password (non-interactive).
 
 .NOTES
     This script must be run on Windows with PowerShell 5.1 or later.
@@ -18,7 +35,44 @@
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [Parameter(
+        Mandatory = $false,
+        Position = 0,
+        HelpMessage = "The subject name for the certificate (e.g., 'Your Name'). Will be prefixed with 'CN=' if not present."
+    )]
+    [ValidateNotNullOrEmpty()]
+    [ValidateScript({
+        if ($_ -eq "{{ .name }}") {
+            throw "Chezmoi template not applied. Please provide a valid subject name using the -SubjectName parameter."
+        }
+        if ([string]::IsNullOrWhiteSpace($_)) {
+            throw "Subject name cannot be empty or whitespace."
+        }
+        $true
+    })]
+    [string]$SubjectName = "{{ .name }}",
+
+    [Parameter(
+        Mandatory = $true,
+        Position = 1,
+        HelpMessage = "The password to protect the certificate (minimum 8 characters)."
+    )]
+    [ValidateNotNull()]
+    [ValidateScript({
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($_)
+        try {
+            $plainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            if ($plainText.Length -lt 8) {
+                throw "Password must be at least 8 characters long."
+            }
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+        }
+        $true
+    })]
+    [SecureString]$Password
+)
 
 # Check if running on Windows
 if ($PSVersionTable.PSVersion.Major -lt 5 -or $PSVersionTable.Platform -eq 'Unix') {
@@ -26,53 +80,29 @@ if ($PSVersionTable.PSVersion.Major -lt 5 -or $PSVersionTable.Platform -eq 'Unix
     exit 1
 }
 
-# Certificate subject name from chezmoi config
-$subjectName = "CN={{ .name }}"
+# Ensure subject name has CN= prefix
+if ($SubjectName -notmatch '^CN=') {
+    $SubjectName = "CN=$SubjectName"
+}
 
 Write-Host "==================================="
 Write-Host "PowerShell Code Signing Certificate Creator"
 Write-Host "==================================="
 Write-Host ""
 Write-Host "This script will create a self-signed code signing certificate for:"
-Write-Host "  Subject: $subjectName"
+Write-Host "  Subject: $SubjectName"
 Write-Host ""
-
-# Prompt for password
-Write-Host "Enter a strong password to protect the certificate:"
-$password = Read-Host -AsSecureString
-Write-Host ""
-
-Write-Host "Confirming password..."
-$passwordConfirm = Read-Host -AsSecureString
-Write-Host ""
-
-# Convert SecureString to plain text for comparison
-$BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-$BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($passwordConfirm)
-$pwd1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
-$pwd2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
-
-if ($pwd1 -ne $pwd2) {
-    Write-Error "Passwords do not match. Please run the script again."
-    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
-    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
-    exit 1
-}
-
-[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
-[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
-
 Write-Host "Creating self-signed code signing certificate..."
 
 try {
     # Create the certificate
     $cert = New-SelfSignedCertificate `
         -Type CodeSigningCert `
-        -Subject $subjectName `
+        -Subject $SubjectName `
         -CertStoreLocation "Cert:\CurrentUser\My" `
         -NotAfter (Get-Date).AddYears(5) `
         -KeyExportPolicy Exportable `
-        -KeyLength 2048 `
+        -KeyLength 4096 `
         -HashAlgorithm SHA256
 
     Write-Host "✓ Certificate created successfully"
@@ -87,7 +117,7 @@ try {
 
     # Export as PFX
     Write-Host "Exporting certificate to PFX..."
-    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $password | Out-Null
+    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $Password | Out-Null
     Write-Host "✓ PFX exported: $pfxPath"
     Write-Host ""
 
