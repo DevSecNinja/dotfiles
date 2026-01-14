@@ -1,11 +1,3 @@
-# PowerShell script to set up profile loader
-# Runs when this script changes, placing the loader at the correct $PROFILE location
-# This handles OneDrive-redirected Documents folders correctly
-
-$ErrorActionPreference = "Stop"
-
-# The loader content that sources the actual config
-$loaderContent = @'
 # PowerShell profile loader
 # This file is managed by chezmoi and placed at the default PowerShell profile location
 # It sources the actual configuration from ~/.config/powershell/profile.ps1
@@ -186,20 +178,3 @@ if (Test-Path $configPath) {
 # WHcD5ML8IfhOzzgRaCtmHO06qu7WwDaeubO8FQZzT1Z7k7svUAt7UE+743qh2VQA
 # kcRtZJT7nbFeifD6us53kqjdraSpG+xoo/e7Lg+Ku/vR1CVrmw==
 # SIG # End signature block
-'@
-
-# Get the actual profile location (handles OneDrive redirects)
-$profilePath = $PROFILE
-
-# Create the profile directory if it doesn't exist
-$profileDir = Split-Path -Parent $profilePath
-if (-not (Test-Path $profileDir)) {
-    Write-Host "Creating PowerShell profile directory: $profileDir" -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
-}
-
-# Write the loader content to the profile location
-Write-Host "Setting up PowerShell profile loader at: $profilePath" -ForegroundColor Cyan
-Set-Content -Path $profilePath -Value $loaderContent -Encoding UTF8 -Force
-
-Write-Host "✅ PowerShell profile loader configured successfully" -ForegroundColor Green
