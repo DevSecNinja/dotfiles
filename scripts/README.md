@@ -4,6 +4,34 @@ Reusable validation and testing scripts for your dotfiles repository. These scri
 
 ## 📁 Available Scripts
 
+### Code Signing
+
+#### `create-signing-cert.ps1`
+Creates a self-signed code signing certificate for PowerShell scripts. This certificate is used by the GitHub Actions workflow to automatically sign all `.ps1` and `.ps1.tmpl` files.
+
+**Usage** (Windows only):
+```powershell
+# Generate certificate and setup files
+.\scripts\create-signing-cert.ps1
+
+# Follow the on-screen instructions to upload secrets to GitHub
+```
+
+**What it does:**
+- Creates a self-signed certificate valid for 5 years
+- Exports it as a password-protected PFX file
+- Generates a base64-encoded file for GitHub Secrets
+- Displays step-by-step instructions for GitHub setup
+
+**GitHub Secrets Required:**
+- `CODE_SIGNING_CERT`: Base64-encoded certificate (from cert-base64-*.txt file)
+- `CODE_SIGNING_PASSWORD`: Certificate password you entered
+
+**GitHub Actions Integration:**
+The workflow at `.github/workflows/sign-powershell.yml` automatically signs all PowerShell scripts when changes are pushed to the main branch.
+
+---
+
 ### Validation Scripts
 
 #### `validate-chezmoi.sh`

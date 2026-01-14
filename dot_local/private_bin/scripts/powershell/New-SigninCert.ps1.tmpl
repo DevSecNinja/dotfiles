@@ -1,0 +1,145 @@
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    Creates a self-signed code signing certificate for PowerShell scripts.
+
+.DESCRIPTION
+    This script generates a self-signed certificate that can be used to sign PowerShell
+    scripts in GitHub Actions. It exports the certificate as a PFX file and converts it
+    to base64 for easy storage in GitHub Secrets.
+
+.EXAMPLE
+    .\create-signing-cert.ps1
+    Creates a certificate and exports it with user-provided details.
+
+.NOTES
+    This script must be run on Windows with PowerShell 5.1 or later.
+    Run as Administrator for best compatibility.
+#>
+
+[CmdletBinding()]
+param()
+
+# Check if running on Windows
+if ($PSVersionTable.PSVersion.Major -lt 5 -or $PSVersionTable.Platform -eq 'Unix') {
+    Write-Error "This script must be run on Windows with PowerShell 5.1 or later."
+    exit 1
+}
+
+# Certificate subject name from chezmoi config
+$subjectName = "CN={{ .name }}"
+
+Write-Host "==================================="
+Write-Host "PowerShell Code Signing Certificate Creator"
+Write-Host "==================================="
+Write-Host ""
+Write-Host "This script will create a self-signed code signing certificate for:"
+Write-Host "  Subject: $subjectName"
+Write-Host ""
+
+# Prompt for password
+Write-Host "Enter a strong password to protect the certificate:"
+$password = Read-Host -AsSecureString
+Write-Host ""
+
+Write-Host "Confirming password..."
+$passwordConfirm = Read-Host -AsSecureString
+Write-Host ""
+
+# Convert SecureString to plain text for comparison
+$BSTR1 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+$BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($passwordConfirm)
+$pwd1 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR1)
+$pwd2 = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
+
+if ($pwd1 -ne $pwd2) {
+    Write-Error "Passwords do not match. Please run the script again."
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
+    exit 1
+}
+
+[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR1)
+[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR2)
+
+Write-Host "Creating self-signed code signing certificate..."
+
+try {
+    # Create the certificate
+    $cert = New-SelfSignedCertificate `
+        -Type CodeSigningCert `
+        -Subject $subjectName `
+        -CertStoreLocation "Cert:\CurrentUser\My" `
+        -NotAfter (Get-Date).AddYears(5) `
+        -KeyExportPolicy Exportable `
+        -KeyLength 2048 `
+        -HashAlgorithm SHA256
+
+    Write-Host "✓ Certificate created successfully"
+    Write-Host "  Thumbprint: $($cert.Thumbprint)"
+    Write-Host "  Valid until: $($cert.NotAfter)"
+    Write-Host ""
+
+    # Export paths
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $pfxPath = Join-Path $PSScriptRoot "CodeSigningCert-$timestamp.pfx"
+    $base64Path = Join-Path $PSScriptRoot "cert-base64-$timestamp.txt"
+
+    # Export as PFX
+    Write-Host "Exporting certificate to PFX..."
+    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $password | Out-Null
+    Write-Host "✓ PFX exported: $pfxPath"
+    Write-Host ""
+
+    # Convert to base64
+    Write-Host "Converting to base64 for GitHub Secrets..."
+    $pfxBytes = [IO.File]::ReadAllBytes($pfxPath)
+    $base64 = [Convert]::ToBase64String($pfxBytes)
+    $base64 | Out-File -FilePath $base64Path -Encoding ASCII
+    Write-Host "✓ Base64 file created: $base64Path"
+    Write-Host ""
+
+    # Display instructions
+    Write-Host "==================================="
+    Write-Host "SUCCESS! Next Steps:"
+    Write-Host "==================================="
+    Write-Host ""
+    Write-Host "1. Go to your GitHub repository:"
+    Write-Host "   https://github.com/{{ .chezmoi.username }}/dotfiles-new/settings/secrets/actions"
+    Write-Host ""
+    Write-Host "2. Click 'New repository secret' and add TWO secrets:"
+    Write-Host ""
+    Write-Host "   Secret #1:"
+    Write-Host "   Name:  CODE_SIGNING_CERT"
+    Write-Host "   Value: Copy the ENTIRE contents of:"
+    Write-Host "          $base64Path"
+    Write-Host ""
+    Write-Host "   Secret #2:"
+    Write-Host "   Name:  CODE_SIGNING_PASSWORD"
+    Write-Host "   Value: The password you entered above"
+    Write-Host ""
+    Write-Host "3. The GitHub Actions workflow (.github/workflows/sign-powershell.yml)"
+    Write-Host "   will automatically sign your PowerShell scripts on push."
+    Write-Host ""
+    Write-Host "==================================="
+    Write-Host "SECURITY NOTES:"
+    Write-Host "==================================="
+    Write-Host ""
+    Write-Host "⚠️  IMPORTANT: Keep these files secure!"
+    Write-Host "   - Store the PFX file in a safe location (password manager, encrypted drive)"
+    Write-Host "   - Delete the base64 file after uploading to GitHub"
+    Write-Host "   - Never commit these files to git"
+    Write-Host ""
+    Write-Host "To verify signing locally after GitHub Actions runs:"
+    Write-Host '  Get-AuthenticodeSignature -FilePath .\install.ps1 | Format-List'
+    Write-Host ""
+    Write-Host "Certificate details:"
+    Write-Host "  Location: Cert:\CurrentUser\My\$($cert.Thumbprint)"
+    Write-Host "  Subject: $($cert.Subject)"
+    Write-Host "  Expires: $($cert.NotAfter.ToString('yyyy-MM-dd'))"
+    Write-Host ""
+
+} catch {
+    Write-Error "Failed to create certificate: $_"
+    exit 1
+}

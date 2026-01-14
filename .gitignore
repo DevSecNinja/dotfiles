@@ -1,0 +1,27 @@
+# Certificate files - NEVER commit these!
+*.pfx
+*cert-base64*.txt
+CodeSigningCert-*.pfx
+
+# Chezmoi generated files
+.chezmoitemplates/
+.chezmoiremove
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
