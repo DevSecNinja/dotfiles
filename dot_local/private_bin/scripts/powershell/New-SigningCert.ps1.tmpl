@@ -110,7 +110,7 @@ try {
 
     # Export as PFX
     Write-Host "Exporting certificate to PFX..."
-    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $Password | Out-Null
+    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $Password
     Write-Host "✓ PFX exported: $pfxPath"
     Write-Host ""
 
@@ -128,7 +128,7 @@ try {
     Write-Host "==================================="
     Write-Host ""
     Write-Host "1. Go to your GitHub repository:"
-    Write-Host "   https://github.com/{{ .chezmoi.username }}/dotfiles-new/settings/secrets/actions"
+    Write-Host "   https://github.com/<your username>/<your repo name>/settings/secrets/actions"
     Write-Host ""
     Write-Host "2. Click 'New repository secret' and add TWO secrets:"
     Write-Host ""
