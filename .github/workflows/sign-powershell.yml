@@ -46,7 +46,6 @@ jobs:
             -CertificateBase64 $env:CERT_BASE64 `
             -CertificatePassword $securePassword `
             -Path $PWD `
-            -TrustSelfSignedRoot `
             -Exclude "*.ps1.tmpl"
 
           # Exit with error if any scripts failed to sign
