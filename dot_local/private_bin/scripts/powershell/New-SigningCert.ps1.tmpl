@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 7.0
 <#
 .SYNOPSIS
     Creates a self-signed code signing certificate for PowerShell scripts.
@@ -65,9 +65,16 @@ param(
     [SecureString]$Password
 )
 
+# Check PowerShell version
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Error "This script requires PowerShell 7.0 or later. Windows PowerShell 5.1 is not supported."
+    Write-Host "Download PowerShell: https://aka.ms/powershell" -ForegroundColor Yellow
+    exit 1
+}
+
 # Check if running on Windows
-if ($PSVersionTable.PSVersion.Major -lt 5 -or $PSVersionTable.Platform -eq 'Unix') {
-    Write-Error "This script must be run on Windows with PowerShell 5.1 or later."
+if (-not $IsWindows) {
+    Write-Error "This script must be run on Windows (certificate operations require Windows APIs)."
     exit 1
 }
 
