@@ -321,9 +321,22 @@ function Invoke-ScriptSigning {
             }
         }
         else {
+            # Debug: Capture detailed error information
+            $errorDetails = @(
+                "Status: $($result.Status)",
+                "StatusMessage: $($result.StatusMessage)",
+                "Path: $($result.Path)"
+            )
+            if ($result.SignerCertificate) {
+                $errorDetails += "SignerCert: $($result.SignerCertificate.Subject)"
+            }
+            Write-Verbose "Set-AuthenticodeSignature details: $($errorDetails -join '; ')"
+            Write-Host "" # Newline for readability
+            Write-Host "    DEBUG - StatusMessage: $($result.StatusMessage)" -ForegroundColor Magenta
+            
             return @{
                 Status = 'Failed'
-                Message = "Signing failed with status: $($result.Status)"
+                Message = "Signing failed with status: $($result.Status) - $($result.StatusMessage)"
             }
         }
     }
@@ -395,6 +408,30 @@ if (-not $SkipValidation) {
 
     Write-ScriptLog "Certificate is valid for code signing" -Level Success
 }
+
+# Debug: Display certificate details
+Write-Host ""
+Write-Host "Certificate Details:" -ForegroundColor Cyan
+Write-Host "  Subject:        $($cert.Subject)"
+Write-Host "  Issuer:         $($cert.Issuer)"
+Write-Host "  Thumbprint:     $($cert.Thumbprint)"
+Write-Host "  NotBefore:      $($cert.NotBefore)"
+Write-Host "  NotAfter:       $($cert.NotAfter)"
+Write-Host "  HasPrivateKey:  $($cert.HasPrivateKey)"
+
+# Debug: Show Enhanced Key Usage list
+$ekuExtension = $cert.Extensions | Where-Object { $_.Oid.Value -eq "2.5.29.37" }
+if ($ekuExtension) {
+    $eku = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]$ekuExtension
+    Write-Host "  EnhancedKeyUsageList:" -ForegroundColor Cyan
+    foreach ($usage in $eku.EnhancedKeyUsages) {
+        $isCodeSigning = if ($usage.Value -eq "1.3.6.1.5.5.7.3.3") { " (Code Signing)" } else { "" }
+        Write-Host "    - $($usage.FriendlyName) ($($usage.Value))$isCodeSigning"
+    }
+} else {
+    Write-Host "  EnhancedKeyUsageList: NONE (Extension not found)" -ForegroundColor Yellow
+}
+Write-Host ""
 
 # Step 3: Find scripts to sign
 Write-ScriptLog "Searching for PowerShell scripts in: $Path"
