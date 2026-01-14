@@ -104,6 +104,18 @@ BeforeAll {
             # Store thumbprint and cert object
             $script:TestCertThumbprint = $cert.Thumbprint
             $script:TestCert = $cert
+
+            # Trust the certificate for testing (add to Trusted Root)
+            # This allows signatures to show as 'Valid' rather than 'UnknownError'
+            try {
+                $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
+                $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                $rootStore.Add($cert)
+                $rootStore.Close()
+            }
+            catch {
+                Write-Warning "Could not add certificate to Trusted Root: $_"
+            }
         }
         else {
             Write-Warning "Failed to create test certificate - Windows-specific tests will be skipped"
@@ -117,7 +129,19 @@ AfterAll {
         Remove-Item $script:TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    # Cleanup test certificates
+    # Cleanup test certificates from Trusted Root store (if added)
+    if ($IsWindows -and $script:TestCertThumbprint) {
+        try {
+            if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
+                Remove-Item "Cert:\CurrentUser\Root\$script:TestCertThumbprint" -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-Warning "Could not remove certificate from Trusted Root: $_"
+        }
+    }
+
+    # Cleanup test certificates from My store
     Remove-TestCertificates -SubjectPattern "*Test*"
 }
 
@@ -250,7 +274,21 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
                 -Password $script:TestCertPassword `
                 -Exportable
             $script:TestCert = $cert
-        } else {
+
+            # Re-add to Trusted Root if not present
+            if (-not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
+                try {
+                    $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
+                    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                    $rootStore.Add($cert)
+                    $rootStore.Close()
+                }
+                catch {
+                    Write-Warning "Could not add certificate to Trusted Root: $_"
+                }
+            }
+        }
+        else {
             # Refresh the certificate object reference
             $script:TestCert = Get-Item "Cert:\CurrentUser\My\$script:TestCertThumbprint"
         }
@@ -517,6 +555,19 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
                     -Password $script:TestCertPassword `
                     -Exportable
                 $script:TestCert = $cert
+
+                # Re-add to Trusted Root if not present
+                if (-not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
+                    try {
+                        $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
+                        $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                        $rootStore.Add($cert)
+                        $rootStore.Close()
+                    }
+                    catch {
+                        Write-Warning "Could not add certificate to Trusted Root: $_"
+                    }
+                }
             }
         }
     }
