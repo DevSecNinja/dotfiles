@@ -240,6 +240,21 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
                 -Password $wrongPassword
         } | Should -Throw
     }
+
+    AfterAll {
+        # Ensure certificate is reinstalled for subsequent tests
+        # The import tests may have removed it, so reimport from PFX
+        if (-not (Test-Path "Cert:\CurrentUser\My\$script:TestCertThumbprint")) {
+            $cert = Import-PfxCertificate -FilePath $script:TestCertPath `
+                -CertStoreLocation 'Cert:\CurrentUser\My' `
+                -Password $script:TestCertPassword `
+                -Exportable
+            $script:TestCert = $cert
+        } else {
+            # Refresh the certificate object reference
+            $script:TestCert = Get-Item "Cert:\CurrentUser\My\$script:TestCertThumbprint"
+        }
+    }
 }
 
 Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWindows) {
@@ -480,18 +495,30 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
         $tempThumbprint = $script:TestCertThumbprint
         Remove-Item "Cert:\CurrentUser\My\$tempThumbprint" -Force -ErrorAction SilentlyContinue
 
-        # Sign using PFX
-        $stats = & $script:SigningScriptPath `
-            -CertificatePath $script:TestCertPath `
-            -CertificatePassword $script:TestCertPassword `
-            -Path $script:E2ERoot `
-            -Include "FromPFX.ps1"
+        try {
+            # Sign using PFX
+            $stats = & $script:SigningScriptPath `
+                -CertificatePath $script:TestCertPath `
+                -CertificatePassword $script:TestCertPassword `
+                -Path $script:E2ERoot `
+                -Include "FromPFX.ps1"
 
-        $stats.Signed | Should -BeGreaterThan 0
+            $stats.Signed | Should -BeGreaterThan 0
 
-        # Verify signature
-        $signature = Get-AuthenticodeSignature -FilePath $newScript.FullName
-        $signature.Status | Should -Be 'Valid'
+            # Verify signature
+            $signature = Get-AuthenticodeSignature -FilePath $newScript.FullName
+            $signature.Status | Should -Be 'Valid'
+        }
+        finally {
+            # Restore certificate for subsequent tests
+            if (-not (Test-Path "Cert:\CurrentUser\My\$script:TestCertThumbprint")) {
+                $cert = Import-PfxCertificate -FilePath $script:TestCertPath `
+                    -CertStoreLocation 'Cert:\CurrentUser\My' `
+                    -Password $script:TestCertPassword `
+                    -Exportable
+                $script:TestCert = $cert
+            }
+        }
     }
 
     It "Should sign scripts using base64-encoded certificate" {
