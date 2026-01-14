@@ -96,14 +96,16 @@ Write-Host "Creating self-signed code signing certificate..."
 
 try {
     # Create the certificate
-    $cert = New-SelfSignedCertificate `
-        -Type CodeSigningCert `
-        -Subject $SubjectName `
-        -CertStoreLocation "Cert:\CurrentUser\My" `
-        -NotAfter (Get-Date).AddYears(5) `
-        -KeyExportPolicy Exportable `
-        -KeyLength 4096 `
-        -HashAlgorithm SHA256
+    $certParams = @{
+        Type              = 'CodeSigningCert'
+        Subject           = $SubjectName
+        CertStoreLocation = 'Cert:\CurrentUser\My'
+        NotAfter          = (Get-Date).AddYears(5)
+        KeyExportPolicy   = 'Exportable'
+        KeyLength         = 4096
+        HashAlgorithm     = 'SHA256'
+    }
+    $cert = New-SelfSignedCertificate @certParams
 
     Write-Host "✓ Certificate created successfully"
     Write-Host "  Thumbprint: $($cert.Thumbprint)"
