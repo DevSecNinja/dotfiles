@@ -40,6 +40,11 @@
 .PARAMETER Force
     Re-sign scripts even if they're already validly signed.
 
+.PARAMETER TrustSelfSignedRoot
+    For self-signed certificates, automatically add the certificate to the
+    Trusted Root store. This is required for signing to succeed with self-signed
+    certs. Uses certutil which works non-interactively (suitable for CI).
+
 .EXAMPLE
     .\Sign-PowerShellScripts.ps1 -CertificatePath "cert.pfx" -CertificatePassword $securePass
     Imports certificate from PFX file and signs all .ps1 files in current directory.
@@ -105,7 +110,10 @@ param(
     [switch]$SkipValidation,
 
     [Parameter()]
-    [switch]$Force
+    [switch]$Force,
+
+    [Parameter()]
+    [switch]$TrustSelfSignedRoot
 )
 
 #region Helper Functions
@@ -272,6 +280,63 @@ function Get-ScriptsToSign {
     return $scripts
 }
 
+function Add-CertificateToTrustedRoot {
+    <#
+    .SYNOPSIS
+        Adds a certificate to the Trusted Root store using certutil (non-interactive).
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate
+    )
+
+    $tempCertPath = $null
+    try {
+        # Export certificate to temp file
+        $tempCertPath = Join-Path $env:TEMP "root-cert-$(New-Guid).cer"
+        $certBytes = $Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+        [IO.File]::WriteAllBytes($tempCertPath, $certBytes)
+
+        Write-ScriptLog "Adding certificate to Trusted Root store..."
+        
+        # Use certutil with -f (force) for non-interactive operation
+        # Try user store first (doesn't require admin)
+        $result = & certutil -user -addstore -f "Root" $tempCertPath 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -eq 0) {
+            Write-ScriptLog "Certificate added to CurrentUser Trusted Root store" -Level Success
+            return $true
+        }
+        else {
+            Write-ScriptLog "certutil output: $result" -Level Warning
+            
+            # Try machine store (requires admin, but might work in CI)
+            Write-ScriptLog "Attempting machine store (may require elevation)..."
+            $result = & certutil -addstore -f "Root" $tempCertPath 2>&1
+            $exitCode = $LASTEXITCODE
+            
+            if ($exitCode -eq 0) {
+                Write-ScriptLog "Certificate added to LocalMachine Trusted Root store" -Level Success
+                return $true
+            }
+            else {
+                Write-ScriptLog "Failed to add certificate to Trusted Root store: $result" -Level Error
+                return $false
+            }
+        }
+    }
+    catch {
+        Write-ScriptLog "Exception adding certificate to Trusted Root: $_" -Level Error
+        return $false
+    }
+    finally {
+        if ($tempCertPath -and (Test-Path $tempCertPath)) {
+            Remove-Item $tempCertPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Invoke-ScriptSigning {
     <#
     .SYNOPSIS
@@ -407,6 +472,26 @@ if (-not $SkipValidation) {
     }
 
     Write-ScriptLog "Certificate is valid for code signing" -Level Success
+}
+
+# Step 2b: Trust self-signed root if requested
+if ($TrustSelfSignedRoot) {
+    # Check if cert is self-signed (Subject == Issuer)
+    $isSelfSigned = $cert.Subject -eq $cert.Issuer
+    
+    if ($isSelfSigned) {
+        Write-ScriptLog "Certificate is self-signed, adding to Trusted Root store..."
+        $trustResult = Add-CertificateToTrustedRoot -Certificate $cert
+        
+        if (-not $trustResult) {
+            Write-ScriptLog "Failed to add self-signed certificate to Trusted Root store" -Level Error
+            Write-ScriptLog "Signing may fail with 'root certificate not trusted' error" -Level Warning
+        }
+    }
+    else {
+        Write-ScriptLog "Certificate is not self-signed (Issuer: $($cert.Issuer))" -Level Warning
+        Write-ScriptLog "You may need to manually trust the root CA certificate" -Level Warning
+    }
 }
 
 # Debug: Display certificate details
