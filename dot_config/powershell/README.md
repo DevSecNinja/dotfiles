@@ -9,17 +9,9 @@ This directory contains PowerShell profile configuration managed by chezmoi.
 
 ## Installation
 
-The profile is automatically linked by the `run_once_after_setup-powershell-profile.ps1.tmpl` script during chezmoi initialization. If you need to manually create the symbolic link:
+The profile is automatically installed by chezmoi. A loader file is placed at `~/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` (the default `$PROFILE` location) which sources the actual configuration from `~/.config/powershell/profile.ps1`.
 
-### PowerShell 7+ (pwsh)
-```powershell
-New-Item -ItemType SymbolicLink -Path $PROFILE -Target "$HOME\.config\powershell\profile.ps1" -Force
-```
-
-### Windows PowerShell 5.1
-```powershell
-New-Item -ItemType SymbolicLink -Path $PROFILE -Target "$HOME\.config\powershell\profile.ps1" -Force
-```
+This approach works seamlessly across different PowerShell versions and doesn't require symbolic links or manual setup.
 
 ## Features
 

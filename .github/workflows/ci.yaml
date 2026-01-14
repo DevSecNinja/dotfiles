@@ -154,39 +154,45 @@ jobs:
           }
           Write-Host "✅ Chezmoi installed successfully at $($chezmoi.Source)"
 
-      - name: Verify PowerShell profile
+      - name: Verify PowerShell profile source
         shell: pwsh
         run: |
-          $profilePath = "$env:USERPROFILE\.config\powershell\profile.ps1"
-          if (-not (Test-Path $profilePath)) {
-            Write-Error "❌ PowerShell profile not found"
+          $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
+          if (-not (Test-Path $profileSource)) {
+            Write-Error "❌ PowerShell profile source not found at $profileSource"
             exit 1
           }
-          Write-Host "✅ PowerShell profile applied"
+          Write-Host "✅ PowerShell profile source exists"
 
-      # - name: Verify PowerShell profile symbolic link
-      #   shell: pwsh
-      #   run: |
-      #     $profileSource = "$env:USERPROFILE\.config\powershell\profile.ps1"
-      #     $profileTarget = $PROFILE
+      - name: Verify PowerShell profile loader
+        shell: pwsh
+        run: |
+          $profileLoader = $PROFILE
+          if (-not (Test-Path $profileLoader)) {
+            Write-Error "❌ PowerShell profile loader not found at $profileLoader"
+            exit 1
+          }
+          Write-Host "✅ PowerShell profile loader exists at $profileLoader"
 
-      #     if (-not (Test-Path $profileTarget)) {
-      #       Write-Error "❌ PowerShell profile link not created at $profileTarget"
-      #       exit 1
-      #     }
+          # Verify it loads the correct config
+          $content = Get-Content $profileLoader -Raw
+          if ($content -notmatch '\.config\\powershell\\profile\.ps1') {
+            Write-Error "❌ Profile loader doesn't source the correct config"
+            exit 1
+          }
+          Write-Host "✅ Profile loader correctly configured"
 
-      #     $item = Get-Item $profileTarget
-      #     if ($item.LinkType -ne "SymbolicLink") {
-      #       Write-Error "❌ Profile at $profileTarget is not a symbolic link"
-      #       exit 1
-      #     }
-
-      #     if ($item.Target -ne $profileSource) {
-      #       Write-Error "❌ Profile symbolic link points to $($item.Target) instead of $profileSource"
-      #       exit 1
-      #     }
-
-      #     Write-Host "✅ PowerShell profile correctly linked: $profileTarget -> $profileSource"
+      - name: Test PowerShell profile loading
+        shell: pwsh
+        run: |
+          # Test that the profile loads without errors
+          try {
+            . $PROFILE
+            Write-Host "✅ PowerShell profile loads successfully"
+          } catch {
+            Write-Error "❌ PowerShell profile failed to load: $_"
+            exit 1
+          }
 
       - name: Display Chezmoi status
         shell: pwsh
