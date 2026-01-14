@@ -108,10 +108,8 @@ BeforeAll {
             # Trust the certificate for testing (add to Trusted Root)
             # This allows signatures to show as 'Valid' rather than 'UnknownError'
             try {
-                $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
-                $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                $rootStore.Add($cert)
-                $rootStore.Close()
+                # Use Import-Certificate with -Force to avoid interactive prompts
+                Import-Certificate -FilePath $script:TestCertPath -CertStoreLocation "Cert:\CurrentUser\Root" -ErrorAction Stop | Out-Null
             }
             catch {
                 Write-Warning "Could not add certificate to Trusted Root: $_"
@@ -278,10 +276,8 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
             # Re-add to Trusted Root if not present
             if (-not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
                 try {
-                    $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
-                    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                    $rootStore.Add($cert)
-                    $rootStore.Close()
+                    # Use Import-Certificate to avoid interactive prompts
+                    Import-Certificate -FilePath $script:TestCertPath -CertStoreLocation "Cert:\CurrentUser\Root" -ErrorAction Stop | Out-Null
                 }
                 catch {
                     Write-Warning "Could not add certificate to Trusted Root: $_"
