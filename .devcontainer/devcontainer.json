@@ -3,6 +3,9 @@
   "image": "mcr.microsoft.com/devcontainers/base:debian-12",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {},
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "modules": "Pester==5.7.1"
+    },
     "ghcr.io/devcontainers/features/python:1": {
       "version": "latest"
     }
@@ -11,7 +14,8 @@
     "vscode": {
       "extensions": [
         "GitHub.copilot",
-        "GitHub.copilot-chat"
+        "GitHub.copilot-chat",
+        "pspester.pester-test"
       ],
       "settings": {
         "editor.formatOnSave": true,
