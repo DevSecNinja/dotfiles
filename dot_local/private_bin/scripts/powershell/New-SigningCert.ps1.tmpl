@@ -95,8 +95,9 @@ try {
         KeyExportPolicy   = 'Exportable'
         KeyLength         = 4096
         HashAlgorithm     = 'SHA256'
+        OutVariable       = 'cert'
     }
-    $cert = New-SelfSignedCertificate @certParams
+    New-SelfSignedCertificate @certParams | Out-Null
 
     Write-Host "✓ Certificate created successfully"
     Write-Host "  Thumbprint: $($cert.Thumbprint)"
@@ -105,14 +106,24 @@ try {
 
     # Export paths
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $pfxPath = Join-Path . "CodeSigningCert-$timestamp.pfx"
-    $base64Path = Join-Path . "cert-base64-$timestamp.txt"
+    $pfxPath = Join-Path $PSScriptRoot "CodeSigningCert-$timestamp.pfx"
+    $base64Path = Join-Path $PSScriptRoot "cert-base64-$timestamp.txt"
 
     # Export as PFX
     Write-Host "Exporting certificate to PFX..."
-    Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $Password
+    $exportParams = @{
+        Cert     = "Cert:\CurrentUser\My\$($cert.Thumbprint)"
+        FilePath = $pfxPath
+        Password = $Password
+    }
+    Export-PfxCertificate @exportParams | Out-Null
     Write-Host "✓ PFX exported: $pfxPath"
     Write-Host ""
+
+    # Verify export succeeded
+    if (-not (Test-Path -Path $pfxPath)) {
+        throw "PFX file was not created at: $pfxPath"
+    }
 
     # Convert to base64
     Write-Host "Converting to base64 for GitHub Secrets..."
