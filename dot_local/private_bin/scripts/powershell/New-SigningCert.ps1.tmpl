@@ -42,15 +42,6 @@ param(
         HelpMessage = "The subject name for the certificate (e.g., 'Your Name'). Will be prefixed with 'CN=' if not present."
     )]
     [ValidateNotNullOrEmpty()]
-    [ValidateScript({
-        if ($_ -eq "{{ .name }}") {
-            throw "Chezmoi template not applied. Please provide a valid subject name using the -SubjectName parameter."
-        }
-        if ([string]::IsNullOrWhiteSpace($_)) {
-            throw "Subject name cannot be empty or whitespace."
-        }
-        $true
-    })]
     [string]$SubjectName = "{{ .name }}",
 
     [Parameter(
