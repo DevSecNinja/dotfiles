@@ -77,6 +77,14 @@ if (-not $pesterModule) {
 Write-Host "🧪 Discovering and running Pester tests..." -ForegroundColor Cyan
 Write-Host "   PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColor Gray
 Write-Host "   Pester Version: $($pesterModule.Version)" -ForegroundColor Gray
+if ($CI) {
+    Write-Host "   Mode: CI (lenient signature validation)" -ForegroundColor Gray
+    $env:PESTER_CI = 'true'
+}
+else {
+    Write-Host "   Mode: Local (strict signature validation)" -ForegroundColor Gray
+    $env:PESTER_CI = $null
+}
 Write-Host ""
 
 # Validate test path
