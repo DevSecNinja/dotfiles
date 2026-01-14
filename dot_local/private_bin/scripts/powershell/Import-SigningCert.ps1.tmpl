@@ -1,0 +1,182 @@
+#Requires -Version 5.1
+#Requires -RunAsAdministrator
+<#
+.SYNOPSIS
+    Imports a code signing certificate into the Windows certificate store.
+
+.DESCRIPTION
+    This script imports a PFX certificate file into the appropriate certificate stores
+    to enable PowerShell script signing and verification. The certificate is imported to:
+    - Personal store (Cert:\CurrentUser\My) - for signing scripts
+    - Trusted Publishers (Cert:\CurrentUser\TrustedPublisher) - for trusting signed scripts
+    - Trusted Root (optional) - for self-signed certificates
+
+.PARAMETER CertificatePath
+    The path to the PFX certificate file to import.
+
+.PARAMETER Password
+    The password protecting the PFX certificate file.
+
+.PARAMETER TrustSelfSigned
+    If specified, also imports the certificate to the Trusted Root store.
+    Required for self-signed certificates to be fully trusted.
+
+.EXAMPLE
+    .\Import-SigningCert.ps1 -CertificatePath ".\CodeSigningCert-20260114.pfx"
+    Imports the certificate and prompts for password.
+
+.EXAMPLE
+    $pwd = ConvertTo-SecureString "Password123!" -AsPlainText -Force
+    .\Import-SigningCert.ps1 -CertificatePath ".\CodeSigningCert-20260114.pfx" -Password $pwd -TrustSelfSigned
+    Imports a self-signed certificate with full trust (non-interactive).
+
+.NOTES
+    This script must be run as Administrator to import certificates to the local machine stores.
+    For user-only imports, remove the -RunAsAdministrator requirement and use CurrentUser stores.
+
+    Author: {{ .name }}
+    Date: $(Get-Date -Format "yyyy-MM-dd")
+#>
+
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+param(
+    [Parameter(
+        Mandatory = $true,
+        Position = 0,
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true,
+        HelpMessage = "Path to the PFX certificate file."
+    )]
+    [ValidateNotNullOrEmpty()]
+    [ValidateScript({
+        if (-not (Test-Path -Path $_ -PathType Leaf)) {
+            throw "Certificate file not found: $_"
+        }
+        if ($_ -notmatch '\.pfx$') {
+            throw "File must be a PFX certificate file (*.pfx)"
+        }
+        $true
+    })]
+    [string]$CertificatePath,
+
+    [Parameter(
+        Mandatory = $true,
+        Position = 1,
+        HelpMessage = "Password protecting the PFX certificate file."
+    )]
+    [ValidateNotNull()]
+    [SecureString]$Password,
+
+    [Parameter(
+        Mandatory = $false,
+        HelpMessage = "Import to Trusted Root store for self-signed certificates."
+    )]
+    [switch]$TrustSelfSigned
+)
+
+begin {
+    # Check if running on Windows
+    if ($PSVersionTable.PSVersion.Major -lt 5 -or $PSVersionTable.Platform -eq 'Unix') {
+        throw "This script must be run on Windows with PowerShell 5.1 or later."
+    }
+
+    # Resolve full path
+    $CertificatePath = Resolve-Path -Path $CertificatePath | Select-Object -ExpandProperty Path
+
+    Write-Host "==================================="
+    Write-Host "Certificate Import Utility"
+    Write-Host "==================================="
+    Write-Host ""
+    Write-Host "Certificate: $CertificatePath"
+    Write-Host ""
+}
+
+process {
+    try {
+        # Import to Personal store (for signing)
+        Write-Host "Importing certificate to Personal store (CurrentUser\My)..."
+
+        if ($PSCmdlet.ShouldProcess("CurrentUser\My", "Import certificate")) {
+            $cert = Import-PfxCertificate `
+                -FilePath $CertificatePath `
+                -CertStoreLocation "Cert:\CurrentUser\My" `
+                -Password $Password `
+                -Exportable
+
+            Write-Host "✓ Certificate imported successfully"
+            Write-Host "  Thumbprint: $($cert.Thumbprint)"
+            Write-Host "  Subject: $($cert.Subject)"
+            Write-Host "  Issuer: $($cert.Issuer)"
+            Write-Host "  Valid: $($cert.NotBefore.ToString('yyyy-MM-dd')) to $($cert.NotAfter.ToString('yyyy-MM-dd'))"
+            Write-Host ""
+
+            # Import to Trusted Publishers (for script verification)
+            Write-Host "Importing to Trusted Publishers (CurrentUser\TrustedPublisher)..."
+
+            if ($PSCmdlet.ShouldProcess("CurrentUser\TrustedPublisher", "Import certificate")) {
+                $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+                $trustedCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+                $trustedCert.Import($certBytes)
+
+                $trustedStore = New-Object System.Security.Cryptography.X509Certificates.X509Store(
+                    [System.Security.Cryptography.X509Certificates.StoreName]::TrustedPublisher,
+                    [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
+                )
+                $trustedStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                $trustedStore.Add($trustedCert)
+                $trustedStore.Close()
+
+                Write-Host "✓ Added to Trusted Publishers"
+                Write-Host ""
+            }
+
+            # Import to Trusted Root (for self-signed certificates)
+            if ($TrustSelfSigned) {
+                Write-Host "Importing to Trusted Root Certification Authorities (CurrentUser\Root)..."
+                Write-Warning "This will trust this certificate as a root authority."
+
+                if ($PSCmdlet.ShouldProcess("CurrentUser\Root", "Import certificate as trusted root")) {
+                    $rootStore = New-Object System.Security.Cryptography.X509Certificates.X509Store(
+                        [System.Security.Cryptography.X509Certificates.StoreName]::Root,
+                        [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
+                    )
+                    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                    $rootStore.Add($trustedCert)
+                    $rootStore.Close()
+
+                    Write-Host "✓ Added to Trusted Root"
+                    Write-Host ""
+                }
+            }
+
+            # Display summary
+            Write-Host "==================================="
+            Write-Host "Import Complete!"
+            Write-Host "==================================="
+            Write-Host ""
+            Write-Host "Certificate stores updated:"
+            Write-Host "  ✓ Personal (CurrentUser\My)"
+            Write-Host "  ✓ Trusted Publishers (CurrentUser\TrustedPublisher)"
+            if ($TrustSelfSigned) {
+                Write-Host "  ✓ Trusted Root (CurrentUser\Root)"
+            }
+            Write-Host ""
+            Write-Host "You can now sign PowerShell scripts with this certificate:"
+            Write-Host '  $cert = Get-ChildItem -Path "Cert:\CurrentUser\My\' + $cert.Thumbprint + '"'
+            Write-Host '  Set-AuthenticodeSignature -FilePath ".\MyScript.ps1" -Certificate $cert'
+            Write-Host ""
+            Write-Host "To verify the certificate is trusted:"
+            Write-Host '  Get-AuthenticodeSignature -FilePath ".\MyScript.ps1" | Format-List'
+            Write-Host ""
+        }
+
+    } catch {
+        Write-Error "Failed to import certificate: $_"
+        Write-Error $_.Exception.Message
+        exit 1
+    }
+}
+
+end {
+    Write-Verbose "Certificate import operation completed."
+}
