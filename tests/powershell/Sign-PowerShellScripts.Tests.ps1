@@ -68,6 +68,47 @@ BeforeAll {
             [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
         }
     }
+
+    # Create test certificate for all tests (only on Windows)
+    if ($IsWindows) {
+        # Clean up any existing test certificates
+        Remove-TestCertificates -SubjectPattern "*SignTest*"
+
+        # Create a test certificate
+        $script:TestCertSubject = "CN=SignTest-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        $script:TestCertPassword = New-TestPassword "SecurePass123!"
+        $script:TestCertPath = Join-Path $script:TestRoot "test-cert.pfx"
+
+        # Create certificate using New-SigningCert.ps1
+        $certScript = Get-Content $certScriptPath -Raw
+        # Replace the chezmoi template variable with our test subject
+        $certScript = $certScript -replace '\{\{\s*\.name\s*\}\}', 'SignTest'
+        $tempCertScript = Join-Path $script:TestRoot "New-SigningCert-temp.ps1"
+        Set-Content -Path $tempCertScript -Value $certScript
+
+        # Execute certificate creation
+        & $tempCertScript -SubjectName $script:TestCertSubject -Password $script:TestCertPassword
+
+        # Export certificate for testing
+        $cert = Get-ChildItem Cert:\CurrentUser\My |
+        Where-Object { $_.Subject -eq $script:TestCertSubject } |
+        Select-Object -First 1
+
+        if ($cert) {
+            Export-PfxCertificate -Cert $cert -FilePath $script:TestCertPath -Password $script:TestCertPassword | Out-Null
+
+            # Create base64 version
+            $certBytes = [System.IO.File]::ReadAllBytes($script:TestCertPath)
+            $script:TestCertBase64 = [Convert]::ToBase64String($certBytes)
+
+            # Store thumbprint and cert object
+            $script:TestCertThumbprint = $cert.Thumbprint
+            $script:TestCert = $cert
+        }
+        else {
+            Write-Warning "Failed to create test certificate - Windows-specific tests will be skipped"
+        }
+    }
 }
 
 AfterAll {
@@ -127,50 +168,10 @@ Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" {
 Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindows) {
 
     BeforeAll {
-        # Clean up any existing test certificates
-        Remove-TestCertificates -SubjectPattern "*SignTest*"
-
-        # Create a test certificate
-        $script:TestCertSubject = "CN=SignTest-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        $script:TestCertPassword = New-TestPassword "SecurePass123!"
-        $script:TestCertPath = Join-Path $script:TestRoot "test-cert.pfx"
-
-        # Create certificate using New-SigningCert.ps1
-        $certScript = Get-Content $certScriptPath -Raw
-        # Replace the chezmoi template variable with our test subject
-        $certScript = $certScript -replace '\{\{\s*\.name\s*\}\}', 'SignTest'
-        $tempCertScript = Join-Path $script:TestRoot "New-SigningCert-temp.ps1"
-        Set-Content -Path $tempCertScript -Value $certScript
-
-        # Execute certificate creation
-        & $tempCertScript -SubjectName $script:TestCertSubject -Password $script:TestCertPassword
-
-        # Export certificate for testing
-        $cert = Get-ChildItem Cert:\CurrentUser\My |
-        Where-Object { $_.Subject -eq $script:TestCertSubject } |
-        Select-Object -First 1
-
-        if ($cert) {
-            Export-PfxCertificate -Cert $cert -FilePath $script:TestCertPath -Password $script:TestCertPassword | Out-Null
-
-            # Create base64 version
-            $certBytes = [System.IO.File]::ReadAllBytes($script:TestCertPath)
-            $script:TestCertBase64 = [Convert]::ToBase64String($certBytes)
-
-            # Store thumbprint
-            $script:TestCertThumbprint = $cert.Thumbprint
+        # Verify certificate was created in top-level BeforeAll
+        if (-not $script:TestCertThumbprint) {
+            throw "Test certificate not available - top-level BeforeAll may have failed"
         }
-        else {
-            throw "Failed to create test certificate"
-        }
-    }
-
-    AfterAll {
-        # Cleanup
-        if (Test-Path $script:TestCertPath) {
-            Remove-Item $script:TestCertPath -Force
-        }
-        Remove-TestCertificates -SubjectPattern "*SignTest*"
     }
 
     It "Should import certificate from PFX file" {
@@ -243,15 +244,12 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
 
 Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWindows) {
 
-    BeforeAll {
-        # Ensure test certificate exists
-        $script:TestCert = Get-Item "Cert:\CurrentUser\My\$script:TestCertThumbprint" -ErrorAction SilentlyContinue
-        if (-not $script:TestCert) {
-            throw "Test certificate not found. Import tests may have failed."
-        }
-    }
-
     It "Should validate certificate has code signing EKU" {
+        if (-not $script:TestCert) {
+            Set-ItResult -Skipped -Because "Test certificate not available"
+            return
+        }
+
         $codeSigningOid = "1.3.6.1.5.5.7.3.3"
         $hasCodeSigningEku = $script:TestCert.Extensions |
         Where-Object { $_.Oid.Value -eq "2.5.29.37" } |
@@ -264,14 +262,29 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWi
     }
 
     It "Should validate certificate is not expired" {
+        if (-not $script:TestCert) {
+            Set-ItResult -Skipped -Because "Test certificate not available"
+            return
+        }
+
         $script:TestCert.NotAfter | Should -BeGreaterThan (Get-Date)
     }
 
     It "Should validate certificate is currently valid" {
+        if (-not $script:TestCert) {
+            Set-ItResult -Skipped -Because "Test certificate not available"
+            return
+        }
+
         $script:TestCert.NotBefore | Should -BeLessThan (Get-Date)
     }
 
     It "Should validate certificate has private key" {
+        if (-not $script:TestCert) {
+            Set-ItResult -Skipped -Because "Test certificate not available"
+            return
+        }
+
         $script:TestCert.HasPrivateKey | Should -Be $true
     }
 }
@@ -323,11 +336,13 @@ Describe "Sign-PowerShellScripts.ps1 - Script Discovery" {
 Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
 
     BeforeAll {
-        # Ensure certificate is available
-        $script:SigningCert = Get-Item "Cert:\CurrentUser\My\$script:TestCertThumbprint" -ErrorAction SilentlyContinue
-        if (-not $script:SigningCert) {
-            throw "Test certificate not found for signing tests"
+        # Verify certificate is available
+        if (-not $script:TestCert -or -not $script:TestCertThumbprint) {
+            throw "Test certificate not available - top-level BeforeAll may have failed"
         }
+
+        # Store reference to signing certificate
+        $script:SigningCert = $script:TestCert
 
         # Create test scripts
         $script:UnsignedScript = New-TestScript -Name "Unsigned.ps1"
@@ -395,6 +410,11 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
 Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows) {
 
     BeforeAll {
+        # Verify certificate is available
+        if (-not $script:TestCert -or -not $script:TestCertThumbprint) {
+            throw "Test certificate not available - top-level BeforeAll may have failed"
+        }
+
         # Create a fresh test environment
         $script:E2ERoot = Join-Path $script:TestRoot "E2E"
         New-Item -ItemType Directory -Path $script:E2ERoot -Force | Out-Null
@@ -495,6 +515,13 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
 
 Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows) {
 
+    BeforeAll {
+        # Verify certificate and signing script are available
+        if (-not $script:TestCertThumbprint -or -not $script:SigningScriptPath) {
+            throw "Test certificate or signing script not available - dependencies may have failed"
+        }
+    }
+
     It "Should fail gracefully with invalid certificate thumbprint" {
         $invalidThumbprint = "0" * 40
 
@@ -532,6 +559,11 @@ Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows) {
 Describe "Sign-PowerShellScripts.ps1 - Statistics Reporting" -Skip:(-not $IsWindows) {
 
     BeforeAll {
+        # Verify certificate and signing script are available
+        if (-not $script:TestCertThumbprint -or -not $script:SigningScriptPath) {
+            throw "Test certificate or signing script not available - dependencies may have failed"
+        }
+
         $script:StatsRoot = Join-Path $script:TestRoot "Stats"
         New-Item -ItemType Directory -Path $script:StatsRoot -Force | Out-Null
 
