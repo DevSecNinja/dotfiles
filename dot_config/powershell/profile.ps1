@@ -6,7 +6,6 @@
 # Set UTF-8 encoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-
 # Load aliases
 . $PSScriptRoot\aliases.ps1
 
