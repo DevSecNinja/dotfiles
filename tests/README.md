@@ -22,8 +22,9 @@ tests/
 
 **Coverage**:
 - PowerShell utility scripts
-- Code signing certificate generation
-- Script signing workflows
+- Code signing certificate generation (`New-SigningCert.ps1.tmpl`)
+- Script signing workflows (`Sign-PowerShellScripts.ps1.tmpl`)
+- End-to-end certificate creation and signing validation
 - CI/CD pipeline validation
 
 **Run locally**:

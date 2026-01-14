@@ -24,73 +24,35 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Import code signing certificate
+      - name: Sign PowerShell scripts
         shell: powershell
         env:
           CERT_BASE64: ${{ secrets.CODE_SIGNING_CERT }}
           CERT_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
         run: |
-          # Decode certificate
-          $certBytes = [Convert]::FromBase64String($env:CERT_BASE64)
-          $certPath = Join-Path $env:TEMP "cert.pfx"
-          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          # Load the signing script
+          $signingScript = Join-Path $PWD "dot_local/private_bin/scripts/powershell/Sign-PowerShellScripts.ps1"
 
-          # Import certificate
-          $password = ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText
-          $cert = Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
-
-          # Store thumbprint for signing
-          echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
-
-          # Cleanup
-          Remove-Item $certPath
-
-      - name: Sign PowerShell scripts
-        shell: powershell
-        run: |
-          # Find all .ps1 files (exclude .ps1.tmpl - they are templates that change after processing)
-          $scripts = Get-ChildItem -Path . -Recurse -Include "*.ps1" -Exclude "*.ps1.tmpl" | Where-Object {
-            $_.FullName -notmatch '[\\/]\.git[\\/]'
+          if (-not (Test-Path $signingScript)) {
+            Write-Error "Sign-PowerShellScripts.ps1.tmpl not found at: $signingScript"
+            exit 1
           }
 
-          Write-Host "Found $($scripts.Count) PowerShell scripts to sign (excluding .ps1.tmpl templates)"
+          # Convert password to SecureString
+          $securePassword = ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText
 
-          $cert = Get-Item "Cert:\CurrentUser\My\$env:CERT_THUMBPRINT"
-          $signed = 0
-          $alreadySigned = 0
+          # Execute the signing script
+          $stats = & $signingScript `
+            -CertificateBase64 $env:CERT_BASE64 `
+            -CertificatePassword $securePassword `
+            -Path $PWD `
+            -Exclude "*.ps1.tmpl"
 
-          foreach ($script in $scripts) {
-            try {
-              # Check if already signed with a valid signature
-              $signature = Get-AuthenticodeSignature -FilePath $script.FullName
-
-              if ($signature.Status -eq 'Valid' -and $signature.SignerCertificate.Thumbprint -eq $cert.Thumbprint) {
-                Write-Host "  Already signed: $($script.Name)"
-                $alreadySigned++
-                continue
-              }
-
-              # Sign the script
-              $result = Set-AuthenticodeSignature -FilePath $script.FullName -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
-
-              if ($result.Status -eq 'Valid') {
-                Write-Host "✓ Signed: $($script.Name)"
-                $signed++
-              } else {
-                Write-Warning "✗ Signing failed: $($script.Name) - Status: $($result.Status)"
-              }
-            }
-            catch {
-              Write-Warning "✗ Failed to sign: $($script.Name) - $_"
-            }
+          # Exit with error if any scripts failed to sign
+          if ($stats.Failed -gt 0) {
+            Write-Error "Failed to sign $($stats.Failed) script(s)"
+            exit 1
           }
-
-          Write-Host "`n==================================="
-          Write-Host "Summary:"
-          Write-Host "  Total scripts: $($scripts.Count)"
-          Write-Host "  Already signed: $alreadySigned"
-          Write-Host "  Newly signed: $signed"
-          Write-Host "==================================="
 
       - name: Check for changes
         id: check_changes
