@@ -46,7 +46,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$TestPath = $PSScriptRoot,
+    [string]$TestPath,
 
     [Parameter(Mandatory = $false)]
     [string]$OutputPath = "test-results.xml",
@@ -67,6 +67,17 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     exit 1
 }
 
+# Fixes "Value cannot be null" error from Pester VS Code extension
+# Set default TestPath if not provided
+if ([string]::IsNullOrWhiteSpace($TestPath)) {
+    $TestPath = $PSScriptRoot
+}
+
+# Ensure TestPath is not null or empty (defensive)
+if ([string]::IsNullOrWhiteSpace($TestPath)) {
+    $TestPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+
 # Check if Pester is available
 $pesterModule = Get-Module -Name Pester -ListAvailable | Where-Object { $_.Version -ge '5.0.0' } | Select-Object -First 1
 if (-not $pesterModule) {
@@ -79,11 +90,10 @@ Write-Host "   PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColo
 Write-Host "   Pester Version: $($pesterModule.Version)" -ForegroundColor Gray
 if ($CI) {
     Write-Host "   Mode: CI (lenient signature validation)" -ForegroundColor Gray
-    $env:PESTER_CI = 'true'
+    $env:CI = 'true'
 }
 else {
     Write-Host "   Mode: Local (strict signature validation)" -ForegroundColor Gray
-    $env:PESTER_CI = $null
 }
 Write-Host ""
 

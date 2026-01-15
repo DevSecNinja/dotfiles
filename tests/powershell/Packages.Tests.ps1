@@ -8,8 +8,10 @@
     Tests YAML syntax, Chezmoi integration, package structure, and consistency across platforms.
     Validates Windows (WinGet, PowerShell modules), Linux (APT, DNF), macOS (Homebrew), and VS Code extensions.
 
+    Automatically installs Chezmoi if not present using available package managers (winget, Homebrew, or install script).
+
 .NOTES
-    Requires Chezmoi to be installed for full test coverage.
+    Chezmoi will be installed automatically if not found. Tests will fail if installation is unsuccessful.
 #>
 
 BeforeAll {
@@ -17,8 +19,100 @@ BeforeAll {
     $script:RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     Push-Location $script:RepoRoot
 
-    # Check if chezmoi is available
-    $script:ChezmoiAvailable = $null -ne (Get-Command chezmoi -ErrorAction SilentlyContinue)
+    # Function to install Chezmoi if not present
+    function Install-ChezmoiIfMissing {
+        $chezmoiCmd = Get-Command chezmoi -ErrorAction SilentlyContinue
+        if ($chezmoiCmd) {
+            Write-Host "✅ Chezmoi is already installed at: $($chezmoiCmd.Source)" -ForegroundColor Green
+            return $true
+        }
+
+        Write-Host "⚠️  Chezmoi not found. Attempting to install..." -ForegroundColor Yellow
+
+        # Try winget on Windows
+        if ($IsWindows -or $PSVersionTable.PSVersion.Major -le 5) {
+            $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+            if ($wingetCmd) {
+                Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
+                try {
+                    winget install --id twpayne.chezmoi --silent --accept-source-agreements --accept-package-agreements | Out-Null
+
+                    # Refresh PATH for current session
+                    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+                    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+                    if ($machinePath -and $userPath) {
+                        $env:Path = $machinePath + ";" + $userPath
+                    }
+
+                    # Verify installation
+                    $chezmoiCmd = Get-Command chezmoi -ErrorAction SilentlyContinue
+                    if ($chezmoiCmd) {
+                        Write-Host "✅ Chezmoi installed successfully via winget" -ForegroundColor Green
+                        return $true
+                    }
+                }
+                catch {
+                    Write-Warning "Failed to install chezmoi via winget: $_"
+                }
+            }
+        }
+
+        # Try Homebrew on macOS/Linux
+        $brewCmd = Get-Command brew -ErrorAction SilentlyContinue
+        if ($brewCmd) {
+            Write-Host "Installing chezmoi using Homebrew..." -ForegroundColor Cyan
+            try {
+                brew install chezmoi | Out-Null
+                $chezmoiCmd = Get-Command chezmoi -ErrorAction SilentlyContinue
+                if ($chezmoiCmd) {
+                    Write-Host "✅ Chezmoi installed successfully via Homebrew" -ForegroundColor Green
+                    return $true
+                }
+            }
+            catch {
+                Write-Warning "Failed to install chezmoi via Homebrew: $_"
+            }
+        }
+
+        # Try installation script as fallback
+        Write-Host "Installing chezmoi using installation script..." -ForegroundColor Cyan
+        try {
+            $binDir = Join-Path $HOME ".local/bin"
+            if (-not (Test-Path $binDir)) {
+                New-Item -ItemType Directory -Path $binDir -Force | Out-Null
+            }
+
+            $installScript = Invoke-WebRequest -Uri "https://get.chezmoi.io" -UseBasicParsing
+            $env:Path = "$binDir" + [IO.Path]::PathSeparator + $env:Path
+
+            if ($IsWindows -or $PSVersionTable.PSVersion.Major -le 5) {
+                # Windows: save and execute as PowerShell
+                $scriptPath = Join-Path $env:TEMP "install-chezmoi.ps1"
+                $installScript.Content | Out-File -FilePath $scriptPath -Encoding UTF8
+                & $scriptPath -b $binDir
+                Remove-Item $scriptPath -Force -ErrorAction SilentlyContinue
+            }
+            else {
+                # Unix: pipe to sh
+                $installScript.Content | sh -s -- -b $binDir
+            }
+
+            $chezmoiCmd = Get-Command chezmoi -ErrorAction SilentlyContinue
+            if ($chezmoiCmd) {
+                Write-Host "✅ Chezmoi installed successfully via install script" -ForegroundColor Green
+                return $true
+            }
+        }
+        catch {
+            Write-Warning "Failed to install chezmoi via install script: $_"
+        }
+
+        Write-Error "❌ Failed to install chezmoi. Please install manually: https://www.chezmoi.io/install/"
+        return $false
+    }
+
+    # Install Chezmoi if missing
+    $script:ChezmoiAvailable = Install-ChezmoiIfMissing
 
     if ($script:ChezmoiAvailable) {
         # Load chezmoi data
@@ -54,14 +148,8 @@ Describe "Packages YAML File" {
 }
 
 Describe "Chezmoi Integration" {
-    BeforeAll {
-        if (-not $script:ChezmoiAvailable) {
-            Set-ItResult -Skipped -Because "Chezmoi is not installed"
-        }
-    }
-
     It "Chezmoi should be installed and available" {
-        $script:ChezmoiAvailable | Should -BeTrue
+        $script:ChezmoiAvailable | Should -BeTrue -Because "Chezmoi is required for tests and should have been installed automatically"
     }
 
     It "Chezmoi should load packages.yaml successfully" {

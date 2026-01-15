@@ -39,6 +39,7 @@ run_check() {
 
 # Run all validation checks (continue even if one fails)
 run_check "Chezmoi Configuration" "validate-chezmoi.sh" || true
+run_check "Packages YAML" "validate-packages.sh" || true
 run_check "Shell Script Syntax" "validate-shell-scripts.sh" || true
 run_check "Fish Configuration" "validate-fish-config.sh" || true
 run_check "Chezmoi Apply (Dry-run)" "test-chezmoi-apply.sh" || true

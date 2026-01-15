@@ -73,7 +73,7 @@ BeforeAll {
     # In CI, Root store import may fail due to permissions, so accept fallback statuses
     # Locally, we expect 'Valid' since the cert should be in Trusted Root
     function Get-AcceptableSignatureStatuses {
-        if ($env:PESTER_CI -eq 'true') {
+        if ($env:CI -eq 'true') {
             return @('Valid', 'UnknownError', 'HashMismatch')
         }
         else {
@@ -120,7 +120,7 @@ BeforeAll {
             # Trust the certificate for testing (add to Trusted Root)
             # This allows signatures to show as 'Valid' rather than 'UnknownError'
             # Skip in CI mode - may prompt for user input and we accept fallback statuses anyway
-            if ($env:PESTER_CI -ne 'true') {
+            if ($env:CI -ne 'true') {
                 try {
                     # Use Import-PfxCertificate for PFX files (Import-Certificate is for .cer files)
                     Import-PfxCertificate -FilePath $script:TestCertPath -CertStoreLocation "Cert:\CurrentUser\Root" -Password $script:TestCertPassword -ErrorAction Stop | Out-Null
@@ -146,11 +146,11 @@ AfterAll {
     }
 
     # Cleanup test certificates from Trusted Root store (if added, skip in CI mode)
-    if ($IsWindows -and $script:TestCertThumbprint -and $env:PESTER_CI -ne 'true') {
+    if ($IsWindows -and $script:TestCertThumbprint -and $env:CI -ne 'true') {
         try {
             if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
-            # Use certutil.exe which works reliably in PowerShell Core
-            $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
+                # Use certutil.exe which works reliably in PowerShell Core
+                $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
             }
         }
         catch {
@@ -293,7 +293,7 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
             $script:TestCert = $cert
 
             # Re-add to Trusted Root if not present (skip in CI mode)
-            if ($env:PESTER_CI -ne 'true' -and -not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
+            if ($env:CI -ne 'true' -and -not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
                 try {
                     # Use Import-PfxCertificate for PFX files
                     Import-PfxCertificate -FilePath $script:TestCertPath -CertStoreLocation "Cert:\CurrentUser\Root" -Password $script:TestCertPassword -ErrorAction Stop | Out-Null
@@ -481,7 +481,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:CI -eq 'true') {
 
     BeforeAll {
         # Verify certificate is available
@@ -583,7 +583,7 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
                 $script:TestCert = $cert
 
                 # Re-add to Trusted Root if not present (skip in CI mode)
-                if ($env:PESTER_CI -ne 'true' -and -not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
+                if ($env:CI -ne 'true' -and -not (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint")) {
                     try {
                         $rootStore = Get-Item "Cert:\CurrentUser\Root" -ErrorAction Stop
                         $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
