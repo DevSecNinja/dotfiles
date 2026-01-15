@@ -8,8 +8,10 @@
     Tests YAML syntax, Chezmoi integration, package structure, and consistency across platforms.
     Validates Windows (WinGet, PowerShell modules), Linux (APT, DNF), macOS (Homebrew), and VS Code extensions.
 
+    Automatically installs Chezmoi if not present using available package managers (winget, Homebrew, or install script).
+
 .NOTES
-    Requires Chezmoi to be installed for full test coverage.
+    Chezmoi will be installed automatically if not found. Tests will fail if installation is unsuccessful.
 #>
 
 BeforeAll {

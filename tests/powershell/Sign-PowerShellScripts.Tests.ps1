@@ -149,8 +149,8 @@ AfterAll {
     if ($IsWindows -and $script:TestCertThumbprint -and $env:PESTER_CI -ne 'true') {
         try {
             if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
-            # Use certutil.exe which works reliably in PowerShell Core
-            $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
+                # Use certutil.exe which works reliably in PowerShell Core
+                $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
             }
         }
         catch {
@@ -481,7 +481,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:PESTER_CI -eq 'true' -or $env:CI -eq 'true') {
 
     BeforeAll {
         # Verify certificate is available

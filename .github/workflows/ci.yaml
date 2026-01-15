@@ -167,7 +167,7 @@ jobs:
       - name: Verify PowerShell profile loader
         shell: pwsh
         run: |
-          $profileLoader = $PROFILE
+          $profileLoader = "$env:USERPROFILE\Documents\PowerShell\profile.ps1"
           if (-not (Test-Path $profileLoader)) {
             Write-Error "❌ PowerShell profile loader not found at $profileLoader"
             exit 1
@@ -182,15 +182,47 @@ jobs:
           }
           Write-Host "✅ Profile loader correctly configured"
 
+      - name: Verify Windows PowerShell profile loader
+        shell: pwsh
+        run: |
+          $profileLoader = "$env:USERPROFILE\Documents\WindowsPowerShell\profile.ps1"
+          if (-not (Test-Path $profileLoader)) {
+            Write-Error "❌ Windows PowerShell profile loader not found at $profileLoader"
+            exit 1
+          }
+          Write-Host "✅ Windows PowerShell profile loader exists at $profileLoader"
+
+          # Verify it loads the correct config
+          $content = Get-Content $profileLoader -Raw
+          if ($content -notmatch '\.config\\powershell\\profile\.ps1') {
+            Write-Error "❌ Windows PowerShell profile loader doesn't source the correct config"
+            exit 1
+          }
+          Write-Host "✅ Windows PowerShell profile loader correctly configured"
+
       - name: Test PowerShell profile loading
         shell: pwsh
         run: |
           # Test that the profile loads without errors
           try {
-            . $PROFILE
+            $profileLoader = "$env:USERPROFILE\Documents\PowerShell\profile.ps1"
+            . $profileLoader
             Write-Host "✅ PowerShell profile loads successfully"
           } catch {
             Write-Error "❌ PowerShell profile failed to load: $_"
+            exit 1
+          }
+
+      - name: Test Windows PowerShell profile loading
+        shell: pwsh
+        run: |
+          # Test that the profile loads without errors
+          try {
+            $profileLoader = "$env:USERPROFILE\Documents\WindowsPowerShell\profile.ps1"
+            . $profileLoader
+            Write-Host "✅ Windows PowerShell profile loads successfully"
+          } catch {
+            Write-Error "❌ Windows PowerShell profile failed to load: $_"
             exit 1
           }
 
