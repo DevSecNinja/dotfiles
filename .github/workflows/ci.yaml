@@ -125,11 +125,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Get Hostname
-        shell: pwsh
-        run: |
-          hostname
-
       - name: Run Windows install script
         shell: pwsh
         run: |
