@@ -94,7 +94,7 @@ echo "✅ Development tools installation complete ({{ .installType }} mode)!"
 if command -v code >/dev/null 2>&1; then
     echo ""
     echo "📦 Installing VS Code extensions..."
-    
+
     # Install common extensions
 {{- range .extensions.common }}
     echo -n "Checking {{ . }}... "
@@ -109,7 +109,7 @@ if command -v code >/dev/null 2>&1; then
         fi
     fi
 {{- end }}
-    
+
 {{- if eq .chezmoi.os "linux" }}
     # Install Linux-specific extensions
 {{- range .extensions.linux }}
@@ -141,7 +141,7 @@ if command -v code >/dev/null 2>&1; then
     fi
 {{- end }}
 {{- end }}
-    
+
     echo "[OK] VS Code extensions installation complete!"
 else
     echo ""
