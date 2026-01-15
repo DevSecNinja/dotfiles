@@ -14,6 +14,7 @@ packages:
         - wget
         - fish
       full:
+        - python3-venv
         - python3.11-venv
         - python3-pip
         - jq
