@@ -27,7 +27,13 @@ while IFS= read -r script; do
 	SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
 	echo "  Checking: ${script}"
 
-	if sh -n "${script}" 2>&1; then
+	# Determine which shell to use based on shebang
+	SHELL_INTERPRETER="sh"
+	if head -n 1 "${script}" | grep -q "#!/bin/bash\|#!/usr/bin/env bash"; then
+		SHELL_INTERPRETER="bash"
+	fi
+
+	if ${SHELL_INTERPRETER} -n "${script}" 2>&1; then
 		echo "    ✅ OK"
 	else
 		echo "    ❌ Syntax error"
