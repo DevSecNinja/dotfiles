@@ -298,7 +298,7 @@ function Add-CertificateToTrustedRoot {
         [IO.File]::WriteAllBytes($tempCertPath, $certBytes)
 
         Write-ScriptLog "Adding certificate to Trusted Root store..."
-        
+
         # Use certutil with -f (force) for non-interactive operation
         # Try user store first (doesn't require admin)
         $result = & certutil -user -addstore -f "Root" $tempCertPath 2>&1
@@ -310,12 +310,12 @@ function Add-CertificateToTrustedRoot {
         }
         else {
             Write-ScriptLog "certutil output: $result" -Level Warning
-            
+
             # Try machine store (requires admin, but might work in CI)
             Write-ScriptLog "Attempting machine store (may require elevation)..."
             $result = & certutil -addstore -f "Root" $tempCertPath 2>&1
             $exitCode = $LASTEXITCODE
-            
+
             if ($exitCode -eq 0) {
                 Write-ScriptLog "Certificate added to LocalMachine Trusted Root store" -Level Success
                 return $true
@@ -398,7 +398,7 @@ function Invoke-ScriptSigning {
             Write-Verbose "Set-AuthenticodeSignature details: $($errorDetails -join '; ')"
             Write-Host "" # Newline for readability
             Write-Host "    DEBUG - StatusMessage: $($result.StatusMessage)" -ForegroundColor Magenta
-            
+
             return @{
                 Status = 'Failed'
                 Message = "Signing failed with status: $($result.Status) - $($result.StatusMessage)"
@@ -478,11 +478,11 @@ if (-not $SkipValidation) {
 if ($TrustSelfSignedRoot) {
     # Check if cert is self-signed (Subject == Issuer)
     $isSelfSigned = $cert.Subject -eq $cert.Issuer
-    
+
     if ($isSelfSigned) {
         Write-ScriptLog "Certificate is self-signed, adding to Trusted Root store..."
         $trustResult = Add-CertificateToTrustedRoot -Certificate $cert
-        
+
         if (-not $trustResult) {
             Write-ScriptLog "Failed to add self-signed certificate to Trusted Root store" -Level Error
             Write-ScriptLog "Signing may fail with 'root certificate not trusted' error" -Level Warning
