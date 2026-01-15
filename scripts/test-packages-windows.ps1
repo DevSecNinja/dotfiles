@@ -28,14 +28,14 @@ try {
         exit 1
     }
     $data = $output | ConvertFrom-Json
-    
+
     if ($data.packages) {
         Write-Host "✅ packages.yaml is loaded by chezmoi" -ForegroundColor Green
-        
+
         # Check Windows section
         if ($data.packages.windows) {
             Write-Host "✅ Windows packages section found" -ForegroundColor Green
-            
+
             # Check winget packages
             if ($data.packages.windows.winget) {
                 if ($data.packages.windows.winget.light) {
@@ -51,7 +51,7 @@ try {
             } else {
                 Write-Warning "⚠️ No winget packages found"
             }
-            
+
             # Check PowerShell modules
             if ($data.packages.windows.powershell_modules) {
                 if ($data.packages.windows.powershell_modules.light) {
@@ -71,14 +71,14 @@ try {
             Write-Error "❌ Windows packages section not found"
             exit 1
         }
-        
+
     } else {
         Write-Error "❌ packages data not found in chezmoi data"
         exit 1
     }
-    
+
     Write-Host "`n✅ All tests passed! packages.yaml is valid for Windows" -ForegroundColor Green
-    
+
 } catch {
     Write-Error "❌ Error testing chezmoi data: $_"
     Pop-Location

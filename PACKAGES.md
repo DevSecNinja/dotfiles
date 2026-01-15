@@ -53,7 +53,7 @@ Minimal installation for production servers (hostname pattern: `SVL*` but not `S
 
 **Windows packages** (3):
 - Git.Git
-- Microsoft.PowerShell  
+- Microsoft.PowerShell
 - twpayne.chezmoi
 
 **PowerShell modules** (2):
@@ -105,7 +105,7 @@ Test template rendering:
 # Test light mode packages
 chezmoi execute-template --source=. '{{ range .packages.windows.winget.light }}{{ . }}{{ "\n" }}{{ end }}'
 
-# Test full mode extra packages  
+# Test full mode extra packages
 chezmoi execute-template --source=. '{{ range .packages.windows.winget.full }}{{ . }}{{ "\n" }}{{ end }}'
 
 # Test PowerShell modules
@@ -178,7 +178,7 @@ Validate the YAML structure:
 
 - [.chezmoidata/packages.yaml](.chezmoidata/packages.yaml) - Package definitions
 - [run_once_install-packages.ps1.tmpl](run_once_install-packages.ps1.tmpl) - Windows installer
-- [run_once_install-packages.sh.tmpl](run_once_install-packages.sh.tmpl) - Linux/macOS installer  
+- [run_once_install-packages.sh.tmpl](run_once_install-packages.sh.tmpl) - Linux/macOS installer
 - [scripts/test-packages-windows.ps1](scripts/test-packages-windows.ps1) - Windows validation
 - [scripts/validate-packages.sh](scripts/validate-packages.sh) - YAML validation
 

@@ -106,7 +106,7 @@ Write-Host "`nDevelopment tools installation complete ({{ .installType }} mode)!
 # Install VS Code extensions if code command is available
 if (Get-Command code -ErrorAction SilentlyContinue) {
     Write-Host "`nInstalling VS Code extensions..." -ForegroundColor Cyan
-    
+
     # Install common extensions
 {{- range .extensions.common }}
     Write-Host "Checking {{ . }}..." -NoNewline
@@ -123,7 +123,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
         }
     }
 {{- end }}
-    
+
     # Install Windows-specific extensions
 {{- range .extensions.windows }}
     Write-Host "Checking {{ . }}..." -NoNewline
@@ -140,7 +140,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
         }
     }
 {{- end }}
-    
+
     Write-Host "[OK] VS Code extensions installation complete!" -ForegroundColor Green
 } else {
     Write-Host "`n[SKIP] VS Code not found, skipping extension installation" -ForegroundColor Yellow

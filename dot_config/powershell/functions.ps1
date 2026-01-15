@@ -41,16 +41,16 @@ function Invoke-ChezmoiSigning {
     param(
         [string]$CertificateThumbprint = "421f66cf0a29ef657c83316a88d5d2ff918eeb7b"
     )
-    
+
     # Signs PowerShell scripts in the Chezmoi source directory
     $chezmoiSourceDir = chezmoi source-path
     $signingScript = Join-Path $chezmoiSourceDir "dot_local\private_bin\scripts\powershell\Sign-PowerShellScripts.ps1"
-    
+
     if (-not (Test-Path $signingScript)) {
         Write-Host "Error: Sign-PowerShellScripts.ps1 not found at $signingScript" -ForegroundColor Red
         return
     }
-    
+
     & $signingScript -CertificateThumbprint $CertificateThumbprint -Path $chezmoiSourceDir
 }
 
