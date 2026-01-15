@@ -38,6 +38,11 @@
 {{-       writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
 {{-     end -}}
 {{-   end -}}
+{{- else if $hostname | hasPrefix "runnervm" -}}
+{{-   $installType = "light" -}}
+{{-   if $interactive -}}
+{{-     writeToStdout "🔧 Runner VM detected - installing light dotfiles\n" -}}
+{{-   end -}}
 {{- else -}}
 {{-   if $interactive -}}
 {{-     writeToStdout "💻 Workstation detected - installing full dotfiles\n" -}}
