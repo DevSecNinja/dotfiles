@@ -79,11 +79,10 @@ Write-Host "   PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColo
 Write-Host "   Pester Version: $($pesterModule.Version)" -ForegroundColor Gray
 if ($CI) {
     Write-Host "   Mode: CI (lenient signature validation)" -ForegroundColor Gray
-    $env:PESTER_CI = 'true'
+    $env:CI = 'true'
 }
 else {
     Write-Host "   Mode: Local (strict signature validation)" -ForegroundColor Gray
-    $env:PESTER_CI = $null
 }
 Write-Host ""
 
