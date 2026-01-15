@@ -1,42 +1,96 @@
-# PowerShell Profile Configuration
-# This file is loaded when PowerShell starts
-# Location: $PROFILE (typically ~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1)
-# But managed by chezmoi in ~/.config/powershell/
+# PowerShell Functions
+# Loaded by profile.ps1
 
-# Set UTF-8 encoding
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# Navigation helpers
+function Set-LocationUp { Set-Location .. }
+function Set-LocationUpUp { Set-Location ..\.. }
 
-# Load functions and aliases
-. $PSScriptRoot\functions.ps1
-. $PSScriptRoot\aliases.ps1
-
-# Custom prompt (simple and clean)
-function prompt {
-    $loc = Get-Location
-    $gitBranch = ""
-
-    # Get git branch if in a git repo
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        $gitBranch = & git rev-parse --abbrev-ref HEAD 2>$null
-        if ($gitBranch) {
-            $gitBranch = " ($gitBranch)"
-        }
-    }
-
-    Write-Host "$loc" -NoNewline -ForegroundColor Cyan
-    Write-Host "$gitBranch" -NoNewline -ForegroundColor Yellow
-    return "> "
+# System utilities
+function which($name) {
+    Get-Command $name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 }
 
-# Welcome message
-Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
-Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+function touch($file) {
+    if (Test-Path $file) {
+        (Get-Item $file).LastWriteTime = Get-Date
+    } else {
+        New-Item -ItemType File -Path $file | Out-Null
+    }
+}
+
+function mkcd($path) {
+    New-Item -ItemType Directory -Path $path -Force | Out-Null
+    Set-Location $path
+}
+
+# Chezmoi utilities
+function Reset-ChezmoiScripts {
+    # Clears Chezmoi script execution state to force re-running of run_once_* and run_onchange_* scripts
+    chezmoi state delete-bucket --bucket=scriptState
+    Write-Host "Chezmoi script state cleared. run_once_* scripts will re-execute on next 'chezmoi apply'." -ForegroundColor Green
+}
+
+function Reset-ChezmoiEntries {
+    # Clears Chezmoi entry state to force reprocessing of all managed files
+    chezmoi state delete-bucket --bucket=entryState
+    Write-Host "Chezmoi entry state cleared. All files will be reprocessed on next 'chezmoi apply'." -ForegroundColor Yellow
+    Write-Host "Warning: This may cause unexpected changes. Use 'chezmoi apply --dry-run' first." -ForegroundColor Yellow
+}
+
+# Profile management
+function Edit-Profile {
+    code $PROFILE
+}
+
+function Import-Profile {
+    . $PROFILE
+    Write-Host "Profile reloaded!" -ForegroundColor Green
+}
+
+# Show all aliases and functions
+function Show-Aliases {
+    Write-Host "`n=== Navigation ===" -ForegroundColor Cyan
+    Write-Host "..      - Go up one directory"
+    Write-Host "...     - Go up two directories"
+
+    Write-Host "`n=== File Operations ===" -ForegroundColor Cyan
+    Write-Host "ll/la   - List files (including hidden)"
+    Write-Host "touch   - Create or update file timestamp"
+    Write-Host "mkcd    - Create directory and cd into it"
+    Write-Host "which   - Find command location"
+
+    Write-Host "`n=== Git ===" -ForegroundColor Cyan
+    Write-Host "gs      - git status"
+    Write-Host "ga      - git add"
+    Write-Host "gc      - git commit"
+    Write-Host "gp      - git push"
+    Write-Host "gl      - git pull"
+    Write-Host "gd      - git diff"
+    Write-Host "gco     - git checkout"
+    Write-Host "gb      - git branch"
+    Write-Host "glog    - git log (formatted)"
+
+    Write-Host "`n=== Docker ===" -ForegroundColor Cyan
+    Write-Host "dps     - docker ps"
+    Write-Host "dpsa    - docker ps -a"
+    Write-Host "di      - docker images"
+    Write-Host "dex     - docker exec -it"
+
+    Write-Host "`n=== Chezmoi ===" -ForegroundColor Cyan
+    Write-Host "Reset-ChezmoiScripts  - Clear script state to re-run scripts"
+    Write-Host "Reset-ChezmoiEntries  - Clear entry state to reprocess files"
+
+    Write-Host "`n=== Profile ===" -ForegroundColor Cyan
+    Write-Host "ep      - Edit profile"
+    Write-Host "reload  - Import profile (reload)"
+    Write-Host ""
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCBx+3HPIlbV5pf
-# YSZ4OfAj6qujNwzHRhmmLuaPWE6ffqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBQJ6cOoE+pXa+k
+# 8SL4n9I4ANDPBkoH1z9jPPOk4+FyeKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -170,33 +224,33 @@ Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yello
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCA2spXZYW7rnF1WHemP7qK5OJgJOx7ApyzAjzUayAhbzjANBgkqhkiG
-# 9w0BAQEFAASCAgCwomZNz5I7VZhMwk3oPj7gG/v9c66YKi0RLqmaIumXNB8QJxRU
-# 5Z5K44ZInERQh8tLjdA9mLgzqd7WTGRhvtqnYs1G9d2khD+LAWbEYRekUVRiAH+z
-# YdSMQMwc4okYjS+lEBRhzHdVVWetr3tqV1qAolYrwgCgwRQ5GI1c/wZg/rpNO8ws
-# oDo/hgv/uAjPMF7ZApEry2Kshv527BYm+VYCEPYOgKiDGUIZt1BwbmyfXweAIbq3
-# u+qO3LEmdi5FhBA07oGZmHkEKzX5om7rg+JjEUOXbkpXJnCUH6liIlRN60jrLxZZ
-# j7osIeeq57h5DiHb3SW/tDaPijyAMKx/AV0GdchTR4Ve36mHLIXepUiTG0ZCwR06
-# shplnoWHOQWM2ON+nyouuSBLdQST1wVywM2oSGi9Fi0XtNIb40CgQ9oo47s4LtfA
-# mTg2gj5oosCDNckNzmis7Uz8APPgOuVuUR1kqqgO+pNVdXzNrkoWddCdPW0/Jvid
-# pFq5iIaZbC/y6n7JTg+ftJnyLylWV2iiApL5YfvxxOAicr71Z6+ChhRhMnZNZPJW
-# mla80mo47C3ow4sIGllsG+VhEuiIUHtWvFHFCslta0zajLmeHof0CbuCTi54f44O
-# lgpiH1fDNB5jeZ7GA3OeuktgnjSjfh78/z/iCvGJFALFTdHnYmMRl4M0U6GCAyYw
+# DQEJBDEiBCD8eFYMvLL5BrEQet17E3V7cbFez0025oQtzdiQQtq+2jANBgkqhkiG
+# 9w0BAQEFAASCAgCh/2+rKXg7eb8xZ7Ltb28QUeYF6MevXlwNY3AxDovB3Nki89f8
+# a4jOJATaw53ZTzvXBFMwawt4BNMUIt0462sBndnqjJHJlokFmRdFomSTjqfEtiee
+# 9KSGmG3bgNS7qK3c4UTw18MaDc+JuHObTSCIE28dYhPdyqNX/K9pjt/87po/vgBR
+# 7MfN52nmddgcwZP5kA51IS/G79P003CN998aD0Dpf251eIA4hcHqjA8q4uPMjsdD
+# Qh5o6mdKBiMoWxCUkrFJPI5jRW4ghwB5i9vHu3c4VtF2UASblT/F0gspoidk5Dn/
+# AaHmAceaJfFTJoT6IvjoV8EizUmm80NxcyReToFnzzuMVcfEfxzLBGY7/9m5vs8R
+# BnRCD7CWh18gGw28JuJSqYhEVz0rOvwZqyRBakZIElQwDbNyDUb6+cruOejqPoRw
+# GXqFR0Jzggs7q5qQrB8dz5ZKHX8HZQ8IKQ54LzMdCxVXhZEIVW1wuRAmuXovZ4Kh
+# wr9oG0U/sPTbfKDCykwM07U/tTKQ6f/51S3zQbyTfCM45qCgA5mfzwysUxZWMMpV
+# YB2aOSDJT8KB6JLfRVfI0wg34M9RDfOduHPe/KnXVexpy/gYE7TQI7sI1NvsE5JW
+# yfhN/eQmv/ULtak1DNb6mr0iwAbcrErIQnmzWJBOqZmpuBWbf5U8Ef8j16GCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTUwODEzMjVaMC8GCSqGSIb3DQEJBDEi
-# BCCx+T1uz40A9tcmqXM3UlkSk1weJ+ZXOmO/Lz1uwyo5CjANBgkqhkiG9w0BAQEF
-# AASCAgAg7J915ZPtp0LDLhLkUASeP1fFmTzEmJQ47uPZouIRgeztQUf/wrRBtVDi
-# hubTMtwTawfsNajr01PF95tnSLLsBspFIwFiIUrNA1Ds2PrxQZOGt+Cyz4uCCMwH
-# QKF7RuAk6US06e/WIyzpGQSlj+12LaTw29xoWV8DzF/3BfRmPNptr5F0L3/lvOPg
-# nkfcOiwJv482H7x7a3+N6C2KjpXZtsW3dJiNFx3l2HGBDEBVu1G4ZZDaBieax9t1
-# P2dX1UzGTSTxbHFAVyR69ZALZ8DtWMbMhne9oxRl1GqtIGjUFM4JhqUlvY+WcpnL
-# q0WDXptggSSLB8l9CgHIEN401aCLFRLiT0Wre7Q5chZAIE5s4qAugjjAnCDamXSd
-# KakB/H/qdR0saOP0iaM46IcYnqJG80oXaJiBfEgGOFIYQ3n6JNd6EU/3SOJZpMZ7
-# q/QfippmgMSyIQ1MkT5WCGh00C5UpxM6gy2eCJOmhWFz2oOJ2btjDv+afxGh5Pf2
-# PQOWOwcHe1HVhFUOKirXgIPhaHs50urxcnMsgqp7XneEdEnOYp96s21C1Fe23MIL
-# qkHkyeqyh7JQAHUQGruzJo1AlyJRy6NxD1RsyPq+FAr3jcj8Lc2vvgMEdRxd2Hvg
-# sl6UjUncfUy4fHpOyylhSVCZQlGRDiuwMRv6XXXQoCesrPDnCQ==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTUwODEzMjRaMC8GCSqGSIb3DQEJBDEi
+# BCBg7an8YEIQTCLuIrEC23sUKM8vBY2+/305ssK0/9vuUTANBgkqhkiG9w0BAQEF
+# AASCAgBHMJo3EtB7K0eRdoRgI7rX0IFMvUL9RrcT/0zmOLpTSYoF9bsClDhq18jB
+# UWyjP1KZjHz6gCg2dT3lT9y7jXEwOZgEJoUVavJswQfhvYfiE7glBbHMu27JKw9Y
+# 2woVFnagTfbRqqe3TZzMWU2JflgBRiDcMv0dTzu9ktEvj9qoomCQgmghVr4cmH5Y
+# 9NYGKdD92PFmaiODIX699PinQS1SyXwzpPRI/Sk8fe7VVFFpXZ9CxIVjrCp8OorQ
+# hNh5vmYkQT+4lA3PJhf2iLJvsaze+Mxp1NC9FPtS2qSa7yWWMCb1d+3TkvsFzbnD
+# +yvCBpAQa+9kbsiay6Azd1HPKY90SecaT4yvbLyCNuzx1XwtFWzbP9LLPZsTOSp3
+# 63dq/LrEJ8Xy9c2um6rA45E2Ubb6yG5g0K3FameR3WGZz11ji8w7syoZ99A1Dlup
+# ntRv8UmnJ2LQhlo4d8RIUSEJV6996pygNGW7HKyw4O1DWj7BxKC5BOQ23NHVEGE0
+# ueD5FD6vvlVVMlFxdM/ii51clqEbdc8lrxv/7wFMD0koTihvSjo/OQ2CWYtgrlPC
+# Sk9IQ0GB7SB3i9Y9PGM5aBAFmgaGlxaax9L9BBK0xFC6MJ/7zjeb/qIBDJm6JxfV
+# qA8jhXMkAWQXevhIKUjbCL8IOmhHPVzE7SZD6pltRaWJlAJfLQ==
 # SIG # End signature block

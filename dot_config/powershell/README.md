@@ -9,7 +9,7 @@ This directory contains PowerShell profile configuration managed by chezmoi.
 
 ## Installation
 
-The profile is automatically installed by chezmoi. A loader file is placed at `~/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` (the default `$PROFILE` location) which sources the actual configuration from `~/.config/powershell/profile.ps1`.
+The profile is automatically installed by chezmoi. A loader file is placed at `~/Documents/PowerShell/profile.ps1` (the default `$PROFILE` location) which sources the actual configuration from `~/.config/powershell/profile.ps1`.
 
 This approach works seamlessly across different PowerShell versions and doesn't require symbolic links or manual setup.
 

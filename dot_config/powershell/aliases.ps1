@@ -3,9 +3,7 @@
 
 # Navigation
 Set-Alias -Name .. -Value Set-LocationUp
-function Set-LocationUp { Set-Location .. }
 Set-Alias -Name ... -Value Set-LocationUpUp
-function Set-LocationUpUp { Set-Location ..\.. }
 
 # List files (Unix-like)
 function ll { Get-ChildItem -Force @args }
@@ -22,84 +20,24 @@ function gco { git checkout @args }
 function gb { git branch @args }
 function glog { git log --oneline --graph --decorate @args }
 
-# Docker shortcuts (if Docker is installed)
+# Docker shortcuts
 function dps { docker ps @args }
 function dpsa { docker ps -a @args }
 function di { docker images @args }
 function dex { docker exec -it @args }
 
-# System utilities
-function which($name) {
-    Get-Command $name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-}
-
-function touch($file) {
-    if (Test-Path $file) {
-        (Get-Item $file).LastWriteTime = Get-Date
-    } else {
-        New-Item -ItemType File -Path $file | Out-Null
-    }
-}
-
-function mkcd($path) {
-    New-Item -ItemType Directory -Path $path -Force | Out-Null
-    Set-Location $path
-}
-
-# Quick edit of this profile
-function Edit-Profile {
-    code $PROFILE
-}
+# Profile management
 Set-Alias -Name ep -Value Edit-Profile
+Set-Alias -Name reload -Value Import-Profile
 
-# Reload profile
-function Reload-Profile {
-    . $PROFILE
-    Write-Host "Profile reloaded!" -ForegroundColor Green
-}
-Set-Alias -Name reload -Value Reload-Profile
-
-# Show all aliases
-function Show-Aliases {
-    Write-Host "`n=== Navigation ===" -ForegroundColor Cyan
-    Write-Host "..      - Go up one directory"
-    Write-Host "...     - Go up two directories"
-
-    Write-Host "`n=== File Operations ===" -ForegroundColor Cyan
-    Write-Host "ll/la   - List files (including hidden)"
-    Write-Host "touch   - Create or update file timestamp"
-    Write-Host "mkcd    - Create directory and cd into it"
-    Write-Host "which   - Find command location"
-
-    Write-Host "`n=== Git ===" -ForegroundColor Cyan
-    Write-Host "gs      - git status"
-    Write-Host "ga      - git add"
-    Write-Host "gc      - git commit"
-    Write-Host "gp      - git push"
-    Write-Host "gl      - git pull"
-    Write-Host "gd      - git diff"
-    Write-Host "gco     - git checkout"
-    Write-Host "gb      - git branch"
-    Write-Host "glog    - git log (formatted)"
-
-    Write-Host "`n=== Docker ===" -ForegroundColor Cyan
-    Write-Host "dps     - docker ps"
-    Write-Host "dpsa    - docker ps -a"
-    Write-Host "di      - docker images"
-    Write-Host "dex     - docker exec -it"
-
-    Write-Host "`n=== Profile ===" -ForegroundColor Cyan
-    Write-Host "ep      - Edit profile"
-    Write-Host "reload  - Reload profile"
-    Write-Host ""
-}
+# Help
 Set-Alias -Name aliases -Value Show-Aliases
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDiXAn4J1XnQh/7
-# OQJboOvbukcN2OyKjdfSwOIkXPB/2KCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDkbwBSru2NRGR+
+# clXKdvT9mb/4Ks1G5OJqQSP5o4Q1TKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -233,33 +171,33 @@ Set-Alias -Name aliases -Value Show-Aliases
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCC+h0AGHMx2JwHVY7hpTL4iaCjfUj1J4EZmT3EfzmNiOzANBgkqhkiG
-# 9w0BAQEFAASCAgCEIf4JDQ67cE6fyfiwRDhYYPgNbyyTlb1HnRbi2UwBi/YMDxcq
-# 8QlxI+Mh3BOjm1jZYk41LrouBZlbOaaBb53FWEwtsJDxYX0qCZlQ68tNPqbvBPlt
-# 7QbknyZB+q2z9j7L0hq/ARC+6EX+1q0Bo+5qFylWbx/LfWa84ZQMHKIz2G9M2N/R
-# Nz0hmu6sAnRSZxQSkEbsVcFzYBLMjFK9kW4s5nFR91B7Hl1l8rB9yIMNidXK2Lvx
-# xMy9F5vBchIVBQnpWJ63bUODlukzS5sVSUEHu2c1SkYeIpCb3OZ2N2QrVMcVDURB
-# LtQDir26KamVEcO6GABmomsu1wt/kJzbEV2zCWGrDF3ouuWYHGj/nRi+R5CzZ5IV
-# cTStEIyagGxo16qr1aJzkbGOZ3hbyXExuvbS2fUtWo+GSpFz5VMa7II8n5GYWWgL
-# w7B3LflsDpedTfvsxSkanjPLCA+hwP/zEn0KFJNVNExUjUu2t7KdJVrNBGluRKu8
-# YivDEMYXVmqQWaUoTQC2E3sHDCxsIV4YGTUZ80949x1qPpocL4ZtkkVETZcSjBDT
-# dvUoiVDEk45e/TVpwhzoi++0Ab0UqycRz/W3ndnCsaHyEuNY0bGoUMawh8rbUkVu
-# GSeAfDpvOtvBTK/KLOuQHtg7CnS3LRYr19xKcUYr2gb9NCGKb8kGPoN1DKGCAyYw
+# DQEJBDEiBCDah06pB4aoAu24GTx5Mti69puVmmwRDdtuYW835DDVPDANBgkqhkiG
+# 9w0BAQEFAASCAgCL/zEx52gQcByXvUZzFbk0Oh/BJxb2xdq9/+8mvLLBsMSkcr1r
+# wftQrO25Okjbnmrm+105Ga8+HpH9GFViXvudbPZnRAEuxmsoYFTsp7Tm28bCGWSy
+# upZsACHJMQmrrqMH4ODKaVtsZdMYDK6ojLzjtwqZugl2b6Fj0AqZKz6T77slMU0n
+# 2R7rqpfZem5MOU2TInJZ3nEXBXZd+p+SfHQOUdNK8eDxIaiOsxEF7zi+jyeo44A4
+# /vKfToGZV24V9YyyWNcal7xLDQTQVWJDd70W4bi5scQu8RDNhyfhRVGm1j7SytHu
+# BqbyaCEeO5wlLTqOO1TS+H65PzsbJ+qi5Xdg7qMp9f+wNH3vB/Nw2SJiiKGwPoNk
+# mWch3c4Ei+00lHe19Q1VQLYvaZsqnnj/u7XaNJbCqWPCGDY/8ipqoejqfLcv++T5
+# hFfqZ+5PQc28p0c6FaYNPl68llbYHiX2TlUnj52vnuPIOi8/WtiKrSREGpTpVUuX
+# 1UwQGOuYusMDgkEgCYJJGhFTa0wPjAa8yT544vH9iFfhsq/TJ8ie7k2W1m7CsZOo
+# 4ISXFZYs6h73e83PuX5r6CFBcakZyVGj0H0oIul0UXbhaacF6RKYF64XURHI8pho
+# FdbRis6mn/zKcCijd0cyc+bbNhg1Z/pZjfO60/WHq9RM92HxWgLF2/YUtqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTQyMjQ0NTdaMC8GCSqGSIb3DQEJBDEi
-# BCDQAoVASwk8R+XsfratFhEtX2iLI9RH99U2OnYyypiqQjANBgkqhkiG9w0BAQEF
-# AASCAgAToYayJPwLdY5sksOU1pefU75vJKRs0UZjklLKOGyjAz1e/wjZJiqjhdN3
-# MUtwaC3ipyYEZlXDoyKgBAauKpj8ljUrnEDUfaZDVdxKYVYk7cRH4eGHSPU0+BgZ
-# +J7EY/3KJl/DezXB1M3zIDr+Me5oOnqcP3yt0d8S4Ihysukb4EJjCUotGRBDlJbO
-# CO8et6EdXe0FGco4wHfJpUio95bjxwJC1P0h0FVGT0tyeHcv5Y2oOolyruhAC8Gl
-# n17I0rQ01Qu/iPFok7u9ukNfdKhX+AYzEffZLYbD5RBh4dnemhbAgaED1orbUiny
-# BiihS2933tV43io3Ne4Ev6gGCvZGXbrO6ohAubX6cBz/cyZE+h0jhBmne1SwOCGN
-# r4XBlrnghiy2qAWzrNHu+yTbKhbeHL54Hnp9acWp4hg6ZiLmdnKFKpxT4DyZOn/w
-# uSNOAgkWDUDykrUTmnJ3pbILbUwypL7lBDmhWg9pN7rBQ79RTQ8GzMVVr51y7mQs
-# 95t+N+SjrTh48US0OYDAgweWWq6vgwPuhPjiKugL4Iu4bk9FAQhAIMrVA4BKOSgJ
-# FMU5iIRM3Xtc1vZXCVsCUs6IWfyHLIblP93qrQq+R71I77xmeCI2dn4ej9oF02kO
-# i2XUauNJnltU6Vh25X4LJ3U3ziuEZH06ig3IfcU8I0B78Ur2zg==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTUwODEzMjRaMC8GCSqGSIb3DQEJBDEi
+# BCDW3v+UwiL9JoVSUffaE0FHe9wEhRbpS7+5MS0lnOZX5TANBgkqhkiG9w0BAQEF
+# AASCAgBAjumv9TNw1GBOl7+Jig9Wg4QuPxTJrq7Mx6/qMXvzpEkvReC2h9/A9Z0f
+# ZMCzNZFY4gkNEjjvjIynKcOxTpxx2G9m45nBe57m3LB4LWS1ug2YftvN4KoflRK7
+# ywJbcGzQEDXW+1FqPSVT+0/61fu95YhqLIl+nxxNXrhwy2koheizyQmAETVsPkqs
+# plivXKo2bfYPc3PJM2EjrAtGWgVDAkqevmKynRNL1xvJxkjQf7zmdPE4y3krx3Rj
+# FpYogyPabGRwMmm/jE/v5T8uEEVmExYLZf06Y+p8GyY474/9wVNADVl4LYTrYtYn
+# GCIcMipE3dGCgC4hbZuGWHTa9IJWZ9NlWSod/EHYkxd7ixH5wP8Kr1aBJ0bNK2HH
+# 2C/PCUhcLtB6P9FU8rFpazA7YYw9g1VJYqcaE5l2hw+ORrrDevMtBm5P6i6FnQC+
+# i4iHwi/wLekwbkepnGH+KSNuuvBgxS7BEuj1+VAmUUEsYIUa6j6k99xPTn23up5m
+# sM0Y2+91KoROfsux9PH28ypklpMdI9mV48jjAwVS8snsLnL7sMtTTgS3ql6yHUqa
+# n08TX5f25Wc/wSZuxfoZ4RWuDloQ4NSEkZqqmGHojJKwnwdkVd5ob6OrbHtfCjYF
+# McACn6O/7C+afLoGjdvFeXkGafCR90EKs/K+nD0wpPhVLRVT3w==
 # SIG # End signature block

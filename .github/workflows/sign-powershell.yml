@@ -1,15 +1,19 @@
 name: Sign PowerShell Scripts
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '**.ps1'
-      - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
-  pull_request:
-    paths:
-      - '**.ps1'
-      - '!**.ps1.tmpl'
+  # TODO: Find a fix for PowerShell signing in the pipeline
+  # Problem is that the certificate import into the trusted root store
+  # requires user interaction, which the GitHub hosted runners do not support.
+  # For now, we will sign scripts manually before releases.
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - '**.ps1'
+  #     - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
+  # pull_request:
+  #   paths:
+  #     - '**.ps1'
+  #     - '!**.ps1.tmpl'
   workflow_dispatch:
 
 jobs:
