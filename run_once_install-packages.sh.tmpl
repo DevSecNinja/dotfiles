@@ -1,8 +1,7 @@
 #!/bin/bash
-# This script installs common development tools
-# Customize based on your needs
-# For light servers (SVL*), only installs essential tools
-# For dev servers (SVLDEV*) and workstations, installs full toolset
+# This script installs packages defined in .chezmoidata/packages.yaml
+# Light mode: installs essential packages only
+# Full mode: installs light + additional development packages
 
 set -e
 
@@ -10,42 +9,144 @@ echo "🔧 Installing development tools ({{ .installType }} mode)..."
 
 {{- if eq .chezmoi.os "linux" }}
     {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
-# Ubuntu/Debian packages
-{{- if eq .installType "light" }}
-# Light installation: Only essential tools for servers
-PACKAGES="git vim tmux curl wget fish"
-{{- else }}
-# Full installation: All development tools
-PACKAGES="git vim tmux curl wget tree htop python3-venv fish"
+echo "📦 Updating package lists..."
+sudo apt-get update
+
+echo "📦 Installing packages with APT..."
+# Install light mode packages (always)
+{{- range .packages.linux.apt.light }}
+if ! dpkg -l {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    sudo apt-get install -y {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
+fi
 {{- end }}
 
-if command -v apt-get >/dev/null 2>&1; then
-    # Update package lists first
-    echo "📦 Updating package lists..."
-    sudo apt-get update
-
-    for pkg in $PACKAGES; do
-        if ! dpkg -l | grep -q "^ii  $pkg "; then
-            echo "Installing $pkg..."
-            sudo apt-get install -y "$pkg"
-        else
-            echo "✅ $pkg already installed"
-        fi
-    done
+{{- if eq .installType "full" }}
+# Install full mode packages (additional)
+{{- range .packages.linux.apt.full }}
+if ! dpkg -l {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    sudo apt-get install -y {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
 fi
+{{- end }}
+{{- end }}
+    {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+echo "📦 Installing packages with DNF..."
+# Install light mode packages (always)
+{{- range .packages.linux.dnf.light }}
+if ! rpm -q {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    sudo dnf install -y {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
+fi
+{{- end }}
+
+{{- if eq .installType "full" }}
+# Install full mode packages (additional)
+{{- range .packages.linux.dnf.full }}
+if ! rpm -q {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    sudo dnf install -y {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
+fi
+{{- end }}
+{{- end }}
     {{- end }}
 {{- else if eq .chezmoi.os "darwin" }}
-# macOS with Homebrew
-if command -v brew >/dev/null 2>&1; then
-{{- if eq .installType "light" }}
-    brew install git vim tmux fish
-{{- else }}
-    brew install git vim tmux tree htop fish
-{{- end }}
-else
+if ! command -v brew >/dev/null 2>&1; then
     echo "❌ Homebrew not found. Please install Homebrew first."
     exit 1
 fi
+
+echo "📦 Installing packages with Homebrew..."
+# Install light mode packages (always)
+{{- range .packages.darwin.brew.light }}
+if ! brew list {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    brew install {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
+fi
+{{- end }}
+
+{{- if eq .installType "full" }}
+# Install full mode packages (additional)
+{{- range .packages.darwin.brew.full }}
+if ! brew list {{ . | quote }} >/dev/null 2>&1; then
+    echo "Installing {{ . }}..."
+    brew install {{ . | quote }}
+else
+    echo "✅ {{ . }} already installed"
+fi
+{{- end }}
+{{- end }}
 {{- end }}
 
 echo "✅ Development tools installation complete ({{ .installType }} mode)!"
+
+# Install VS Code extensions if code command is available
+if command -v code >/dev/null 2>&1; then
+    echo ""
+    echo "📦 Installing VS Code extensions..."
+    
+    # Install common extensions
+{{- range .extensions.common }}
+    echo -n "Checking {{ . }}... "
+    if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
+        echo "[OK]"
+    else
+        echo "Installing..."
+        if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
+            echo "  [OK] {{ . }} installed"
+        else
+            echo "  [FAILED] Could not install {{ . }}"
+        fi
+    fi
+{{- end }}
+    
+{{- if eq .chezmoi.os "linux" }}
+    # Install Linux-specific extensions
+{{- range .extensions.linux }}
+    echo -n "Checking {{ . }}... "
+    if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
+        echo "[OK]"
+    else
+        echo "Installing..."
+        if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
+            echo "  [OK] {{ . }} installed"
+        else
+            echo "  [FAILED] Could not install {{ . }}"
+        fi
+    fi
+{{- end }}
+{{- else if eq .chezmoi.os "darwin" }}
+    # Install macOS-specific extensions
+{{- range .extensions.darwin }}
+    echo -n "Checking {{ . }}... "
+    if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
+        echo "[OK]"
+    else
+        echo "Installing..."
+        if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
+            echo "  [OK] {{ . }} installed"
+        else
+            echo "  [FAILED] Could not install {{ . }}"
+        fi
+    fi
+{{- end }}
+{{- end }}
+    
+    echo "[OK] VS Code extensions installation complete!"
+else
+    echo ""
+    echo "[SKIP] VS Code not found, skipping extension installation"
+fi
+
+echo ""
+echo "[COMPLETE] All installations finished!"
