@@ -197,7 +197,7 @@ It "Windows-only feature" -Skip:(-not $IsWindows) {
 
 ```bash
 # From repository root
-cd /workspaces/dotfiles-new
+cd /workspaces/dotfiles
 
 # PowerShell tests (using test runner)
 pwsh -Command ".\tests\powershell\Invoke-PesterTests.ps1"

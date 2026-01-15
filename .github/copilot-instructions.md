@@ -305,7 +305,7 @@ pip3 install -r requirements.txt
 pip3 install -r requirements.txt
 
 # Ensure you're in the repo root
-cd /path/to/dotfiles-new
+cd /path/to/dotfiles
 ```
 
 ### 2. Make Your Changes

@@ -19,7 +19,7 @@ Chezmoi uses special prefixes in filenames to determine how files are managed:
 ## 📁 Directory Structure
 
 ```
-dotfiles-new/
+dotfiles/
 │
 ├── 🐠 Fish Shell Configuration (Linux/macOS/WSL)
 │   └── dot_config/fish/

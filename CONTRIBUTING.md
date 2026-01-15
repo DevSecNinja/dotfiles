@@ -6,7 +6,7 @@
 
 1. **Edit files in the repository**:
    ```bash
-   cd /path/to/dotfiles-new
+   cd /path/to/dotfiles
    # Edit files directly
    vim dot_config/fish/config.fish
    ```

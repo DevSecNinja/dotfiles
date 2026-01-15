@@ -16,7 +16,7 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 ## 📁 Structure
 
 ```
-dotfiles-new/
+dotfiles/
 ├── dot_config/                    # XDG config directory (~/.config/)
 │   ├── fish/                      # Fish shell configuration (Linux/macOS)
 │   │   ├── config.fish           # Main Fish config
@@ -54,14 +54,14 @@ dotfiles-new/
 ### Install on Linux/macOS
 
 ```bash
-sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles
 ```
 
 Or clone and install locally:
 
 ```bash
-git clone https://github.com/DevSecNinja/dotfiles-new.git
-cd dotfiles-new
+git clone https://github.com/DevSecNinja/dotfiles.git
+cd dotfiles
 ./install.sh
 ```
 
@@ -71,14 +71,14 @@ cd dotfiles-new
 
 ```powershell
 # Using the official chezmoi installer (recommended)
-(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja/dotfiles-new
+(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja
 ```
 
 **Option 2: Clone and install locally**
 
 ```powershell
-git clone https://github.com/DevSecNinja/dotfiles-new.git
-cd dotfiles-new
+git clone https://github.com/DevSecNinja/dotfiles.git
+cd dotfiles
 .\install.ps1
 ```
 
@@ -87,7 +87,7 @@ cd dotfiles-new
 Use the Linux installation method inside your WSL distribution:
 
 ```bash
-sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles-new
+sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles
 ```
 
 The dotfiles will automatically detect WSL and apply appropriate configurations.
