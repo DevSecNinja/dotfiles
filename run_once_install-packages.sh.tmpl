@@ -15,46 +15,30 @@ sudo apt-get update
 echo "📦 Installing packages with APT..."
 # Install light mode packages (always)
 {{- range .packages.linux.apt.light }}
-if ! dpkg -l {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    sudo apt-get install -y {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+sudo apt-get install -y {{ . | quote }}
 {{- end }}
 
 {{- if eq .installType "full" }}
 # Install full mode packages (additional)
 {{- range .packages.linux.apt.full }}
-if ! dpkg -l {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    sudo apt-get install -y {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+sudo apt-get install -y {{ . | quote }}
 {{- end }}
 {{- end }}
     {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
 echo "📦 Installing packages with DNF..."
 # Install light mode packages (always)
 {{- range .packages.linux.dnf.light }}
-if ! rpm -q {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    sudo dnf install -y {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+sudo dnf install -y {{ . | quote }}
 {{- end }}
 
 {{- if eq .installType "full" }}
 # Install full mode packages (additional)
 {{- range .packages.linux.dnf.full }}
-if ! rpm -q {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    sudo dnf install -y {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+sudo dnf install -y {{ . | quote }}
 {{- end }}
 {{- end }}
     {{- end }}
@@ -67,23 +51,15 @@ fi
 echo "📦 Installing packages with Homebrew..."
 # Install light mode packages (always)
 {{- range .packages.darwin.brew.light }}
-if ! brew list {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    brew install {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+brew install {{ . | quote }}
 {{- end }}
 
 {{- if eq .installType "full" }}
 # Install full mode packages (additional)
 {{- range .packages.darwin.brew.full }}
-if ! brew list {{ . | quote }} >/dev/null 2>&1; then
-    echo "Installing {{ . }}..."
-    brew install {{ . | quote }}
-else
-    echo "✅ {{ . }} already installed"
-fi
+echo "Installing {{ . }}..."
+brew install {{ . | quote }}
 {{- end }}
 {{- end }}
 {{- end }}
