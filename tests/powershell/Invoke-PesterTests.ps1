@@ -46,7 +46,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$TestPath = $PSScriptRoot,
+    [string]$TestPath,
 
     [Parameter(Mandatory = $false)]
     [string]$OutputPath = "test-results.xml",
@@ -65,6 +65,17 @@ param(
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     Write-Error "This script requires PowerShell 7.0 or later. Current version: $($PSVersionTable.PSVersion)"
     exit 1
+}
+
+# Fixes "Value cannot be null" error from Pester VS Code extension
+# Set default TestPath if not provided
+if ([string]::IsNullOrWhiteSpace($TestPath)) {
+    $TestPath = $PSScriptRoot
+}
+
+# Ensure TestPath is not null or empty (defensive)
+if ([string]::IsNullOrWhiteSpace($TestPath)) {
+    $TestPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
 
 # Check if Pester is available
