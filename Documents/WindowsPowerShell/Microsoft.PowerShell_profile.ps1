@@ -1,45 +1,20 @@
-$ErrorActionPreference = 'Stop'
+# PowerShell profile loader
+# This file is managed by chezmoi and placed at the default PowerShell profile location
+# It sources the actual configuration from ~/.config/powershell/profile.ps1
 
-if (-not $env:CHEZMOI_SOURCE_DIR) {
-    throw "CHEZMOI_SOURCE_DIR is not set"
+$configPath = "$env:USERPROFILE\.config\powershell\profile.ps1"
+
+if (Test-Path $configPath) {
+    . $configPath
+} else {
+    Write-Warning "PowerShell configuration not found at $configPath"
 }
-
-# Define profile sources and targets for both PowerShell Core and Windows PowerShell
-$profiles = @(
-    @{
-        Name = "PowerShell Core"
-        Source = Join-Path $env:CHEZMOI_SOURCE_DIR 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
-        Target = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
-    },
-    @{
-        Name = "Windows PowerShell"
-        Source = Join-Path $env:CHEZMOI_SOURCE_DIR 'Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1'
-        Target = "$env:USERPROFILE\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-    }
-)
-
-foreach ($profile in $profiles) {
-    if (-not (Test-Path $profile.Source)) {
-        Write-Warning "⚠️  $($profile.Name) profile not found at $($profile.Source), skipping..."
-        continue
-    }
-
-    $targetDir = Split-Path -Parent $profile.Target
-    if (-not (Test-Path $targetDir)) {
-        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-    }
-
-    Copy-Item -Path $profile.Source -Destination $profile.Target -Force
-    Write-Host "✅ $($profile.Name) profile deployed to $($profile.Target)"
-}
-
-Write-Host "`n🎉 All PowerShell profiles have been deployed!"
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAea5RF6I5dngkc
-# Fxlc1tcAWizWC4j2gYFnjgEddOWk5qCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDBspMPOyLZH9EG
+# 9oq12P9gBgZk3N12ebv3fLQ/T1IgEqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -173,33 +148,33 @@ Write-Host "`n🎉 All PowerShell profiles have been deployed!"
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCAPIWdeyVN2H4yfMbCDm+s62Flhysv+F11f1yYZJXEEPjANBgkqhkiG
-# 9w0BAQEFAASCAgBTS4JE0sH8PGtB7U7xNQawkrpWWFuLH6af3iXbc1INDiC/ILY2
-# S1tVGst+3btqTa5/bGjo63xDxUpLZcjW6pecARujdaoVmJC3fesLWOqnsDKzplzz
-# zqsMscMUcvP+7ziZsqxetHZnMF7Uc2u5IOcCRp9xgpGKt5HxFySjKxG8DqNiSMfx
-# YWtniESSKN27RKi3HkQM6IPLs1iFwNDtH6NyvNmIv+Cw4VBaGcoaqnwsQ+suXTLV
-# Gi4y3m6H+XQi8vVkN7eUcI+Rx7HbBg1zGdb9Y21HKAdbeh4twgGFkbVs/ij+0xw4
-# WcfWELGvlaU5d+CS+R1aEqa8+hfmYMVuSJwQc3GdGUjayWICop+SYck/qYVF+/Ju
-# Tv5Nbl+jCIbf1tvgsLzvoXR0m75Vrvyafes2apwjzlYHn4+ZqjIZIMtfNyRvMvXs
-# zXdBjHEiSYVdZYcOEsbaT8xTebs6Pst5hV2aGIhy0QWPUQ784J5WzlL0xfBeoRMu
-# 8kHfATsW/EbOCOPWRcjLx79LNhi6nvM5qh1XxyuYw7xprSNujr1Qb2TkCqXbChw7
-# MRGyWeRh+68jaFV3b5EkDW6FBIYAnbELOgh52g6m70lOlt5Qh717Qmtt6s14Sd/7
-# 1VlESeDWWdH1AFPdUNiZL7+FwnFrdoXx2nGk9Ga+jFT+8Ibrh21CMTIIaKGCAyYw
+# DQEJBDEiBCDMJ5OIG+EZSgEnJU6+eiPb19UByk4EkxNxh5PdLM4fWjANBgkqhkiG
+# 9w0BAQEFAASCAgB9F9nD7A0RpNXQElHisEn7GpDdIVUFx8OtkWPCbVAk5kKHzq0A
+# XYgGw9iCoYnGgm9zusM3b17/j0CqJCj1xoAK9GW7WIfqAUCoHkcEDaaCVcD6dyp3
+# PnhhQzkjOSdb1B79ybRJieWhvViyXChYdA/TOPxub+z9yvfHh7qC9iRolZ/hO51k
+# MmayDEbQMeF/fH+1AS8LIMpDz4VCN6QuVXTC38Y2LdWnreM1Q3EwHT8izBjyGpkI
+# yH4y9S2+UkbdYrANeJl9HVTWlH8FJEez/yq/CFVYD4/nuP/ykRJ9bVLdde593is6
+# bidibdHD+x0ITvtdfSh1PUg2mZtgWohrQjnp19STHxZKvwaRIXn/UYu+4I5NYdKE
+# W6C8W0kS8X7wJQIigDv94WTXkfLqIbnnF6rKBSvLtUu/en0tGIEJOa4FeeL4Ut1s
+# dQu9LVlVcS/MGzmi5zqz20/BcI8BuCU+nOnMgPdkVi8QzeKaj1cmVqS6B7f+SzG0
+# ZhVzmi5TNEDieCfSO1KKaYvWVRzHKhV0GYr+jfkEKA8aKf3aykJLV1YWCagxqqFR
+# v21k0IPWxPuKX6kAiCXXZEYnToFRT41cL5olelJr6lpgJ2mc22YlIPYWFU6gccJX
+# bUWsfC+OQrFT8apSJBUMAIccTa0bsQYg2iTgzUj7LMQ3IxD+pKKSwMU2UKGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTUwNzM1MjdaMC8GCSqGSIb3DQEJBDEi
-# BCD3XADl2TgqxtNGoiOxF0SbVM8D3MRmln62qOHKEDZcFTANBgkqhkiG9w0BAQEF
-# AASCAgChKsSgQ9wZZoAJoBwflqr0TQDu/yBb9d5FnccoTrU4xFgOCKQr393NvOAn
-# xvYKTpXRWHoZpJS7bjapYapRijWczqkHxdX+ffG4PDkWea35azL3X8uIGo++9VjQ
-# pytIjXlFgL9G8Uj2Qnb6Lpq/PCR7pKjuCwxayYZniOx2/TbvGlMx0bFPAXH83XjF
-# tj0hyScu7pLNCNMThh2Hb0JA1KU7W2sZyTwJpH0Abe1NtGch5wbJ66FDYZ7+NFsH
-# 5i2/9/3ZmcCntyqVFLJIusvvzWljSZQ16g5aelwobQreD9+P1qWOZiGA5qW9Ce73
-# NQTj1YCApqdmlKCSnvT8/t07eATQx3u6xpp+rds3uElgCWAtgkOFcWnAwLmDRZb8
-# RpjkgyNlVH/horwk5O+3CFzwlvD+q2wBVTD/5jU04gCT2OvscVOvlAqN8iP1Pay/
-# lWEn3sPnfDM6Dgcl6EClcK/g9tqcPEZJheQE9gWBLle8NjoR0JtYXvWePsVNzkwb
-# Xm8gO1rsBKMcKUJhpGTNNqTUZ4lR9IjGs+BOKPK2T91ncMT2zbHnLFx0Cc3sC+4p
-# 1bBSLdP1BoX1wa84TIkE09WnqNSdFkoqmz69rkHuPwYZ/2HYYZw6EwMuFlBndXRq
-# DIFoipmkGrmTSBz/vTeKw1qzJmmK5JlmkSstCSLeZ7GfhVKYrw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTQyMjUzMDhaMC8GCSqGSIb3DQEJBDEi
+# BCAw5XfTMNHHP+woOrURkAZEOf+uL8SPYZJ0k7dXBkTgojANBgkqhkiG9w0BAQEF
+# AASCAgAqBehHkYtJNOcrJpstFcWY+RRCWV/or55O7C7201B3+OKRRH2ylLuhQZR0
+# ui63CW+qgfTy5KoA978+KWtNuSeV2xlNiJujCjX+dvYPUuLYT27PZYOYTnRLKI7e
+# 794bPgixATWAwnTcJJ8IrPzfA0wg0gNGtyiKExgYrlMxX/f3KKcaq6N9C73EbzNx
+# dm08U7AmYNn7YQcUgNA6I/JnELSLtKD92O1W6NL0yDaE/wvNU800j+9jDJfpQdZy
+# 2YpaUNtV6sXGp9GSt6xg1Jqr60vPUy+WCRxUtRSwbj05wxLt25SEWeGMG7VKO8JI
+# SySbIHwzc8pigWO5lqg0N6vj+DS31tS1o0pxMnaFtLigI4LKL29W+rnoaVfWdaj5
+# Ewccu99q4mcRhv4Ty5mKLqH7gcLwvtrSjO5XtTc6BNbcJxzxit+L1Gwwub9uzXzm
+# bIq/tVxk/jaMAmG7bFHAt4E0GYUD9DgLTHSH3bm5Dj2gKeyTwBduTDFJeYGnz2v/
+# F88yEGGUiaXRKIWSPAzV8UfzhGiuw6DiZ2FTZN3S1dYmi7rHuqbBFKx5B3ervEA0
+# WHcD5ML8IfhOzzgRaCtmHO06qu7WwDaeubO8FQZzT1Z7k7svUAt7UE+743qh2VQA
+# kcRtZJT7nbFeifD6us53kqjdraSpG+xoo/e7Lg+Ku/vR1CVrmw==
 # SIG # End signature block
