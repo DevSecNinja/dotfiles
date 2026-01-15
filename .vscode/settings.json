@@ -7,5 +7,8 @@
     "files.associations": {
         "*.ps1.tmpl": "powershell",
         "*.sh.tmpl": "shellscript"
-    }
+    },
+    "pester.testFilePath": [
+        "tests/powershell/*.Tests.ps1"
+    ]
 }
