@@ -25,4 +25,4 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
-tests/powershell/test-results.xml
+**/test-results.xml
