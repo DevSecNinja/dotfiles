@@ -1,16 +1,150 @@
-# PowerShell script to install common development tools on Windows
-# Uses winget (modern, built-in) as primary package manager
-# For light servers, only installs essential tools
-# For full installation, installs complete development toolset
+{{- if eq .chezmoi.os "windows" -}}
+# PowerShell script to install packages defined in .chezmoidata/packages.yaml
+# Light mode: installs essential packages only
+# Full mode: installs light + additional development packages
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "Installing development tools ({{ .installType }} mode)..." -ForegroundColor Cyan
 
-# Check if winget is available (Windows 10 1809+ with App Installer)
-$useWinget = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
-
-if (-not $useWinget) {
-    Write-Error "winget not found."
+# Check if winget is available
+if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Write-Error "winget not found. Please install App Installer from Microsoft Store."
     exit 1
 }
+
+# Import PowerShellGet module for Install-Module cmdlet
+Write-Host "`nImporting PowerShellGet module..." -ForegroundColor Cyan
+try {
+    Import-Module PowerShellGet -Force -ErrorAction Stop
+    Write-Host "[OK] PowerShellGet module loaded" -ForegroundColor Green
+} catch {
+    Write-Host "[SKIP] PowerShellGet module not available. Skipping PowerShell module installation." -ForegroundColor Yellow
+    $skipModules = $true
+}
+
+if (-not $skipModules) {
+    Write-Host "`nInstalling PowerShell modules..." -ForegroundColor Cyan
+
+    # Install light mode modules (always)
+{{- range .packages.windows.powershell_modules.light }}
+    $module = {{ . | quote }}
+    Write-Host "Checking $module..." -NoNewline
+    if (Get-Module -ListAvailable -Name $module) {
+        Write-Host " [OK]" -ForegroundColor Green
+    } else {
+        Write-Host " Installing..." -ForegroundColor Yellow
+        try {
+            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+            Write-Host "  [OK] $module installed" -ForegroundColor Green
+        } catch {
+            Write-Host "  [FAILED] Could not install $module`: $_" -ForegroundColor Red
+        }
+    }
+{{- end }}
+
+{{- if eq .installType "full" }}
+    # Install full mode modules (additional)
+{{- range .packages.windows.powershell_modules.full }}
+    $module = {{ . | quote }}
+    Write-Host "Checking $module..." -NoNewline
+    if (Get-Module -ListAvailable -Name $module) {
+        Write-Host " [OK]" -ForegroundColor Green
+    } else {
+        Write-Host " Installing..." -ForegroundColor Yellow
+        try {
+            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+            Write-Host "  [OK] $module installed" -ForegroundColor Green
+        } catch {
+            Write-Host "  [FAILED] Could not install $module`: $_" -ForegroundColor Red
+        }
+    }
+{{- end }}
+{{- end }}
+}
+
+Write-Host "`nInstalling WinGet packages..." -ForegroundColor Cyan
+
+# Install light mode packages (always)
+{{- range .packages.windows.winget.light }}
+Write-Host "Checking {{ . }}..." -NoNewline
+$result = winget list --id {{ . | quote }} --exact 2>&1
+if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
+    Write-Host " [OK]" -ForegroundColor Green
+} else {
+    Write-Host " Installing..." -ForegroundColor Yellow
+    winget install --id {{ . | quote }} --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] {{ . }} installed" -ForegroundColor Green
+    } else {
+        Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
+    }
+}
+{{- end }}
+
+{{- if eq .installType "full" }}
+# Install full mode packages (additional)
+{{- range .packages.windows.winget.full }}
+Write-Host "Checking {{ . }}..." -NoNewline
+$result = winget list --id {{ . | quote }} --exact 2>&1
+if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
+    Write-Host " [OK]" -ForegroundColor Green
+} else {
+    Write-Host " Installing..." -ForegroundColor Yellow
+    winget install --id {{ . | quote }} --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] {{ . }} installed" -ForegroundColor Green
+    } else {
+        Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
+    }
+}
+{{- end }}
+{{- end }}
+
+Write-Host "`nDevelopment tools installation complete ({{ .installType }} mode)!" -ForegroundColor Green
+
+# Install VS Code extensions if code command is available
+if (Get-Command code -ErrorAction SilentlyContinue) {
+    Write-Host "`nInstalling VS Code extensions..." -ForegroundColor Cyan
+    
+    # Install common extensions
+{{- range .extensions.common }}
+    Write-Host "Checking {{ . }}..." -NoNewline
+    $installed = code --list-extensions 2>&1 | Select-String -Pattern "^{{ . }}$" -Quiet
+    if ($installed) {
+        Write-Host " [OK]" -ForegroundColor Green
+    } else {
+        Write-Host " Installing..." -ForegroundColor Yellow
+        code --install-extension {{ . | quote }} --force | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] {{ . }} installed" -ForegroundColor Green
+        } else {
+            Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
+        }
+    }
+{{- end }}
+    
+    # Install Windows-specific extensions
+{{- range .extensions.windows }}
+    Write-Host "Checking {{ . }}..." -NoNewline
+    $installed = code --list-extensions 2>&1 | Select-String -Pattern "^{{ . }}$" -Quiet
+    if ($installed) {
+        Write-Host " [OK]" -ForegroundColor Green
+    } else {
+        Write-Host " Installing..." -ForegroundColor Yellow
+        code --install-extension {{ . | quote }} --force | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] {{ . }} installed" -ForegroundColor Green
+        } else {
+            Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
+        }
+    }
+{{- end }}
+    
+    Write-Host "[OK] VS Code extensions installation complete!" -ForegroundColor Green
+} else {
+    Write-Host "`n[SKIP] VS Code not found, skipping extension installation" -ForegroundColor Yellow
+}
+
+Write-Host "`n[COMPLETE] All installations finished!" -ForegroundColor Green
+{{- end }}

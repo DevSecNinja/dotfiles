@@ -1,0 +1,74 @@
+# Cross-platform package definitions for Chezmoi dotfiles
+# Packages are organized by OS and package manager
+# Installation modes: light (essential) + full (light + additional packages)
+
+packages:
+  # Linux packages
+  linux:
+    # APT packages (Debian/Ubuntu)
+    apt:
+      light:
+        - git
+        - vim
+        - curl
+        - wget
+        - fish
+      full:
+        - python3-venv
+        - python3-pip
+        - jq
+
+    # DNF packages (Fedora/RHEL/CentOS)
+    dnf:
+      light:
+      full:
+
+  # macOS packages
+  darwin:
+    # Homebrew formulas
+    brew:
+      light:
+        - git
+        - vim
+        - fish
+      full:
+        - python@3
+
+  # Windows packages
+  windows:
+    # WinGet packages
+    winget:
+      light:
+        - Git.Git
+        - Microsoft.PowerShell
+        - twpayne.chezmoi
+      full:
+        - Docker.DockerDesktop
+        - Microsoft.VisualStudioCode
+        - Microsoft.WindowsTerminal
+        - JanDeDobbeleer.OhMyPosh
+
+    # PowerShell modules (installed via PowerShellGet)
+    powershell_modules:
+      light:
+      full:
+        - oh-my-posh
+
+# VS Code extensions (optional, separate from package installation)
+extensions:
+  # Extensions for all platforms
+  common:
+    - GitHub.copilot
+    - GitHub.copilot-chat
+
+  # Windows-specific extensions
+  windows:
+    - ms-vscode-remote.remote-wsl
+
+  # Linux-specific extensions
+  linux:
+    - ms-vscode-remote.remote-ssh
+
+  # macOS-specific extensions
+  darwin:
+    - ms-vscode-remote.remote-ssh
