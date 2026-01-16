@@ -28,9 +28,10 @@ packages:
     # Homebrew formulas
     brew:
       light:
+        - fastfetch
+        - fish
         - git
         - vim
-        - fish
       full:
         - python@3
 
