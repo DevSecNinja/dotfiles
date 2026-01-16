@@ -1,18 +1,20 @@
 #!/bin/bash
-# git-set-execution-bit - Ensure executable permissions on shell scripts
+# file-set-execution-bit - Ensure executable permissions on shell scripts
 #
 # This function automatically sets executable permissions on shell scripts
 # in the git repository and updates the git index accordingly.
 # Processes both staged and unstaged files.
 #
-# Usage: git-set-execution-bit [--dry-run|-n]
+# Usage: file-set-execution-bit [--dry-run|-n] [--all|-a]
 #   --dry-run, -n    Show what would be changed without making changes
+#   --all, -a        Check all files in current directory (not just git files)
 #
 # Originally based on Stack Overflow solution by ixe013
 # Retrieved 2026-01-16, License - CC BY-SA 4.0
 
-git-set-execution-bit() {
+file-set-execution-bit() {
     local dry_run=false
+    local check_all=false
     local changes_made=false
 
     # Parse arguments
@@ -22,12 +24,17 @@ git-set-execution-bit() {
                 dry_run=true
                 shift
                 ;;
+            --all|-a)
+                check_all=true
+                shift
+                ;;
             -h|--help)
-                echo "Usage: git-set-execution-bit [--dry-run|-n]"
+                echo "Usage: file-set-execution-bit [--dry-run|-n] [--all|-a]"
                 echo "Ensure executable permissions on shell scripts"
                 echo ""
                 echo "Options:"
                 echo "  --dry-run, -n    Show what would be changed without making changes"
+                echo "  --all, -a        Check all files in current directory (not just git files)"
                 echo "  -h, --help       Show this help message"
                 return 0
                 ;;
@@ -39,8 +46,8 @@ git-set-execution-bit() {
         esac
     done
 
-    # Check if we're in a git repository
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    # Check if we're in a git repository (only needed for git mode)
+    if [ "$check_all" = false ] && ! git rev-parse --git-dir > /dev/null 2>&1; then
         echo "❌ Not in a git repository"
         return 1
     fi
@@ -50,15 +57,22 @@ git-set-execution-bit() {
         echo "🔍 Dry run mode: no changes will be made"
     fi
 
-    # Get list of files (both staged and unstaged)
+    # Get list of files
     local files
-    files=$(
-        {
-            git diff-index --cached --name-only HEAD 2>/dev/null || true
-            git diff-index --name-only HEAD 2>/dev/null || true
-            git ls-files --others --exclude-standard 2>/dev/null || true
-        } | sort -u
-    )
+    if [ "$check_all" = true ]; then
+        echo "📁 Checking all files in current directory..."
+        # Find all .sh and .bash files recursively
+        files=$(find . -type f \( -name "*.sh" -o -name "*.bash" \) -not -path "./.git/*" 2>/dev/null | sed 's|^\./||' | sort)
+    else
+        echo "📝 Checking git-tracked files..."
+        files=$(
+            {
+                git diff-index --cached --name-only HEAD 2>/dev/null || true
+                git diff-index --name-only HEAD 2>/dev/null || true
+                git ls-files --others --exclude-standard 2>/dev/null || true
+            } | sort -u
+        )
+    fi
 
     if [ -z "$files" ]; then
         echo "ℹ️  No files found to check"
@@ -70,8 +84,9 @@ git-set-execution-bit() {
         # Skip empty lines
         [ -z "$filename" ] && continue
 
-        # Only check shell script files
-        if [[ "$filename" =~ \.(sh|bash)$ ]]; then
+        # For --all mode, we already filtered to shell scripts in find command
+        # For git mode, check if it's a shell script file
+        if [ "$check_all" = true ] || [[ "$filename" =~ \.(sh|bash)$ ]]; then
             if [ -f "$filename" ]; then
                 if [ ! -x "$filename" ]; then
                     changes_made=true
@@ -80,8 +95,10 @@ git-set-execution-bit() {
                     else
                         echo "🔧 Making executable: $filename"
                         chmod +x "$filename"
-                        # Update git index if file is tracked
-                        if git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
+                        # Update git index if file is tracked and we're in a git repo
+                        if [ "$check_all" = false ] && git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
+                            git update-index --chmod=+x -- "$filename"
+                        elif [ "$check_all" = true ] && git rev-parse --git-dir > /dev/null 2>&1 && git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
                             git update-index --chmod=+x -- "$filename"
                         fi
                     fi
@@ -106,5 +123,5 @@ git-set-execution-bit() {
 
 # If script is executed directly (not sourced), run the function
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    git-set-execution-bit "$@"
+    file-set-execution-bit "$@"
 fi
