@@ -30,6 +30,11 @@
 	visual = log --oneline --graph --all
 	amend = commit --amend --no-edit
 
+{{- if eq .chezmoi.os "darwin" }}
+[credential]
+	helper = osxkeychain
+{{- end }}
+
 [diff]
 	colorMoved = zebra
 

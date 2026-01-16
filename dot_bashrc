@@ -1,0 +1,22 @@
+#!/bin/bash
+# Main bashrc - source this from ~/.bashrc or ~/.bash_profile
+#
+# Add this line to your ~/.bashrc:
+# [ -f ~/.config/shell/config.bash ] && source ~/.config/shell/config.bash
+
+# Source the main shell config
+if [ -f "$HOME/.config/shell/config.bash" ]; then
+    # shellcheck source=config.bash
+    source "$HOME/.config/shell/config.bash"
+fi
+
+# Bash completion
+if ! shopt -oq posix; then
+    if [ -f /usr/share/bash-completion/bash_completion ]; then
+        # shellcheck source=/usr/share/bash-completion/bash_completion
+        . /usr/share/bash-completion/bash_completion
+    elif [ -f /etc/bash_completion ]; then
+        # shellcheck source=/etc/bash_completion
+        . /etc/bash_completion
+    fi
+fi
