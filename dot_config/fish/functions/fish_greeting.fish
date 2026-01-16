@@ -2,11 +2,11 @@ function fish_greeting
     # Custom greeting function
     # Override the default Fish greeting
     
-    if command -v fastfetch >/dev/null 2>&1; then
+    if type -q fastfetch
         echo
         fastfetch
         echo
-    fi
+    end
 
     echo "Welcome to Fish Shell! 🐠"
     echo "Type 'help' for assistance"
