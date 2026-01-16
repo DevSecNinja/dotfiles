@@ -1,0 +1,148 @@
+#!/bin/bash
+# FUNCTION_NAME - Brief description of what this function does
+#
+# Detailed description of the function's purpose and behavior.
+# Add more context about when and how to use this function.
+#
+# Usage: FUNCTION_NAME [OPTIONS] [ARGUMENTS]
+#   --dry-run, -n    Show what would be changed without making changes
+#   --verbose, -v    Enable verbose output
+#   --help, -h       Show help message and exit
+#
+# Examples:
+#   FUNCTION_NAME                    # Run with default options
+#   FUNCTION_NAME --dry-run          # Preview changes without executing
+#   FUNCTION_NAME --verbose arg1     # Run with verbose output
+#
+# Notes:
+#   - Add any important notes or warnings here
+#   - Mention dependencies or requirements
+#   - Include attribution if based on external sources
+
+FUNCTION_NAME() {
+    # Initialize variables
+    local dry_run=false
+    local verbose=false
+    local arg1=""
+    local changes_made=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --dry-run|-n)
+                dry_run=true
+                shift
+                ;;
+            --verbose|-v)
+                verbose=true
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: FUNCTION_NAME [OPTIONS] [ARGUMENTS]"
+                echo "Brief description of what this function does"
+                echo ""
+                echo "Options:"
+                echo "  --dry-run, -n    Show what would be changed without making changes"
+                echo "  --verbose, -v    Enable verbose output"
+                echo "  -h, --help       Show this help message"
+                echo ""
+                echo "Examples:"
+                echo "  FUNCTION_NAME                    # Run with default options"
+                echo "  FUNCTION_NAME --dry-run          # Preview changes without executing"
+                echo "  FUNCTION_NAME --verbose arg1     # Run with verbose output"
+                return 0
+                ;;
+            -*)
+                echo "❌ Unknown option: $1"
+                echo "Use --help for usage information"
+                return 1
+                ;;
+            *)
+                # Handle positional arguments
+                if [ -z "$arg1" ]; then
+                    arg1="$1"
+                else
+                    echo "❌ Too many arguments. Expected 1, got: $*"
+                    echo "Use --help for usage information"
+                    return 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    # Validation checks
+    # Add your validation logic here
+    # Examples:
+
+    # Check for required commands
+    if ! command -v required_command >/dev/null 2>&1; then
+        echo "❌ Required command 'required_command' is not installed or not in PATH"
+        return 1
+    fi
+
+    # Check if we're in the right directory/context
+    # if ! some_condition_check; then
+    #     echo "❌ Not in the correct context (e.g., not in a git repository)"
+    #     return 1
+    # fi
+
+    # Verbose output
+    if [ "$verbose" = true ]; then
+        echo "🔍 Running FUNCTION_NAME with arguments:"
+        echo "   Dry run: $dry_run"
+        echo "   Verbose: $verbose"
+        echo "   Argument 1: ${arg1:-"(not provided)"}"
+    fi
+
+    # Main logic starts here
+    echo "🚀 Starting FUNCTION_NAME..."
+
+    # Example of conditional execution based on dry_run
+    if [ "$dry_run" = true ]; then
+        echo "🔍 [DRY RUN] Would perform the following actions:"
+        # Show what would be done
+        echo "   - Action 1 would be performed"
+        echo "   - Action 2 would be performed"
+        return 0
+    fi
+
+    # Actual execution logic
+    # Replace this section with your function's main logic
+
+    # Example: Perform some action
+    if some_action_that_might_fail; then
+        echo "✅ Successfully completed action"
+        changes_made=true
+    else
+        echo "❌ Failed to complete action"
+        return 1
+    fi
+
+    # Report results
+    if [ "$changes_made" = true ]; then
+        echo "✅ FUNCTION_NAME completed successfully"
+        if [ "$verbose" = true ]; then
+            echo "📋 Summary of changes:"
+            echo "   - List changes made"
+        fi
+    else
+        echo "ℹ️ No changes were needed"
+    fi
+
+    return 0
+}
+
+# Helper function example (optional)
+_FUNCTION_NAME_helper() {
+    local input="$1"
+    # Helper logic here
+    # Example: validate input, format output, etc.
+    echo "Processing: $input"
+    return 0
+}
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    FUNCTION_NAME "$@"
+fi
