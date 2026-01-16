@@ -1,0 +1,33 @@
+#!/bin/zsh
+# Main zshrc - source this from ~/.zshrc
+#
+# Add this line to your ~/.zshrc:
+# [ -f ~/.config/shell/config.zsh ] && source ~/.config/shell/config.zsh
+
+# Source the main shell config
+if [[ -f "$HOME/.config/shell/config.zsh" ]]; then
+    source "$HOME/.config/shell/config.zsh"
+fi
+
+# Zsh-specific configuration
+setopt AUTO_CD              # cd by typing directory name if it's not a command
+setopt CORRECT              # command auto-correction
+setopt CORRECT_ALL          # argument auto-correction
+setopt HIST_VERIFY          # verify history expansion
+setopt SHARE_HISTORY        # share command history between sessions
+setopt APPEND_HISTORY       # append to history file
+setopt INC_APPEND_HISTORY   # append to history immediately
+setopt HIST_IGNORE_DUPS     # ignore duplicate commands in history
+setopt HIST_IGNORE_SPACE    # ignore commands that start with space
+
+# History settings
+HISTSIZE=10000
+SAVEHIST=10000
+HISTFILE="$HOME/.zsh_history"
+
+# Zsh completions
+autoload -Uz compinit
+compinit
+
+# Case-insensitive completion
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'

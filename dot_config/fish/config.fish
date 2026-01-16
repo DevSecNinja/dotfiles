@@ -14,5 +14,16 @@ fish_add_path $HOME/bin
 
 # Load custom functions from conf.d/
 # Files in conf.d/ are automatically sourced
+# TODO: Decide to migrate functions to fish syntax or keep bash scripts
+if test -d $HOME/.config/shell/functions
+    for script in $HOME/.config/shell/functions/*.sh
+        set -l func_name (basename $script .sh)
+
+        # Create Fish function wrapper
+        eval "function $func_name --description 'Run bash script: $script'
+            bash $script \$argv
+        end"
+    end
+end
 
 echo "🐠 Fish shell configured successfully!"
