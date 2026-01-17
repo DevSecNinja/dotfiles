@@ -10,5 +10,6 @@
     },
     "pester.testFilePath": [
         "tests/powershell/*.Tests.ps1"
-    ]
+    ],
+    "powershell.pester.codeLens": false
 }
