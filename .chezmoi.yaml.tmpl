@@ -23,33 +23,25 @@
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 
-{{- /* Determine installation type based on hostname and environment */ -}}
+{{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- $hostname := .chezmoi.hostname -}}
-{{- $isCI := or (env "CI") (env "GITHUB_ACTIONS") -}}
-{{- $isCodespaces := env "CODESPACES" -}}
-
-{{- /* Check hostname patterns for specific server types first */ -}}
-{{- if $hostname | hasPrefix "SVLDEV" -}}
-{{-   $installType = "full" -}}
-{{-   if $interactive -}}
-{{-     writeToStdout "🖥️  Dev server detected - installing full dotfiles\n" -}}
-{{-   end -}}
-{{- else if $hostname | hasPrefix "SVL" -}}
-{{-   $installType = "light" -}}
-{{-   if $interactive -}}
-{{-     writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
+{{- if $hostname | hasPrefix "SVL" -}}
+{{-   if $hostname | hasPrefix "SVLDEV" -}}
+{{-     $installType = "full" -}}
+{{-     if $interactive -}}
+{{-       writeToStdout "🖥️  Dev server detected - installing full dotfiles\n" -}}
+{{-     end -}}
+{{-   else -}}
+{{-     $installType = "light" -}}
+{{-     if $interactive -}}
+{{-       writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
+{{-     end -}}
 {{-   end -}}
 {{- else if $hostname | hasPrefix "runnervm" -}}
 {{-   $installType = "light" -}}
 {{-   if $interactive -}}
 {{-     writeToStdout "🔧 Runner VM detected - installing light dotfiles\n" -}}
-{{-   end -}}
-{{- /* CI/GitHub Actions runners default to light mode if no hostname pattern matches */ -}}
-{{- else if or $isCI $isCodespaces -}}
-{{-   $installType = "light" -}}
-{{-   if $interactive -}}
-{{-     writeToStdout "🤖 CI/Runner environment detected - installing light dotfiles\n" -}}
 {{-   end -}}
 {{- else -}}
 {{-   if $interactive -}}
