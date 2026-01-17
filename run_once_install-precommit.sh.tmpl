@@ -66,4 +66,16 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "✅ pre-commit installed successfully!"
+
+# Auto-enable hooks in devcontainer/codespace/dev server environments
+{{- if or .devcontainer .codespaces (eq .installType "full") }}
+if [ -d "{{ .chezmoi.sourceDir }}/.git" ] || git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "🔗 Enabling pre-commit hooks..."
+    cd "{{ .chezmoi.sourceDir }}" && pre-commit install
+    echo "✅ Pre-commit hooks enabled!"
+else
+    echo "💡 To enable hooks later, run: pre-commit install"
+fi
+{{- else }}
 echo "💡 To enable hooks, run: pre-commit install"
+{{- end }}
