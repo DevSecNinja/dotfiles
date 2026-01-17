@@ -50,10 +50,12 @@
 {{- end -}}
 
 {{- $codespaces:= env "CODESPACES" | not | not -}}
+{{- $ci:= env "CI" | not | not -}}
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
   name: {{ $name | quote }}
   codespaces = {{ $codespaces }}
+  ci: {{ $ci }}
   email: {{ $email | quote }}
   installType: {{ $installType | quote }}
