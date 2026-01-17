@@ -5,21 +5,21 @@
 set -eu
 
 # Check if running in interactive mode
-is_interactive() {
-	# Return false (non-interactive) if:
-	# - CI environment variable is set
-	# - DEBIAN_FRONTEND is set to noninteractive
-	# - Running in a devcontainer (REMOTE_CONTAINERS or CODESPACES env vars)
-	# - stdin is not a terminal
-	if [ "${CI:-}" = "true" ] ||
-		[ "${DEBIAN_FRONTEND:-}" = "noninteractive" ] ||
-		[ -n "${REMOTE_CONTAINERS:-}" ] ||
-		[ -n "${CODESPACES:-}" ] ||
-		! [ -t 0 ]; then
-		return 1
-	fi
-	return 0
-}
+# is_interactive() {
+# 	# Return false (non-interactive) if:
+# 	# - CI environment variable is set
+# 	# - DEBIAN_FRONTEND is set to noninteractive
+# 	# - Running in a devcontainer (REMOTE_CONTAINERS or CODESPACES env vars)
+# 	# - stdin is not a terminal
+# 	if [ "${CI:-}" = "true" ] ||
+# 		[ "${DEBIAN_FRONTEND:-}" = "noninteractive" ] ||
+# 		[ -n "${REMOTE_CONTAINERS:-}" ] ||
+# 		[ -n "${CODESPACES:-}" ] ||
+# 		! [ -t 0 ]; then
+# 		return 1
+# 	fi
+# 	return 0
+# }
 
 if ! chezmoi="$(command -v chezmoi)"; then
 	echo "chezmoi not found, attempting to install..." >&2
@@ -55,12 +55,13 @@ fi
 # POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188
 script_dir="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" && pwd -P)"
 
-# Add --no-tty flag if not running interactively
-if is_interactive; then
-	set -- init --apply --source="${script_dir}"
-else
-	set -- init --apply --no-tty --source="${script_dir}"
-fi
+# # Add --no-tty flag if not running interactively
+# if is_interactive; then
+# 	set -- init --apply --source="${script_dir}"
+# else
+# 	set -- init --apply --no-tty --source="${script_dir}"
+# fi
+set -- init --apply --source="${script_dir}"
 
 echo "Running 'chezmoi $*'" >&2
 # exec: replace current process with chezmoi
