@@ -23,6 +23,9 @@
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 
+{{- $codespaces:= env "CODESPACES" | not | not -}}
+{{- $ci:= env "CI" | not | not -}}
+
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- $hostname := .chezmoi.hostname -}}
@@ -38,10 +41,10 @@
 {{-       writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
 {{-     end -}}
 {{-   end -}}
-{{- else if $hostname | hasPrefix "runnervm" -}}
+{{- else if $ci -}}
 {{-   $installType = "light" -}}
 {{-   if $interactive -}}
-{{-     writeToStdout "🔧 Runner VM detected - installing light dotfiles\n" -}}
+{{-     writeToStdout "🔧 CI environment detected - installing light dotfiles\n" -}}
 {{-   end -}}
 {{- else -}}
 {{-   if $interactive -}}
@@ -49,8 +52,6 @@
 {{-   end -}}
 {{- end -}}
 
-{{- $codespaces:= env "CODESPACES" | not | not -}}
-{{- $ci:= env "CI" | not | not -}}
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
