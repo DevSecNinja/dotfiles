@@ -49,9 +49,11 @@
 {{-   end -}}
 {{- end -}}
 
+{{- $codespaces:= env "CODESPACES" | not | not -}}
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
   name: {{ $name | quote }}
+  codespaces = {{ $codespaces }}
   email: {{ $email | quote }}
   installType: {{ $installType | quote }}
