@@ -67,6 +67,8 @@ brew install {{ . | quote }}
 echo "✅ Development tools installation complete ({{ .installType }} mode)!"
 
 # Install VS Code extensions if code command is available
+# Skip in codespaces and dev containers as extensions are managed differently
+{{- if and (not .codespaces) (not .devcontainer) }}
 if command -v code >/dev/null 2>&1; then
     echo ""
     echo "📦 Installing VS Code extensions..."
@@ -123,6 +125,10 @@ else
     echo ""
     echo "[SKIP] VS Code not found, skipping extension installation"
 fi
+{{- else }}
+echo ""
+echo "[SKIP] VS Code extensions skipped (codespace/devcontainer environment)"
+{{- end }}
 
 echo ""
 echo "[COMPLETE] All installations finished!"
