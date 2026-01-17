@@ -55,25 +55,22 @@ dotfiles/
 sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles
 ```
 
-Or from a local directory:
+**For development/testing with a local checkout:**
 
 ```bash
-git clone https://github.com/DevSecNinja/dotfiles.git
-chezmoi init --apply ./dotfiles
+chezmoi init --apply /path/to/local/dotfiles
 ```
 
 ### Install on Windows (PowerShell)
 
 ```powershell
-# Using the official chezmoi installer (recommended)
 (irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja/dotfiles
 ```
 
-Or from a local directory:
+**For development/testing with a local checkout:**
 
 ```powershell
-git clone https://github.com/DevSecNinja/dotfiles.git
-chezmoi init --apply .\dotfiles
+chezmoi init --apply C:\path\to\local\dotfiles
 ```
 
 ### Install on WSL (Windows Subsystem for Linux)
