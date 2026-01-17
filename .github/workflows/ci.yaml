@@ -136,20 +136,10 @@ jobs:
       - name: Install Chezmoi and apply dotfiles
         shell: pwsh
         run: |
-          # Install chezmoi using winget
-          Write-Host "Installing chezmoi with winget..."
-          winget install --id twpayne.chezmoi --silent --accept-source-agreements --accept-package-agreements
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to install chezmoi"
-            exit 1
-          }
-          
-          # Refresh PATH to include chezmoi
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          # Install and initialize chezmoi using the official one-liner
+          iex "&{$(irm 'https://get.chezmoi.io/ps1')}"
           
           # Initialize and apply dotfiles
-          Write-Host "Initializing dotfiles..."
           chezmoi init --apply --no-tty --source="${{ github.workspace }}"
           
           if ($LASTEXITCODE -ne 0) {
