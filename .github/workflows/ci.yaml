@@ -54,14 +54,11 @@ jobs:
 
       - name: Install Chezmoi and apply dotfiles
         run: |
-          # Install chezmoi
-          sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "${HOME}/.local/bin"
-
-          # Ensure .local/bin is in PATH
+          # Install chezmoi and initialize dotfiles in one command
+          sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply --no-tty --source="${PWD}"
+          
+          # Ensure .local/bin is in PATH for subsequent steps
           export PATH="${HOME}/.local/bin:${PATH}"
-
-          # Apply dotfiles
-          chezmoi init --apply --no-tty --source="${PWD}"
 
       - name: Verify Chezmoi installation
         run: |
@@ -136,12 +133,9 @@ jobs:
       - name: Install Chezmoi and apply dotfiles
         shell: pwsh
         run: |
-          # Install chezmoi using official installer
-          & ([scriptblock]::Create((irm -useb https://get.chezmoi.io/ps1)))
-
-          # Apply dotfiles
-          chezmoi init --apply --no-tty --source="${{ github.workspace }}"
-
+          # Install chezmoi and initialize dotfiles in one command
+          & ([scriptblock]::Create((irm -useb https://get.chezmoi.io/ps1))) -ArgumentList 'init','--apply','--no-tty','--source="${{ github.workspace }}"'
+          
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Chezmoi init failed"
             exit 1

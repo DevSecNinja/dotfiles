@@ -172,7 +172,7 @@ try {
     Write-Host "   - Never commit these files to git"
     Write-Host ""
     Write-Host "To verify signing locally after GitHub Actions runs:"
-    Write-Host '  Get-AuthenticodeSignature -FilePath .\run_once_install-packages.ps1.tmpl | Format-List'
+    Write-Host '  Get-AuthenticodeSignature -FilePath .\run_once_setup-powershell-loader.ps1 | Format-List'
     Write-Host ""
     Write-Host "Certificate details:"
     Write-Host "  Location: Cert:\CurrentUser\My\$($cert.Thumbprint)"
