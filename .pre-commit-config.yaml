@@ -21,9 +21,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: git-set-execution-bit
+      - id: file-set-execution-bit
         name: Set executable permissions on shell scripts
-        entry: ./dot_config/shell/functions/git-set-execution-bit.sh
+        entry: ./dot_config/shell/functions/file-set-execution-bit.sh
         language: script
         files: '\.(sh|bash)$'
         pass_filenames: false
