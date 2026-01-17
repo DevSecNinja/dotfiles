@@ -136,16 +136,8 @@ jobs:
       - name: Install Chezmoi and apply dotfiles
         shell: pwsh
         run: |
-          # Install and initialize chezmoi using the official one-liner
-          iex "&{$(irm 'https://get.chezmoi.io/ps1')}"
-          
-          # Initialize and apply dotfiles
-          chezmoi init --apply --no-tty --source="${{ github.workspace }}"
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Chezmoi init failed"
-            exit 1
-          }
+          # Run the install script
+          .\install.ps1
 
       - name: Verify Chezmoi installation
         shell: pwsh

@@ -67,10 +67,12 @@ chezmoi init --apply /path/to/local/dotfiles
 (irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja/dotfiles
 ```
 
-**For development/testing with a local checkout:**
+Or clone and install locally:
 
 ```powershell
-chezmoi init --apply C:\path\to\local\dotfiles
+git clone https://github.com/DevSecNinja/dotfiles.git
+cd dotfiles
+.\install.ps1
 ```
 
 ### Install on WSL (Windows Subsystem for Linux)
