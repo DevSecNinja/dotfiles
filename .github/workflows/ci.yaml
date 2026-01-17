@@ -53,16 +53,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Chezmoi and apply dotfiles
-        run: |
-          # Install chezmoi to .local/bin
-          sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "${HOME}/.local/bin"
-          
-          # Ensure .local/bin is in PATH
-          export PATH="${HOME}/.local/bin:${PATH}"
-          
-          # Initialize and apply dotfiles
-          chezmoi init --apply --no-tty --source="${PWD}"
+      - name: Run install script
+        run: ./install.sh
 
       - name: Verify Chezmoi installation
         run: |
