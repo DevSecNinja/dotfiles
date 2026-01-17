@@ -1,5 +1,10 @@
-{{- /* Checks if running interactively, which is not the case for GitHub Codespaces */ -}}
-{{- $interactive := stdinIsATTY -}}
+{{- /* Detect special environments first */ -}}
+{{- $codespaces:= env "CODESPACES" | not | not -}}
+{{- $ci:= env "CI" | not | not -}}
+
+{{- /* Checks if running interactively */ -}}
+{{- /* In Codespaces and CI, force non-interactive mode */ -}}
+{{- $interactive := and stdinIsATTY (not $codespaces) (not $ci) -}}
 
 {{- /* Initializes the name variable with a default value */ -}}
 {{- $name := "Jean-Paul van Ravensberg" -}}
@@ -22,9 +27,6 @@
 {{- if $interactive -}}
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
-
-{{- $codespaces:= env "CODESPACES" | not | not -}}
-{{- $ci:= env "CI" | not | not -}}
 {{- $remoteContainers:= env "REMOTE_CONTAINERS" | not | not -}}
 {{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") -}}
 
