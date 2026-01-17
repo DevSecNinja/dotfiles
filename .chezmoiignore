@@ -6,6 +6,7 @@ requirements.txt
 
 {{- if eq .chezmoi.os "windows" }}
 # Ignore Unix-specific files on Windows
+install.sh
 run_once_before_00-setup.sh.tmpl
 run_once_install-packages.sh.tmpl
 run_once_install-precommit.sh.tmpl
