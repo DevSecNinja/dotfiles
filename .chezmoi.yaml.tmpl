@@ -55,7 +55,7 @@ sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
   name: {{ $name | quote }}
-  codespaces = {{ $codespaces }}
+  codespaces: {{ $codespaces }}
   ci: {{ $ci }}
   email: {{ $email | quote }}
   installType: {{ $installType | quote }}
