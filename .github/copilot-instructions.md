@@ -98,9 +98,6 @@ chezmoi init --apply --dry-run --source=.
 ### Local Installation
 
 ```bash
-# Unix/Linux/macOS
-./install.sh
-
 # Windows PowerShell
 .\install.ps1
 ```
@@ -131,7 +128,7 @@ chezmoi init --apply --dry-run --source=.
 ### Root Files (Chezmoi Managed)
 
 ```
-install.sh / install.ps1           # Installation scripts
+install.ps1           # Installation scripts
 dot_vimrc                          # → ~/.vimrc
 dot_tmux.conf                      # → ~/.tmux.conf
 run_once_*.sh.tmpl                 # One-time setup scripts (templated)
