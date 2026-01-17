@@ -1,14 +1,16 @@
 #!/bin/bash
 # This script installs pre-commit for code quality checks
 # Runs once per installation
-# Only runs in devcontainer environments OR on dev servers (SVLDEV*)
+# Only runs in devcontainer/codespace environments OR on dev servers (SVLDEV*)
 # Skipped on light servers (SVL*)
 
 set -e
 
 {{- if eq .installType "light" }}
+{{-   if not (or .devcontainer .codespaces) }}
 echo "ℹ️  Skipping pre-commit installation (light server mode)"
 exit 0
+{{-   end }}
 {{- end }}
 
 if command -v pre-commit >/dev/null 2>&1; then
@@ -16,11 +18,11 @@ if command -v pre-commit >/dev/null 2>&1; then
     exit 0
 fi
 
-# Check if running in a devcontainer
-if [ -z "$REMOTE_CONTAINERS" ] && [ -z "$CODESPACES" ] && [ ! -f "/.dockerenv" ]; then
-    echo "ℹ️  Skipping pre-commit installation (not in a devcontainer)"
-    exit 0
-fi
+{{- if or .devcontainer .codespaces }}
+echo "🐳 Detected devcontainer/codespace environment - installing pre-commit..."
+{{- else if eq .installType "full" }}
+echo "📦 Installing pre-commit on dev server..."
+{{- end }}
 
 echo "📦 Installing pre-commit..."
 
