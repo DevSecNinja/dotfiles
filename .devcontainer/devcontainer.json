@@ -24,7 +24,5 @@
       }
     }
   },
-  // Run install script after container is created
-  "postCreateCommand": "./install.sh",
   "remoteUser": "vscode"
 }
