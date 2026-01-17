@@ -1,7 +1,7 @@
 function fish_greeting
     # Custom greeting function
     # Override the default Fish greeting
-
+    
     if type -q fastfetch
         echo
         fastfetch

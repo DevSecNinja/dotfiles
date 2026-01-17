@@ -82,7 +82,9 @@ dotfiles/
 │   ├── .chezmoi.yaml.tmpl           # Chezmoi config (prompts for name/email)
 │   ├── .chezmoiignore               # Files to not copy to home (supports templates)
 │   ├── .pre-commit-config.yaml      # Pre-commit hooks configuration
-│   └── requirements.txt             # Python dependencies (pre-commit)
+│   ├── requirements.txt             # Python dependencies (pre-commit)
+│   ├── install.sh                   # Installation script (Unix)
+│   └── install.ps1                  # Installation script (Windows)
 │
 ├── 📚 Documentation
 │   ├── README.md                    # Main documentation

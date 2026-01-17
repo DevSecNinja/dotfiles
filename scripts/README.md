@@ -217,7 +217,7 @@ Runs all validation checks in sequence.
 
 ### Testing After Installation
 ```bash
-# After installing dotfiles with chezmoi
+# After running ./install.sh
 ./scripts/verify-dotfiles.sh
 chezmoi verify
 ```
