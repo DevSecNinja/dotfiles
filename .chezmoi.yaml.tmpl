@@ -41,6 +41,11 @@
 {{-       writeToStdout "🔧 Server detected - installing light dotfiles\n" -}}
 {{-     end -}}
 {{-   end -}}
+{{- else if $codespaces -}}
+{{-   $installType = "light" -}}
+{{-   if $interactive -}}
+{{-     writeToStdout "☁️  Codespaces detected - installing light dotfiles\n" -}}
+{{-   end -}}
 {{- else if $ci -}}
 {{-   $installType = "light" -}}
 {{-   if $interactive -}}
