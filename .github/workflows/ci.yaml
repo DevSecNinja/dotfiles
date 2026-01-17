@@ -54,11 +54,14 @@ jobs:
 
       - name: Install Chezmoi and apply dotfiles
         run: |
-          # Install chezmoi and initialize dotfiles in one command
-          sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply --no-tty --source="${PWD}"
+          # Install chezmoi to .local/bin
+          sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "${HOME}/.local/bin"
           
-          # Ensure .local/bin is in PATH for subsequent steps
+          # Ensure .local/bin is in PATH
           export PATH="${HOME}/.local/bin:${PATH}"
+          
+          # Initialize and apply dotfiles
+          chezmoi init --apply --no-tty --source="${PWD}"
 
       - name: Verify Chezmoi installation
         run: |
@@ -133,8 +136,10 @@ jobs:
       - name: Install Chezmoi and apply dotfiles
         shell: pwsh
         run: |
-          # Install chezmoi and initialize dotfiles in one command
+          # Install chezmoi using official PowerShell installer
           (irm -useb https://get.chezmoi.io/ps1) | powershell -c -
+          
+          # Initialize and apply dotfiles
           chezmoi init --apply --no-tty --source="${{ github.workspace }}"
           
           if ($LASTEXITCODE -ne 0) {
