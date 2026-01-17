@@ -21,8 +21,8 @@ packages:
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
-      light:
-      full:
+      light: []
+      full: []
 
   # macOS packages
   darwin:
@@ -52,7 +52,7 @@ packages:
 
     # PowerShell modules (installed via PowerShellGet)
     powershell_modules:
-      light:
+      light: []
       full:
         - oh-my-posh
 
