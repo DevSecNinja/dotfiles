@@ -42,9 +42,7 @@ git-https-to-ssh() {
 
 	# Get the current origin URL
 	local current_url
-	current_url=$(git remote get-url origin 2>/dev/null)
-
-	if [ $? -ne 0 ] || [ -z "$current_url" ]; then
+	if ! current_url=$(git remote get-url origin 2>/dev/null) || [ -z "$current_url" ]; then
 		echo "❌ No origin remote found"
 		return 1
 	fi
@@ -120,7 +118,10 @@ git-https-to-ssh() {
 			echo "🔗 New origin: $(git remote get-url origin)"
 			echo ""
 			echo "💡 Make sure you have SSH keys configured for this Git host"
-			echo "   You can test the connection with: ssh -T git@$(echo "$ssh_url" | sed 's/.*@\([^:]*\):.*/\1/')"
+			# Extract hostname from git@hostname:user/repo.git format
+			local hostname="${ssh_url#*@}"
+			hostname="${hostname%%:*}"
+			echo "   You can test the connection with: ssh -T git@${hostname}"
 		else
 			echo "❌ Failed to update origin remote"
 			return 1
