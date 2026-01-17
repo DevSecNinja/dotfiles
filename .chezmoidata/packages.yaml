@@ -8,15 +8,16 @@ packages:
     # APT packages (Debian/Ubuntu)
     apt:
       light:
-        - git
-        - vim
         - curl
-        - wget
         - fish
+        - git
+        - jq
+        - vim
+        - wget
+        - yq
       full:
         - python3-venv
         - python3-pip
-        - jq
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
