@@ -22,10 +22,19 @@ fi
 
 SCRIPT_COUNT=0
 ERROR_COUNT=0
+SKIPPED_COUNT=0
 
 while IFS= read -r script; do
-	SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
 	echo "  Checking: ${script}"
+
+	# Skip template files with Chezmoi template syntax ({{- }})
+	if [[ "${script}" == *.tmpl ]] && grep -q '{{' "${script}"; then
+		echo "    ⏭️  Skipped (contains Chezmoi template syntax)"
+		SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+		continue
+	fi
+
+	SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
 
 	# Determine which shell to use based on shebang
 	SHELL_INTERPRETER="sh"
@@ -43,6 +52,9 @@ done <"${TEMP_FILE}"
 
 echo ""
 echo "📊 Checked ${SCRIPT_COUNT} script(s)"
+if [ "${SKIPPED_COUNT}" -gt 0 ]; then
+	echo "⏭️  Skipped ${SKIPPED_COUNT} template file(s)"
+fi
 
 if [ "${ERROR_COUNT}" -gt 0 ]; then
 	echo "❌ Found ${ERROR_COUNT} script(s) with syntax errors"

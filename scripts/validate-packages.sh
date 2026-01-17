@@ -18,11 +18,34 @@ fi
 # Check if yq or python with pyyaml is available for YAML validation
 if command -v yq >/dev/null 2>&1; then
 	# Validate YAML syntax with yq
-	if yq eval '.' "$PACKAGES_FILE" >/dev/null 2>&1; then
-		echo "✅ YAML syntax is valid"
+	# Check which version of yq (Go version supports eval, Python version doesn't)
+	if yq --version 2>&1 | grep -q 'mikefarah\|version 4'; then
+		# Go yq (mikefarah/yq)
+		if yq eval '.' "$PACKAGES_FILE" >/dev/null 2>&1; then
+			echo "✅ YAML syntax is valid (verified with yq)"
+		else
+			echo "❌ YAML syntax errors detected"
+			yq eval '.' "$PACKAGES_FILE" 2>&1
+			exit 1
+		fi
+	elif yq --help 2>&1 | grep -q 'yaml-output\|python'; then
+		# Python yq (kislyuk/yq) - different syntax
+		if yq -y . "$PACKAGES_FILE" >/dev/null 2>&1; then
+			echo "✅ YAML syntax is valid (verified with Python yq)"
+		else
+			echo "❌ YAML syntax errors detected"
+			yq -y . "$PACKAGES_FILE" 2>&1
+			exit 1
+		fi
 	else
-		echo "❌ YAML syntax errors detected"
-		exit 1
+		# Unknown yq version, try basic eval
+		if yq '.' "$PACKAGES_FILE" >/dev/null 2>&1; then
+			echo "✅ YAML syntax is valid (verified with yq)"
+		else
+			echo "❌ YAML syntax errors detected"
+			yq '.' "$PACKAGES_FILE" 2>&1
+			exit 1
+		fi
 	fi
 elif command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" 2>/dev/null; then
 	# Validate YAML syntax with Python
