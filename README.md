@@ -44,9 +44,7 @@ dotfiles/
 ├── run_once_install-packages.sh.tmpl     # Development tools (Unix)
 ├── run_once_install-packages.ps1.tmpl    # Development tools (Windows)
 ├── .chezmoi.yaml.tmpl            # Chezmoi configuration
-├── .chezmoiignore                # Files to exclude (with templates)
-├── install.sh                     # Installation script (Unix)
-└── install.ps1                    # Installation script (Windows)
+└── .chezmoiignore                # Files to exclude (with templates)
 ```
 
 ## 🚀 Quick Start
@@ -57,24 +55,19 @@ dotfiles/
 sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfiles
 ```
 
-Or clone and install locally:
+**For development/testing with a local checkout:**
 
 ```bash
-git clone https://github.com/DevSecNinja/dotfiles.git
-cd dotfiles
-./install.sh
+chezmoi init --apply /path/to/local/dotfiles
 ```
 
 ### Install on Windows (PowerShell)
 
-**Option 1: Direct from GitHub (PowerShell 5.1+ or PowerShell 7+)**
-
 ```powershell
-# Using the official chezmoi installer (recommended)
-(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja
+(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja/dotfiles
 ```
 
-**Option 2: Clone and install locally**
+Or clone and install locally:
 
 ```powershell
 git clone https://github.com/DevSecNinja/dotfiles.git
