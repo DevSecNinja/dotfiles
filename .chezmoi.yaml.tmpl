@@ -25,6 +25,8 @@
 
 {{- $codespaces:= env "CODESPACES" | not | not -}}
 {{- $ci:= env "CI" | not | not -}}
+{{- $remoteContainers:= env "REMOTE_CONTAINERS" | not | not -}}
+{{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") -}}
 
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
@@ -46,6 +48,11 @@
 {{-   if $interactive -}}
 {{-     writeToStdout "☁️  Codespaces detected - installing light dotfiles\n" -}}
 {{-   end -}}
+{{- else if $devcontainer -}}
+{{-   $installType = "light" -}}
+{{-   if $interactive -}}
+{{-     writeToStdout "🐳 Devcontainer detected - installing light dotfiles\n" -}}
+{{-   end -}}
 {{- else if $ci -}}
 {{-   $installType = "light" -}}
 {{-   if $interactive -}}
@@ -62,6 +69,7 @@ sourceDir: {{ .chezmoi.sourceDir | quote }}
 data:
   name: {{ $name | quote }}
   codespaces: {{ $codespaces }}
+  devcontainer: {{ $devcontainer }}
   ci: {{ $ci }}
   email: {{ $email | quote }}
   installType: {{ $installType | quote }}
