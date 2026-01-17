@@ -138,6 +138,15 @@ jobs:
         run: |
           # Run the install script
           .\install.ps1
+          
+          # Check exit code
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Install script failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+          
+          # Refresh PATH to ensure chezmoi is available
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
       - name: Verify Chezmoi installation
         shell: pwsh
