@@ -28,7 +28,7 @@ dotfiles/
 │       │   ├── aliases.fish         # Command aliases
 │       │   └── .gitkeep             # Keeps directory in git
 │       ├── functions/               # Custom Fish functions
-│       │   ├── fish-greeting.fish   # Custom greeting
+│       │   ├── fish_greeting.fish   # Custom greeting
 │       │   └── .gitkeep
 │       └── completions/             # Custom completions
 │           └── .gitkeep
@@ -91,7 +91,6 @@ dotfiles/
 │   ├── QUICKSTART.md                # Quick start guide
 │   ├── STRUCTURE.md                 # This file
 │   ├── CONTRIBUTING.md              # Development guide
-│   └── .scripts/README.md           # Scripts documentation
 │
 └── 🔄 CI/CD
     └── .github/workflows/ci.yaml    # GitHub Actions validation

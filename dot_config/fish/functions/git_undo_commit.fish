@@ -1,4 +1,31 @@
-function git-undo-commit --description "Remove or revert a git commit"
+function git_undo_commit --description "Remove or revert a git commit"
+    # Parse options and arguments
+    set -l reset_mode soft
+    set -l commit_sha ""
+    set -l show_help false
+
+    if test "$show_help" = true
+        echo "Usage: git_undo_commit [OPTIONS] [COMMIT_SHA]"
+        echo ""
+        echo "Remove or revert a git commit"
+        echo ""
+        echo "Arguments:"
+        echo "  COMMIT_SHA  Specific commit to revert (creates new commit)"
+        echo "              If omitted, removes the last commit"
+        echo ""
+        echo "Options:"
+        echo "  --soft      Keep changes staged (default, only for last commit)"
+        echo "  --mixed     Keep changes unstaged (only for last commit)"
+        echo "  --hard      Discard all changes (DESTRUCTIVE, only for last commit)"
+        echo "  -h, --help  Show this help message"
+        echo ""
+        echo "Examples:"
+        echo "  git_undo_commit              # Remove last commit, keep changes staged"
+        echo "  git_undo_commit --mixed      # Remove last commit, unstage changes"
+        echo "  git_undo_commit abc123       # Revert commit abc123"
+        return 0
+    end
+
     # Check if we're in a git repository
     if not git rev-parse --git-dir >/dev/null 2>&1
         echo "Error: Not in a git repository" >&2
@@ -10,11 +37,6 @@ function git-undo-commit --description "Remove or revert a git commit"
         echo "Error: No commits to undo" >&2
         return 1
     end
-
-    # Parse options and arguments
-    set -l reset_mode soft
-    set -l commit_sha ""
-    set -l show_help false
 
     for arg in $argv
         switch $arg
@@ -35,28 +57,6 @@ function git-undo-commit --description "Remove or revert a git commit"
                     return 1
                 end
         end
-    end
-
-    if test "$show_help" = true
-        echo "Usage: git-undo-commit [OPTIONS] [COMMIT_SHA]"
-        echo ""
-        echo "Remove or revert a git commit"
-        echo ""
-        echo "Arguments:"
-        echo "  COMMIT_SHA  Specific commit to revert (creates new commit)"
-        echo "              If omitted, removes the last commit"
-        echo ""
-        echo "Options:"
-        echo "  --soft      Keep changes staged (default, only for last commit)"
-        echo "  --mixed     Keep changes unstaged (only for last commit)"
-        echo "  --hard      Discard all changes (DESTRUCTIVE, only for last commit)"
-        echo "  -h, --help  Show this help message"
-        echo ""
-        echo "Examples:"
-        echo "  git-undo-commit              # Remove last commit, keep changes staged"
-        echo "  git-undo-commit --mixed      # Remove last commit, unstage changes"
-        echo "  git-undo-commit abc123       # Revert commit abc123"
-        return 0
     end
 
     # If commit SHA is provided, revert that specific commit

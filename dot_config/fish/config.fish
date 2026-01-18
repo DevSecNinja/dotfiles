@@ -2,7 +2,7 @@
 # This file is sourced on every new shell session
 
 # Set greeting
-set -g fish-greeting ""
+set -g fish_greeting ""
 
 # Environment variables
 # Use VS Code if available, otherwise vim
