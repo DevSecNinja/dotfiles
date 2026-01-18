@@ -109,7 +109,10 @@ find-broken-symlinks() {
 	fi
 
 	# Get absolute path for better display
-	target_dir=$(cd "$target_dir" && pwd)
+	if ! target_dir=$(cd "$target_dir" && pwd); then
+		echo "❌ Failed to access directory: $target_dir"
+		return 1
+	fi
 
 	# Verbose output
 	if [ "$verbose" = true ]; then
@@ -124,8 +127,9 @@ find-broken-symlinks() {
 	echo "🔍 Searching for broken symlinks in: $target_dir"
 
 	# Find all broken symlinks
-	# -L follows symlinks and -type l finds symlinks
-	# ! -e checks if the target doesn't exist (broken symlink)
+	# -L tells find to follow symlinks and report those that are broken
+	# -type l finds symbolic links
+	# When combined with -L, only broken symlinks (those whose targets don't exist) are matched
 	local broken_symlinks=()
 	while IFS= read -r -d '' link; do
 		broken_symlinks+=("$link")
@@ -161,8 +165,7 @@ find-broken-symlinks() {
 
 	# Confirm removal unless auto-confirm is set
 	if [ "$auto_confirm" = false ]; then
-		echo "❓ Do you want to remove these broken symlinks? [y/N] "
-		read -r response
+		read -p "❓ Do you want to remove these broken symlinks? [y/N] " response
 		case "$response" in
 		[yY] | [yY][eE][sS])
 			echo "🗑️  Removing broken symlinks..."
