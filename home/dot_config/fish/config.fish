@@ -18,6 +18,13 @@ end
 fish_add_path $HOME/.local/bin
 fish_add_path $HOME/bin
 
+# Initialize Homebrew (macOS)
+if test -f /opt/homebrew/bin/brew
+    eval (/opt/homebrew/bin/brew shellenv)
+else if test -f /usr/local/bin/brew
+    eval (/usr/local/bin/brew shellenv)
+end
+
 # Load custom functions from conf.d/
 # Files in conf.d/ are automatically sourced
 # TODO: Decide to migrate functions to fish syntax or keep bash scripts

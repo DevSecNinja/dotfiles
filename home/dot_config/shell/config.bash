@@ -2,6 +2,17 @@
 # Bash configuration
 # This file should be sourced by ~/.bashrc or ~/.bash_profile
 
+# TODO: Fix duplicate config files for bash/zsh/fish by moving common parts to separate init script
+
+# Initialize Homebrew (macOS/Linux)
+if [ -f "/opt/homebrew/bin/brew" ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -f "/usr/local/bin/brew" ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+elif [ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
 # Load all functions from shell/functions directory
 if [ -d "$HOME/.config/shell/functions" ]; then
 	for func_file in "$HOME/.config/shell/functions"/*; do
