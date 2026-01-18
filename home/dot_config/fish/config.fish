@@ -18,12 +18,9 @@ end
 fish_add_path $HOME/.local/bin
 fish_add_path $HOME/bin
 
-# Initialize Homebrew (macOS)
-if test -f /opt/homebrew/bin/brew
-    eval (/opt/homebrew/bin/brew shellenv)
-else if test -f /usr/local/bin/brew
-    eval (/usr/local/bin/brew shellenv)
-end
+# Homebrew initialization is now in conf.d/homebrew.fish
+# mise initialization is now in conf.d/mise.fish
+# Docker and gh completions are in completions/ directory
 
 # Load custom functions from conf.d/
 # Files in conf.d/ are automatically sourced
