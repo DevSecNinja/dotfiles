@@ -2,7 +2,7 @@ function fish-greeting
     # Custom greeting function
     # Override the default Fish greeting
 
-    if type -q fastfetch
+    if command -sq fastfetch
         echo
         fastfetch
         echo
