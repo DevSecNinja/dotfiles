@@ -6,10 +6,16 @@
 
 set -e
 
-# Check if we're in a git repository - skip in CI environments
+# Check if we're in a git repository - if not, try to use chezmoi source directory
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    echo "ℹ️  Skipping pre-commit installation (not in a git repository)"
-    exit 0
+    # Try to use the chezmoi source directory if it's a git repository
+    if [ -d "{{ .chezmoi.sourceDir }}/.git" ]; then
+        echo "📁 Changing to chezmoi source directory..."
+        cd "{{ .chezmoi.sourceDir }}"
+    else
+        echo "ℹ️  Skipping pre-commit installation (not in a git repository)"
+        exit 0
+    fi
 fi
 
 {{- if eq .installType "light" }}
