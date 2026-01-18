@@ -20,4 +20,5 @@ run_once_install-packages.ps1.tmpl
 dot_config/powershell/
 AppData/
 *.ps1
+*.ps1.tmpl
 {{- end }}
