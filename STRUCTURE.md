@@ -91,7 +91,6 @@ dotfiles/
 │   ├── QUICKSTART.md                # Quick start guide
 │   ├── STRUCTURE.md                 # This file
 │   ├── CONTRIBUTING.md              # Development guide
-│   └── .scripts/README.md           # Scripts documentation
 │
 └── 🔄 CI/CD
     └── .github/workflows/ci.yaml    # GitHub Actions validation
