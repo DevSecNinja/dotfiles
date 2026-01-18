@@ -46,8 +46,17 @@
     "enabled": true
   },
   "pip_requirements": {
-    "managerFilePatterns": [
-      "/(^|/)requirements\\.txt$/"
-    ]
-  }
+    "fileMatch": ["(^|/)requirements\\.txt$"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update GitHub releases in packages.yaml",
+      "fileMatch": ["(^|/)home/\\.chezmoidata/packages\\.yaml$"],
+      "matchStrings": [
+        "- name: (?<depName>[^\\n]+)\\n\\s+repo: (?<packageName>[^\\n]+)\\n\\s+current_version: [\"']?(?<currentValue>[^\"'\\n]+)[\"']?"
+      ],
+      "datasourceTemplate": "github-releases"
+    }
+  ]
 }

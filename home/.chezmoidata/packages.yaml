@@ -75,3 +75,16 @@ extensions:
   # macOS-specific extensions
   darwin:
     - ms-vscode-remote.remote-ssh
+
+# Version-pinned packages for Renovate tracking
+# These packages are monitored for updates by Renovate
+versioned:
+  github_releases:
+    # GitHub CLI - github-releases/cli/cli
+    - name: gh
+      repo: cli/cli
+      current_version: "2.61.0"
+    # Chezmoi - github-releases/twpayne/chezmoi
+    - name: chezmoi
+      repo: twpayne/chezmoi
+      current_version: "2.54.0"
