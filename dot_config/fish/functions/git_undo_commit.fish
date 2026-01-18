@@ -1,41 +1,8 @@
 function git_undo_commit --description "Remove or revert a git commit"
-    # Check if we're in a git repository
-    if not git rev-parse --git-dir >/dev/null 2>&1
-        echo "Error: Not in a git repository" >&2
-        return 1
-    end
-
-    # Check if there are any commits
-    if not git rev-parse HEAD >/dev/null 2>&1
-        echo "Error: No commits to undo" >&2
-        return 1
-    end
-
     # Parse options and arguments
     set -l reset_mode soft
     set -l commit_sha ""
     set -l show_help false
-
-    for arg in $argv
-        switch $arg
-            case -h --help
-                set show_help true
-            case --soft
-                set reset_mode soft
-            case --mixed
-                set reset_mode mixed
-            case --hard
-                set reset_mode hard
-            case '*'
-                # Assume it's a commit SHA
-                if test -z "$commit_sha"
-                    set commit_sha $arg
-                else
-                    echo "Error: Multiple commit SHAs provided" >&2
-                    return 1
-                end
-        end
-    end
 
     if test "$show_help" = true
         echo "Usage: git_undo_commit [OPTIONS] [COMMIT_SHA]"
@@ -57,6 +24,39 @@ function git_undo_commit --description "Remove or revert a git commit"
         echo "  git_undo_commit --mixed      # Remove last commit, unstage changes"
         echo "  git_undo_commit abc123       # Revert commit abc123"
         return 0
+    end
+
+    # Check if we're in a git repository
+    if not git rev-parse --git-dir >/dev/null 2>&1
+        echo "Error: Not in a git repository" >&2
+        return 1
+    end
+
+    # Check if there are any commits
+    if not git rev-parse HEAD >/dev/null 2>&1
+        echo "Error: No commits to undo" >&2
+        return 1
+    end
+
+    for arg in $argv
+        switch $arg
+            case -h --help
+                set show_help true
+            case --soft
+                set reset_mode soft
+            case --mixed
+                set reset_mode mixed
+            case --hard
+                set reset_mode hard
+            case '*'
+                # Assume it's a commit SHA
+                if test -z "$commit_sha"
+                    set commit_sha $arg
+                else
+                    echo "Error: Multiple commit SHAs provided" >&2
+                    return 1
+                end
+        end
     end
 
     # If commit SHA is provided, revert that specific commit
