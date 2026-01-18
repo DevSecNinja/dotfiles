@@ -4,20 +4,17 @@ README.md
 .pre-commit-config.yaml
 requirements.txt
 
-{{- if eq .chezmoi.os "windows" }}
-# Ignore Unix-specific files on Windows
-install.sh
-run_once_before_00-setup.sh.tmpl
-run_once_install-packages.sh.tmpl
-run_once_install-precommit.sh.tmpl
-dot_config/fish/
-*.sh
-{{- else }}
-# Ignore Windows-specific files on Unix systems
-install.ps1
-run_once_before_00-setup.ps1.tmpl
-run_once_install-packages.ps1.tmpl
-dot_config/powershell/
-AppData/
-*.ps1
-{{- end }}
+{{ if ne .chezmoi.os "darwin" }}
+.chezmoiscripts/darwin/**
+{{ end }}
+
+{{ if ne .chezmoi.os "linux" }}
+.chezmoiscripts/linux/**
+{{ end }}
+
+{{ if ne .chezmoi.os "windows" }}
+.chezmoiscripts/windows/**
+Documents
+AppData
+{{ else }}
+{{ end }}
