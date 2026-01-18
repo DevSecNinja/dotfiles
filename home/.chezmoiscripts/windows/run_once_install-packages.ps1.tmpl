@@ -103,6 +103,47 @@ if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
 
 Write-Host "`nDevelopment tools installation complete ({{ .installType }} mode)!" -ForegroundColor Green
 
+# Install Python packages with pip (if available)
+if (Get-Command pip3 -ErrorAction SilentlyContinue) {
+    Write-Host "`nInstalling Python packages..." -ForegroundColor Cyan
+
+    # Install light mode Python packages (always)
+{{- range .packages.windows.pip.light }}
+    Write-Host "Installing {{ . }}..." -NoNewline
+    try {
+        pip3 install --user {{ . | quote }} 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host " [OK]" -ForegroundColor Green
+        } else {
+            Write-Host " [FAILED]" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host " [FAILED]" -ForegroundColor Red
+    }
+{{- end }}
+
+{{- if eq .installType "full" }}
+    # Install full mode Python packages (additional)
+{{- range .packages.windows.pip.full }}
+    Write-Host "Installing {{ . }}..." -NoNewline
+    try {
+        pip3 install --user {{ . | quote }} 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host " [OK]" -ForegroundColor Green
+        } else {
+            Write-Host " [FAILED]" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host " [FAILED]" -ForegroundColor Red
+    }
+{{- end }}
+{{- end }}
+
+    Write-Host "[OK] Python packages installation complete!" -ForegroundColor Green
+} else {
+    Write-Host "`n[SKIP] pip3 not found, skipping Python packages installation" -ForegroundColor Yellow
+}
+
 # Install VS Code extensions if code command is available
 if (Get-Command code -ErrorAction SilentlyContinue) {
     Write-Host "`nInstalling VS Code extensions..." -ForegroundColor Cyan

@@ -25,6 +25,12 @@ packages:
       light: []
       full: []
 
+    # Python packages (pip) - installed in all modes for dev tools
+    pip:
+      light:
+        - pre-commit>=3.0.0
+      full: []
+
   # macOS packages
   darwin:
     # Homebrew formulas
@@ -36,6 +42,12 @@ packages:
         - vim
       full:
         - python@3
+
+    # Python packages (pip) - installed in all modes for dev tools
+    pip:
+      light:
+        - pre-commit>=3.0.0
+      full: []
 
   # Windows packages
   windows:
@@ -56,6 +68,12 @@ packages:
       light: []
       full:
         - oh-my-posh
+
+    # Python packages (pip) - installed in all modes for dev tools
+    pip:
+      light:
+        - pre-commit>=3.0.0
+      full: []
 
 # VS Code extensions (optional, separate from package installation)
 extensions:

@@ -65,8 +65,8 @@ The CI pipeline runs automatically on push and will:
 You can run similar checks locally:
 
 ```bash
-# Install Python dependencies
-pip3 install -r requirements.txt
+# Install Python dependencies from packages.yaml
+./scripts/install-python-packages.sh
 
 # Run pre-commit checks
 pre-commit run --all-files
