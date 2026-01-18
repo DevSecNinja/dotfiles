@@ -17,7 +17,8 @@ packages:
         - vim
         - wget
         - yq
-      full: []
+      full:
+        - gh # GitHub CLI
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
