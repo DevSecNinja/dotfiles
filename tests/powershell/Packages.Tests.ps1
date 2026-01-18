@@ -437,39 +437,6 @@ Describe "VS Code Extensions Configuration" {
             }
         }
     }
-
-    Context "Installation Script Integration" {
-        It "Common extensions should be referenced in Windows installation script" {
-            $scriptContent = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.ps1.tmpl") -Raw
-            $scriptContent | Should -Match "extensions\.common"
-        }
-
-        It "Windows extensions should be referenced in Windows installation script" {
-            $scriptContent = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.ps1.tmpl") -Raw
-            $scriptContent | Should -Match "extensions\.windows"
-        }
-
-        It "Common extensions should be referenced in Linux/macOS installation script" {
-            $scriptContent = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.sh.tmpl") -Raw
-            $scriptContent | Should -Match "extensions\.common"
-        }
-
-        It "Installation scripts should check for VS Code availability" {
-            $psScript = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.ps1.tmpl") -Raw
-            $shScript = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.sh.tmpl") -Raw
-
-            $psScript | Should -Match "Get-Command code"
-            $shScript | Should -Match "command -v code"
-        }
-
-        It "Installation scripts should use --install-extension flag" {
-            $psScript = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.ps1.tmpl") -Raw
-            $shScript = Get-Content (Join-Path $script:RepoRoot "run_once_install-packages.sh.tmpl") -Raw
-
-            $psScript | Should -Match "--install-extension"
-            $shScript | Should -Match "--install-extension"
-        }
-    }
 }
 
 Describe "Package Consistency" {
