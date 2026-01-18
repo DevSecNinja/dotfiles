@@ -3,6 +3,7 @@ LICENSE
 README.md
 .pre-commit-config.yaml
 requirements.txt
+tests
 
 {{- if eq .chezmoi.os "windows" }}
 # Ignore Unix-specific files on Windows
@@ -10,16 +11,23 @@ install.sh
 run_once_before_00-setup.sh.tmpl
 run_once_install-packages.sh.tmpl
 run_once_install-precommit.sh.tmpl
-dot_config/fish/
+.chezmoiscripts/linux/**
+.chezmoiscripts/darwin/**
+.config/fish/**
 *.sh
 {{- else }}
 # Ignore Windows-specific files on Unix systems
 install.ps1
 run_once_before_00-setup.ps1.tmpl
 run_once_install-packages.ps1.tmpl
-.chezmoiscripts/windows/
-dot_config/powershell/
-AppData/
+.chezmoiscripts/windows/**
+.config/powershell/**
+Documents/PowerShell/**
+Documents/WindowsPowerShell/**
+AppData/**
+.local/bin/scripts/powershell/**
+scripts/test-packages-windows.ps1
+tests/powershell/**
 *.ps1
 *.ps1.tmpl
 {{- end }}
