@@ -1,4 +1,4 @@
-function fish-greeting
+function fish_greeting
     # Custom greeting function
     # Override the default Fish greeting
 

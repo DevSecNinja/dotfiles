@@ -10,7 +10,7 @@ fish/
 ├── conf.d/              # Configuration snippets (auto-loaded)
 │   └── aliases.fish     # Command aliases
 ├── functions/           # Custom Fish functions
-│   └── fish-greeting.fish
+│   └── fish_greeting.fish
 └── completions/         # Custom tab completions
 ```
 

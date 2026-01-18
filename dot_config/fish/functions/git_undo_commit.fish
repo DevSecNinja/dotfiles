@@ -1,4 +1,4 @@
-function git-undo-commit --description "Remove or revert a git commit"
+function git_undo_commit --description "Remove or revert a git commit"
     # Check if we're in a git repository
     if not git rev-parse --git-dir >/dev/null 2>&1
         echo "Error: Not in a git repository" >&2
@@ -38,7 +38,7 @@ function git-undo-commit --description "Remove or revert a git commit"
     end
 
     if test "$show_help" = true
-        echo "Usage: git-undo-commit [OPTIONS] [COMMIT_SHA]"
+        echo "Usage: git_undo_commit [OPTIONS] [COMMIT_SHA]"
         echo ""
         echo "Remove or revert a git commit"
         echo ""
@@ -53,9 +53,9 @@ function git-undo-commit --description "Remove or revert a git commit"
         echo "  -h, --help  Show this help message"
         echo ""
         echo "Examples:"
-        echo "  git-undo-commit              # Remove last commit, keep changes staged"
-        echo "  git-undo-commit --mixed      # Remove last commit, unstage changes"
-        echo "  git-undo-commit abc123       # Revert commit abc123"
+        echo "  git_undo_commit              # Remove last commit, keep changes staged"
+        echo "  git_undo_commit --mixed      # Remove last commit, unstage changes"
+        echo "  git_undo_commit abc123       # Revert commit abc123"
         return 0
     end
 

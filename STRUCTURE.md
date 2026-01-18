@@ -28,7 +28,7 @@ dotfiles/
 │       │   ├── aliases.fish         # Command aliases
 │       │   └── .gitkeep             # Keeps directory in git
 │       ├── functions/               # Custom Fish functions
-│       │   ├── fish-greeting.fish   # Custom greeting
+│       │   ├── fish_greeting.fish   # Custom greeting
 │       │   └── .gitkeep
 │       └── completions/             # Custom completions
 │           └── .gitkeep
