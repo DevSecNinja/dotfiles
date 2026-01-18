@@ -2,7 +2,7 @@
 # This file is sourced on every new shell session
 
 # Set greeting
-set -g fish_greeting ""
+set -g fish-greeting ""
 
 # Environment variables
 set -gx EDITOR vim

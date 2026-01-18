@@ -149,7 +149,7 @@ dot_config/
 ├── fish/                          # → ~/.config/fish/
 │   ├── config.fish                # Main Fish config
 │   ├── conf.d/aliases.fish        # Command aliases (auto-loaded)
-│   └── functions/fish_greeting.fish
+│   └── functions/fish-greeting.fish
 ├── git/                           # → ~/.config/git/
 │   ├── config.tmpl                # Git config (templates name/email)
 │   └── ignore                     # Global gitignore

@@ -12,7 +12,7 @@ $HOME/.vimrc
 $HOME/.tmux.conf
 $HOME/.config/fish/config.fish
 $HOME/.config/fish/conf.d/aliases.fish
-$HOME/.config/fish/functions/fish_greeting.fish
+$HOME/.config/fish/functions/fish-greeting.fish
 $HOME/.config/git/config
 $HOME/.config/git/ignore
 "

@@ -34,7 +34,7 @@ fi
 
 echo ""
 echo "🧪 Testing custom functions..."
-if fish -c "functions fish_greeting" >/dev/null 2>&1; then
+if fish -c "functions fish-greeting" >/dev/null 2>&1; then
 	echo "✅ Custom functions are available"
 else
 	echo "⚠️  Custom functions not found (may be expected in some cases)"

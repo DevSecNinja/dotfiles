@@ -23,7 +23,7 @@ dotfiles/
 │   │   ├── conf.d/               # Configuration snippets (auto-loaded)
 │   │   │   └── aliases.fish      # Command aliases
 │   │   ├── functions/            # Custom Fish functions
-│   │   │   └── fish_greeting.fish
+│   │   │   └── fish-greeting.fish
 │   │   └── completions/          # Custom completions
 │   ├── powershell/                # PowerShell configuration (Windows)
 │   │   ├── profile.ps1           # Main PowerShell profile
