@@ -12,12 +12,12 @@ packages:
         - fish
         - git
         - jq
+        - python3-venv
+        - python3-pip
         - vim
         - wget
         - yq
-      full:
-        - python3-venv
-        - python3-pip
+      full: []
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
