@@ -484,6 +484,11 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
 Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:CI -eq 'true') {
 
     BeforeAll {
+        # Skip setup if tests are being skipped (Pester runs BeforeAll even for skipped Describe blocks)
+        if (-not $IsWindows -or $env:CI -eq 'true') {
+            return
+        }
+
         # Verify certificate is available
         if (-not $script:TestCert -or -not $script:TestCertThumbprint) {
             throw "Test certificate not available - top-level BeforeAll may have failed"
