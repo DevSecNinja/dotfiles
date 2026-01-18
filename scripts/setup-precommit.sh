@@ -33,6 +33,9 @@ else
 		"$VENV_DIR/bin/pip" install pyyaml
 
 		# Parse and install packages from packages.yaml
+		# Export environment variables for Python subprocess
+		export PACKAGES_FILE
+		export VENV_DIR
 		"$VENV_DIR/bin/python3" <<'PYEOF'
 import yaml
 import os
@@ -40,6 +43,7 @@ import subprocess
 import sys
 
 packages_file = os.environ.get('PACKAGES_FILE')
+venv_dir = os.environ.get('VENV_DIR')
 os_type = 'darwin' if sys.platform == 'darwin' else 'linux'
 
 try:
@@ -50,7 +54,7 @@ try:
 
     for package in packages:
         print(f"Installing {package}...")
-        subprocess.run([os.environ.get('VENV_DIR') + '/bin/pip', 'install', package], check=True)
+        subprocess.run([f'{venv_dir}/bin/pip', 'install', package], check=True)
 
 except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
