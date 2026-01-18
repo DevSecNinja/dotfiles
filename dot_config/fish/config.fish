@@ -5,8 +5,14 @@
 set -g fish-greeting ""
 
 # Environment variables
-set -gx EDITOR vim
-set -gx VISUAL vim
+# Use VS Code if available, otherwise vim
+if type -q code
+    set -gx EDITOR "code --wait"
+    set -gx VISUAL "code --wait"
+else
+    set -gx EDITOR vim
+    set -gx VISUAL vim
+end
 
 # Add custom paths
 fish_add_path $HOME/.local/bin
