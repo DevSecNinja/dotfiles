@@ -4,49 +4,68 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 
 ## ✨ Features
 
-- **Fish Shell** (Linux/macOS) & **PowerShell** (Windows): Modern shell configurations with sensible defaults and useful aliases
-- **Git Configuration**: Pre-configured with templates for user info
-- **Vim & Tmux**: Basic but functional configurations
-- **Automated Setup**: Scripts to install tools and create directories
-- **Cross-Platform**: Works on Linux (Ubuntu/Debian), macOS, and Windows (PowerShell/WSL)
-- **Smart Installation**: Automatically detects server type and installs appropriate version
-  - **Light mode** for servers (SVL*): Essential tools only
-  - **Full mode** for dev servers (SVLDEV*) and workstations: All development tools
+- **Multi-Shell Support**: Configurations for Fish, Bash, Zsh (Linux/macOS) and PowerShell (Windows) with unified aliases and custom functions
+- **Git Configuration**: Pre-configured with templates for user info and global ignore patterns
+- **Editor Configurations**: Vim and Tmux with sensible defaults
+- **Cross-Platform**: Works seamlessly on Linux, macOS, Windows (PowerShell), and WSL
+- **Custom Functions Library**: Reusable shell functions for common tasks (git operations, brew updates, file management)
+- **Automated Validation**: Pre-commit hooks and validation scripts ensure configuration quality
 
 ## 📁 Structure
 
 ```
 dotfiles/
-├── dot_config/                    # XDG config directory (~/.config/)
-│   ├── fish/                      # Fish shell configuration (Linux/macOS)
-│   │   ├── config.fish           # Main Fish config
-│   │   ├── conf.d/               # Configuration snippets (auto-loaded)
-│   │   │   └── aliases.fish      # Command aliases
-│   │   ├── functions/            # Custom Fish functions
-│   │   │   └── fish_greeting.fish
-│   │   └── completions/          # Custom completions
-│   ├── powershell/                # PowerShell configuration (Windows)
-│   │   ├── profile.ps1           # Main PowerShell profile
-│   │   └── aliases.ps1           # Command aliases
-│   ├── git/                       # Git configuration
-│   │   ├── config.tmpl           # Git config with templating
-│   │   └── ignore                # Global gitignore
-│   └── shell/                     # Other shell configs (bash, zsh)
-├── AppData/                       # Windows-specific application data
-│   └── Local/Packages/
-│       └── Microsoft.WindowsTerminal_.../
-│           └── LocalState/
-│               └── settings.json  # Windows Terminal settings
-├── dot_vimrc                      # Vim configuration
-├── dot_tmux.conf                  # Tmux configuration
-├── run_once_before_00-setup.sh.tmpl      # Initial directory setup (Unix)
-├── run_once_before_00-setup.ps1.tmpl     # Initial directory setup (Windows)
-├── run_once_install-packages.sh.tmpl     # Development tools (Unix)
-├── run_once_install-packages.ps1.tmpl    # Development tools (Windows)
-├── .chezmoi.yaml.tmpl            # Chezmoi configuration
-├── .chezmoiignore                # Files to exclude (with templates)
-├── install.sh                     # Installation script (Unix)
-└── install.ps1                    # Installation script (Windows)
+├── home/                          # Chezmoi source directory
+│   ├── dot_config/                # XDG config directory (~/.config/)
+│   │   ├── fish/                  # Fish shell configuration (Linux/macOS)
+│   │   │   ├── config.fish        # Main Fish config
+│   │   │   ├── conf.d/            # Configuration snippets (auto-loaded)
+│   │   │   │   └── aliases.fish   # Command aliases
+│   │   │   ├── functions/         # Custom Fish functions
+│   │   │   │   ├── fish_greeting.fish
+│   │   │   │   └── git_undo_commit.fish
+│   │   │   └── completions/       # Custom completions
+│   │   ├── powershell/            # PowerShell configuration (Windows)
+│   │   │   ├── profile.ps1        # Main PowerShell profile
+│   │   │   ├── aliases.ps1        # Command aliases
+│   │   │   └── functions.ps1      # Custom functions
+│   │   ├── git/                   # Git configuration
+│   │   │   ├── config.tmpl        # Git config with templating
+│   │   │   └── ignore             # Global gitignore
+│   │   └── shell/                 # Other shell configs (bash, zsh)
+│   │       ├── config.bash
+│   │       ├── config.zsh
+│   │       └── functions/         # Shared shell functions
+│   ├── AppData/                   # Windows-specific application data
+│   │   └── Local/Packages/
+│   │       └── Microsoft.WindowsTerminal_.../
+│   │           └── LocalState/
+│   │               └── settings.json  # Windows Terminal settings
+│   ├── Documents/                 # Windows PowerShell profiles
+│   │   ├── PowerShell/
+│   │   │   └── profile.ps1
+│   │   └── WindowsPowerShell/
+│   │       └── profile.ps1
+│   ├── dot_local/                 # Local user binaries
+│   │   └── private_bin/
+│   │       └── scripts/           # Custom scripts
+│   ├── dot_bashrc                 # Bash configuration
+│   ├── dot_zshrc                  # Zsh configuration
+│   ├── dot_vimrc                  # Vim configuration
+│   ├── dot_tmux.conf              # Tmux configuration
+│   ├── install.sh                 # Installation script (Unix)
+│   └── install.ps1                # Installation script (Windows)
+├── scripts/                       # Validation and testing scripts
+│   ├── validate-all.sh
+│   ├── validate-chezmoi.sh
+│   ├── validate-fish-config.sh
+│   ├── validate-shell-scripts.sh
+│   └── test-chezmoi-apply.sh
+├── tests/                         # Test files
+├── README.md
+├── CONTRIBUTING.md
+├── STRUCTURE.md
+└── requirements.txt
 ```
 
 ## 🚀 Quick Start
