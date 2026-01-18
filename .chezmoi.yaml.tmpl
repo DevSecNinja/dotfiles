@@ -28,9 +28,7 @@
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 {{- $remoteContainers:= env "REMOTE_CONTAINERS" | not | not -}}
-{{- /* Only detect devcontainer if REMOTE_CONTAINERS is set, not just any Docker container */ -}}
-{{- /* GitHub Actions runs in Docker but shouldn't be treated as a devcontainer */ -}}
-{{- $devcontainer:= $remoteContainers -}}
+{{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") -}}
 
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
