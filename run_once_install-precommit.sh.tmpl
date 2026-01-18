@@ -6,6 +6,12 @@
 
 set -e
 
+# Check if we're in a git repository - skip in CI environments
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "ℹ️  Skipping pre-commit installation (not in a git repository)"
+    exit 0
+fi
+
 {{- if eq .installType "light" }}
 {{-   if not (or .devcontainer .codespaces) }}
 echo "ℹ️  Skipping pre-commit installation (light server mode)"
