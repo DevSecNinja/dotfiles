@@ -123,7 +123,7 @@ BeforeAll {
     }
 
     # Load YAML file directly for additional validation
-    $script:PackagesYamlPath = Join-Path $script:RepoRoot ".chezmoidata\packages.yaml"
+    $script:PackagesYamlPath = Join-Path $script:RepoRoot ".chezmoidata\home\packages.yaml"
 }
 
 AfterAll {

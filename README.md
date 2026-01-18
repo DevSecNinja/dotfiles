@@ -92,46 +92,6 @@ sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja/dotfile
 
 The dotfiles will automatically detect WSL and apply appropriate configurations.
 
-### What happens during installation
-
-1. Installs Chezmoi (if not present)
-2. Detects the system type based on hostname and OS:
-   - **Light Server Mode** (hostname starts with `SVL` but not `SVLDEV`):
-     - **Linux/macOS**: Installs only essential tools: git, vim, tmux, curl, wget, fish
-     - **Windows**: Installs only essential tools: git, vim, curl, wget
-     - Skips pre-commit hooks and dev-only tools
-     - Excludes development configuration files
-   - **Full Mode** (hostname starts with `SVLDEV` or any other name):
-     - **Linux/macOS**: Installs all development tools: tree, htop, python3-venv, etc.
-     - **Windows**: Installs all development tools: 7zip, python3, nodejs, vscode, PowerShell 7
-     - Installs pre-commit hooks (in devcontainer environments)
-     - Includes all configuration files
-3. Prompts for your name and email (for Git config)
-4. Runs initial setup scripts:
-   - **Linux/macOS**: Creates directories (~/.vim/undo, ~/bin, ~/projects)
-   - **Windows**: Creates directories (%USERPROFILE%\bin, %USERPROFILE%\projects)
-   - Installs Fish shell (Linux/macOS) or PowerShell modules (Windows)
-   - Installs packages based on installation mode
-5. Applies all dotfiles to your home directory
-
-### Installation Modes
-
-The dotfiles automatically detect the system type:
-
-- **🔧 Light Server** (`SVL*`): Minimal installation for production servers
-  - Example hostnames: `SVLPROD01`, `SVLWEB02`, `SVLDB03`
-  - Only essential tools installed
-  - No dev-only tools like pre-commit, tree, htop
-
-- **🖥️ Dev Server** (`SVLDEV*`): Full installation for development servers
-  - Example hostnames: `SVLDEV01`, `SVLDEV-STAGING`
-  - All development tools installed
-  - Includes pre-commit hooks and dev tools
-
-- **💻 Workstation** (any other hostname): Full installation
-  - Your local machine, laptop, or desktop
-  - All tools and features enabled
-
 ## 🔧 Customization
 
 ### Personal Information
@@ -142,77 +102,8 @@ On first run, Chezmoi will prompt for:
 
 To re-enter this information:
 ```bash
-# Linux/macOS/WSL
-chezmoi init --data=false
-
-# Windows PowerShell
 chezmoi init --data=false
 ```
-
-### Adding Your Own Dotfiles
-
-1. **Add an existing file**:
-   ```bash
-   # Linux/macOS/WSL
-   chezmoi add ~/.bashrc
-
-   # Windows PowerShell
-   chezmoi add $PROFILE
-   ```
-
-2. **Edit a managed file**:
-   ```bash
-   # Linux/macOS/WSL
-   chezmoi edit ~/.config/fish/config.fish
-
-   # Windows PowerShell
-   chezmoi edit ~/.config/powershell/profile.ps1
-   ```
-
-3. **Apply changes**:
-   ```bash
-   chezmoi apply
-   ```
-
-### Shell Customization
-
-#### Fish Shell (Linux/macOS/WSL)
-
-- **Aliases**: Edit [dot_config/fish/conf.d/aliases.fish](dot_config/fish/conf.d/aliases.fish)
-- **Functions**: Add files to [dot_config/fish/functions/](dot_config/fish/functions/)
-- **Config snippets**: Add files to [dot_config/fish/conf.d/](dot_config/fish/conf.d/)
-
-#### PowerShell (Windows)
-
-- **Profile**: Edit [dot_config/powershell/profile.ps1](dot_config/powershell/profile.ps1)
-- **Aliases**: Edit [dot_config/powershell/aliases.ps1](dot_config/powershell/aliases.ps1)
-- **View all aliases**: Type `aliases` in PowerShell
-
-### Windows Terminal Configuration
-
-Windows Terminal settings are managed at:
-- [AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json](AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json)
-
-Features:
-- PowerShell 7 as default profile
-- WSL integration
-- Useful keyboard shortcuts
-
-### Adding Scripts
-
-Create scripts in the root directory with platform-specific extensions:
-
-**Unix (Linux/macOS/WSL)**:
-- `run_once_*.sh`: Runs once after installation
-- `run_onchange_*.sh`: Runs when file content changes
-- `run_*.sh`: Runs on every apply
-
-**Windows**:
-- `run_once_*.ps1`: Runs once after installation
-- `run_onchange_*.ps1`: Runs when file content changes
-- `run_*.ps1`: Runs on every apply
-
-Use `.tmpl` extension to use Chezmoi templating (e.g., `run_once_setup.sh.tmpl`).
 
 ## 📝 Common Commands
 
@@ -239,53 +130,6 @@ chezmoi data
 chezmoi verify
 ```
 
-## 🎯 Tips
-
-### Unix (Linux/macOS/WSL)
-- **Set Fish as default shell**: `chsh -s $(which fish)`
-- **Preview changes**: Always run `chezmoi diff` before `chezmoi apply`
-
-### Windows
-- **Set PowerShell 7 as default**: Open Windows Terminal settings and set PowerShell 7 as default profile
-- **PowerShell modules**: Type `aliases` to see all available shortcuts
-
-### Cross-Platform
-- **Preview changes**: Always run `chezmoi diff` before `chezmoi apply`
-- **Templates**: Use `.tmpl` extension to access Chezmoi variables like `{{ .name }}`
-- **Platform-specific config**: Use Chezmoi's conditional templating:
-  ```
-  {{- if eq .chezmoi.os "darwin" }}
-  # macOS-specific config
-  {{- else if eq .chezmoi.os "linux" }}
-  # Linux-specific config
-  {{- else if eq .chezmoi.os "windows" }}
-  # Windows-specific config
-  {{- end }}
-  ```
-
-## 🧪 Testing
-
-The repository includes validation and testing scripts in the [scripts/](scripts/) directory:
-
-```bash
-# Validate everything at once
-./scripts/validate-all.sh
-
-# Or run individual checks
-./scripts/validate-chezmoi.sh       # Check Chezmoi config
-./scripts/validate-shell-scripts.sh # Validate shell syntax
-./scripts/validate-fish-config.sh   # Validate Fish config
-./scripts/test-chezmoi-apply.sh     # Dry-run apply
-```
-
-### CI Testing
-
-The CI pipeline automatically tests both installation scenarios:
-- **Light server** (hostname `SVLPROD01`): Minimal toolset
-- **Dev server** (hostname `SVLDEV01`): Full toolset
-
-These tests run only in GitHub Actions with specific container hostname configuration.
-
 ### Pre-commit Hooks
 
 This repository uses [pre-commit](https://pre-commit.com/) for code quality checks:
@@ -307,7 +151,7 @@ Hooks will automatically run on `git commit`. The checks include:
 - 🔍 YAML validation
 - 🎨 Shell script formatting (shfmt)
 
-These scripts and hooks are also used in the GitHub Actions CI pipeline to ensure quality. See [scripts/README.md](scripts/README.md) for detailed documentation.
+These scripts and hooks are also used in the GitHub Actions CI pipeline to ensure quality.
 
 ## 📚 Learn More
 
