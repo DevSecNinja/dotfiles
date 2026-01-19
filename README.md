@@ -28,7 +28,11 @@ dotfiles/
 │   │   ├── powershell/            # PowerShell configuration (Windows)
 │   │   │   ├── profile.ps1        # Main PowerShell profile
 │   │   │   ├── aliases.ps1        # Command aliases
-│   │   │   └── functions.ps1      # Custom functions
+│   │   │   ├── functions.ps1      # Custom functions
+│   │   │   └── scripts/           # PowerShell utility scripts
+│   │   │       ├── New-SigningCert.ps1.tmpl      # Create code signing certificate
+│   │   │       ├── Import-SigningCert.ps1        # Import certificate
+│   │   │       └── Sign-PowerShellScripts.ps1    # Sign PowerShell scripts
 │   │   ├── git/                   # Git configuration
 │   │   │   ├── config.tmpl        # Git config with templating
 │   │   │   └── ignore             # Global gitignore
@@ -46,9 +50,6 @@ dotfiles/
 │   │   │   └── profile.ps1
 │   │   └── WindowsPowerShell/
 │   │       └── profile.ps1
-│   ├── dot_local/                 # Local user binaries
-│   │   └── private_bin/
-│   │       └── scripts/           # Custom scripts
 │   ├── dot_bashrc                 # Bash configuration
 │   ├── dot_zshrc                  # Zsh configuration
 │   ├── dot_vimrc                  # Vim configuration
@@ -56,12 +57,20 @@ dotfiles/
 │   ├── install.sh                 # Installation script (Unix)
 │   └── install.ps1                # Installation script (Windows)
 ├── scripts/                       # Validation and testing scripts
-│   ├── validate-all.sh
-│   ├── validate-chezmoi.sh
-│   ├── validate-fish-config.sh
-│   ├── validate-shell-scripts.sh
-│   └── test-chezmoi-apply.sh
-├── tests/                         # Test files
+│   ├── validate-all.sh             # Run all validation tests
+│   └── setup-precommit.sh         # Install pre-commit hooks
+├── tests/                         # Test files (Bats/Pester)
+│   ├── bash/                      # Bats tests for validation
+│   │   ├── validate-chezmoi.bats
+│   │   ├── validate-shell-scripts.bats
+│   │   ├── validate-fish-config.bats
+│   │   ├── test-chezmoi-apply.bats
+│   │   ├── test-fish-config.bats
+│   │   ├── verify-dotfiles.bats
+│   │   └── run-tests.sh           # Bats test runner
+│   └── powershell/                # Pester tests
+│       ├── Validate-Packages.Tests.ps1
+│       └── Invoke-PesterTests.ps1 # Pester test runner
 ├── README.md
 ├── CONTRIBUTING.md
 ├── STRUCTURE.md

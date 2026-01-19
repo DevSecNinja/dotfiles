@@ -29,4 +29,8 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test results
 **/test-results.xml
+**/test-results.tap
+test-results.tap

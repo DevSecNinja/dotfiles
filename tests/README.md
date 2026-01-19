@@ -7,7 +7,7 @@ Comprehensive test suite for validating dotfiles configurations, scripts, and ut
 ```
 tests/
 ├── powershell/      # Pester tests for PowerShell scripts
-├── bash/            # Tests for Bash scripts (future)
+├── bash/            # Bats tests for Bash scripts ✨
 ├── python/          # Tests for Python utilities (future)
 └── README.md        # This file
 ```
@@ -22,6 +22,7 @@ tests/
 
 **Coverage**:
 - PowerShell utility scripts
+- **Packages YAML validation** (cross-platform package configuration) ✨
 - Code signing certificate generation (`New-SigningCert.ps1.tmpl`)
 - Script signing workflows (`Sign-PowerShellScripts.ps1.tmpl`)
 - End-to-end certificate creation and signing validation
@@ -49,16 +50,52 @@ Invoke-Pester -Path ./tests/powershell -Tag "E2E"
 Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 ```
 
-### Bash Tests (Future)
+### Bash Tests (Bats)
 
 **Location**: `tests/bash/`
 
-**Planned Framework**: [Bats](https://github.com/bats-core/bats-core) or similar
+**Framework**: [Bats 1.11+](https://github.com/bats-core/bats-core)
 
-**Planned Coverage**:
-- Shell script utilities
-- Installation scripts
-- Environment setup scripts
+**Coverage**:
+- Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, etc.)
+- **Configuration validation** (Chezmoi, Fish, shell scripts) ✨
+- **Dotfiles verification** (applied files existence) ✨
+- **Integration tests** (Chezmoi apply dry-run, Fish loading) ✨
+- Interactive command behavior
+- File system operations
+- Error handling and edge cases
+
+**Run locally**:
+```bash
+# Using the test runner script (recommended)
+./tests/bash/run-tests.sh
+
+# In CI mode (installs dependencies automatically)
+./tests/bash/run-tests.sh --ci
+
+# Or directly with Bats
+bats tests/bash/
+
+# Run with TAP output to file
+bats --tap tests/bash/*.bats > results.tap
+
+# Run a specific test file
+bats tests/bash/find-broken-symlinks.bats
+```
+
+**Test features**:
+- Comprehensive coverage of all function options (--dry-run, --yes, --verbose)
+- Edge cases (special characters, nested directories, mixed symlinks)
+- Error conditions (nonexistent directories, permission issues)
+- Output validation and behavior verification
+
+**Validation tests** (new):
+- `validate-chezmoi.bats` - Validates Chezmoi configuration syntax and structure
+- `validate-shell-scripts.bats` - Checks all shell scripts for syntax errors
+- `validate-fish-config.bats` - Validates Fish configuration files
+- `test-chezmoi-apply.bats` - Tests Chezmoi apply in dry-run mode
+- `test-fish-config.bats` - Tests Fish shell loading with repository config
+- `verify-dotfiles.bats` - Verifies expected dotfiles exist after apply
 
 ### Python Tests (Future)
 
@@ -82,18 +119,19 @@ All tests run automatically in GitHub Actions on every push and pull request.
 3. **test-light-server** - Light mode installation
 4. **test-dev-server** - Full mode installation
 5. **test-windows** - Windows installation and configuration
-6. **test-powershell-scripts** - PowerShell Pester tests ✨
+6. **test-bash-scripts** - Bash Bats tests ✨
+7. **test-powershell-scripts** - PowerShell Pester tests ✨
 
 ### Test Execution
 
 The CI pipeline:
 - Uses dedicated test runner scripts for each language:
   - PowerShell: `tests/powershell/Invoke-PesterTests.ps1`
-  - Bash: (future) `tests/bash/run-tests.sh`
+  - Bash: `tests/bash/run-tests.sh` ✨
   - Python: (future) `tests/python/run-tests.sh`
 - Automatically discovers all test files matching patterns:
   - PowerShell: `tests/powershell/**/*.Tests.ps1`
-  - Bash: `tests/bash/**/*.bats` (future)
+  - Bash: `tests/bash/**/*.bats` ✨
   - Python: `tests/python/**/test_*.py` (future)
 - Runs tests with appropriate runners/frameworks
 - Uploads test results as artifacts
@@ -105,6 +143,7 @@ The CI pipeline:
 1. Go to [Actions](../../actions) tab in GitHub
 2. Click on the latest workflow run
 3. Download test result artifacts:
+   - `bats-test-results` - Bash test results (TAP format) ✨
    - `pester-test-results` - PowerShell test results (NUnit XML)
 
 **Test Summary**:
@@ -129,11 +168,37 @@ The CI pipeline:
 
 2. The CI pipeline will automatically discover and run it!
 
-### Bash (Future)
+### Bash (Bats)
 
-1. Create test files with `.bats` extension in `tests/bash/`
-2. Follow Bats syntax
-3. Update CI pipeline to run Bats tests
+1. Create a new file in `tests/bash/` with `.bats` suffix:
+   ```bash
+   # tests/bash/my-function.bats
+   #!/usr/bin/env bats
+
+   setup() {
+       # Load the function
+       load "../../home/dot_config/shell/functions/my-function.sh"
+
+       # Create temp directory
+       TEST_DIR="$(mktemp -d)"
+       export TEST_DIR
+   }
+
+   teardown() {
+       # Cleanup
+       rm -rf "$TEST_DIR"
+   }
+
+   @test "my-function: basic functionality" {
+       run my-function --help
+       [ "$status" -eq 0 ]
+       [[ "$output" =~ "Usage" ]]
+   }
+   ```
+
+2. The CI pipeline will automatically discover and run it!
+
+3. Run locally with: `./tests/bash/run-tests.sh`
 
 ### Python (Future)
 
@@ -146,7 +211,7 @@ The CI pipeline:
 ### Naming Conventions
 
 - **PowerShell**: `<Feature>.Tests.ps1` (e.g., `New-SigningCert.Tests.ps1`)
-- **Bash**: `<feature>.bats` (e.g., `install.bats`)
+- **Bash**: `<feature>.bats` (e.g., `find-broken-symlinks.bats`) ✨
 - **Python**: `test_<feature>.py` (e.g., `test_validation.py`)
 
 ### Test Tags
@@ -199,14 +264,17 @@ It "Windows-only feature" -Skip:(-not $IsWindows) {
 # From repository root
 cd /workspaces/dotfiles
 
+# Bash tests (using test runner) ✨
+./tests/bash/run-tests.sh
+
+# Bash tests (direct Bats invocation) ✨
+bats tests/bash/*.bats
+
 # PowerShell tests (using test runner)
 pwsh -Command ".\tests\powershell\Invoke-PesterTests.ps1"
 
 # PowerShell tests (direct Pester invocation)
 pwsh -c "Invoke-Pester -Path ./tests/powershell"
-
-# Future: Bash tests
-# ./tests/bash/run-tests.sh
 
 # Future: Python tests
 # ./tests/python/run-tests.sh
@@ -214,17 +282,23 @@ pwsh -c "Invoke-Pester -Path ./tests/powershell"
 
 ### Running Specific Tests
 
-```powershell
-# Single test file
+```bash
+# Bash - Single test file ✨
+bats tests/bash/find-broken-symlinks.bats
+
+# Bash - Specific test by name ✨
+bats tests/bash/find-broken-symlinks.bats --filter "help option"
+
+# PowerShell - Single test file
 Invoke-Pester -Path ./tests/powershell/New-SigningCert.Tests.ps1
 
-# Using test runner with tags
+# PowerShell - Using test runner with tags
 .\tests\powershell\Invoke-PesterTests.ps1 -Tag "E2E"
 
-# By tag (direct Pester)
+# PowerShell - By tag (direct Pester)
 Invoke-Pester -Path ./tests/powershell -Tag "E2E"
 
-# Exclude tags
+# PowerShell - Exclude tags
 .\tests\powershell\Invoke-PesterTests.ps1 -ExcludeTag "Integration"
 ```
 
@@ -235,7 +309,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "E2E"
 $config = New-PesterConfiguration
 $config.Run.Path = './tests/powershell'
 $config.CodeCoverage.Enabled = $true
-$config.CodeCoverage.Path = './dot_local/private_bin/scripts/powershell/*.ps1'
+$config.CodeCoverage.Path = './home/dot_config/powershell/scripts/*.ps1'
 Invoke-Pester -Configuration $config
 ```
 

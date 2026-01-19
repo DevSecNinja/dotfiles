@@ -11,11 +11,11 @@
 BeforeAll {
     # Get the script path - it's in the dotfiles repo structure
     $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $scriptPath = Join-Path $repoRoot "home/dot_local/private_bin/scripts/powershell/New-SigningCert.ps1.tmpl"
+    $scriptPath = Join-Path $repoRoot "home" | Join-Path -ChildPath "dot_config" | Join-Path -ChildPath "powershell" | Join-Path -ChildPath "scripts" | Join-Path -ChildPath "New-SigningCert.ps1.tmpl"
 
     # If running in CI/actual environment, might need to process template
     if (-not (Test-Path $scriptPath)) {
-        $scriptPath = Join-Path $repoRoot "home/dot_local/private_bin/scripts/powershell/New-SigningCert.ps1"
+        $scriptPath = Join-Path $repoRoot "home" | Join-Path -ChildPath "dot_config" | Join-Path -ChildPath "powershell" | Join-Path -ChildPath "scripts" | Join-Path -ChildPath "New-SigningCert.ps1"
     }
 
     if (-not (Test-Path $scriptPath)) {
