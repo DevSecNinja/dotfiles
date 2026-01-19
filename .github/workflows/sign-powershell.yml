@@ -16,9 +16,14 @@ on:
   #     - '!**.ps1.tmpl'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sign-scripts:
     runs-on: windows-latest
+    timeout-minutes: 20
     permissions:
       contents: write
 
