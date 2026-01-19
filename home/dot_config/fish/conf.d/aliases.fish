@@ -15,8 +15,12 @@ alias g 'git'
 alias gs 'git status'
 alias ga 'git add'
 alias gc 'git commit'
-alias gp 'git push'
+alias gps 'git push'
+alias gpl 'git pull'
 alias gl 'git log --oneline --graph'
+alias gd 'git diff'
+alias gco 'git checkout'
+alias gb 'git branch'
 
 # Pre-commit shortcuts
 alias pc 'pre-commit run --all-files'
@@ -35,5 +39,9 @@ alias cze 'chezmoi edit'
 # Docker shortcuts
 alias d 'docker'
 alias dc 'docker compose'
+alias dps 'docker ps'
+alias dpsa 'docker ps -a'
+alias di 'docker images'
+alias dex 'docker exec -it'
 
 echo "✅ Aliases loaded"

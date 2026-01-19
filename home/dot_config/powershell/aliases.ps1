@@ -10,15 +10,16 @@ function ll { Get-ChildItem -Force @args }
 function la { Get-ChildItem -Force @args }
 
 # Git shortcuts
+function g { git @args }
 function gs { git status @args }
 function ga { git add @args }
 function gc { git commit @args }
-function gp { git push @args }
-function gl { git pull @args }
+function gps { git push @args }
+function gpl { git pull @args }
+function gl { git log --oneline --graph @args }
 function gd { git diff @args }
 function gco { git checkout @args }
 function gb { git branch @args }
-function glog { git log --oneline --graph --decorate @args }
 
 # Docker shortcuts
 function d { docker @args }
