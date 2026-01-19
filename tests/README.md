@@ -162,21 +162,21 @@ The CI pipeline:
    ```bash
    # tests/bash/my-function.bats
    #!/usr/bin/env bats
-   
+
    setup() {
        # Load the function
        load "../../home/dot_config/shell/functions/my-function.sh"
-       
+
        # Create temp directory
        TEST_DIR="$(mktemp -d)"
        export TEST_DIR
    }
-   
+
    teardown() {
        # Cleanup
        rm -rf "$TEST_DIR"
    }
-   
+
    @test "my-function: basic functionality" {
        run my-function --help
        [ "$status" -eq 0 ]
