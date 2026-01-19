@@ -16,8 +16,8 @@
 BeforeAll {
     # Get script paths
     $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $signingScriptPath = Join-Path $repoRoot "home/dot_config/powershell/scripts/Sign-PowerShellScripts.ps1"
-    $certScriptPath = Join-Path $repoRoot "home/dot_config/powershell/scripts/New-SigningCert.ps1.tmpl"
+    $signingScriptPath = Join-Path $repoRoot "home" | Join-Path -ChildPath "dot_config" | Join-Path -ChildPath "powershell" | Join-Path -ChildPath "scripts" | Join-Path -ChildPath "Sign-PowerShellScripts.ps1"
+    $certScriptPath = Join-Path $repoRoot "home" | Join-Path -ChildPath "dot_config" | Join-Path -ChildPath "powershell" | Join-Path -ChildPath "scripts" | Join-Path -ChildPath "New-SigningCert.ps1.tmpl"
 
     # Verify scripts exist
     if (-not (Test-Path $signingScriptPath)) {
