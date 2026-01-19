@@ -56,8 +56,7 @@ dotfiles/
 │   ├── dot_tmux.conf              # Tmux configuration
 │   ├── install.sh                 # Installation script (Unix)
 │   └── install.ps1                # Installation script (Windows)
-├── scripts/                       # Validation and testing scripts
-│   ├── validate-all.sh             # Run all validation tests
+├── scripts/                       # Utility scripts
 │   └── setup-precommit.sh         # Install pre-commit hooks
 ├── tests/                         # Test files (Bats/Pester)
 │   ├── bash/                      # Bats tests for validation

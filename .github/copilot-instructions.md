@@ -32,10 +32,10 @@ pip3 install -r requirements.txt
 ### 2. Run All Validation Checks
 
 ```bash
-./scripts/validate-all.sh
+./tests/bash/run-tests.sh --ci
 ```
 
-**Status**: ✅ Validated working. Runs all checks below in sequence.
+**Status**: ✅ Validated working. Runs all validation tests via Bats framework.
 
 **What it validates**:
 
@@ -63,26 +63,24 @@ pre-commit run --all-files
 - Shell script formatting (shfmt)
 - Large file detection
 
-### 4. Individual Validation Scripts (if needed)
+### 4. Run Specific Validation Tests (if needed)
 
 ```bash
-# Validate Chezmoi config
-./scripts/validate-chezmoi.sh
+# Run specific test file
+./tests/bash/run-tests.sh --test validate-chezmoi.bats
 
-# Check shell scripts syntax
-./scripts/validate-shell-scripts.sh
+# Run multiple specific tests
+./tests/bash/run-tests.sh --test validate-shell-scripts.bats --test validate-fish-config.bats
 
-# Validate Fish configs
-./scripts/validate-fish-config.sh
-
-# Test Chezmoi apply (dry-run, no actual changes)
-./scripts/test-chezmoi-apply.sh
-
-# Verify applied dotfiles exist
-./scripts/verify-dotfiles.sh
+# Available test files:
+# - validate-chezmoi.bats          # Chezmoi config validation
+# - validate-shell-scripts.bats    # Shell script syntax checks
+# - validate-fish-config.bats      # Fish config validation
+# - test-chezmoi-apply.bats        # Chezmoi apply dry-run test
+# - verify-dotfiles.bats           # Verify applied files
 ```
 
-**Status**: ✅ All validated working individually.
+**Status**: ✅ All test files validated working individually.
 
 ## Installation & Testing
 
@@ -162,16 +160,29 @@ AppData/Local/Packages/            # → Windows Terminal settings
     Microsoft.WindowsTerminal_*/LocalState/settings.json
 ```
 
-### Validation Scripts (scripts/)
+### Validation & Testing
 
+**Validation tests**: Located in `tests/bash/` (Bats framework)
+
+```bash
+# Run all validation tests
+./tests/bash/run-tests.sh --ci
+
+# Run specific test
+./tests/bash/run-tests.sh --test validate-chezmoi.bats
+
+# Available test files:
+# - validate-chezmoi.bats          # Chezmoi config validation
+# - validate-shell-scripts.bats    # Shell syntax checking
+# - validate-fish-config.bats      # Fish syntax checking
+# - test-chezmoi-apply.bats        # Chezmoi apply dry-run test
+# - test-fish-config.bats          # Fish loading test
+# - verify-dotfiles.bats           # Verify files exist after apply
 ```
-validate-all.sh                    # Runs all checks (use this!)
-validate-chezmoi.sh                # Chezmoi config validation
-validate-shell-scripts.sh          # Shell syntax checking
-validate-fish-config.sh            # Fish syntax checking
-test-chezmoi-apply.sh              # Dry-run test
-test-fish-config.sh                # Fish loading test
-verify-dotfiles.sh                 # Verify files exist after apply
+
+**Utility scripts**: Located in `scripts/`
+
+```bash
 setup-precommit.sh                 # Install pre-commit hooks
 ```
 
@@ -316,7 +327,7 @@ cd /path/to/dotfiles
 
 ```bash
 # Run all validation (REQUIRED)
-./scripts/validate-all.sh
+./tests/bash/run-tests.sh --ci
 
 # Run pre-commit hooks (REQUIRED)
 pre-commit run --all-files
@@ -356,7 +367,7 @@ Pre-commit hooks will run automatically on `git commit` if installed.
 
 **When working on this repository**:
 
-1. Run validation with `./scripts/validate-all.sh` before committing
+1. Run validation with `./tests/bash/run-tests.sh --ci` before committing
 2. Run `pre-commit run --all-files` before committing
 3. Use `chezmoi apply --dry-run --source=.` to preview changes
 4. Never edit dotfiles in `~` directly; edit in the repo

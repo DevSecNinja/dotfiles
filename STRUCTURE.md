@@ -68,7 +68,6 @@ dotfiles/
 │
 ├── 🧪 Validation & Testing
 │   ├── scripts/
-│   │   ├── validate-all.sh          # Run all validation tests
 │   │   └── setup-precommit.sh       # Install pre-commit hooks
 │   └── tests/
 │       ├── bash/                    # Bats tests for bash/shell validation
@@ -78,7 +77,7 @@ dotfiles/
 │       │   ├── test-chezmoi-apply.bats     # Chezmoi apply dry-run test
 │       │   ├── test-fish-config.bats       # Fish loading test
 │       │   ├── verify-dotfiles.bats        # Verify applied files
-│       │   └── run-tests.sh                # Bats test runner
+│       │   └── run-tests.sh                # Bats test runner (runs all validation)
 │       └── powershell/              # Pester tests for PowerShell
 │           ├── Validate-Packages.Tests.ps1  # Packages YAML validation
 │           ├── Packages.Tests.ps1           # Package configuration tests
