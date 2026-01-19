@@ -6,14 +6,35 @@
 {{- /* In Codespaces and CI, force non-interactive mode */ -}}
 {{- $interactive := and stdinIsATTY (not $codespaces) (not $ci) -}}
 
-{{- /* Initializes the name variable with a default value */ -}}
-{{- $name := "Jean-Paul van Ravensberg" -}}
-{{- /* If name was previously set, reuses it */ -}}
-{{- if hasKey . "name" -}}
-{{-   $name = .name -}}
-{{- /* Otherwise, if running interactively, prompts for a name */ -}}
+{{- /* Initializes the firstname and lastname variables with default values */ -}}
+{{- $firstname := "Jean-Paul" -}}
+{{- $lastname := "van Ravensberg" -}}
+
+{{- /* If firstname was previously set, reuses it */ -}}
+{{- if hasKey . "firstname" -}}
+{{-   $firstname = .firstname -}}
+{{- /* Otherwise, if running interactively, prompts for firstname */ -}}
 {{- else if $interactive -}}
-{{-   $name = promptString "name" $name -}}
+{{-   $firstname = promptString "firstname" $firstname -}}
+{{- end -}}
+
+{{- /* If lastname was previously set, reuses it */ -}}
+{{- if hasKey . "lastname" -}}
+{{-   $lastname = .lastname -}}
+{{- /* Otherwise, if running interactively, prompts for lastname */ -}}
+{{- else if $interactive -}}
+{{-   $lastname = promptString "lastname" $lastname -}}
+{{- end -}}
+
+{{- /* Combine firstname and lastname into full name */ -}}
+{{- $name := printf "%s %s" $firstname $lastname -}}
+
+{{- /* Username (for system login, etc.) */ -}}
+{{- $username := "jean-paul" -}}
+{{- if hasKey . "username" -}}
+{{-   $username = .username -}}
+{{- else if $interactive -}}
+{{-   $username = promptString "username" $username -}}
 {{- end -}}
 
 {{- /* Does the same for the email */ -}}
@@ -25,7 +46,7 @@
 {{- end -}}
 
 {{- if $interactive -}}
-{{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
+{{-   writeToStdout "💡 Tip: you can re-enter your details with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 {{- $remoteContainers:= env "REMOTE_CONTAINERS" | not | not -}}
 {{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") | not | not -}}
@@ -70,7 +91,10 @@
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
+  firstname: {{ $firstname | quote }}
+  lastname: {{ $lastname | quote }}
   name: {{ $name | quote }}
+  username: {{ $username | quote }}
   codespaces: {{ $codespaces }}
   devcontainer: {{ $devcontainer }}
   wsl: {{ $wsl }}
