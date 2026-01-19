@@ -45,3 +45,16 @@ alias dps='docker ps'
 alias dpsa='docker ps -a'
 alias di='docker images'
 alias dex='docker exec -it'
+
+# Shell introspection
+alias aliases="alias | sed 's/=.*//'"
+alias functions="declare -f | grep '^[a-z].* ()' | sed 's/{$//'"
+alias paths='echo -e ${PATH//:/\\n}'
+
+# System info
+alias ff='fastfetch'
+alias sysinfo='fastfetch'
+alias motd='fastfetch'
+
+# SSH
+alias pubkey="more ~/.ssh/id_rsa.pub | pbcopy | echo '=> Public key copied to pasteboard.'"

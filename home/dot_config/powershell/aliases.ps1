@@ -33,8 +33,20 @@ function dex { docker exec -it @args }
 Set-Alias -Name ep -Value Edit-Profile
 Set-Alias -Name reload -Value Import-Profile
 
-# Help
+# Shell introspection
 Set-Alias -Name aliases -Value Show-Aliases
+function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
+function paths { $env:PATH -split [IO.Path]::PathSeparator }
+
+# System info
+function ff { fastfetch @args }
+function sysinfo { fastfetch @args }
+function motd { fastfetch @args }
+
+# SSH
+function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
+
+# Help (keeping backward compatibility)
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

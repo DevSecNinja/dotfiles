@@ -44,4 +44,17 @@ alias dpsa 'docker ps -a'
 alias di 'docker images'
 alias dex 'docker exec -it'
 
+# Shell introspection
+alias aliases "alias | sed 's/=.*//'"
+# alias functions - Already built-in in Fish
+alias paths 'string split : $PATH'
+
+# System info
+alias ff 'fastfetch'
+alias sysinfo 'fastfetch'
+alias motd 'fastfetch'
+
+# SSH
+alias pubkey "cat ~/.ssh/id_rsa.pub | pbcopy; and echo '=> Public key copied to pasteboard.'"
+
 echo "✅ Aliases loaded"
