@@ -1,0 +1,57 @@
+---
+name: Sync Develop Branch
+
+# Automatically update the develop branch whenever commits are merged to main.
+# This ensures develop stays in sync with main without manual intervention.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  sync-develop:
+    name: Update Develop Branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync develop branch
+        run: |
+          # Fetch the latest develop branch
+          git fetch origin develop:develop
+
+          # Checkout develop branch
+          git checkout develop
+
+          # Merge main into develop
+          git merge origin/main --no-edit \
+            -m "chore: sync develop with main [skip ci]"
+
+          # Push changes to develop
+          git push origin develop
+
+      - name: Report status
+        if: success()
+        run: |
+          echo "✅ Successfully synced develop branch with main"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Failed to sync develop branch"
+          echo "May require manual intervention if there are merge conflicts"
