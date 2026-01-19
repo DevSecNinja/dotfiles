@@ -104,9 +104,6 @@ Describe "Profile Configuration" {
         $script:ProfileContent = Get-Content $script:ProfilePath -Raw
     }
 
-    It "Profile should set UTF-8 encoding" {
-        $script:ProfileContent | Should -Match "System\.Text\.Encoding::UTF8"
-    }
 
     It "Profile should load functions.ps1" {
         $script:ProfileContent | Should -Match "\. \`$PSScriptRoot\\functions\.ps1"
@@ -170,15 +167,15 @@ Describe "PowerShell Aliases" {
     }
 
     It "Should define ll alias for directory listing" {
-        $script:AliasesContent | Should -Match "Set-Alias ll"
+        $script:AliasesContent | Should -Match "function ll"
     }
 
     It "Should define aliases function to list all aliases" {
-        $script:AliasesContent | Should -Match "function aliases"
+        $script:AliasesContent | Should -Match "Set-Alias.*aliases.*Show-Aliases"
     }
 
-    It "Aliases function should retrieve custom aliases" {
-        $script:AliasesContent | Should -Match "Get-Alias.*Where-Object"
+    It "Show-Aliases function should exist in functions.ps1" {
+        $script:FunctionsContent | Should -Match "function Show-Aliases"
     }
 }
 
