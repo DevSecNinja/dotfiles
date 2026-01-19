@@ -5,55 +5,6 @@
 # Limits VM memory to use no more than 4 GB, this can be set as whole numbers using GB or MB
 memory=4GB
 
-# Sets the VM to use two virtual processors
-processors=2
-
-# Sets amount of swap storage space to 8GB, default is 25% of available RAM
-swap=8GB
-
-# Turn off default connection to bind WSL 2 localhost to Windows localhost
-# This is useful if you want to host web services from WSL
-localhostForwarding=true
-
-# Disallow the distribution to consume more than 4GB of memory
-# memoryReclaim=gradual
-
-# Sets the kernel command line parameters
-# kernelCommandLine =
-
-# Specifies the path to a custom Linux kernel
-# kernel=
-
-# Additional command line arguments appended to the kernel command line
-# kernelCommandLine=
-
-# Boolean specifying if the WSL VM should be automatically deallocated when idle
-# autoMemoryReclaim=gradual
-
-# Disables nested virtualization
-# nestedVirtualization=true
-
-# Turns on output console showing contents of dmesg when opening a WSL 2 distro for debugging
-# debugConsole=false
-
-# Boolean specifying if GUI applications can use WSL
-guiApplications=true
-
-# Boolean specifying if networking support should be enabled
-# networkingMode=NAT
-
-# DnsTunneling, lets you use Windows DNS resolution inside WSL
-dnsTunneling=true
-
-# autoProxy, lets you use Windows proxy settings inside WSL
-autoProxy=true
-
 [experimental]
-# Automatically release cached memory after detecting idle CPU usage
-# autoMemoryReclaim=gradual
-
-# Only applies when experimental.autoMemoryReclaim is set to gradual
-# gradualMemoryReclaimCooldown=5m
-
 # Sparse VHD enables automatic disk space clean up
 sparseVhd=true
