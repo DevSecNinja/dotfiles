@@ -1,0 +1,12 @@
+# Basic Nano Configuration
+# Always show line numbers
+set linenumbers
+
+# Automatically indent new lines to match previous line
+set autoindent
+
+# Convert typed tabs to spaces
+set tabstospaces
+
+# Set tab size to 4 spaces
+set tabsize 4
