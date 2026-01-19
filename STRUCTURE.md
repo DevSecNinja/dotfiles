@@ -56,19 +56,20 @@ dotfiles/
 │   └── dot_config/shell/.gitkeep    # Future bash/zsh configs
 │
 ├── 🚀 Setup Scripts (run on chezmoi apply)
-│   ├── Unix/Linux/macOS/WSL:
-│   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
-│   │   ├── run_once_install-fish.sh.tmpl          # Fish shell installation
-│   │   ├── run_once_install-packages.sh.tmpl      # Development tools
-│   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks
-│   │
-│   └── Windows:
-│       ├── run_once_before_00-setup.ps1.tmpl      # Initial directory creation
-│       └── run_once_install-packages.ps1.tmpl     # Development tools (winget)
+│   ├── .chezmoiscripts/
+│   │   ├── setup-precommit.sh                       # Manual pre-commit setup utility
+│   │   ├── linux/
+│   │   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
+│   │   │   ├── run_once_install-packages.sh.tmpl      # Development tools
+│   │   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks (auto)
+│   │   ├── darwin/
+│   │   │   └── run_once_before_10-setup-fish.sh.tmpl  # Fish setup (macOS)
+│   │   └── windows/
+│   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
+│   │       ├── run_once_install-packages.ps1.tmpl     # Development tools (winget)
+│   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing
-│   ├── scripts/
-│   │   └── setup-precommit.sh       # Install pre-commit hooks
 │   └── tests/
 │       ├── bash/                    # Bats tests for bash/shell validation
 │       │   ├── validate-chezmoi.bats       # Chezmoi config validation

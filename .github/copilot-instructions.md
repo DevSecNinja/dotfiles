@@ -180,10 +180,10 @@ AppData/Local/Packages/            # → Windows Terminal settings
 # - verify-dotfiles.bats           # Verify files exist after apply
 ```
 
-**Utility scripts**: Located in `scripts/`
+**Utility scripts**: Located in `home/.chezmoiscripts/`
 
 ```bash
-setup-precommit.sh                 # Install pre-commit hooks
+setup-precommit.sh                 # Install pre-commit hooks (run from repo root)
 ```
 
 ### Chezmoi Naming Conventions
