@@ -8,17 +8,23 @@ This directory contains your Fish shell configuration managed by Chezmoi.
 fish/
 ├── config.fish           # Main configuration (loaded on shell start)
 ├── conf.d/              # Configuration snippets (auto-loaded)
-│   └── aliases.fish     # Command aliases
+│   ├── aliases.fish     # Command aliases
+│   ├── homebrew.fish    # Homebrew initialization
+│   └── mise.fish        # mise (rtx) activation
 ├── functions/           # Custom Fish functions
 │   └── fish_greeting.fish
-└── completions/         # Custom tab completions
+└── completions/         # Shell completions (auto-loaded)
+    ├── chezmoi.fish     # Chezmoi completion
+    ├── docker.fish      # Docker completion
+    └── gh.fish          # GitHub CLI completion
 ```
 
 ## 🔄 Load Order
 
-1. **conf.d/*.fish** - Loaded first, in alphabetical order
+1. **conf.d/*.fish** - Loaded first, in alphabetical order (includes tool initializations)
 2. **config.fish** - Main config file
-3. **functions/** - Functions loaded on-demand
+3. **completions/*.fish** - Shell completions loaded on-demand
+4. **functions/** - Functions loaded on-demand
 
 ## ✏️ Customization
 
@@ -46,7 +52,15 @@ The function name **must match** the filename (without .fish extension).
 
 ### Adding Completions
 
-Create completion files in [completions/](completions/):
+Completions are automatically generated for installed tools. The following completions are included:
+
+- **Homebrew**: Initialized via `conf.d/homebrew.fish`
+- **mise**: Activated via `conf.d/mise.fish`
+- **Docker**: Auto-completion in `completions/docker.fish`
+- **GitHub CLI (gh)**: Auto-completion in `completions/gh.fish`
+- **Chezmoi**: Auto-completion in `completions/chezmoi.fish`
+
+To add custom completions, create a file in [completions/](completions/):
 
 ```bash
 # File: completions/mycommand.fish

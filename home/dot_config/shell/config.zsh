@@ -3,11 +3,13 @@
 # Zsh configuration
 # This file should be sourced by ~/.zshrc
 
-# Initialize Homebrew (macOS)
-if [[ -f "/opt/homebrew/bin/brew" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [[ -f "/usr/local/bin/brew" ]]; then
-    eval "$(/usr/local/bin/brew shellenv)"
+# Load all completions and evals from completions.d/
+if [[ -d "$HOME/.config/shell/completions.d" ]]; then
+    for comp_file in "$HOME/.config/shell/completions.d"/*.zsh; do
+        if [[ -r "$comp_file" && -f "$comp_file" ]]; then
+            source "$comp_file"
+        fi
+    done
 fi
 
 # Load all functions from shell/functions directory

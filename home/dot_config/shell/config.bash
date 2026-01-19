@@ -4,13 +4,14 @@
 
 # TODO: Fix duplicate config files for bash/zsh/fish by moving common parts to separate init script
 
-# Initialize Homebrew (macOS/Linux)
-if [ -f "/opt/homebrew/bin/brew" ]; then
-	eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [ -f "/usr/local/bin/brew" ]; then
-	eval "$(/usr/local/bin/brew shellenv)"
-elif [ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
-	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+# Load all completions and evals from completions.d/
+if [ -d "$HOME/.config/shell/completions.d" ]; then
+	for comp_file in "$HOME/.config/shell/completions.d"/*.bash; do
+		if [ -r "$comp_file" ] && [ -f "$comp_file" ]; then
+			# shellcheck source=/dev/null
+			source "$comp_file"
+		fi
+	done
 fi
 
 # Load all functions from shell/functions directory
