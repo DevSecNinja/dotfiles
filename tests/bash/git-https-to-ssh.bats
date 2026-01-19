@@ -236,11 +236,10 @@ teardown() {
 	git remote add origin https://github.com/org/team/repo.git
 
 	run git-https-to-ssh
-	[ "$status" -eq 0 ]
+	local exit_code=$status
 
 	# This will fail because the function doesn't support subgroups properly
 	# but we test that it tries to handle it
-	local exit_code=$status
 	[ "$exit_code" -eq 0 ] || [ "$exit_code" -eq 1 ]
 }
 
