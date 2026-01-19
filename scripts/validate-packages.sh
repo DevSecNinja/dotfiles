@@ -5,7 +5,14 @@
 set -e
 
 SOURCE_DIR="${1:-.}"
-PACKAGES_FILE="${SOURCE_DIR}/.chezmoidata/packages.yaml"
+# Support both standalone .chezmoidata (legacy) and home/.chezmoidata (current)
+if [ -f "${SOURCE_DIR}/.chezmoidata/packages.yaml" ]; then
+    PACKAGES_FILE="${SOURCE_DIR}/.chezmoidata/packages.yaml"
+elif [ -f "${SOURCE_DIR}/home/.chezmoidata/packages.yaml" ]; then
+    PACKAGES_FILE="${SOURCE_DIR}/home/.chezmoidata/packages.yaml"
+else
+    PACKAGES_FILE="${SOURCE_DIR}/.chezmoidata/packages.yaml"  # fallback for error message
+fi
 
 echo "Validating packages.yaml..."
 
