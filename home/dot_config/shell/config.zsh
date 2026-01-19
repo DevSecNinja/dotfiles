@@ -3,6 +3,9 @@
 # Zsh configuration
 # This file should be sourced by ~/.zshrc
 
+# Add custom paths
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
 # Load common aliases
 if [[ -f "$HOME/.config/shell/aliases.sh" ]]; then
     source "$HOME/.config/shell/aliases.sh"

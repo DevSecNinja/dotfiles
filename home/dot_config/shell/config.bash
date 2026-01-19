@@ -2,6 +2,9 @@
 # Bash configuration
 # This file should be sourced by ~/.bashrc or ~/.bash_profile
 
+# Add custom paths
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
 # Load common aliases
 if [ -f "$HOME/.config/shell/aliases.sh" ]; then
 	# shellcheck source=/dev/null
