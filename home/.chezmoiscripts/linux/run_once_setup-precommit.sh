@@ -54,9 +54,16 @@ else
 		"$VENV_DIR/bin/pip" install pre-commit >/dev/null 2>&1
 	fi
 
-	# Create symlink to make pre-commit available
-	mkdir -p "$HOME/.local/bin"
-	ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
+	# Create directory for symlink if it doesn't exist
+	if [ ! -d "$HOME/.local/bin" ]; then
+		mkdir -p "$HOME/.local/bin"
+	fi
+
+	# Create symlink to make pre-commit available if it doesn't exist or is different
+	if [ ! -L "$HOME/.local/bin/pre-commit" ] || [ "$(readlink "$HOME/.local/bin/pre-commit")" != "$VENV_DIR/bin/pre-commit" ]; then
+		ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
+	fi
+
 	export PATH="$HOME/.local/bin:$PATH"
 
 	echo "✅ pre-commit installed successfully"
