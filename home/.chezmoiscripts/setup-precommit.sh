@@ -34,9 +34,6 @@ else
 	ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
 	export PATH="$HOME/.local/bin:$PATH"
 
-	# Add to PATH if needed
-	export PATH="$HOME/.local/bin:$PATH"
-
 	echo "✅ pre-commit installed successfully"
 fi
 
