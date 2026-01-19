@@ -78,27 +78,47 @@ else {
     if (-not $debianInstalled) {
         Write-Host "Debian distribution not found. Installing..." -ForegroundColor Yellow
         
-        # Check if running with admin privileges
-        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        # Check if running interactively (not in CI, user can respond to prompts)
+        $isInteractive = (-not $env:CI) -and [Environment]::UserInteractive
         
-        if (-not $isAdmin) {
-            Write-Host "⚠️  Debian installation requires administrator privileges." -ForegroundColor Yellow
-            Write-Host "Please run the following command in an elevated PowerShell:" -ForegroundColor Yellow
-            Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
-            exit 0
-        }
-        
-        # Install Debian
-        Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
-        wsl.exe --install -d Debian
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Debian installed successfully" -ForegroundColor Green
-            Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
+        if ($isInteractive) {
+            # In interactive mode, just run the installer - Windows will prompt for elevation if needed
+            Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
+            Write-Host "💡 You may be prompted for administrator privileges..." -ForegroundColor Yellow
+            wsl.exe --install -d Debian
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ Debian installed successfully" -ForegroundColor Green
+                Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+                exit 1
+            }
         }
         else {
-            Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit 1
+            # In non-interactive mode (CI or automated), check for admin privileges
+            $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            
+            if (-not $isAdmin) {
+                Write-Host "⚠️  Debian installation requires administrator privileges." -ForegroundColor Yellow
+                Write-Host "Please run the following command in an elevated PowerShell:" -ForegroundColor Yellow
+                Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
+                exit 0
+            }
+            
+            # Install Debian
+            Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
+            wsl.exe --install -d Debian
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ Debian installed successfully" -ForegroundColor Green
+                Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+                exit 1
+            }
         }
     }
     else {
