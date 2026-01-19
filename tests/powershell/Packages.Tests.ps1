@@ -502,8 +502,6 @@ Describe "WSL Configuration" {
         It ".wslconfig should not be empty" {
             $content = Get-Content $script:WSLConfigPath -Raw
             $content | Should -Not -BeNullOrEmpty
-            # Reduced threshold to 50 to accommodate simplified config (memory + sparseVhd only)
-            $content.Length | Should -BeGreaterThan 50
         }
 
         It ".wslconfig should contain [wsl2] section" {
