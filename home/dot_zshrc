@@ -4,11 +4,6 @@
 # Add this line to your ~/.zshrc:
 # [ -f ~/.config/shell/config.zsh ] && source ~/.config/shell/config.zsh
 
-# Source the main shell config
-if [[ -f "$HOME/.config/shell/config.zsh" ]]; then
-    source "$HOME/.config/shell/config.zsh"
-fi
-
 # Zsh-specific configuration
 setopt AUTO_CD              # cd by typing directory name if it's not a command
 setopt CORRECT              # command auto-correction
@@ -25,9 +20,15 @@ HISTSIZE=10000
 SAVEHIST=10000
 HISTFILE="$HOME/.zsh_history"
 
-# Zsh completions
+# Initialize Zsh completions BEFORE sourcing config files
+# This ensures compdef is available when tools like mise/homebrew set up their completions
 autoload -Uz compinit
 compinit
+
+# Source the main shell config
+if [[ -f "$HOME/.config/shell/config.zsh" ]]; then
+    source "$HOME/.config/shell/config.zsh"
+fi
 
 # Case-insensitive completion
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
