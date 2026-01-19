@@ -59,7 +59,7 @@ teardown() {
 	run file-set-execution-bit
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Not in a git repository" ]]
-	
+
 	# Cleanup
 	rm -rf "$NO_GIT_DIR"
 	cd "$TEST_DIR"

@@ -58,7 +58,7 @@ teardown() {
 	run git-https-to-ssh
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Not in a git repository" ]]
-	
+
 	# Cleanup
 	rm -rf "$NO_GIT_DIR"
 	cd "$TEST_DIR"
