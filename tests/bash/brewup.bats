@@ -203,20 +203,24 @@ EOF
 }
 
 @test "brewup: continues after cask upgrade failures" {
+	# Create a state file in TEST_DIR
+	STATE_FILE="$TEST_DIR/brew-state"
+	
 	# Create a mock brew command that simulates cask upgrade issues
-	cat >"$TEST_DIR/brew" <<'EOF'
+	cat >"$TEST_DIR/brew" <<EOF
 #!/bin/bash
-case "$1" in
+STATE_FILE="$STATE_FILE"
+case "\$1" in
 	outdated)
-		if [ -f /tmp/brewup-second-call ]; then
+		if [ -f "\$STATE_FILE" ]; then
 			exit 0
 		else
-			touch /tmp/brewup-second-call
+			touch "\$STATE_FILE"
 			echo "package1 1.0.0 < 1.1.0"
 		fi
 		;;
 	update|upgrade)
-		if [[ "$2" == "--cask" ]]; then
+		if [[ "\$2" == "--cask" ]]; then
 			exit 1
 		fi
 		exit 0
@@ -225,9 +229,9 @@ case "$1" in
 		exit 0
 		;;
 	list)
-		if [[ "$2" == "--formula" ]]; then
+		if [[ "\$2" == "--formula" ]]; then
 			echo "package1"
-		elif [[ "$2" == "--cask" ]]; then
+		elif [[ "\$2" == "--cask" ]]; then
 			echo "cask1"
 		fi
 		;;
@@ -241,25 +245,26 @@ EOF
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "Some casks may have failed to upgrade" ]]
 	[[ "$output" =~ "Homebrew update complete" ]]
-
-	# Cleanup temp file
-	rm -f /tmp/brewup-second-call
 }
 
 @test "brewup: displays summary after successful update" {
+	# Create a state file in TEST_DIR
+	STATE_FILE="$TEST_DIR/brew-updated"
+	
 	# Create a mock brew command with full successful workflow
-	cat >"$TEST_DIR/brew" <<'EOF'
+	cat >"$TEST_DIR/brew" <<EOF
 #!/bin/bash
-case "$1" in
+STATE_FILE="$STATE_FILE"
+case "\$1" in
 	outdated)
-		if [ -f /tmp/brewup-updated ]; then
+		if [ -f "\$STATE_FILE" ]; then
 			exit 0
 		else
 			echo "package1 1.0.0 < 1.1.0"
 		fi
 		;;
 	update|upgrade|cleanup)
-		touch /tmp/brewup-updated
+		touch "\$STATE_FILE"
 		exit 0
 		;;
 	--version)
@@ -267,10 +272,10 @@ case "$1" in
 		exit 0
 		;;
 	list)
-		if [[ "$2" == "--formula" ]]; then
+		if [[ "\$2" == "--formula" ]]; then
 			echo "package1"
 			echo "package2"
-		elif [[ "$2" == "--cask" ]]; then
+		elif [[ "\$2" == "--cask" ]]; then
 			echo "cask1"
 		fi
 		exit 0
@@ -287,7 +292,4 @@ EOF
 	[[ "$output" =~ "Installed packages:" ]]
 	[[ "$output" =~ "Installed casks:" ]]
 	[[ "$output" =~ "Homebrew update complete" ]]
-
-	# Cleanup temp file
-	rm -f /tmp/brewup-updated
 }
