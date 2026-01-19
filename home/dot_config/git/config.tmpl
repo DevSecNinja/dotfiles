@@ -6,6 +6,9 @@
 	editor = vim
 	autocrlf = input
 	excludesfile = ~/.config/git/ignore
+{{- if .wsl }}
+	sshCommand = ssh.exe
+{{- end }}
 
 [init]
 	defaultBranch = main
