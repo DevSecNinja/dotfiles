@@ -4,6 +4,13 @@
 # Add this line to your ~/.bashrc:
 # [ -f ~/.config/shell/config.bash ] && source ~/.config/shell/config.bash
 
+# If not running interactively, don't do anything
+# This prevents errors from Docker Desktop WSL integration messages
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
 # Source the main shell config
 if [ -f "$HOME/.config/shell/config.bash" ]; then
     # shellcheck source=config.bash
