@@ -72,7 +72,7 @@ pip3 install -r requirements.txt
 pre-commit run --all-files
 
 # Or install hooks to run automatically on commit
-home/.chezmoiscripts/setup-precommit.sh
+home/.chezmoiscripts/linux/executable_setup-precommit.sh
 
 # Check shell script syntax
 find . -name "*.sh" -type f -exec sh -n {} \;

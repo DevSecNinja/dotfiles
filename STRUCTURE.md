@@ -57,8 +57,8 @@ dotfiles/
 │
 ├── 🚀 Setup Scripts (run on chezmoi apply)
 │   ├── .chezmoiscripts/
-│   │   ├── setup-precommit.sh                       # Manual pre-commit setup utility
 │   │   ├── linux/
+│   │   │   ├── executable_setup-precommit.sh            # Manual pre-commit setup utility
 │   │   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
 │   │   │   ├── run_once_install-packages.sh.tmpl      # Development tools
 │   │   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks (auto)

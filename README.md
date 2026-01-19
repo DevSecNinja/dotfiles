@@ -164,7 +164,7 @@ This repository uses [pre-commit](https://pre-commit.com/) for code quality chec
 pip3 install -r requirements.txt
 
 # Setup pre-commit hooks (from repository root)
-home/.chezmoiscripts/setup-precommit.sh
+home/.chezmoiscripts/linux/executable_setup-precommit.sh
 
 # Run manually on all files
 pre-commit run --all-files
