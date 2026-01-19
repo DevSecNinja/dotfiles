@@ -54,6 +54,12 @@
                 "hidden": false,
                 "name": "Azure Cloud Shell",
                 "source": "Windows.Terminal.Azure"
+            },
+            {
+                "guid": "{ac68943a-a5ca-59ae-849c-6661bd11e35b}",
+                "hidden": false,
+                "name": "WSL - Debian",
+                "source": "Microsoft.WSL"
             }
         ]
     },
