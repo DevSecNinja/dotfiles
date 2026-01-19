@@ -155,7 +155,7 @@ fi
 # Display test results
 echo ""
 echo -e "${BLUE}📊 Test Results Summary:${NC}"
-cat "$OUTPUT_FILE" | grep -E "^(ok|not ok)" | sort | uniq -c
+grep -E "^(ok|not ok)" "$OUTPUT_FILE" | sort | uniq -c
 
 # In CI mode, display full output
 if [ "$CI_MODE" = true ]; then
