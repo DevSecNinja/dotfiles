@@ -12,7 +12,6 @@ Desktop.ini
 *~
 *.swp
 *.swo
-.vscode/
 .idea/
 
 # Build artifacts
