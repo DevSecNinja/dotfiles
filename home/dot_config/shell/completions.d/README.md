@@ -8,7 +8,7 @@ This directory contains shell completions and tool initializations for **Bash** 
 
 These files handle shell integration and environment setup:
 
-- **homebrew.bash** / **homebrew.zsh** - Homebrew environment initialization
+- **00-homebrew.bash** / **00-homebrew.zsh** - Homebrew environment initialization (loaded first)
 - **mise.bash** / **mise.zsh** - mise (rtx) shell activation and environment
 
 ### Completions
@@ -26,7 +26,7 @@ All files in this directory are automatically sourced by:
 - **Bash**: `~/.config/shell/config.bash`
 - **Zsh**: `~/.config/shell/config.zsh`
 
-Files are loaded in alphabetical order. Each file checks if the tool is installed before attempting to load its completion or initialization.
+Files are loaded in alphabetical order. Homebrew is loaded first (prefix `00-`) to ensure PATH is set up before other tools are checked. Each file checks if the tool is installed before attempting to load its completion or initialization.
 
 ## ✏️ Adding New Completions
 

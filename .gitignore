@@ -7,6 +7,10 @@ CodeSigningCert-*.pfx
 .chezmoitemplates/
 .chezmoiremove
 
+# Generated completion cache files (Fish)
+*_generated.fish
+chezmoi_completions.fish
+
 # Python
 __pycache__/
 *.py[cod]
