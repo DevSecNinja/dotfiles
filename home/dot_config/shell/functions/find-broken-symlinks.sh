@@ -191,7 +191,7 @@ find-broken-symlinks() {
 
 	# Confirm removal unless auto-confirm is set
 	if [ "$auto_confirm" = false ]; then
-		read -p "❓ Do you want to remove these broken symlinks? [y/N] " response
+		read -r -p "❓ Do you want to remove these broken symlinks? [y/N] " response
 		case "$response" in
 		[yY] | [yY][eE][sS])
 			echo "🗑️  Removing broken symlinks..."
