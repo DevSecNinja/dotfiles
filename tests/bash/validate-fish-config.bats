@@ -12,7 +12,7 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed (requires manual installation for test)"
 	fi
-	
+
 	run fish --version
 	[ "$status" -eq 0 ]
 }
@@ -28,12 +28,12 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	local config_file="$REPO_ROOT/home/dot_config/fish/config.fish"
 	if [ ! -f "$config_file" ]; then
 		skip "Fish config not found"
 	fi
-	
+
 	run fish -n "$config_file"
 	[ "$status" -eq 0 ]
 }
@@ -42,12 +42,12 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	local aliases_file="$REPO_ROOT/home/dot_config/fish/conf.d/aliases.fish"
 	if [ ! -f "$aliases_file" ]; then
 		skip "Fish aliases not found"
 	fi
-	
+
 	run fish -n "$aliases_file"
 	[ "$status" -eq 0 ]
 }
@@ -56,13 +56,13 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	cd "$REPO_ROOT"
-	
+
 	# Find and validate all Fish files
 	local found_fish_files=false
 	local error_count=0
-	
+
 	while IFS= read -r fish_file; do
 		if [ -n "$fish_file" ] && [ -f "$fish_file" ]; then
 			found_fish_files=true
@@ -72,11 +72,11 @@ setup() {
 			fi
 		fi
 	done < <(find home -name "*.fish" -type f 2>/dev/null || true)
-	
+
 	if [ "$found_fish_files" = false ]; then
 		skip "No Fish files found"
 	fi
-	
+
 	[ "$error_count" -eq 0 ]
 }
 

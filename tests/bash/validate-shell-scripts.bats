@@ -19,14 +19,14 @@ setup() {
 	if [ ! -f "$REPO_ROOT/home/install.sh" ]; then
 		skip "install.sh not found"
 	fi
-	
+
 	run bash -n "$REPO_ROOT/home/install.sh"
 	[ "$status" -eq 0 ]
 }
 
 @test "validate-shell-scripts: all .sh files have valid bash syntax" {
 	cd "$REPO_ROOT"
-	
+
 	# Find all .sh files with bash shebang
 	local found_scripts=false
 	while IFS= read -r script; do
@@ -41,7 +41,7 @@ setup() {
 			fi
 		fi
 	done < <(find home tests .github/scripts -name "*.sh" 2>/dev/null | grep -v node_modules || true)
-	
+
 	if [ "$found_scripts" = false ]; then
 		skip "No bash scripts found"
 	fi
@@ -49,7 +49,7 @@ setup() {
 
 @test "validate-shell-scripts: all .sh files have valid sh syntax" {
 	cd "$REPO_ROOT"
-	
+
 	# Find all .sh files with sh shebang
 	local found_scripts=false
 	while IFS= read -r script; do
@@ -64,7 +64,7 @@ setup() {
 			fi
 		fi
 	done < <(find home tests .github/scripts -name "*.sh" 2>/dev/null | grep -v node_modules || true)
-	
+
 	if [ "$found_scripts" = false ]; then
 		skip "No sh scripts found"
 	fi
@@ -72,7 +72,7 @@ setup() {
 
 @test "validate-shell-scripts: template files with chezmoi syntax are skipped" {
 	cd "$REPO_ROOT"
-	
+
 	# Find template files with Chezmoi syntax
 	local found_templates=false
 	while IFS= read -r script; do
@@ -84,7 +84,7 @@ setup() {
 			fi
 		fi
 	done < <(find home -name "*.sh.tmpl" 2>/dev/null || true)
-	
+
 	# This test just verifies the logic for finding templates
 	[ "$found_templates" = true ] || skip "No template files found"
 }

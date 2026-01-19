@@ -6,7 +6,7 @@ setup() {
 	# Get repository root
 	REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
 	export REPO_ROOT
-	
+
 	# Create a temporary Fish config directory for testing
 	TEST_FISH_DIR="$(mktemp -d)"
 	export TEST_FISH_DIR
@@ -25,7 +25,7 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed (requires manual installation for test)"
 	fi
-	
+
 	run fish --version
 	[ "$status" -eq 0 ]
 }
@@ -34,7 +34,7 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	run fish -c "echo 'test'"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "test" ]]
@@ -44,7 +44,7 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	# Copy Fish config to test location
 	mkdir -p "$TEST_FISH_DIR/fish"
 	if [ -d "$REPO_ROOT/home/dot_config/fish" ]; then
@@ -52,7 +52,7 @@ teardown() {
 	else
 		skip "Fish config not found in repository"
 	fi
-	
+
 	run fish -c "echo 'Fish started successfully'"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "Fish started successfully" ]]
@@ -62,7 +62,7 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	# Copy Fish config to test location
 	mkdir -p "$TEST_FISH_DIR/fish"
 	if [ -d "$REPO_ROOT/home/dot_config/fish" ]; then
@@ -70,7 +70,7 @@ teardown() {
 	else
 		skip "Fish config not found in repository"
 	fi
-	
+
 	# Check if fish_greeting function exists
 	run fish -c "functions fish_greeting"
 	# Function may or may not exist, but fish should start
@@ -81,7 +81,7 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	# Copy Fish config to test location
 	mkdir -p "$TEST_FISH_DIR/fish"
 	if [ -d "$REPO_ROOT/home/dot_config/fish" ]; then
@@ -89,7 +89,7 @@ teardown() {
 	else
 		skip "Fish config not found in repository"
 	fi
-	
+
 	# Check if aliases file exists and was loaded
 	if [ -f "$TEST_FISH_DIR/fish/conf.d/aliases.fish" ]; then
 		# Try to check for a common alias (like 'l' or 'll')
@@ -105,28 +105,28 @@ teardown() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	
+
 	local config_file="$REPO_ROOT/home/dot_config/fish/config.fish"
 	if [ ! -f "$config_file" ]; then
 		skip "Fish config.fish not found"
 	fi
-	
+
 	# Copy Fish config to test location
 	mkdir -p "$TEST_FISH_DIR/fish"
 	cp "$config_file" "$TEST_FISH_DIR/fish/config.fish"
-	
+
 	# If there are conf.d files, copy them too
 	if [ -d "$REPO_ROOT/home/dot_config/fish/conf.d" ]; then
 		mkdir -p "$TEST_FISH_DIR/fish/conf.d"
 		cp -r "$REPO_ROOT/home/dot_config/fish/conf.d"/* "$TEST_FISH_DIR/fish/conf.d/" 2>/dev/null || true
 	fi
-	
+
 	# If there are function files, copy them too
 	if [ -d "$REPO_ROOT/home/dot_config/fish/functions" ]; then
 		mkdir -p "$TEST_FISH_DIR/fish/functions"
 		cp -r "$REPO_ROOT/home/dot_config/fish/functions"/* "$TEST_FISH_DIR/fish/functions/" 2>/dev/null || true
 	fi
-	
+
 	run fish -c "echo 'Config loaded'"
 	[ "$status" -eq 0 ]
 }

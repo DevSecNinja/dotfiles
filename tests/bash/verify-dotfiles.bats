@@ -12,7 +12,7 @@ setup() {
 	if [ ! -f "$HOME/.vimrc" ]; then
 		skip ".vimrc not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.vimrc" ]
 }
 
@@ -20,7 +20,7 @@ setup() {
 	if [ ! -f "$HOME/.tmux.conf" ]; then
 		skip ".tmux.conf not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.tmux.conf" ]
 }
 
@@ -28,7 +28,7 @@ setup() {
 	if [ ! -f "$HOME/.config/fish/config.fish" ]; then
 		skip "Fish config not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.config/fish/config.fish" ]
 }
 
@@ -36,7 +36,7 @@ setup() {
 	if [ ! -f "$HOME/.config/fish/conf.d/aliases.fish" ]; then
 		skip "Fish aliases not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.config/fish/conf.d/aliases.fish" ]
 }
 
@@ -44,7 +44,7 @@ setup() {
 	if [ ! -f "$HOME/.config/fish/functions/fish_greeting.fish" ]; then
 		skip "fish_greeting not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.config/fish/functions/fish_greeting.fish" ]
 }
 
@@ -52,7 +52,7 @@ setup() {
 	if [ ! -f "$HOME/.config/git/config" ]; then
 		skip "Git config not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.config/git/config" ]
 }
 
@@ -60,7 +60,7 @@ setup() {
 	if [ ! -f "$HOME/.config/git/ignore" ]; then
 		skip "Git ignore not applied (test only works after chezmoi apply)"
 	fi
-	
+
 	[ -f "$HOME/.config/git/ignore" ]
 }
 

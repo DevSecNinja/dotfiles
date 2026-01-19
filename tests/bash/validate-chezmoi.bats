@@ -6,7 +6,7 @@ setup() {
 	# Get repository root
 	REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
 	export REPO_ROOT
-	
+
 	# Ensure PATH includes ~/.local/bin for chezmoi
 	export PATH="${HOME}/.local/bin:${PATH}"
 }
@@ -16,7 +16,7 @@ setup() {
 	if ! command -v chezmoi >/dev/null 2>&1; then
 		skip "Chezmoi not installed (requires manual installation for test)"
 	fi
-	
+
 	run chezmoi --version
 	[ "$status" -eq 0 ]
 }
@@ -26,7 +26,7 @@ setup() {
 	if ! command -v chezmoi >/dev/null 2>&1; then
 		skip "Chezmoi not installed"
 	fi
-	
+
 	cd "$REPO_ROOT/home"
 	run chezmoi data --source=.
 	[ "$status" -eq 0 ]
@@ -38,11 +38,11 @@ setup() {
 	if ! command -v chezmoi >/dev/null 2>&1; then
 		skip "Chezmoi not installed"
 	fi
-	
+
 	cd "$REPO_ROOT/home"
 	run chezmoi data --source=.
 	[ "$status" -eq 0 ]
-	
+
 	# Check for expected fields in output
 	[[ "$output" =~ "chezmoi" ]]
 }
