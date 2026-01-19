@@ -10,7 +10,7 @@ $settingsFile = "$settingsDir\settings.json"
 # Only create if it doesn't exist (don't overwrite user changes)
 if (-not (Test-Path $settingsFile)) {
     Write-Host "Setting up Windows Terminal initial configuration..." -ForegroundColor Cyan
-    
+
     # Ensure directory exists
     if (-not (Test-Path $settingsDir)) {
         New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null

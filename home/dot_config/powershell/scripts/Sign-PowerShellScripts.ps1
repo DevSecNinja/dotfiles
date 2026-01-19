@@ -397,9 +397,9 @@ function Invoke-ScriptSigning {
         if (-not $ForceSign -and $currentSignature.SignerCertificate) {
             $sameThumbprint = $currentSignature.SignerCertificate.Thumbprint -eq $Certificate.Thumbprint
             $isValidSignature = $currentSignature.Status -eq 'Valid'
-            $isUntrustedRoot = $currentSignature.Status -eq 'UnknownError' -and 
+            $isUntrustedRoot = $currentSignature.Status -eq 'UnknownError' -and
                                $currentSignature.StatusMessage -like "*certificate*trusted*"
-            
+
             $isAlreadySigned = $sameThumbprint -and ($isValidSignature -or $isUntrustedRoot)
         }
 
@@ -425,7 +425,7 @@ function Invoke-ScriptSigning {
         # Check if signing succeeded
         # Status 'Valid' = fully trusted signature
         # Status 'UnknownError' with trust-related message = signed but cert not trusted (still valid signing operation)
-        $isTrustIssue = $result.Status -eq 'UnknownError' -and 
+        $isTrustIssue = $result.Status -eq 'UnknownError' -and
                         $result.StatusMessage -like "*certificate*trusted*"
 
         if ($result.Status -eq 'Valid') {
