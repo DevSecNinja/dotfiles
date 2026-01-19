@@ -181,27 +181,27 @@ Describe "PowerShell Aliases" {
 
 Describe "Profile Syntax Validation" {
     It "profile.ps1 should have valid PowerShell syntax" {
-        { 
+        {
             $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script:ProfilePath -Raw), 
+                (Get-Content $script:ProfilePath -Raw),
                 [ref]$null
             )
         } | Should -Not -Throw
     }
 
     It "functions.ps1 should have valid PowerShell syntax" {
-        { 
+        {
             $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script:FunctionsPath -Raw), 
+                (Get-Content $script:FunctionsPath -Raw),
                 [ref]$null
             )
         } | Should -Not -Throw
     }
 
     It "aliases.ps1 should have valid PowerShell syntax" {
-        { 
+        {
             $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script:AliasesPath -Raw), 
+                (Get-Content $script:AliasesPath -Raw),
                 [ref]$null
             )
         } | Should -Not -Throw
