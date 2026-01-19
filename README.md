@@ -56,9 +56,6 @@ dotfiles/
 │   ├── dot_tmux.conf              # Tmux configuration
 │   ├── install.sh                 # Installation script (Unix)
 │   └── install.ps1                # Installation script (Windows)
-├── scripts/                       # Validation and testing scripts
-│   ├── validate-all.sh             # Run all validation tests
-│   └── setup-precommit.sh         # Install pre-commit hooks
 ├── tests/                         # Test files (Bats/Pester)
 │   ├── bash/                      # Bats tests for validation
 │   │   ├── validate-chezmoi.bats
@@ -166,8 +163,8 @@ This repository uses [pre-commit](https://pre-commit.com/) for code quality chec
 # Install dependencies
 pip3 install -r requirements.txt
 
-# Setup pre-commit hooks
-./scripts/setup-precommit.sh
+# Setup pre-commit hooks (from repository root)
+home/.chezmoiscripts/linux/run_once_setup-precommit.sh
 
 # Run manually on all files
 pre-commit run --all-files

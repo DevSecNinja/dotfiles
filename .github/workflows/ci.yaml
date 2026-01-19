@@ -34,7 +34,7 @@ jobs:
         continue-on-error: true
 
       - name: Run validation tests
-        run: ./scripts/validate-all.sh
+        run: ./tests/bash/run-tests.sh --ci
 
   test-install:
     name: Test Installation

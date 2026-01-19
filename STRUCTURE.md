@@ -56,20 +56,20 @@ dotfiles/
 │   └── dot_config/shell/.gitkeep    # Future bash/zsh configs
 │
 ├── 🚀 Setup Scripts (run on chezmoi apply)
-│   ├── Unix/Linux/macOS/WSL:
-│   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
-│   │   ├── run_once_install-fish.sh.tmpl          # Fish shell installation
-│   │   ├── run_once_install-packages.sh.tmpl      # Development tools
-│   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks
-│   │
-│   └── Windows:
-│       ├── run_once_before_00-setup.ps1.tmpl      # Initial directory creation
-│       └── run_once_install-packages.ps1.tmpl     # Development tools (winget)
+│   ├── .chezmoiscripts/
+│   │   ├── linux/
+│   │   │   ├── run_once_setup-precommit.sh              # Pre-commit setup (runs once)
+│   │   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
+│   │   │   ├── run_once_install-packages.sh.tmpl      # Development tools
+│   │   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks (auto)
+│   │   ├── darwin/
+│   │   │   └── run_once_before_10-setup-fish.sh.tmpl  # Fish setup (macOS)
+│   │   └── windows/
+│   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
+│   │       ├── run_once_install-packages.ps1.tmpl     # Development tools (winget)
+│   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing
-│   ├── scripts/
-│   │   ├── validate-all.sh          # Run all validation tests
-│   │   └── setup-precommit.sh       # Install pre-commit hooks
 │   └── tests/
 │       ├── bash/                    # Bats tests for bash/shell validation
 │       │   ├── validate-chezmoi.bats       # Chezmoi config validation
@@ -78,7 +78,7 @@ dotfiles/
 │       │   ├── test-chezmoi-apply.bats     # Chezmoi apply dry-run test
 │       │   ├── test-fish-config.bats       # Fish loading test
 │       │   ├── verify-dotfiles.bats        # Verify applied files
-│       │   └── run-tests.sh                # Bats test runner
+│       │   └── run-tests.sh                # Bats test runner (runs all validation)
 │       └── powershell/              # Pester tests for PowerShell
 │           ├── Validate-Packages.Tests.ps1  # Packages YAML validation
 │           ├── Packages.Tests.ps1           # Package configuration tests
