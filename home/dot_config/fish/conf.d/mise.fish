@@ -4,4 +4,5 @@
 # Initialize mise if available
 if type -q mise
     mise activate fish | source
+    echo "✅ mise initialized"
 end
