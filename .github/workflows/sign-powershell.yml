@@ -35,7 +35,7 @@ jobs:
           CERT_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
         run: |
           # Load the signing script
-          $signingScript = Join-Path $PWD "dot_local/private_bin/scripts/powershell/Sign-PowerShellScripts.ps1"
+          $signingScript = Join-Path $PWD "home/dot_config/powershell/scripts/Sign-PowerShellScripts.ps1"
 
           if (-not (Test-Path $signingScript)) {
             Write-Error "Sign-PowerShellScripts.ps1.tmpl not found at: $signingScript"

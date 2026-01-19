@@ -297,7 +297,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "E2E"
 $config = New-PesterConfiguration
 $config.Run.Path = './tests/powershell'
 $config.CodeCoverage.Enabled = $true
-$config.CodeCoverage.Path = './dot_local/private_bin/scripts/powershell/*.ps1'
+$config.CodeCoverage.Path = './home/dot_config/powershell/scripts/*.ps1'
 Invoke-Pester -Configuration $config
 ```
 
