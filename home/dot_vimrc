@@ -38,5 +38,3 @@ set lazyredraw
 " Misc
 set mouse=a
 set encoding=utf-8
-
-echo "✅ Vim configured"
