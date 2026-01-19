@@ -1,4 +1,5 @@
 # Basic Nano Configuration
+# NOTE: On MacOS, nano is symlinked to pico by default! Consider installing GNU nano via Homebrew for full functionality.
 # Always show line numbers
 set linenumbers
 
