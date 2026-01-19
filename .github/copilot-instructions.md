@@ -183,7 +183,7 @@ AppData/Local/Packages/            # → Windows Terminal settings
 **Utility scripts**: Located in `home/.chezmoiscripts/linux/`
 
 ```bash
-executable_setup-precommit.sh     # Install pre-commit hooks (run from repo root)
+run_once_setup-precommit.sh        # Install pre-commit hooks (runs once on apply)
 ```
 
 ### Chezmoi Naming Conventions
@@ -255,10 +255,10 @@ Available in `*.tmpl` files:
 pre-commit run --all-files
 ```
 
-**Auto-install hooks** (runs on first Chezmoi apply):
+**Auto-install hooks** (runs once on Chezmoi apply):
 
 ```bash
-home/.chezmoiscripts/linux/executable_setup-precommit.sh
+home/.chezmoiscripts/linux/run_once_setup-precommit.sh
 ```
 
 ## Common Issues & Solutions
