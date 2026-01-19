@@ -46,29 +46,56 @@ Describe "PowerShell Profile Files" {
     }
 }
 
-Describe "WinGet Tab Completion" {
+Describe "PowerShell Completions" {
     BeforeAll {
+        $script:CompletionsPath = Join-Path $script:RepoRoot "home\dot_config\powershell\completions"
+        $script:WingetCompletionPath = Join-Path $script:CompletionsPath "winget.ps1"
         $script:ProfileContent = Get-Content $script:ProfilePath -Raw
     }
 
-    It "Profile should check for winget command" {
-        $script:ProfileContent | Should -Match "Get-Command winget"
+    Context "Completions Directory" {
+        It "Completions directory should exist" {
+            $script:CompletionsPath | Should -Exist
+        }
+
+        It "Profile should load completions from completions folder" {
+            $script:ProfileContent | Should -Match "completions"
+        }
+
+        It "Profile should iterate through completion files" {
+            $script:ProfileContent | Should -Match "Get-ChildItem.*\.ps1"
+        }
     }
 
-    It "Profile should register winget argument completer" {
-        $script:ProfileContent | Should -Match "Register-ArgumentCompleter.*-CommandName winget"
-    }
+    Context "WinGet Completion" {
+        It "Winget completion file should exist" {
+            $script:WingetCompletionPath | Should -Exist
+        }
 
-    It "Profile should use winget complete command" {
-        $script:ProfileContent | Should -Match "winget complete"
-    }
+        It "Winget completion should check for winget command" {
+            $content = Get-Content $script:WingetCompletionPath -Raw
+            $content | Should -Match "Get-Command winget"
+        }
 
-    It "Profile should handle UTF-8 encoding for winget completion" {
-        $script:ProfileContent | Should -Match "System\.Text\.Utf8Encoding"
-    }
+        It "Winget completion should register argument completer" {
+            $content = Get-Content $script:WingetCompletionPath -Raw
+            $content | Should -Match "Register-ArgumentCompleter.*-CommandName winget"
+        }
 
-    It "Profile should create completion results" {
-        $script:ProfileContent | Should -Match "System\.Management\.Automation\.CompletionResult"
+        It "Winget completion should use winget complete command" {
+            $content = Get-Content $script:WingetCompletionPath -Raw
+            $content | Should -Match "winget complete"
+        }
+
+        It "Winget completion should handle UTF-8 encoding" {
+            $content = Get-Content $script:WingetCompletionPath -Raw
+            $content | Should -Match "System\.Text\.Utf8Encoding"
+        }
+
+        It "Winget completion should create completion results" {
+            $content = Get-Content $script:WingetCompletionPath -Raw
+            $content | Should -Match "System\.Management\.Automation\.CompletionResult"
+        }
     }
 }
 

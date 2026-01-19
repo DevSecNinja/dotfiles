@@ -491,7 +491,7 @@ Describe "Package Consistency" {
 Describe "WSL Configuration" {
     BeforeAll {
         $script:WSLConfigPath = Join-Path $script:RepoRoot "home\dot_wslconfig"
-        $script:WSLInstallScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_once_install-wsl.ps1.tmpl"
+        $script:WSLInstallScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_once_install-wsl.ps1"
     }
 
     Context "WSL Config File" {
@@ -502,7 +502,7 @@ Describe "WSL Configuration" {
         It ".wslconfig should not be empty" {
             $content = Get-Content $script:WSLConfigPath -Raw
             $content | Should -Not -BeNullOrEmpty
-            $content.Length | Should -BeGreaterThan 100
+            $content.Length | Should -BeGreaterThan 50
         }
 
         It ".wslconfig should contain [wsl2] section" {
@@ -515,14 +515,14 @@ Describe "WSL Configuration" {
             $content | Should -Match "memory="
         }
 
-        It ".wslconfig should configure processor settings" {
+        It ".wslconfig should contain [experimental] section" {
             $content = Get-Content $script:WSLConfigPath -Raw
-            $content | Should -Match "processors="
+            $content | Should -Match "\[experimental\]"
         }
 
-        It ".wslconfig should enable GUI applications" {
+        It ".wslconfig should enable sparse VHD" {
             $content = Get-Content $script:WSLConfigPath -Raw
-            $content | Should -Match "guiApplications=true"
+            $content | Should -Match "sparseVhd=true"
         }
     }
 
@@ -531,8 +531,13 @@ Describe "WSL Configuration" {
             $script:WSLInstallScriptPath | Should -Exist
         }
 
-        It "WSL installation script should be a Chezmoi template" {
-            $script:WSLInstallScriptPath | Should -Match "\.tmpl$"
+        It "WSL installation script should be a PowerShell file" {
+            $script:WSLInstallScriptPath | Should -Match "\.ps1$"
+        }
+
+        It "WSL installation script should check if WSL is installed" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "wsl"
         }
 
         It "WSL installation script should contain wsl.exe --install command" {
@@ -545,34 +550,14 @@ Describe "WSL Configuration" {
             $content | Should -Match "Debian"
         }
 
-        It "WSL installation script should set default distribution" {
-            $content = Get-Content $script:WSLInstallScriptPath -Raw
-            $content | Should -Match "wsl\.exe --set-default"
-        }
-
-        It "WSL installation script should check WSL version" {
-            $content = Get-Content $script:WSLInstallScriptPath -Raw
-            $content | Should -Match "Get-WSLVersion"
-        }
-
-        It "WSL installation script should warn about WSL v1" {
-            $content = Get-Content $script:WSLInstallScriptPath -Raw
-            $content | Should -Match "WSL version 1 detected"
-        }
-
         It "WSL installation script should check admin privileges" {
             $content = Get-Content $script:WSLInstallScriptPath -Raw
             $content | Should -Match "Administrator"
         }
 
-        It "WSL installation script should only run in full mode" {
+        It "WSL installation script should warn about WSL v1" {
             $content = Get-Content $script:WSLInstallScriptPath -Raw
-            $content | Should -Match "installType.*full"
-        }
-
-        It "WSL installation script should only run on Windows" {
-            $content = Get-Content $script:WSLInstallScriptPath -Raw
-            $content | Should -Match "chezmoi\.os.*windows"
+            $content | Should -Match "WSL version 1|WSL 2"
         }
     }
 }

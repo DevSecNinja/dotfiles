@@ -33,18 +33,11 @@ function prompt {
     return "> "
 }
 
-# Setup winget tab completion
-# https://learn.microsoft.com/en-us/windows/package-manager/winget/tab-completion
-if (Get-Command winget -ErrorAction SilentlyContinue) {
-    # Register winget argument completer
-    Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
-        param($wordToComplete, $commandAst, $cursorPosition)
-        [Console]::InputEncoding = [Console]::OutputEncoding = $OutputEncoding = [System.Text.Utf8Encoding]::new()
-        $Local:word = $wordToComplete.Replace('"', '""')
-        $Local:ast = $commandAst.ToString().Replace('"', '""')
-        winget complete --word="$Local:word" --commandline "$Local:ast" --position $cursorPosition | ForEach-Object {
-            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-        }
+# Load completions
+$completionsPath = Join-Path $PSScriptRoot "completions"
+if (Test-Path $completionsPath) {
+    Get-ChildItem -Path $completionsPath -Filter "*.ps1" | ForEach-Object {
+        . $_.FullName
     }
 }
 
