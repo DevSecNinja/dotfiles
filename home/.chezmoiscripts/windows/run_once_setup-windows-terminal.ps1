@@ -83,7 +83,7 @@ if (-not (Test-Path $settingsFile)) {
 '@
 
     $settingsContent | Out-File -FilePath $settingsFile -Encoding utf8 -NoNewline
-    Write-Host "✓ Windows Terminal settings created at: $settingsFile" -ForegroundColor Green
+    Write-Host "[OK] Windows Terminal settings created at: $settingsFile" -ForegroundColor Green
     Write-Host "  Windows Terminal will manage this file from now on." -ForegroundColor Gray
 } else {
     Write-Host "Windows Terminal settings already exist, skipping..." -ForegroundColor Gray
@@ -92,8 +92,8 @@ if (-not (Test-Path $settingsFile)) {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAHpx/NRG1BJX0O
-# hTR16v9Huay6bHsZAi77G9LtLm/nU6CCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBmzw7y8qnOlUAw
+# 0Vyb0MNS2+MNQdfxLdy2Pqqpcp/M16CCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -227,33 +227,33 @@ if (-not (Test-Path $settingsFile)) {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCD57HaS/kBasDvrYso6k+KAUp0uP5YU4Rsz6FpILb2KIDANBgkqhkiG
-# 9w0BAQEFAASCAgBd+8bGccWJgrxVejXawWcpCELh0jvM2di+6OfHfD7gFaKaUjp7
-# +eNTRbUny/w+sccfbE1etzJtJc/JatR93pmNTb6cfgyHDwLlxywpZMUEXaMKmkom
-# +sVC5oovuJ7v6V0I1EuqY33pZ1ugB3Ho6TEDJiXD5YZ+I7q3TIzvOAq5CfMlB1HW
-# 7zuINRsI5SWBlIGG6hPX9q9cw6O1ziqX2IwbY6AQasNjbI859swiXvwwygffuf0E
-# /5xhxR5ZsQfUe5cCZSh2fMI6aLzIC2INVqD3Jvk6eY5TNh7P5jX1x8/Gaiij4PLM
-# el/VtU2pRQqdXTxhJ0/Ekh7WL7S7ycAqUD0k2yKJFYYmr6ePcpJJTbVVSCTJo7uQ
-# CoxBOMOBgK99F2EqWDMu6TrcLVHd2WXsfoWEsq8/eIJuhuzn64wqYS+w71+g9z5c
-# Wu0ERCadusZfOLoQKD9zo3q9h9gUBFQJHr57VtvF2yQrCEaPnvRyxf2fzcptoKdJ
-# ikFgBMsoRGBdyHcfU+GJpBKeuX7TJ+5PFALXBphjMABacupgjTwn+xOY78sW+bJe
-# ciZDcEWj+bQH/s/+lHLZIDIun25BF+En+lOrjiocxVaVxRQgbSGXJuJdIdDL1tAp
-# DZd6GxIbJVLaP7pHVvbHeP0JKlSHGeaGQWGqzYsgw9OaEeOKGZTHnEC2X6GCAyYw
+# DQEJBDEiBCAZpVxIdtFyONW0qnpbFbzgWvtHoB3JtaAw1dgG5gIY4DANBgkqhkiG
+# 9w0BAQEFAASCAgBN+iWiXpNCFE51SBPx0tjcouOE+UYGHbGEXdWJcId1ZXf9Ugpr
+# NqaWNXkJLBUnVqVqrrGFbSKyGYFssN/0coy9LxPv+Lt0OEM9HCDOgk8zXf77Ugmu
+# PvRWwbQHuW6lNi0BYSDNu7tyOIdghw+qad0PzSd2YjEEikuMsgcs7wpgvvYYgMoS
+# 89L+DXnZoJ8uND4QSQB/05mJ6dSCNawz4EmDnktUVieB9INbEeQrhAm9abJCox6o
+# xthTUrplQI9FleTQj/KdWOw92ZXnTXXBkzBdt4eFVtY1dQ4MWprmCB3I+9wAOneJ
+# o9M1u7jhmIdTusBePIPvakA5dtY/wW9gbmP7pNg4/9G33EI3Hwm/Wtzwr9rddiTO
+# EbabSxCLMp41VrbYdTWj/TEv3nzUztwbCw0A1m/NOW5HcAlSV9IuYjAQCx2d7WO0
+# 5ejlgHnscID6PVVQ59AiDSlrQ6h4YBPZGn2cOzUlPinz4fagEqaKGB3w5UFisfXt
+# y7N3gIDey5nrjF7VgJhitU8/wd6HZdddrvqyldUaV3+IIhZkkN0Wj4dmTN+hpVII
+# iX0tJUFjtwrD23bK7O1Azlmwxf6skpdqkkA1Tki1rk4yQVCOGVTSuYdhMPd1ppCK
+# mi6OiU4kaLzaYOTKmjgc7gw9eocouKHC/dOalWFnBmOMOiM0KgAmMjm4XqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjAyNDlaMC8GCSqGSIb3DQEJBDEi
-# BCCsjQ69NOsZhwP71EdCvcSDNdmYLEIqL9HihkwQL6M+kzANBgkqhkiG9w0BAQEF
-# AASCAgAWRlzKIpdjtAgfaVhwRYi9uLtqp9WE3Al0ySZbSc15fNn7SXxTyOhRMnhl
-# aCBGeJWepe6PdZf4gIM/SgS2PE/kRHEzwQpYKjiziW43U7wpFYj6pqeugKZWGPQ0
-# 1dpjCfMt3B3n/OwVT1//AFnwyVn4dFe+Oe6AlebE6ObsBRLeL3KK40//moS9pCTK
-# h3q7N6T6s7oIujvhWNMizFZ7btSEaufu44Lic4V3ORg3mmt2PtJ0aG8AdODhNKRl
-# pdYWQ35kB150jDc0XbGdCUkhOqDx+FPyunBNNCzUA+AFMb0DCtmtd9v8FGuKVt4t
-# 5ko4Mm5/klu80HaBN8G2UREHF9aZtxmnDvYwjVfPBcZ0qZaKL2yA2zRSJp/M8caV
-# P64Kv2OcymolsoDP7QtppBjvvoqwABy3292a2XoLq6w4DzGb+JmIuEA/LN8Tua/N
-# 8arT+Gqxu75tfxuuMR6tGcIfKqL+LuktMvgydcIcC6gkcot9BZK9w47pl1U4EQEi
-# xa8S/etsdnKXUXWDfH95Us14c7bRqPFyObyadAubhFfiNFPMYVdfT9a2hQHx3IAP
-# i2wdGyWJY7tGsZJ5L+Bh74glxyMJ+sAkKk913ccwhVAcZDxR031PDU3oseArVfHl
-# lsgl51RENmmiVc/9vb5pOlkd7fpbujTy7pisb3EwAcAxjKGBxw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjE0MTBaMC8GCSqGSIb3DQEJBDEi
+# BCBE4gplrnFvuQbZG+m//kzYEXslLeYh+ySHLTnZXYgnsjANBgkqhkiG9w0BAQEF
+# AASCAgBPjaM0+f/RN/VR3D98K/PqMMZed8Ar3X0PAxsQYXnmxStDXBrOD1n07nqk
+# w3YBTbmU0NKxjLbS8AiZsjgMYBYyEH1sjZutS2wGPdKjPNnuCzm0ny1jte1MqVli
+# rfUJtGeKjFunVrTyVMQ5h58n2UOCYKGS3nJf2zUIVcamYf4uy+l7H2TvVoL5RQBA
+# KLNa3MEHbshUKTsOdVLFY0VwNcIUBSXhacba8tPYJYopKhHu+FBAyRzx0ruXQPUQ
+# Qi763b5Ux4t/Feb8Rc9G/jUnzLB0WMmOnICgbxeX+I/UPvsHSp46u2vxRyk9mUl6
+# HfhvrSoja8Px6i5cEKFbffVJS20PvDG+3A0FqvsXFFP3gQF+1BIz2YKhYiskmBdL
+# 0aIOZHDx+BPRVK++IUEjnGmfL/7FHWgKs04hZy/r2+LFSdWJJyNtVQIDY7Lg/Z3U
+# g9nW4vh/4YUv+5eJaIyQvCJDlLVcGkotNp10dZ6uQCemyeiA/2Ll6rzlnV33gPoU
+# Dc2l2UWjjNw1Kly3cm4FSPe9jgNHgilx+DbqgzRJvpxeGdm7z+rUGiktDruf34aU
+# tyFtOeg3GI283Y5KzI3Isbz+vGb4RaBQuV70Rt+PJOtXUMQTtRRpnPFgTfu9p46v
+# aqJhl9GmzMcfDf2qO48tojWuvVQy/HbyyPxKhp5rfg7ldLLmVA==
 # SIG # End signature block
