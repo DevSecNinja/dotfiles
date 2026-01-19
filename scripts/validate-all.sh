@@ -1,61 +1,60 @@
 #!/bin/bash
 # Run all validation checks
-# Convenient wrapper to run all validation scripts
+# Wrapper to run validation tests using Bats test framework
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_DIR="${1:-.}"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+TESTS_DIR="${REPO_ROOT}/tests"
 
 echo "╔════════════════════════════════════════╗"
 echo "║   Dotfiles Validation Suite            ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
+echo "Running validation tests via Bats framework..."
+echo ""
 
-# Track overall results
-TOTAL_CHECKS=0
-PASSED_CHECKS=0
-FAILED_CHECKS=0
+# Run Bash validation tests
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Running Bash Validation Tests"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+if "${TESTS_DIR}/bash/run-tests.sh" --ci; then
+	BASH_STATUS=0
+	echo "✅ Bash validation tests passed"
+else
+	BASH_STATUS=1
+	echo "❌ Bash validation tests failed"
+fi
 
-run_check() {
-	local name="$1"
-	local script="$2"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Running PowerShell Validation Tests"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-	TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-	echo ""
-	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	echo "Running: ${name}"
-	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-	if bash "${SCRIPT_DIR}/${script}" "${SOURCE_DIR}"; then
-		PASSED_CHECKS=$((PASSED_CHECKS + 1))
-		echo "✅ ${name} passed"
+# Check if PowerShell is available
+if command -v pwsh >/dev/null 2>&1; then
+	if pwsh -c "${TESTS_DIR}/powershell/Invoke-PesterTests.ps1 -CI"; then
+		PWSH_STATUS=0
+		echo "✅ PowerShell validation tests passed"
 	else
-		FAILED_CHECKS=$((FAILED_CHECKS + 1))
-		echo "❌ ${name} failed"
-		return 1
+		PWSH_STATUS=1
+		echo "❌ PowerShell validation tests failed"
 	fi
-}
-
-# Run all validation checks (continue even if one fails)
-run_check "Chezmoi Configuration" "validate-chezmoi.sh" || true
-run_check "Packages YAML" "validate-packages.sh" || true
-run_check "Shell Script Syntax" "validate-shell-scripts.sh" || true
-run_check "Fish Configuration" "validate-fish-config.sh" || true
-run_check "Chezmoi Apply (Dry-run)" "test-chezmoi-apply.sh" || true
+else
+	echo "⚠️  PowerShell not available, skipping PowerShell tests"
+	PWSH_STATUS=0
+fi
 
 echo ""
 echo "╔════════════════════════════════════════╗"
 echo "║           Summary                      ║"
 echo "╚════════════════════════════════════════╝"
-echo "Total checks:  ${TOTAL_CHECKS}"
-echo "Passed:        ${PASSED_CHECKS}"
-echo "Failed:        ${FAILED_CHECKS}"
-echo ""
 
-if [ "${FAILED_CHECKS}" -gt 0 ]; then
-	echo "❌ Some checks failed"
+if [ "${BASH_STATUS}" -eq 0 ] && [ "${PWSH_STATUS}" -eq 0 ]; then
+	echo "✅ All validation checks passed!"
+	exit 0
+else
+	echo "❌ Some validation checks failed"
 	exit 1
 fi
-
-echo "✅ All validation checks passed!"
