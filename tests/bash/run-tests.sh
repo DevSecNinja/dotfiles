@@ -138,27 +138,36 @@ echo -e "${BLUE}🧪 Running ${#TEST_FILES[@]} test file(s)...${NC}"
 echo ""
 
 # Run tests
-if bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"; then
-	echo ""
+if [ "$CI_MODE" = true ]; then
+	# In CI mode, save output to file
+	bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"
+	EXIT_CODE=$?
+else
+	# In interactive mode, show output directly (no file needed)
+	bats "${TEST_FILES[@]}"
+	EXIT_CODE=$?
+fi
+
+# Display results based on exit code
+echo ""
+if [ $EXIT_CODE -eq 0 ]; then
 	echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
 	echo -e "${GREEN}║   ✅ All Tests Passed!                ║${NC}"
 	echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
-	EXIT_CODE=0
 else
-	echo ""
 	echo -e "${RED}╔════════════════════════════════════════╗${NC}"
 	echo -e "${RED}║   ❌ Some Tests Failed                ║${NC}"
 	echo -e "${RED}╚════════════════════════════════════════╝${NC}"
-	EXIT_CODE=1
 fi
 
-# Display test results
-echo ""
-echo -e "${BLUE}📊 Test Results Summary:${NC}"
-grep -E "^(ok|not ok)" "$OUTPUT_FILE" | sort | uniq -c
-
-# In CI mode, display full output
+# In CI mode, display full output and summary
 if [ "$CI_MODE" = true ]; then
+	echo ""
+	echo -e "${BLUE}📊 Test Results Summary:${NC}"
+	if [ -f "$OUTPUT_FILE" ]; then
+		grep -E "^(ok|not ok)" "$OUTPUT_FILE" | sort | uniq -c || echo "  No test results found"
+	fi
+
 	echo ""
 	echo -e "${BLUE}📋 Full Test Output:${NC}"
 	cat "$OUTPUT_FILE"

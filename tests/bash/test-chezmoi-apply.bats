@@ -26,7 +26,7 @@ setup() {
 	fi
 
 	cd "$REPO_ROOT/home"
-	run chezmoi init --apply --dry-run --source=.
+	run chezmoi init --apply --dry-run --no-tty --source=.
 	[ "$status" -eq 0 ]
 }
 
@@ -39,7 +39,7 @@ setup() {
 	local temp_home="$(mktemp -d)"
 
 	cd "$REPO_ROOT/home"
-	HOME="$temp_home" run chezmoi init --apply --dry-run --source=.
+	HOME="$temp_home" run chezmoi init --apply --dry-run --no-tty --source=.
 
 	# Verify no files were actually created in temp home
 	local file_count=$(find "$temp_home" -type f 2>/dev/null | wc -l)
@@ -69,8 +69,8 @@ setup() {
 	# Initialize chezmoi with the source directory
 	cd "$REPO_ROOT/home"
 
-	# Check if any files would be managed (in dry-run mode)
-	run bash -c "chezmoi init --apply --dry-run --source=. 2>&1 || true"
+	# Check if any files would be managed (in dry-run mode with --no-tty to avoid prompts)
+	run bash -c "chezmoi init --apply --dry-run --no-tty --source=. 2>&1 || true"
 	[ "$status" -eq 0 ]
 
 	# Output should contain some file references
