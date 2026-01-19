@@ -32,4 +32,8 @@ alias czd 'chezmoi diff'
 alias cza 'chezmoi apply'
 alias cze 'chezmoi edit'
 
+# Docker shortcuts
+alias d 'docker'
+alias dc 'docker compose'
+
 echo "✅ Aliases loaded"

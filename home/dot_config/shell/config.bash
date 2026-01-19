@@ -2,6 +2,12 @@
 # Bash configuration
 # This file should be sourced by ~/.bashrc or ~/.bash_profile
 
+# Load common aliases
+if [ -f "$HOME/.config/shell/aliases.sh" ]; then
+	# shellcheck source=/dev/null
+	source "$HOME/.config/shell/aliases.sh"
+fi
+
 # Load all completions and evals from completions.d/
 if [ -d "$HOME/.config/shell/completions.d" ]; then
 	for comp_file in "$HOME/.config/shell/completions.d"/*.bash; do

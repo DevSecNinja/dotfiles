@@ -21,6 +21,8 @@ function gb { git branch @args }
 function glog { git log --oneline --graph --decorate @args }
 
 # Docker shortcuts
+function d { docker @args }
+function dc { docker compose @args }
 function dps { docker ps @args }
 function dpsa { docker ps -a @args }
 function di { docker images @args }

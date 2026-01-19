@@ -28,6 +28,13 @@ fish_add_path $HOME/bin
 if test -d $HOME/.config/shell/functions
     for script in $HOME/.config/shell/functions/*.sh
         set -l func_name (basename $script .sh)
+        set -l func_name_underscore (string replace -a '-' '_' $func_name)
+
+        # Skip bash functions that have native Fish implementations
+        # Check both hyphenated and underscored versions (Fish convention)
+        if functions -q $func_name; or functions -q $func_name_underscore
+            continue
+        end
 
         # Create Fish function wrapper
         eval "function $func_name --description 'Run bash script: $script'
