@@ -147,7 +147,6 @@ find-broken-symlinks() {
 	# -L tells find to follow symlinks and report those that are broken
 	# -type l finds symbolic links
 	# When combined with -L, only broken symlinks (those whose targets don't exist) are matched
-	# -maxdepth 1 limits search to current directory only (non-recursive)
 	local broken_symlinks=()
 	if [ "$recursive" = true ]; then
 		# Recursive search in all subdirectories
@@ -156,6 +155,7 @@ find-broken-symlinks() {
 		done < <(find -L "$target_dir" -type l -print0 2>/dev/null)
 	else
 		# Non-recursive search (current directory only)
+		# -maxdepth 1 limits search to current directory only
 		while IFS= read -r -d '' link; do
 			broken_symlinks+=("$link")
 		done < <(find -L "$target_dir" -maxdepth 1 -type l -print0 2>/dev/null)
