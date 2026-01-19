@@ -28,7 +28,8 @@
 {{-   writeToStdout "💡 Tip: you can re-enter your name and email with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
 {{- $remoteContainers:= env "REMOTE_CONTAINERS" | not | not -}}
-{{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") -}}
+{{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") | not | not -}}
+{{- $wsl:= and (lookPath "wslinfo") (output "wslinfo" "--version" | trim | ne "") | not | not -}}
 
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
@@ -72,6 +73,7 @@ data:
   name: {{ $name | quote }}
   codespaces: {{ $codespaces }}
   devcontainer: {{ $devcontainer }}
+  wsl: {{ $wsl }}
   ci: {{ $ci }}
   email: {{ $email | quote }}
   installType: {{ $installType | quote }}
