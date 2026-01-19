@@ -34,7 +34,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # Check if PowerShell is available
 if command -v pwsh >/dev/null 2>&1; then
-	if pwsh -c "${TESTS_DIR}/powershell/Invoke-PesterTests.ps1 -CI"; then
+	if pwsh -File "${TESTS_DIR}/powershell/Invoke-PesterTests.ps1" -CI; then
 		PWSH_STATUS=0
 		echo "✅ PowerShell validation tests passed"
 	else
