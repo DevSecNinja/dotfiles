@@ -1,130 +1,99 @@
-# PowerShell script to check and install WSL 2 with Debian
-# This script is run once during dotfiles setup
+#!/usr/bin/env pwsh
+# Setup Windows Terminal settings - runs once on initial install
+# After this, Windows Terminal manages its own settings
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 
-Write-Host "🐧 Checking WSL installation..." -ForegroundColor Cyan
+$settingsDir = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+$settingsFile = "$settingsDir\settings.json"
 
-# Check if WSL is already installed
-$wslInstalled = $false
-try {
-    $wslCommand = Get-Command wsl.exe -ErrorAction SilentlyContinue
-    if ($wslCommand) {
-        $wslInstalled = $true
-        Write-Host "✅ WSL is already installed" -ForegroundColor Green
-    }
-}
-catch {
-    $wslInstalled = $false
-}
-
-if (-not $wslInstalled) {
-    Write-Host "WSL is not installed. Installing..." -ForegroundColor Yellow
-
-    # Check if running with admin privileges
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-    if (-not $isAdmin) {
-        Write-Host "⚠️  WSL installation requires administrator privileges." -ForegroundColor Yellow
-        Write-Host "Please run the following command in an elevated PowerShell:" -ForegroundColor Yellow
-        Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
-        exit 0
+# Only create if it doesn't exist (don't overwrite user changes)
+if (-not (Test-Path $settingsFile)) {
+    Write-Host "Setting up Windows Terminal initial configuration..." -ForegroundColor Cyan
+    
+    # Ensure directory exists
+    if (-not (Test-Path $settingsDir)) {
+        New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
     }
 
-    # Install WSL with Debian
-    Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
-    wsl.exe --install -d Debian
-
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ WSL installed successfully" -ForegroundColor Green
-        Write-Host "⚠️  You may need to restart your computer for WSL to work properly." -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "❌ WSL installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
-        exit 1
-    }
-}
-else {
-    # WSL is installed, check version and provide info
-    try {
-        $wslStatus = wsl.exe --status 2>$null
-        if ($wslStatus -match "Default Version:\s*(\d+)") {
-            $wslVersion = [int]$matches[1]
-            Write-Host "WSL version: $wslVersion" -ForegroundColor Cyan
-
-            if ($wslVersion -eq 1) {
-                Write-Host "⚠️  WARNING: WSL version 1 detected!" -ForegroundColor Yellow
-                Write-Host "WSL 2 is recommended for better performance and compatibility." -ForegroundColor Yellow
-                Write-Host "To upgrade to WSL 2:" -ForegroundColor Yellow
-                Write-Host "  1. Run: wsl --set-default-version 2" -ForegroundColor Cyan
-                Write-Host "  2. Convert existing distros: wsl --set-version <distro> 2" -ForegroundColor Cyan
+    $settingsContent = @'
+{
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "actions": [],
+    "copyFormatting": "none",
+    "copyOnSelect": false,
+    "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+    "keybindings":
+    [
+        {
+            "id": "Terminal.CopyToClipboard",
+            "keys": "ctrl+c"
+        },
+        {
+            "id": "Terminal.PasteFromClipboard",
+            "keys": "ctrl+v"
+        },
+        {
+            "id": "Terminal.DuplicatePaneAuto",
+            "keys": "alt+shift+d"
+        }
+    ],
+    "newTabMenu":
+    [
+        {
+            "type": "remainingProfiles"
+        }
+    ],
+    "profiles":
+    {
+        "defaults": {},
+        "list":
+        [
+            {
+                "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+                "hidden": false,
+                "name": "PowerShell",
+                "source": "Windows.Terminal.PowershellCore"
+            },
+            {
+                "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+                "hidden": false,
+                "name": "Windows PowerShell"
+            },
+            {
+                "commandline": "%SystemRoot%\\System32\\cmd.exe",
+                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+                "hidden": false,
+                "name": "Command Prompt"
+            },
+            {
+                "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
+                "hidden": false,
+                "name": "Azure Cloud Shell",
+                "source": "Windows.Terminal.Azure"
             }
-        }
-    }
-    catch {
-        # Ignore errors in version check
-    }
-
-    # Check if Debian is installed
-    $debianInstalled = $false
-    try {
-        $distros = wsl.exe --list --quiet 2>$null
-        # Convert from UTF-16 if needed and clean up
-        $distroList = $distros | ForEach-Object {
-            $_.Trim() -replace '\x00', '' -replace '\r', ''
-        } | Where-Object { $_ -match '\S' }
-        $debianInstalled = $distroList -match "^Debian"
-    }
-    catch {
-        # Ignore errors
-    }
-
-    if (-not $debianInstalled) {
-        # Check Chezmoi variables and interactive status
-        $installType = try { (chezmoi execute-template "{{ .installType }}") 2>$null } catch { "full" }
-        $isCI = try { (chezmoi execute-template "{{ .ci }}") 2>$null } catch {
-            if ([bool]$env:CI -or [bool]$env:GITHUB_ACTIONS -or [bool]$env:TF_BUILD) { "true" } else { "false" }
-        }
-        $isInteractive = [Environment]::UserInteractive -and ($Host.UI -ne $null) -and ($Host.UI.RawUI -ne $null)
-
-        # Skip installation if light mode, CI, or non-interactive
-        if ($installType -eq "light" -or $isCI -eq "true" -or -not $isInteractive) {
-            $skipReason = if ($installType -eq "light") { "light installation mode" }
-                          elseif ($isCI -eq "true") { "CI environment" }
-                          else { "non-interactive environment" }
-            Write-Host "⏭️  Skipping Debian installation ($skipReason)" -ForegroundColor Yellow
-            Write-Host "💡 To install manually, run: wsl --install -d Debian" -ForegroundColor Cyan
-            exit 0
-        }
-
-        # In interactive mode, run the installer
-        Write-Host "Debian distribution not found. Installing..." -ForegroundColor Yellow
-        Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
-        Write-Host "💡 You may be prompted for administrator privileges..." -ForegroundColor Yellow
-
-        wsl.exe --install -d Debian
-
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Debian installed successfully" -ForegroundColor Green
-            Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
-        }
-        else {
-            Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit 1
-        }
-    }
-    else {
-        Write-Host "✅ Debian distribution is installed" -ForegroundColor Green
-    }
+        ]
+    },
+    "schemes": [],
+    "theme": "system",
+    "themes": []
 }
+'@
 
-Write-Host "`n💡 To launch WSL, run: wsl" -ForegroundColor Yellow
+    $settingsContent | Out-File -FilePath $settingsFile -Encoding utf8 -NoNewline
+    Write-Host "✓ Windows Terminal settings created at: $settingsFile" -ForegroundColor Green
+    Write-Host "  Windows Terminal will manage this file from now on." -ForegroundColor Gray
+} else {
+    Write-Host "Windows Terminal settings already exist, skipping..." -ForegroundColor Gray
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDUaxOrEJy8E0P5
-# g5D0wuHRVroPTYSK2tAXjKR4N/1RSKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAHpx/NRG1BJX0O
+# hTR16v9Huay6bHsZAi77G9LtLm/nU6CCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -258,33 +227,33 @@ Write-Host "`n💡 To launch WSL, run: wsl" -ForegroundColor Yellow
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCBvnTWVJdAuhtcvGwMe01oXFZJ7jSm+5t7duR92jm4q7DANBgkqhkiG
-# 9w0BAQEFAASCAgBvMldwtz9VBhzlIyVt7eUlY+xq4decWvknmQDMyGp+4i0iL3Ul
-# qDffQG2+OEvrgl8O7UnRcb9EHsioJBcdWl82V2oJXTdVhkXql+LGn4bo5TzHrTOl
-# MJZdVIvqFiUxlU1cAM2a1+E0jiIDAl3gkyQWk+CMtAGcJIbDMVmpPdjrAcSuA2qh
-# gfE7RwwKxuOy1Zd7oSe+XwptuOAHIlOt0jl2FN+G36gUhivvzwKvNwpJrLHRzW6g
-# 987hJvnMUXw0eE51Ko3saD57Rm4z3rhFXQQpaMlgh7+i+wNAblHB2uq/EgzvTbUU
-# q00d9gU2gEMowgubNCVy0k+J7GoWSJdrPxNtEdb4Z2kC3rBZ66VIf2+Rykohypo8
-# fdeeHPWRCkxzzKlQu0/WkdqoVZFwIRGo/ICfWHofeyrSe+uslEyVF+dgZ0GX0+r9
-# eqzPDsgPD9kEm9YVcTfWVIkQiT5cCy0uCYVoft75txzuP5DN/P05sQLA++O9YXWE
-# L1+7nmkFOiWIShhLgzxT+EmEUBAxU0Df3tBoee/oyPz9gvGTUJR2R3KZC+Motsus
-# 6P2Mqs8UadHfo7jEANVJNCyDpVHd56MFwRAeiT+Vuajlpuj0teVw5Qw5Ubpry0pB
-# aI1SWfksGo663F68ExTFVD4/UGbGZZ9ZN0SylR7vurPbW9fZufbtsrdXLKGCAyYw
+# DQEJBDEiBCD57HaS/kBasDvrYso6k+KAUp0uP5YU4Rsz6FpILb2KIDANBgkqhkiG
+# 9w0BAQEFAASCAgBd+8bGccWJgrxVejXawWcpCELh0jvM2di+6OfHfD7gFaKaUjp7
+# +eNTRbUny/w+sccfbE1etzJtJc/JatR93pmNTb6cfgyHDwLlxywpZMUEXaMKmkom
+# +sVC5oovuJ7v6V0I1EuqY33pZ1ugB3Ho6TEDJiXD5YZ+I7q3TIzvOAq5CfMlB1HW
+# 7zuINRsI5SWBlIGG6hPX9q9cw6O1ziqX2IwbY6AQasNjbI859swiXvwwygffuf0E
+# /5xhxR5ZsQfUe5cCZSh2fMI6aLzIC2INVqD3Jvk6eY5TNh7P5jX1x8/Gaiij4PLM
+# el/VtU2pRQqdXTxhJ0/Ekh7WL7S7ycAqUD0k2yKJFYYmr6ePcpJJTbVVSCTJo7uQ
+# CoxBOMOBgK99F2EqWDMu6TrcLVHd2WXsfoWEsq8/eIJuhuzn64wqYS+w71+g9z5c
+# Wu0ERCadusZfOLoQKD9zo3q9h9gUBFQJHr57VtvF2yQrCEaPnvRyxf2fzcptoKdJ
+# ikFgBMsoRGBdyHcfU+GJpBKeuX7TJ+5PFALXBphjMABacupgjTwn+xOY78sW+bJe
+# ciZDcEWj+bQH/s/+lHLZIDIun25BF+En+lOrjiocxVaVxRQgbSGXJuJdIdDL1tAp
+# DZd6GxIbJVLaP7pHVvbHeP0JKlSHGeaGQWGqzYsgw9OaEeOKGZTHnEC2X6GCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
 # AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMTUwNDVaMC8GCSqGSIb3DQEJBDEi
-# BCBJBrK0E8YSxsnPf1aEYNqSjITa/RHms25qBD6+CyaqCTANBgkqhkiG9w0BAQEF
-# AASCAgCzuKw5c3xczr09nllJn3ieZGqiavxAkcUPV8dB6ldt1mjrqNS5sHp6elUU
-# 3WSYaEtVQNb+bh3w6tQ1JefCUg2IylLBrW0iwSoGZfI/yl7splA8Lw63D/b6DIPL
-# VIYnvlGGM1s+gwrTtmySvcMAgCqfapmVAU7JuoZ16SQ9I1K6W9y7ETBo8AZJeLEA
-# U4UzWpniIv6hvgWpD0alac2cgHoNUIQRQ853UgdKkqClfMmkt7/D2riKdXAqsCrq
-# dH09x/KrB5GtH3EKIQMcPTjQonSy6Ojs12LfIAR+6AAvsBLMVmUBq5Wy2jjXaVJf
-# LDqfOszzF/7QDOlhI/762XvLVM8YFNqmThYPYVztTR3Ed4ino09TO3LTclORW3OE
-# 1pX2be511jKxuZY+oepavf71/DkWdLYQxZm23Bixf3Q3XQGf3iuXM/Sdx64+Weqv
-# 5CD06u1+LQtuOvYp0vOWhN1S2rt8X124xLDA77sNhUClMLHy7l8z+BzLGAux/0St
-# onZsxazZ5zJjnvcjXCUfgm9chzKqMCSUcjH9pl7lfZXXENEMt6b39yqPlU6CQyqm
-# Hm+4evZVN3mHDsPo4DNBd3eWvYuS/AJ6ZBF8AbnZ/VQL4iIuqM7kxT9VnYZX/iD2
-# SwBfSqRUv82ugA2l4ejDm5fDCWfrrQ5opr9s3FRfXE7qv6gFog==
+# BCCsjQ69NOsZhwP71EdCvcSDNdmYLEIqL9HihkwQL6M+kzANBgkqhkiG9w0BAQEF
+# AASCAgBxUnJlD8B9olQG3MD3lz2eDhAM4m7KlZgj/wLgHn+WZ21/YxXuGzcPfLqe
+# zcXax7BBeqkeBPfI/Uf74pqFkk6DAXaezeAtUJa/NbHwteo3XTzj040YN4bQ1tKz
+# qHqbnmHHJAbSTXZL3GZp+dCTUijSS0fujSUXS+PBe3Hik6XOg8im4X5VPyYIBe/h
+# H07T+CFLszSFS7n5ocGTMp9MpuI21CQhHaD5rBS2axjRAohaKRijkIcTfXJ5v+hn
+# lBhHOqwiZJDQe2LRm5RhQIF3W6ADGbL7I1XReueMdRYU78BiyT2WtFelqJ/NlDPV
+# vlRb0ffarcE3BSbabXDbNV4GRRQrmq7aLQQ3cgveBdKf7ld7yIwXkoptB3uR9nL/
+# IudVjq7Ul16Ywlrsy4qr0oa3UiA50VGoJf2HnygcVCIQAmWjGhu+P4s0C09HRlU+
+# vowh5utLXc2TYhs8mH/j6wfBbbT9pQoOyYl1oJz5tRjPDqHAuauBH+Qv6H12268/
+# wtEI/MfWBUjvS9Z24ogUDhgFPvW0JFAdHk2UeqPX0wDn5ATsDEcpFtzRLKZNDcZv
+# mbD8wgz4ivK6um0yawjZmmZ1aEzcluWy+RJkjosI0Eq69EKpyljnCuGlE6gBWMBQ
+# sJuUzVkMYw+9KrL9heNOjm2c2Um0uRq0nmM+VKYC7EhJEZjoRA==
 # SIG # End signature block
