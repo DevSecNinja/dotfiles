@@ -1,5 +1,7 @@
 # Chezmoi completion for Fish shell
-# Cache generated completions to avoid regenerating on every load
+# Note: Homebrew provides chezmoi completions in $(brew --prefix)/share/fish/vendor_completions.d/chezmoi.fish
+# which are automatically loaded by Homebrew's Fish. See: https://docs.brew.sh/Shell-Completion
+# This file exists only for non-Homebrew installations and uses caching to avoid regeneration.
 
 if type -q chezmoi
     # Determine cache directory for generated completions

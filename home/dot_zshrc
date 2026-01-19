@@ -20,15 +20,15 @@ HISTSIZE=10000
 SAVEHIST=10000
 HISTFILE="$HOME/.zsh_history"
 
-# Initialize Zsh completions BEFORE sourcing config files
-# This ensures compdef is available when tools like mise/homebrew set up their completions
-autoload -Uz compinit
-compinit
-
-# Source the main shell config
+# Source the main shell config FIRST (this sets up Homebrew and FPATH)
 if [[ -f "$HOME/.config/shell/config.zsh" ]]; then
     source "$HOME/.config/shell/config.zsh"
 fi
+
+# Initialize Zsh completions AFTER sourcing config (so FPATH includes Homebrew paths)
+# See: https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
+autoload -Uz compinit
+compinit
 
 # Case-insensitive completion
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'

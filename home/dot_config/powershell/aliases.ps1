@@ -10,17 +10,20 @@ function ll { Get-ChildItem -Force @args }
 function la { Get-ChildItem -Force @args }
 
 # Git shortcuts
+function g { git @args }
 function gs { git status @args }
 function ga { git add @args }
 function gc { git commit @args }
-function gp { git push @args }
-function gl { git pull @args }
+function gps { git push @args }
+function gpl { git pull @args }
+function gl { git log --oneline --graph @args }
 function gd { git diff @args }
 function gco { git checkout @args }
 function gb { git branch @args }
-function glog { git log --oneline --graph --decorate @args }
 
 # Docker shortcuts
+function d { docker @args }
+function dc { docker compose @args }
 function dps { docker ps @args }
 function dpsa { docker ps -a @args }
 function di { docker images @args }
@@ -30,8 +33,20 @@ function dex { docker exec -it @args }
 Set-Alias -Name ep -Value Edit-Profile
 Set-Alias -Name reload -Value Import-Profile
 
-# Help
+# Shell introspection
 Set-Alias -Name aliases -Value Show-Aliases
+function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
+function paths { $env:PATH -split [IO.Path]::PathSeparator }
+
+# System info
+function ff { fastfetch @args }
+function sysinfo { fastfetch @args }
+function motd { fastfetch @args }
+
+# SSH
+function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
+
+# Help (keeping backward compatibility)
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

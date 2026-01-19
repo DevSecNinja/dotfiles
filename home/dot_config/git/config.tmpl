@@ -6,6 +6,9 @@
 	editor = vim
 	autocrlf = input
 	excludesfile = ~/.config/git/ignore
+{{- if .wsl }}
+	sshCommand = ssh.exe
+{{- end }}
 
 [init]
 	defaultBranch = main
@@ -30,9 +33,15 @@
 	visual = log --oneline --graph --all
 	amend = commit --amend --no-edit
 
-{{- if eq .chezmoi.os "darwin" }}
+{{- if and (eq .chezmoi.os "darwin") (not .codespaces) }}
 [credential]
 	helper = osxkeychain
+{{- else if eq .chezmoi.os "windows" }}
+[credential]
+	helper = manager
+{{- else if and (eq .chezmoi.os "linux") (not .codespaces) }}
+[credential]
+	helper = cache
 {{- end }}
 
 [diff]
@@ -40,3 +49,6 @@
 
 [merge]
 	conflictstyle = diff3
+
+[apply]
+        whitespace = nowarn

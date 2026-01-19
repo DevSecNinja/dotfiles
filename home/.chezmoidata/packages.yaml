@@ -30,12 +30,51 @@ packages:
     # Homebrew formulas
     brew:
       light:
+        - azure-cli
         - fastfetch
         - fish
         - git
+        - jq
         - vim
+        - wget
       full:
         - python@3
+      # TODO: Homebrew: add support for casks * app store apps
+      # Move them under brew (brew.brew and brew.cask and brew.app-store)
+      # casks:
+      #   light: []
+      #   full:
+      #   - 1password
+      #   - chatgpt
+      #   - iterm2
+      #   - microsoft-edge
+      #   - rekordbox
+      #   - signal
+      #   - spotify
+      #   - visual-studio-code
+      #   - vlc
+      #   - vmware-fusion
+      # app-store:
+      #   light: []
+      #   full:
+      #     - name: "1Password for Safari"
+      #       id: 1569813296
+      #     - name: "Home Assistant"
+      #       id: 1099568401
+      #     - name: "Kindle"
+      #       id: 302584613
+      #     - name: "Mela"
+      #       id: 1568924476
+      #     - name: "Microsoft 365"
+      #       id: 1450038993
+      #     - name: "Notability"
+      #       id: 360593530
+      #     - name: "Windows"
+      #       id: 1295203466
+      #     - name: "WireGuard"
+      #       id: 1451685025
+      #     - name: "Xcode"
+      #       id: 497799835
 
   # Windows packages
   windows:

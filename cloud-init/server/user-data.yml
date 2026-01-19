@@ -1,0 +1,56 @@
+#cloud-config
+# To generate seed, run: cloud-localds --hostname <<YourVmName>> --verbose cloud-init-seed-<<YourVmName>>.qcow2 user-data.yml
+
+# Disable password authentication with the SSH daemon
+ssh_pwauth: false
+
+# Disable the root account
+disable_root: true
+
+# Time zone & locale
+timezone: "Europe/Amsterdam"
+locale: "en_US.UTF-8"
+
+# Create standard users
+users:
+  - name: jean-paul
+    gecos: Jean-Paul van Ravensberg
+    primary_group: jean-paul
+    groups: users,sudo
+    ssh_import_id: "gh:DevSecNinja"
+    lock_passwd: true
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /usr/bin/zsh
+
+# Update apt database and upgrade packages on first boot
+package_update: true
+package_upgrade: true
+
+# Install packages on first boot
+packages:
+  - git
+  - qemu-guest-agent
+  - zsh
+
+# Create files
+write_files:
+- path: /etc/netplan/50-cloud-init.yaml
+  content: |
+    # This file is generated from information provided by the datasource.  Changes
+    # to it will not persist across an instance reboot. To disable cloud-init's
+    # network configuration capabilities, write a file
+    # /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg with the following:
+    # network: {config: disabled}
+    network:
+        version: 2
+        ethernets:
+            eth0:
+                dhcp4: true
+                set-name: eth0
+  owner: "root:root"
+  permissions: "0644"
+
+# Enable firewall and allow SSH
+runcmd:
+  - ufw allow 22/tcp
+  - ufw enable
