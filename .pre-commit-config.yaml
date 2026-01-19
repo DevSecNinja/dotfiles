@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: file-set-execution-bit
         name: Set executable permissions on shell scripts
-        entry: ./dot_config/shell/functions/file-set-execution-bit.sh
+        entry: ./home/dot_config/shell/functions/file-set-execution-bit.sh
         language: script
         files: '\.(sh|bash)$'
         pass_filenames: false

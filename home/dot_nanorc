@@ -1,0 +1,6 @@
+# Basic Nano Configuration
+# Always show line numbers
+set linenumbers
+
+# Automatically indent new lines to match previous line
+set autoindent
