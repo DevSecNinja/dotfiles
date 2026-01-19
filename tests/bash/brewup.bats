@@ -205,7 +205,7 @@ EOF
 @test "brewup: continues after cask upgrade failures" {
 	# Create a state file in TEST_DIR
 	STATE_FILE="$TEST_DIR/brew-state"
-	
+
 	# Create a mock brew command that simulates cask upgrade issues
 	cat >"$TEST_DIR/brew" <<EOF
 #!/bin/bash
@@ -250,7 +250,7 @@ EOF
 @test "brewup: displays summary after successful update" {
 	# Create a state file in TEST_DIR
 	STATE_FILE="$TEST_DIR/brew-updated"
-	
+
 	# Create a mock brew command with full successful workflow
 	cat >"$TEST_DIR/brew" <<EOF
 #!/bin/bash

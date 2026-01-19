@@ -66,17 +66,24 @@ dotfiles/
 │       ├── run_once_before_00-setup.ps1.tmpl      # Initial directory creation
 │       └── run_once_install-packages.ps1.tmpl     # Development tools (winget)
 │
-├── 🧪 Validation & Testing Scripts
-│   └── scripts/
-│       ├── validate-chezmoi.sh      # Validate Chezmoi config
-│       ├── validate-shell-scripts.sh # Check shell syntax
-│       ├── validate-fish-config.sh  # Check Fish syntax
-│       ├── test-chezmoi-apply.sh    # Dry-run test
-│       ├── test-fish-config.sh      # Test Fish loads
-│       ├── verify-dotfiles.sh       # Verify files applied
-│       ├── setup-precommit.sh       # Install pre-commit hooks
-│       ├── validate-all.sh          # Run all checks
-│       └── README.md                # Scripts documentation
+├── 🧪 Validation & Testing
+│   ├── scripts/
+│   │   ├── validate-all.sh          # Run all validation tests
+│   │   └── setup-precommit.sh       # Install pre-commit hooks
+│   └── tests/
+│       ├── bash/                    # Bats tests for bash/shell validation
+│       │   ├── validate-chezmoi.bats       # Chezmoi config validation
+│       │   ├── validate-shell-scripts.bats # Shell script syntax checks
+│       │   ├── validate-fish-config.bats   # Fish config validation
+│       │   ├── test-chezmoi-apply.bats     # Chezmoi apply dry-run test
+│       │   ├── test-fish-config.bats       # Fish loading test
+│       │   ├── verify-dotfiles.bats        # Verify applied files
+│       │   └── run-tests.sh                # Bats test runner
+│       └── powershell/              # Pester tests for PowerShell
+│           ├── Validate-Packages.Tests.ps1  # Packages YAML validation
+│           ├── Packages.Tests.ps1           # Package configuration tests
+│           └── Invoke-PesterTests.ps1       # Pester test runner
+
 │
 ├── ⚙️ Chezmoi Configuration
 │   ├── .chezmoi.yaml.tmpl           # Chezmoi config (prompts for name/email)

@@ -22,6 +22,7 @@ tests/
 
 **Coverage**:
 - PowerShell utility scripts
+- **Packages YAML validation** (cross-platform package configuration) ✨
 - Code signing certificate generation (`New-SigningCert.ps1.tmpl`)
 - Script signing workflows (`Sign-PowerShellScripts.ps1.tmpl`)
 - End-to-end certificate creation and signing validation
@@ -56,7 +57,10 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 **Framework**: [Bats 1.11+](https://github.com/bats-core/bats-core)
 
 **Coverage**:
-- Shell function utilities (`find-broken-symlinks`)
+- Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, etc.)
+- **Configuration validation** (Chezmoi, Fish, shell scripts) ✨
+- **Dotfiles verification** (applied files existence) ✨
+- **Integration tests** (Chezmoi apply dry-run, Fish loading) ✨
 - Interactive command behavior
 - File system operations
 - Error handling and edge cases
@@ -84,6 +88,14 @@ bats tests/bash/find-broken-symlinks.bats
 - Edge cases (special characters, nested directories, mixed symlinks)
 - Error conditions (nonexistent directories, permission issues)
 - Output validation and behavior verification
+
+**Validation tests** (new):
+- `validate-chezmoi.bats` - Validates Chezmoi configuration syntax and structure
+- `validate-shell-scripts.bats` - Checks all shell scripts for syntax errors
+- `validate-fish-config.bats` - Validates Fish configuration files
+- `test-chezmoi-apply.bats` - Tests Chezmoi apply in dry-run mode
+- `test-fish-config.bats` - Tests Fish shell loading with repository config
+- `verify-dotfiles.bats` - Verifies expected dotfiles exist after apply
 
 ### Python Tests (Future)
 
