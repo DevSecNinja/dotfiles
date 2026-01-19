@@ -33,6 +33,21 @@ function prompt {
     return "> "
 }
 
+# Setup winget tab completion
+# https://learn.microsoft.com/en-us/windows/package-manager/winget/tab-completion
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    # Register winget argument completer
+    Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
+        param($wordToComplete, $commandAst, $cursorPosition)
+        [Console]::InputEncoding = [Console]::OutputEncoding = $OutputEncoding = [System.Text.Utf8Encoding]::new()
+        $Local:word = $wordToComplete.Replace('"', '""')
+        $Local:ast = $commandAst.ToString().Replace('"', '""')
+        winget complete --word="$Local:word" --commandline "$Local:ast" --position $cursorPosition | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
+}
+
 # Welcome message
 Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
 Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow

@@ -50,6 +50,7 @@ packages:
         - Microsoft.VisualStudioCode
         - Microsoft.WindowsTerminal
         - JanDeDobbeleer.OhMyPosh
+        - Microsoft.WSL
 
     # PowerShell modules (installed via PowerShellGet)
     powershell_modules:
