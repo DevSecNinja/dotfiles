@@ -1,19 +1,22 @@
 #!/bin/bash
 # find-broken-symlinks - Find and optionally remove broken symbolic links
 #
-# This function recursively searches for broken symbolic links in a specified
-# directory and prompts for removal confirmation. Broken symlinks are those
-# that point to non-existent targets.
+# This function searches for broken symbolic links in a specified directory
+# and prompts for removal confirmation. Broken symlinks are those that point
+# to non-existent targets.
 #
 # Usage: find-broken-symlinks [OPTIONS] [DIRECTORY]
-#   --dry-run, -n    Show what would be removed without making changes
-#   --verbose, -v    Enable verbose output
-#   --help, -h       Show help message and exit
-#   --yes, -y        Skip confirmation prompts and remove all broken symlinks
+#   --dry-run, -n      Show what would be removed without making changes
+#   --verbose, -v      Enable verbose output
+#   --help, -h         Show help message and exit
+#   --yes, -y          Skip confirmation prompts and remove all broken symlinks
+#   --recursive, -r    Search in subdirectories recursively (default: current directory only)
 #
 # Examples:
-#   find-broken-symlinks                       # Check current directory
-#   find-broken-symlinks /path/to/dir          # Check specific directory
+#   find-broken-symlinks                       # Check current directory only
+#   find-broken-symlinks -r                    # Check current directory and subdirectories
+#   find-broken-symlinks /path/to/dir          # Check specific directory only
+#   find-broken-symlinks -r /path/to/dir       # Check directory and subdirectories
 #   find-broken-symlinks --dry-run ~/projects  # Preview without removing
 #   find-broken-symlinks --yes ~/old-files     # Remove all without prompting
 #
@@ -21,12 +24,14 @@
 #   - Requires 'find' command (standard on Unix-like systems)
 #   - Only checks symbolic links, not regular files or directories
 #   - Uses 'test -e' to determine if symlink target exists
+#   - By default, only searches in the specified directory (non-recursive)
 
 find-broken-symlinks() {
 	# Initialize variables
 	local dry_run=false
 	local verbose=false
 	local auto_confirm=false
+	local recursive=false
 	local target_dir=""
 	local changes_made=false
 
@@ -45,22 +50,29 @@ find-broken-symlinks() {
 			auto_confirm=true
 			shift
 			;;
+		--recursive | -r)
+			recursive=true
+			shift
+			;;
 		-h | --help)
 			echo "Usage: find-broken-symlinks [OPTIONS] [DIRECTORY]"
 			echo "Find and optionally remove broken symbolic links"
 			echo ""
 			echo "Options:"
-			echo "  --dry-run, -n    Show what would be removed without making changes"
-			echo "  --verbose, -v    Enable verbose output"
-			echo "  --yes, -y        Skip confirmation prompts and remove all broken symlinks"
-			echo "  -h, --help       Show this help message"
+			echo "  --dry-run, -n      Show what would be removed without making changes"
+			echo "  --verbose, -v      Enable verbose output"
+			echo "  --yes, -y          Skip confirmation prompts and remove all broken symlinks"
+			echo "  --recursive, -r    Search in subdirectories recursively (default: current directory only)"
+			echo "  -h, --help         Show this help message"
 			echo ""
 			echo "Arguments:"
-			echo "  DIRECTORY        Directory to search (default: current directory)"
+			echo "  DIRECTORY          Directory to search (default: current directory)"
 			echo ""
 			echo "Examples:"
-			echo "  find-broken-symlinks                       # Check current directory"
-			echo "  find-broken-symlinks /path/to/dir          # Check specific directory"
+			echo "  find-broken-symlinks                       # Check current directory only"
+			echo "  find-broken-symlinks -r                    # Check current directory and subdirectories"
+			echo "  find-broken-symlinks /path/to/dir          # Check specific directory only"
+			echo "  find-broken-symlinks -r /path/to/dir       # Check directory and subdirectories"
 			echo "  find-broken-symlinks --dry-run ~/projects  # Preview without removing"
 			echo "  find-broken-symlinks --yes ~/old-files     # Remove all without prompting"
 			return 0
@@ -120,20 +132,34 @@ find-broken-symlinks() {
 		echo "   Dry run: $dry_run"
 		echo "   Verbose: $verbose"
 		echo "   Auto-confirm: $auto_confirm"
+		echo "   Recursive: $recursive"
 		echo "   Target directory: $target_dir"
 	fi
 
 	# Main logic starts here
-	echo "🔍 Searching for broken symlinks in: $target_dir"
+	if [ "$recursive" = true ]; then
+		echo "🔍 Searching for broken symlinks recursively in: $target_dir"
+	else
+		echo "🔍 Searching for broken symlinks in: $target_dir (non-recursive)"
+	fi
 
 	# Find all broken symlinks
 	# -L tells find to follow symlinks and report those that are broken
 	# -type l finds symbolic links
 	# When combined with -L, only broken symlinks (those whose targets don't exist) are matched
+	# -maxdepth 1 limits search to current directory only (non-recursive)
 	local broken_symlinks=()
-	while IFS= read -r -d '' link; do
-		broken_symlinks+=("$link")
-	done < <(find -L "$target_dir" -type l -print0 2>/dev/null)
+	if [ "$recursive" = true ]; then
+		# Recursive search in all subdirectories
+		while IFS= read -r -d '' link; do
+			broken_symlinks+=("$link")
+		done < <(find -L "$target_dir" -type l -print0 2>/dev/null)
+	else
+		# Non-recursive search (current directory only)
+		while IFS= read -r -d '' link; do
+			broken_symlinks+=("$link")
+		done < <(find -L "$target_dir" -maxdepth 1 -type l -print0 2>/dev/null)
+	fi
 
 	# Check if any broken symlinks were found
 	if [ ${#broken_symlinks[@]} -eq 0 ]; then

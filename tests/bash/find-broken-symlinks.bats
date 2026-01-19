@@ -33,6 +33,7 @@ teardown() {
 	[[ "$output" =~ "--dry-run" ]]
 	[[ "$output" =~ "--verbose" ]]
 	[[ "$output" =~ "--yes" ]]
+	[[ "$output" =~ "--recursive" ]]
 }
 
 @test "find-broken-symlinks: detects broken symlinks" {
@@ -126,7 +127,7 @@ teardown() {
 	[[ "$output" =~ "Found 1 broken symlink(s)" ]]
 }
 
-@test "find-broken-symlinks: recursively finds broken symlinks in subdirectories" {
+@test "find-broken-symlinks: non-recursive by default (only finds in current directory)" {
 	# Create directory structure
 	mkdir -p "$TEST_DIR/subdir1/subdir2"
 
@@ -135,13 +136,50 @@ teardown() {
 	ln -s "$TEST_DIR/nonexistent2.txt" "$TEST_DIR/subdir1/broken-link2"
 	ln -s "$TEST_DIR/nonexistent3.txt" "$TEST_DIR/subdir1/subdir2/broken-link3"
 
-	# Run function
+	# Run function without recursive flag
 	run find-broken-symlinks --dry-run "$TEST_DIR"
 	[ "$status" -eq 0 ]
+	[[ "$output" =~ "non-recursive" ]]
+	[[ "$output" =~ "Found 1 broken symlink(s)" ]]
+	[[ "$output" =~ "broken-link1" ]]
+	[[ ! "$output" =~ "broken-link2" ]]
+	[[ ! "$output" =~ "broken-link3" ]]
+}
+
+@test "find-broken-symlinks: recursively finds broken symlinks with --recursive flag" {
+	# Create directory structure
+	mkdir -p "$TEST_DIR/subdir1/subdir2"
+
+	# Create broken symlinks at different levels
+	ln -s "$TEST_DIR/nonexistent1.txt" "$TEST_DIR/broken-link1"
+	ln -s "$TEST_DIR/nonexistent2.txt" "$TEST_DIR/subdir1/broken-link2"
+	ln -s "$TEST_DIR/nonexistent3.txt" "$TEST_DIR/subdir1/subdir2/broken-link3"
+
+	# Run function with recursive flag
+	run find-broken-symlinks --recursive --dry-run "$TEST_DIR"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "recursively" ]]
 	[[ "$output" =~ "Found 3 broken symlink(s)" ]]
 	[[ "$output" =~ "broken-link1" ]]
 	[[ "$output" =~ "broken-link2" ]]
 	[[ "$output" =~ "broken-link3" ]]
+}
+
+@test "find-broken-symlinks: short form -r flag works for recursive search" {
+	# Create directory structure
+	mkdir -p "$TEST_DIR/subdir1"
+
+	# Create broken symlinks at different levels
+	ln -s "$TEST_DIR/nonexistent1.txt" "$TEST_DIR/broken-link1"
+	ln -s "$TEST_DIR/nonexistent2.txt" "$TEST_DIR/subdir1/broken-link2"
+
+	# Run function with short form -r flag
+	run find-broken-symlinks -r --dry-run "$TEST_DIR"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "recursively" ]]
+	[[ "$output" =~ "Found 2 broken symlink(s)" ]]
+	[[ "$output" =~ "broken-link1" ]]
+	[[ "$output" =~ "broken-link2" ]]
 }
 
 @test "find-broken-symlinks: preserves working symlinks while removing broken ones" {
@@ -178,6 +216,7 @@ teardown() {
 	# Run with verbose and yes flags
 	run find-broken-symlinks --verbose --yes "$TEST_DIR"
 	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Recursive: false" ]]
 	[[ "$output" =~ "Total found: 3" ]]
 	[[ "$output" =~ "Removed: 3" ]]
 	[[ "$output" =~ "Failed: 0" ]]
