@@ -68,6 +68,7 @@ dotfiles/
 │
 ├── 🧪 Validation & Testing Scripts
 │   └── scripts/
+│       ├── install-python-packages.sh # Install Python packages from packages.yaml
 │       ├── validate-chezmoi.sh      # Validate Chezmoi config
 │       ├── validate-shell-scripts.sh # Check shell syntax
 │       ├── validate-fish-config.sh  # Check Fish syntax
@@ -79,10 +80,12 @@ dotfiles/
 │       └── README.md                # Scripts documentation
 │
 ├── ⚙️ Chezmoi Configuration
+│   ├── .chezmoidata/
+│   │   └── packages.yaml           # Package definitions (system + Python packages)
 │   ├── .chezmoi.yaml.tmpl           # Chezmoi config (prompts for name/email)
 │   ├── .chezmoiignore               # Files to not copy to home (supports templates)
 │   ├── .pre-commit-config.yaml      # Pre-commit hooks configuration
-│   ├── requirements.txt             # Python dependencies (pre-commit)
+│   ├── requirements.txt             # (Deprecated) Use packages.yaml instead
 │   ├── install.sh                   # Installation script (Unix)
 │   └── install.ps1                  # Installation script (Windows)
 │

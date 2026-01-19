@@ -23,9 +23,48 @@ else
 	echo "Installing pre-commit in venv..."
 	"$VENV_DIR/bin/pip" install --upgrade pip
 
-	if [ -f requirements.txt ]; then
+	# Check if we can install from packages.yaml
+	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	PACKAGES_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/home/.chezmoidata/packages.yaml"
+
+	if [ -f "$PACKAGES_FILE" ]; then
+		echo "Installing Python packages from packages.yaml..."
+		# Install PyYAML for parsing
+		"$VENV_DIR/bin/pip" install pyyaml
+
+		# Parse and install packages from packages.yaml
+		# Export environment variables for Python subprocess
+		export PACKAGES_FILE
+		export VENV_DIR
+		"$VENV_DIR/bin/python3" <<'PYEOF'
+import yaml
+import os
+import subprocess
+import sys
+
+packages_file = os.environ.get('PACKAGES_FILE')
+venv_dir = os.environ.get('VENV_DIR')
+os_type = 'darwin' if sys.platform == 'darwin' else 'linux'
+
+try:
+    with open(packages_file, 'r') as f:
+        data = yaml.safe_load(f)
+
+    packages = data.get('packages', {}).get(os_type, {}).get('pip', {}).get('light', [])
+
+    for package in packages:
+        print(f"Installing {package}...")
+        subprocess.run([f'{venv_dir}/bin/pip', 'install', package], check=True)
+
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
+	elif [ -f requirements.txt ]; then
+		echo "Falling back to requirements.txt..."
 		"$VENV_DIR/bin/pip" install -r requirements.txt
 	else
+		echo "Installing pre-commit directly..."
 		"$VENV_DIR/bin/pip" install pre-commit
 	fi
 

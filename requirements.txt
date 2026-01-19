@@ -1,5 +1,13 @@
 # Python requirements for dotfiles development tools
-# Install with: pip3 install -r requirements.txt
+#
+# ⚠️  DEPRECATED: This file is kept for backwards compatibility only.
+# Python packages are now defined in home/.chezmoidata/packages.yaml
+#
+# To install Python packages, use:
+#   ./scripts/install-python-packages.sh
+#
+# Or for manual installation from packages.yaml:
+#   See home/.chezmoidata/packages.yaml under packages.<os>.pip.light/full
 
 # Code quality and pre-commit hooks
 pre-commit>=3.0.0

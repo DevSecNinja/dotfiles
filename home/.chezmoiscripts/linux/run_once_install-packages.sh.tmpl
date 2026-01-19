@@ -66,6 +66,47 @@ brew install {{ . | quote }}
 
 echo "✅ Development tools installation complete ({{ .installType }} mode)!"
 
+# Install Python packages with pip (if python3-pip is available)
+if command -v pip3 >/dev/null 2>&1; then
+    echo ""
+    echo "📦 Installing Python packages..."
+
+{{- if eq .chezmoi.os "linux" }}
+    # Install light mode Python packages (always)
+{{- range .packages.linux.pip.light }}
+    echo "Installing {{ . }}..."
+    pip3 install --user {{ . | quote }}
+{{- end }}
+
+{{- if eq .installType "full" }}
+    # Install full mode Python packages (additional)
+{{- range .packages.linux.pip.full }}
+    echo "Installing {{ . }}..."
+    pip3 install --user {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- else if eq .chezmoi.os "darwin" }}
+    # Install light mode Python packages (always)
+{{- range .packages.darwin.pip.light }}
+    echo "Installing {{ . }}..."
+    pip3 install --user {{ . | quote }}
+{{- end }}
+
+{{- if eq .installType "full" }}
+    # Install full mode Python packages (additional)
+{{- range .packages.darwin.pip.full }}
+    echo "Installing {{ . }}..."
+    pip3 install --user {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+    echo "✅ Python packages installation complete!"
+else
+    echo ""
+    echo "[SKIP] pip3 not found, skipping Python packages installation"
+fi
+
 # Install VS Code extensions if code command is available
 # Skip in codespaces and dev containers as extensions are managed differently
 {{- if and (not .codespaces) (not .devcontainer) }}

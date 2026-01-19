@@ -21,8 +21,12 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install Python dependencies
+        run: |
+          # Install PyYAML for parsing packages.yaml
+          pip install pyyaml
+          # Install Python packages from packages.yaml
+          ./scripts/install-python-packages.sh
 
       - name: Run pre-commit checks
         run: pre-commit run --all-files

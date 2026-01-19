@@ -15,7 +15,17 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 
 ```
 dotfiles/
-├── home/                          # Chezmoi source directory
+│   ├── .chezmoidata/
+│   │   └── packages.yaml          # Cross-platform package definitions (system + Python)
+│   ├── .chezmoiscripts/           # Installation scripts (OS-specific)
+│   │   ├── linux/
+│   │   │   ├── run_once_install-packages.sh.tmpl
+│   │   │   └── run_once_install-precommit.sh.tmpl
+│   │   ├── darwin/
+│   │   │   └── run_once_before_10-setup-fish.sh.tmpl
+│   │   └── windows/
+│   │       ├── run_once_install-packages.ps1.tmpl
+│   │       └── run_once_setup-powershell-loader.ps1
 │   ├── dot_config/                # XDG config directory (~/.config/)
 │   │   ├── fish/                  # Fish shell configuration (Linux/macOS)
 │   │   │   ├── config.fish        # Main Fish config
@@ -57,6 +67,7 @@ dotfiles/
 │   ├── install.sh                 # Installation script (Unix)
 │   └── install.ps1                # Installation script (Windows)
 ├── scripts/                       # Validation and testing scripts
+│   ├── install-python-packages.sh # Install Python packages from packages.yaml
 │   ├── validate-all.sh
 │   ├── validate-chezmoi.sh
 │   ├── validate-fish-config.sh
@@ -66,7 +77,7 @@ dotfiles/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── STRUCTURE.md
-└── requirements.txt
+└── requirements.txt               # (Deprecated) Use packages.yaml instead
 ```
 
 ## 🚀 Quick Start
@@ -155,10 +166,7 @@ chezmoi verify
 This repository uses [pre-commit](https://pre-commit.com/) for code quality checks:
 
 ```bash
-# Install dependencies
-pip3 install -r requirements.txt
-
-# Setup pre-commit hooks
+# Setup pre-commit hooks (installs Python packages from packages.yaml)
 ./scripts/setup-precommit.sh
 
 # Run manually on all files
