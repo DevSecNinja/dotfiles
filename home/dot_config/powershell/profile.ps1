@@ -33,6 +33,14 @@ function prompt {
     return "> "
 }
 
+# Load completions
+$completionsPath = Join-Path $PSScriptRoot "completions"
+if (Test-Path $completionsPath) {
+    Get-ChildItem -Path $completionsPath -Filter "*.ps1" | ForEach-Object {
+        . $_.FullName
+    }
+}
+
 # Welcome message
 Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
 Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow

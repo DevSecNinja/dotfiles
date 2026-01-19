@@ -1,0 +1,10 @@
+# WSL 2 Configuration
+# https://learn.microsoft.com/en-us/windows/wsl/wsl-config
+
+[wsl2]
+# Limits VM memory to use no more than 4 GB, this can be set as whole numbers using GB or MB
+memory=4GB
+
+[experimental]
+# Sparse VHD enables automatic disk space clean up
+sparseVhd=true
