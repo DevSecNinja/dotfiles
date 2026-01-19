@@ -47,7 +47,7 @@ if (-not $wslInstalled) {
 else {
     # WSL is installed, check version and provide info
     try {
-        $wslStatus = wsl.exe --status 2>&1
+        $wslStatus = wsl.exe --status 2>$null
         if ($wslStatus -match "Default Version:\s*(\d+)") {
             $wslVersion = [int]$matches[1]
             Write-Host "WSL version: $wslVersion" -ForegroundColor Cyan
@@ -68,7 +68,7 @@ else {
     # Check if Debian is installed
     $debianInstalled = $false
     try {
-        $distros = wsl.exe --list --quiet 2>&1 | Where-Object { $_ -match '\S' }
+        $distros = wsl.exe --list --quiet 2>$null | Where-Object { $_ -match '\S' }
         $debianInstalled = $distros -match "Debian"
     }
     catch {
