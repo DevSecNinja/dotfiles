@@ -68,8 +68,12 @@ else {
     # Check if Debian is installed
     $debianInstalled = $false
     try {
-        $distros = wsl.exe --list --quiet 2>$null | Where-Object { $_ -match '\S' }
-        $debianInstalled = $distros -match "Debian"
+        $distros = wsl.exe --list --quiet 2>$null
+        # Convert from UTF-16 if needed and clean up
+        $distroList = $distros | ForEach-Object { 
+            $_.Trim() -replace '\x00', '' -replace '\r', '' 
+        } | Where-Object { $_ -match '\S' }
+        $debianInstalled = $distroList -match "^Debian"
     }
     catch {
         # Ignore errors

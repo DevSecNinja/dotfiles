@@ -44,7 +44,12 @@ function Invoke-ChezmoiSigning {
 
     # Signs PowerShell scripts in the Chezmoi source directory
     $chezmoiSourceDir = chezmoi source-path
-    $signingScript = Join-Path $chezmoiSourceDir "home" | Join-Path -ChildPath "dot_config" | Join-Path -ChildPath "powershell" | Join-Path -ChildPath "scripts" | Join-Path -ChildPath "Sign-PowerShellScripts.ps1"
+    if ($LASTEXITCODE -ne 0 -or -not $chezmoiSourceDir) {
+        Write-Host "Error: Failed to get Chezmoi source directory" -ForegroundColor Red
+        return
+    }
+
+    $signingScript = Join-Path -Path $chezmoiSourceDir -ChildPath "dot_config\powershell\scripts\Sign-PowerShellScripts.ps1"
 
     if (-not (Test-Path $signingScript)) {
         Write-Host "Error: Sign-PowerShellScripts.ps1 not found at $signingScript" -ForegroundColor Red
