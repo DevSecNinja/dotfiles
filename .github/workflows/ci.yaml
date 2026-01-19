@@ -28,17 +28,8 @@ jobs:
         run: pre-commit run --all-files
         continue-on-error: true
 
-      - name: Validate Chezmoi configuration
-        run: ./scripts/validate-chezmoi.sh
-
-      - name: Validate shell scripts syntax
-        run: ./scripts/validate-shell-scripts.sh
-
-      - name: Validate Fish configuration
-        run: ./scripts/validate-fish-config.sh
-
-      - name: Test Chezmoi apply (dry-run)
-        run: ./scripts/test-chezmoi-apply.sh
+      - name: Run validation tests
+        run: ./scripts/validate-all.sh
 
   test-install:
     name: Test Installation
