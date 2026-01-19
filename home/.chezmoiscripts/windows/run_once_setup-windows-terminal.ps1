@@ -1,33 +1,99 @@
-# PowerShell script that runs once after chezmoi init on Windows
-# Use it for initial system setup
+#!/usr/bin/env pwsh
+# Setup Windows Terminal settings - runs once on initial install
+# After this, Windows Terminal manages its own settings
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 
-Write-Host "🚀 Running initial Windows setup..." -ForegroundColor Cyan
+$settingsDir = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+$settingsFile = "$settingsDir\settings.json"
 
-# Create necessary directories
-$directories = @(
-    "$env:USERPROFILE\bin",
-    "$env:USERPROFILE\projects"
-)
-
-foreach ($dir in $directories) {
-    if (-not (Test-Path $dir)) {
-        Write-Host "Creating directory: $dir" -ForegroundColor Yellow
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+# Only create if it doesn't exist (don't overwrite user changes)
+if (-not (Test-Path $settingsFile)) {
+    Write-Host "Setting up Windows Terminal initial configuration..." -ForegroundColor Cyan
+    
+    # Ensure directory exists
+    if (-not (Test-Path $settingsDir)) {
+        New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
     }
-    else {
-        Write-Host "✅ Directory already exists: $dir" -ForegroundColor Green
-    }
+
+    $settingsContent = @'
+{
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "actions": [],
+    "copyFormatting": "none",
+    "copyOnSelect": false,
+    "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+    "keybindings":
+    [
+        {
+            "id": "Terminal.CopyToClipboard",
+            "keys": "ctrl+c"
+        },
+        {
+            "id": "Terminal.PasteFromClipboard",
+            "keys": "ctrl+v"
+        },
+        {
+            "id": "Terminal.DuplicatePaneAuto",
+            "keys": "alt+shift+d"
+        }
+    ],
+    "newTabMenu":
+    [
+        {
+            "type": "remainingProfiles"
+        }
+    ],
+    "profiles":
+    {
+        "defaults": {},
+        "list":
+        [
+            {
+                "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+                "hidden": false,
+                "name": "PowerShell",
+                "source": "Windows.Terminal.PowershellCore"
+            },
+            {
+                "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+                "hidden": false,
+                "name": "Windows PowerShell"
+            },
+            {
+                "commandline": "%SystemRoot%\\System32\\cmd.exe",
+                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+                "hidden": false,
+                "name": "Command Prompt"
+            },
+            {
+                "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
+                "hidden": false,
+                "name": "Azure Cloud Shell",
+                "source": "Windows.Terminal.Azure"
+            }
+        ]
+    },
+    "schemes": [],
+    "theme": "system",
+    "themes": []
 }
+'@
 
-Write-Host "✅ Initial Windows setup complete!" -ForegroundColor Green
+    $settingsContent | Out-File -FilePath $settingsFile -Encoding utf8 -NoNewline
+    Write-Host "[OK] Windows Terminal settings created at: $settingsFile" -ForegroundColor Green
+    Write-Host "  Windows Terminal will manage this file from now on." -ForegroundColor Gray
+} else {
+    Write-Host "Windows Terminal settings already exist, skipping..." -ForegroundColor Gray
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA5O9B0zQBu/5tZ
-# UHjtowbBf0VAr7zOJwk9wKuq8i8IoKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBmzw7y8qnOlUAw
+# 0Vyb0MNS2+MNQdfxLdy2Pqqpcp/M16CCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -161,33 +227,33 @@ Write-Host "✅ Initial Windows setup complete!" -ForegroundColor Green
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCDPZ9sSuL0O7HbMRZZIMS7l/4mdYo0Fsfjw23ccRaFfPTANBgkqhkiG
-# 9w0BAQEFAASCAgBvMnDT8RuXwEZVnBaG+CsQPSZwbn4sEE9HBFOIQjOJnkNUbpiZ
-# G6mPLL4CjmktuXgiBeAmNnvZzQNuk6+1YWzySBM819C2x3t4W7F8PVczM7l3axGn
-# YW2dmBwoVUtnatX3d5X/iqElW3Lny/Q1bEuHaNmVGk6L69A4dxgdgWpe8ThmCElA
-# G9haBjIc1WWPaJX1skzuVVS7TZgPPBqb5FAgnHfDJrQF5lY+Bf+pt+5QT4MMQyBY
-# jtFJGdPulFOSru3psCLWylaLmDYBhBTJ7f9v6Up0r/yQ0MBorADkdhKM03juqWnM
-# vwgXbxRSMuXEaGyRLddTJ33HVnE0L4d5/UJcm/TWVL1iykioYmP7J0t0grtJ1guz
-# CeEnUDRvHjwLMP+mFQbHiPnliEMyKzsFqoszcWxAE79cFMx456E8OtfWxgE2KEAr
-# 6D9frK7x3Uw9jhDU1luOVEgu0HuSDK9BudxE+JO6KvWv/BTif+lhCDssHLZlA1dM
-# r9S30bkgtIiTlRU4SHGz27OAdMcIz/KCc7O7nNqWnPwdu2cGZS+oFbRBgQo1Psj/
-# UadHELT18u6eT+mc4zOUZUP33h8qFwOa+/nV4jaGC3inhwaBGQrZtVlJttnwFe0b
-# ZsXypHCM3KJYHyhvL6YsE3fxjx+ZapeJSE4i3NDVl1IZkCFofNJ8kKv41qGCAyYw
+# DQEJBDEiBCAZpVxIdtFyONW0qnpbFbzgWvtHoB3JtaAw1dgG5gIY4DANBgkqhkiG
+# 9w0BAQEFAASCAgBN+iWiXpNCFE51SBPx0tjcouOE+UYGHbGEXdWJcId1ZXf9Ugpr
+# NqaWNXkJLBUnVqVqrrGFbSKyGYFssN/0coy9LxPv+Lt0OEM9HCDOgk8zXf77Ugmu
+# PvRWwbQHuW6lNi0BYSDNu7tyOIdghw+qad0PzSd2YjEEikuMsgcs7wpgvvYYgMoS
+# 89L+DXnZoJ8uND4QSQB/05mJ6dSCNawz4EmDnktUVieB9INbEeQrhAm9abJCox6o
+# xthTUrplQI9FleTQj/KdWOw92ZXnTXXBkzBdt4eFVtY1dQ4MWprmCB3I+9wAOneJ
+# o9M1u7jhmIdTusBePIPvakA5dtY/wW9gbmP7pNg4/9G33EI3Hwm/Wtzwr9rddiTO
+# EbabSxCLMp41VrbYdTWj/TEv3nzUztwbCw0A1m/NOW5HcAlSV9IuYjAQCx2d7WO0
+# 5ejlgHnscID6PVVQ59AiDSlrQ6h4YBPZGn2cOzUlPinz4fagEqaKGB3w5UFisfXt
+# y7N3gIDey5nrjF7VgJhitU8/wd6HZdddrvqyldUaV3+IIhZkkN0Wj4dmTN+hpVII
+# iX0tJUFjtwrD23bK7O1Azlmwxf6skpdqkkA1Tki1rk4yQVCOGVTSuYdhMPd1ppCK
+# mi6OiU4kaLzaYOTKmjgc7gw9eocouKHC/dOalWFnBmOMOiM0KgAmMjm4XqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjAyNDhaMC8GCSqGSIb3DQEJBDEi
-# BCDsuM5FV6Xk+S0Lt1+MIhvq66D/Y5h+0ZDbbaB2sQ7PajANBgkqhkiG9w0BAQEF
-# AASCAgBFOfml7aO5gBLk+FlrhXc9wmllyC1lrjriYKGhMWO6PZxqwULIUlpkWGVa
-# ZJwCsNiJF/YYgwQD1JeKWhTGb3xnCE3XKqJBMcYi1GAx42TLrSMru7cegQokW834
-# ZbyqBQ+M9fc3MKErrvtj0zBcESFu8MFuWSjkKw42tjBDyQG+61TjbeynBYv9WZcy
-# aoNqSx1DUeAC/T/ZwjAhEYvll8wwlrKo5loLVIORonaKgBFIXy8Qjt/m9Xrfgu6w
-# JPOF3muZ0RFLLtYoyICg0USFU4TMS7PcTeg30xAbuMkMrZ/yoG/1jmzFU8INBZ+z
-# b0+ZZUkztT2vOgXai35hW5ayEKV40lISVox849SzfzfAj5rPqnE9ame0SQKtpdmC
-# UGFEHE0Uc/mcf8qhRr0I8CkYHOVZN8BxrxSLmdhdAv0cR2PA1+XSAXzJBMXX35C4
-# OwebwpxlYEVjhu4Tl6qntz3EUVcGnF5DFrkWnv3Krno1K0lnNz+MYLkfwKchLVl8
-# shrLH8U917MJVoWIOINyLNOC6hAERq9CX/jxKTiOLp+ZA1kd9HVTpPkkl4JhbS9k
-# 3vSwT42/qjsjaewbu7QrfjFlXOh6zRbwrWsmCjF3gHYM+KHsnxnqFKiTyuKhUy7n
-# XZQ2yijCNeZA69vm+BcQqLJIK0slwf9hKctj/XgIhlodVO/g5w==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjE0MTBaMC8GCSqGSIb3DQEJBDEi
+# BCBE4gplrnFvuQbZG+m//kzYEXslLeYh+ySHLTnZXYgnsjANBgkqhkiG9w0BAQEF
+# AASCAgBPjaM0+f/RN/VR3D98K/PqMMZed8Ar3X0PAxsQYXnmxStDXBrOD1n07nqk
+# w3YBTbmU0NKxjLbS8AiZsjgMYBYyEH1sjZutS2wGPdKjPNnuCzm0ny1jte1MqVli
+# rfUJtGeKjFunVrTyVMQ5h58n2UOCYKGS3nJf2zUIVcamYf4uy+l7H2TvVoL5RQBA
+# KLNa3MEHbshUKTsOdVLFY0VwNcIUBSXhacba8tPYJYopKhHu+FBAyRzx0ruXQPUQ
+# Qi763b5Ux4t/Feb8Rc9G/jUnzLB0WMmOnICgbxeX+I/UPvsHSp46u2vxRyk9mUl6
+# HfhvrSoja8Px6i5cEKFbffVJS20PvDG+3A0FqvsXFFP3gQF+1BIz2YKhYiskmBdL
+# 0aIOZHDx+BPRVK++IUEjnGmfL/7FHWgKs04hZy/r2+LFSdWJJyNtVQIDY7Lg/Z3U
+# g9nW4vh/4YUv+5eJaIyQvCJDlLVcGkotNp10dZ6uQCemyeiA/2Ll6rzlnV33gPoU
+# Dc2l2UWjjNw1Kly3cm4FSPe9jgNHgilx+DbqgzRJvpxeGdm7z+rUGiktDruf34aU
+# tyFtOeg3GI283Y5KzI3Isbz+vGb4RaBQuV70Rt+PJOtXUMQTtRRpnPFgTfu9p46v
+# aqJhl9GmzMcfDf2qO48tojWuvVQy/HbyyPxKhp5rfg7ldLLmVA==
 # SIG # End signature block

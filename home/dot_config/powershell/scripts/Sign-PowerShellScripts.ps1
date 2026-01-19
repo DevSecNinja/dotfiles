@@ -29,7 +29,7 @@
 
 .PARAMETER Exclude
     File patterns to exclude (e.g., "*.ps1.tmpl", "*.Tests.ps1").
-    Defaults to excluding templates and test files.
+    Defaults to excluding template files.
 
 .PARAMETER TimestampServer
     URL of the timestamp server to use. Defaults to DigiCert's server.
@@ -101,7 +101,7 @@ param(
     [string[]]$Include = @("*.ps1"),
 
     [Parameter()]
-    [string[]]$Exclude = @("*.ps1.tmpl", "*.Tests.ps1"),
+    [string[]]$Exclude = @("*.ps1.tmpl"),
 
     [Parameter()]
     [string]$TimestampServer = "http://timestamp.digicert.com",
@@ -248,6 +248,38 @@ function Test-CodeSigningCertificate {
     }
 }
 
+function Test-CertificateInStore {
+    <#
+    .SYNOPSIS
+        Checks if a certificate exists in a specific certificate store.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Thumbprint,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Root', 'TrustedPublisher', 'My', 'CA')]
+        [string]$StoreName,
+
+        [Parameter()]
+        [ValidateSet('CurrentUser', 'LocalMachine')]
+        [string]$StoreLocation = 'CurrentUser'
+    )
+
+    try {
+        $storePath = "Cert:\$StoreLocation\$StoreName"
+        $cert = Get-ChildItem -Path $storePath -ErrorAction SilentlyContinue |
+            Where-Object { $_.Thumbprint -eq $Thumbprint } |
+            Select-Object -First 1
+
+        return ($null -ne $cert)
+    }
+    catch {
+        Write-Verbose "Error checking certificate store $storePath : $_"
+        return $false
+    }
+}
+
 function Get-ScriptsToSign {
     <#
     .SYNOPSIS
@@ -358,9 +390,20 @@ function Invoke-ScriptSigning {
         # Check if already signed
         $currentSignature = Get-AuthenticodeSignature -FilePath $Script.FullName
 
-        if (-not $ForceSign -and
-            $currentSignature.Status -eq 'Valid' -and
-            $currentSignature.SignerCertificate.Thumbprint -eq $Certificate.Thumbprint) {
+        # Check if already signed with same certificate
+        # Valid = fully trusted signature
+        # UnknownError with trust message = signed but untrusted root (still a valid signature)
+        $isAlreadySigned = $false
+        if (-not $ForceSign -and $currentSignature.SignerCertificate) {
+            $sameThumbprint = $currentSignature.SignerCertificate.Thumbprint -eq $Certificate.Thumbprint
+            $isValidSignature = $currentSignature.Status -eq 'Valid'
+            $isUntrustedRoot = $currentSignature.Status -eq 'UnknownError' -and 
+                               $currentSignature.StatusMessage -like "*certificate*trusted*"
+            
+            $isAlreadySigned = $sameThumbprint -and ($isValidSignature -or $isUntrustedRoot)
+        }
+
+        if ($isAlreadySigned) {
             return @{
                 Status = 'AlreadySigned'
                 Message = "Already signed with same certificate"
@@ -379,14 +422,28 @@ function Invoke-ScriptSigning {
 
         $result = Set-AuthenticodeSignature @signParams
 
+        # Check if signing succeeded
+        # Status 'Valid' = fully trusted signature
+        # Status 'UnknownError' with trust-related message = signed but cert not trusted (still valid signing operation)
+        $isTrustIssue = $result.Status -eq 'UnknownError' -and 
+                        $result.StatusMessage -like "*certificate*trusted*"
+
         if ($result.Status -eq 'Valid') {
             return @{
                 Status = 'Signed'
                 Message = "Successfully signed"
             }
         }
+        elseif ($isTrustIssue -and $result.SignerCertificate) {
+            # Signature was applied successfully, but certificate chain isn't fully trusted
+            # This is expected with self-signed certs not in Trusted Root
+            return @{
+                Status = 'Signed'
+                Message = "Signed (untrusted root certificate)"
+            }
+        }
         else {
-            # Debug: Capture detailed error information
+            # Actual signing failure
             $errorDetails = @(
                 "Status: $($result.Status)",
                 "StatusMessage: $($result.StatusMessage)",
@@ -474,7 +531,40 @@ if (-not $SkipValidation) {
     Write-ScriptLog "Certificate is valid for code signing" -Level Success
 }
 
-# Step 2b: Trust self-signed root if requested
+# Step 2b: Check certificate trust stores
+Write-Host ""
+Write-Host "Certificate Trust Status:" -ForegroundColor Cyan
+
+# Check Trusted Root CA store (both CurrentUser and LocalMachine)
+$inRootCurrentUser = Test-CertificateInStore -Thumbprint $cert.Thumbprint -StoreName 'Root' -StoreLocation 'CurrentUser'
+$inRootLocalMachine = Test-CertificateInStore -Thumbprint $cert.Thumbprint -StoreName 'Root' -StoreLocation 'LocalMachine'
+
+if ($inRootCurrentUser -or $inRootLocalMachine) {
+    $locations = @()
+    if ($inRootCurrentUser) { $locations += "CurrentUser" }
+    if ($inRootLocalMachine) { $locations += "LocalMachine" }
+    Write-Host "  ✓ Trusted Root CA:        Yes ($($locations -join ', '))" -ForegroundColor Green
+} else {
+    Write-Host "  ✗ Trusted Root CA:        No" -ForegroundColor Yellow
+    Write-Host "    (Certificate may not be trusted for signing)" -ForegroundColor Yellow
+}
+
+# Check Trusted Publishers store (both CurrentUser and LocalMachine)
+$inPublisherCurrentUser = Test-CertificateInStore -Thumbprint $cert.Thumbprint -StoreName 'TrustedPublisher' -StoreLocation 'CurrentUser'
+$inPublisherLocalMachine = Test-CertificateInStore -Thumbprint $cert.Thumbprint -StoreName 'TrustedPublisher' -StoreLocation 'LocalMachine'
+
+if ($inPublisherCurrentUser -or $inPublisherLocalMachine) {
+    $locations = @()
+    if ($inPublisherCurrentUser) { $locations += "CurrentUser" }
+    if ($inPublisherLocalMachine) { $locations += "LocalMachine" }
+    Write-Host "  ✓ Trusted Publishers:     Yes ($($locations -join ', '))" -ForegroundColor Green
+} else {
+    Write-Host "  ℹ Trusted Publishers:     No" -ForegroundColor Gray
+    Write-Host "    (Not required for signing, but may affect execution policy)" -ForegroundColor Gray
+}
+Write-Host ""
+
+# Step 2c: Trust self-signed root if requested
 if ($TrustSelfSignedRoot) {
     # Check if cert is self-signed (Subject == Issuer)
     $isSelfSigned = $cert.Subject -eq $cert.Issuer
@@ -585,8 +675,8 @@ return $stats
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDUOsEWtxaOB7lc
-# yFknvi9/U1mxtCvdmaZXEojce7lQAaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBpq8Zqg3Zy8Iqu
+# jfx3B1x1JJbd5gx1N40jmjMBwjzdjqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -720,33 +810,33 @@ return $stats
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCArDtraYcEJu1uLKpz482Zv9ARzX4wxEuLrxNHn+EqF6jANBgkqhkiG
-# 9w0BAQEFAASCAgCF7gR41jaDkzNVcox0BR6Oytx1gnxYW/2Zrdy0gkSOm8xD1guE
-# nOLAQRsGXWPqWSl6mVDXqhzt13mFoB27cAhywkNDfPVNOclMKmtvL4Ogcojk2fd0
-# ECUwkgXptuyyAUZnieuUrz5XoyC2EYjjLUUUWS8SXjB1iYLjMvgomYFEPMB5hHSl
-# zg8vJs5RBNfKss0yytkqKeXCyUP/cJYQTFm7h3JnfmbKu9wvQhdLcs7uhelJBIeC
-# EvPSVNYvvNKk7rAfghQMCGlwTx2oyf/dI+O7OTI9OZHOoNMeLsAC96HyQC8oEBEa
-# PpgAZKyces9Kljvepu2FstPJFcZK0PwtjeRAh6b4AN9eomNcs32QgcNtIBoK8pBA
-# majV6LxypGBUn2GAK5S+EprXaSr0krTTGMEEZm9AZX5Nqvhu8XVn4A6v9Gkk3bSu
-# tWGocyRt3AGt1KVZpA0QyUtPpSOk3mJ9jCIAK73vAqxFpKUkp4t4zoKxlXk0ngiH
-# LGdlf3GT4fdNOMMZjhRed9eJtBQecZQNBzeUALB+tRKMCeErXOkmp92wL5+8m5dt
-# yhOBQiq+nXxVjzCvZ7jGTWf7NsXa8M00nF7vJH7WmiygIfyUrQflkfMQaalZpP1U
-# EJfJMz/VguAUxS3+GSu9ibJG+6uI6Oc7XKuJFDR8LyXN8N8R+P2+O5D5rKGCAyYw
+# DQEJBDEiBCDDavBaIynUuonIejggMGKPssn4H+E+eML+DoAgKVoA0TANBgkqhkiG
+# 9w0BAQEFAASCAgB2SXAbCPaRoFo4Pdy1SiqmbSyOvOB9/I/s6HU9Wf13tcjyO+BS
+# y2m8ZN6LULGy5wlZEJUnVZrCT25JRTQUgsoahKuMmsvYcnbmXA1rM5MqJO+XZjJE
+# AsXwy3c10be4Qprf4SKoLBFewTuGhAsSd6KM5mi6FJgaTgae0w3iMr1m0vYmKhIK
+# kxWoMKMTktpEqSXdoVo36Z58bqWNUHSvtQzTXDjWlJpiLKHVphzdoxIP9tzK2Mxr
+# VcVUYBRDxXiGS8fF9BJUvii6VJOhfFF6e241bsQNrR/sWCLdNbmSsZo3Mt7Mw8HW
+# 8SbZ1G6fLlORbAOiqc7mfeCC/gd1HOpQcJjUrWyN9jW3ZxuPKdN78SRde1YjMpKi
+# n8C3IgBKn+1qLBwV617rkgAuFDRl0TOEfZO+MMs09htXUp++3AYN1qLKpgZuUc11
+# IV/qVvTWLQqE8xQhvXu+2FVdobl2elCyt/VqOMMUyCMUN5LIEW89bDmcKmOI4JKV
+# 5PKVV748ocl4h9So33a3jZPH1GpW20AxayD7/IaUffHntYxxR9GKB5QIqZbImaJ3
+# UPcYDLHXkgI6vRIkh+iMIL+6rrnHJFaJdPxpRPNWwwRo+hWGhO0IhDnD7T8kuJqv
+# bbd3sAW50alIqwNHo/h1qoFvHGENB6JMUgXglqhqErTV1GkK7xlLXhi5baGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTQyMjQ0NThaMC8GCSqGSIb3DQEJBDEi
-# BCCiL+D4QC6rrfR22wHnWUtjZuhiYe5j69qEmUHtO62zeDANBgkqhkiG9w0BAQEF
-# AASCAgBUwW/ShcQXzs6wMwrI3VoJmn2aVU/DdjL/O9UJAno+Qxu8Kyct1IBP0XXL
-# bgbbp6fFBK6HQ+V1CYfwGmipXzGJFJo0MsRg5WYEjMQc47r3w2f9gAT0Oh1Khrqb
-# xzefU6gGCdTRUPEFcSKtonn+bZtDFISZVq/IwvaUU5VPyVdZrMd5uoduh5R0qPl/
-# 7Uqd2zr+r0olznXQqiBIMInvH5DfJ3+7a3Ezm1GlQ74ZswXcy7t2uQASXi3LbzkA
-# LUD+85hZaSSQrdsPHqTpNWJV2jHz7WfF7o0sU13spuCaJLm0U2bWn4ErxMUuLpJD
-# P+c/kg/A/DsOSAXHlrZdGc2q4h5V9fK2ownOS4oWPbpTlvojI53VxL5FGH7s5Xkc
-# hDYxUHnYmoJRgc6iph+RRKF40sW8m8LKiQagCTYyEaMqYmWHwdsATq/5PLt8js1H
-# yRZPOYJUGVXnpVKdx+DQICrenE50pZJcpDv2QUUhiMC9SU5XfZOqyIU8O8flOyyo
-# NEHMUhSAAD1KaySGYJ3rMk2jJG1LwZWozURlm3mXxdxMVfaXExk5OgHNTuNiZytF
-# Rb4gldPtwq2WMzw9nxBRZCnCNLjXMGHK2/eh6whkIW5wWghK5CWOO9+HK0MSEzmx
-# dYjoY2eJqe/npcQ8AWs4D4a29vkA9w1XDlt6ECiMSLJEage9Ig==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjE3MjJaMC8GCSqGSIb3DQEJBDEi
+# BCD8EtYS1OygpfFKAXEgyE8SuaeDqlmnkb/ZckM1/Xb8yTANBgkqhkiG9w0BAQEF
+# AASCAgC2FDUEmEhJF/qIcVNN5XNli2sENV7pL0vzHkqoH6+ydA/gO7ZqdUe3PgUx
+# KnuCmmgxWLV8dXpLnUG+aZeOEKCWE/vy4upqdzg5JjhCstfgA3AONDRefT94wwb/
+# ydeuli6VEhuR2dXmEGo8SxOW9fgf2CqUjDazkQ1I7EnobtBrqf3cw6iKTcLBjNN8
+# 7ZnO1nirdPjb4C71pHGdizFECqDH4f8CXdkSBSWdZ8Wz0fEZbKiCNaQ3Fh9bdoIP
+# BmwQ862js1pMSs41JgDV2P7kFr+kPyFRKdUnPZMpusouGBeDQV6eeAqGnvUq/C12
+# /3ynDKMJoS/Z3xWpMy807pbjCl8h6qenmymoCAFMzsZsTo+y1rz9s8zoLvbZbuup
+# upcje9vfQaE59KAn79hjryDFdyGOZxR+Y3VbuKsVUaktNmH5xvyE6oXNyD5oARkB
+# u/gNp+OKyDqyzFbB8+qrCk5/slh0K40x4loLy6bhnBAHDMrDxjSJwmZe+84JiDUz
+# l+nbLtIz1jnokIuslod+CIqCEkF5UkgIvDYtF8bM5uxvj2jRX8yhcCsor6HLoMW8
+# fMElRKfbVP7yFEmZnRBiPjbsujQjBMmYcj3Yq0BptOqR2GdnXrbW1W8Txrh3y6bO
+# 1d5Sh6oleOX5OWm+E9Jzcf8V3+n25Vno8BJ2V+Tk8D5bFqDpJg==
 # SIG # End signature block
