@@ -69,9 +69,23 @@ if [ ! -d "$DOTFILES_ROOT/.git" ]; then
 	exit 0
 fi
 
+# Skip git hooks installation in CI environments
+if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
+	echo "ℹ️  Skipping git hooks installation in CI environment"
+	exit 0
+fi
+
 # Install the git hooks in the dotfiles repository
 echo "🔗 Installing git hooks in dotfiles repository..."
-cd "$DOTFILES_ROOT"
+cd "$DOTFILES_ROOT" || exit 1
+
+# Verify we're in a git repository before installing hooks
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+	echo "⚠️  Cannot access git repository"
+	echo "Skipping git hooks installation"
+	exit 0
+fi
+
 pre-commit install
 
 echo ""
