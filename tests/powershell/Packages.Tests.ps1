@@ -195,6 +195,11 @@ Describe "Windows Package Configuration" {
             $fullPackages | Should -Contain "Microsoft.WindowsTerminal"
         }
 
+        It "Full mode should include WSL" {
+            $fullPackages = $script:ChezmoiData.packages.windows.winget.full
+            $fullPackages | Should -Contain "Microsoft.WSL"
+        }
+
         It "All winget package IDs should follow proper format (Vendor.Product)" {
             $allPackages = @()
             $allPackages += $script:ChezmoiData.packages.windows.winget.light
@@ -479,6 +484,79 @@ Describe "Package Consistency" {
 
         foreach ($pkg in $fullPackages) {
             $lightPackages | Should -Not -Contain $pkg
+        }
+    }
+}
+
+Describe "WSL Configuration" {
+    BeforeAll {
+        $script:WSLConfigPath = Join-Path $script:RepoRoot "home\dot_wslconfig"
+        $script:WSLInstallScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_once_install-wsl.ps1"
+    }
+
+    Context "WSL Config File" {
+        It ".wslconfig file should exist" {
+            $script:WSLConfigPath | Should -Exist
+        }
+
+        It ".wslconfig should not be empty" {
+            $content = Get-Content $script:WSLConfigPath -Raw
+            $content | Should -Not -BeNullOrEmpty
+        }
+
+        It ".wslconfig should contain [wsl2] section" {
+            $content = Get-Content $script:WSLConfigPath -Raw
+            $content | Should -Match "\[wsl2\]"
+        }
+
+        It ".wslconfig should configure memory settings" {
+            $content = Get-Content $script:WSLConfigPath -Raw
+            $content | Should -Match "memory="
+        }
+
+        It ".wslconfig should contain [experimental] section" {
+            $content = Get-Content $script:WSLConfigPath -Raw
+            $content | Should -Match "\[experimental\]"
+        }
+
+        It ".wslconfig should enable sparse VHD" {
+            $content = Get-Content $script:WSLConfigPath -Raw
+            $content | Should -Match "sparseVhd=true"
+        }
+    }
+
+    Context "WSL Installation Script" {
+        It "WSL installation script should exist" {
+            $script:WSLInstallScriptPath | Should -Exist
+        }
+
+        It "WSL installation script should be a PowerShell file" {
+            $script:WSLInstallScriptPath | Should -Match "\.ps1$"
+        }
+
+        It "WSL installation script should check if WSL is installed" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "wsl"
+        }
+
+        It "WSL installation script should contain wsl.exe --install command" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "wsl\.exe --install"
+        }
+
+        It "WSL installation script should install Debian" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "Debian"
+        }
+
+        It "WSL installation script should check admin privileges" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "Administrator"
+        }
+
+        It "WSL installation script should warn about WSL v1" {
+            $content = Get-Content $script:WSLInstallScriptPath -Raw
+            $content | Should -Match "WSL version 1|WSL 2"
         }
     }
 }
