@@ -28,7 +28,11 @@ dotfiles/
 │   │   ├── powershell/            # PowerShell configuration (Windows)
 │   │   │   ├── profile.ps1        # Main PowerShell profile
 │   │   │   ├── aliases.ps1        # Command aliases
-│   │   │   └── functions.ps1      # Custom functions
+│   │   │   ├── functions.ps1      # Custom functions
+│   │   │   └── scripts/           # PowerShell utility scripts
+│   │   │       ├── New-SigningCert.ps1.tmpl      # Create code signing certificate
+│   │   │       ├── Import-SigningCert.ps1        # Import certificate
+│   │   │       └── Sign-PowerShellScripts.ps1    # Sign PowerShell scripts
 │   │   ├── git/                   # Git configuration
 │   │   │   ├── config.tmpl        # Git config with templating
 │   │   │   └── ignore             # Global gitignore
@@ -46,9 +50,6 @@ dotfiles/
 │   │   │   └── profile.ps1
 │   │   └── WindowsPowerShell/
 │   │       └── profile.ps1
-│   ├── dot_local/                 # Local user binaries
-│   │   └── private_bin/
-│   │       └── scripts/           # Custom scripts
 │   ├── dot_bashrc                 # Bash configuration
 │   ├── dot_zshrc                  # Zsh configuration
 │   ├── dot_vimrc                  # Vim configuration
