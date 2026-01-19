@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 # Default values
 CI_MODE=false
 OUTPUT_FILE="test-results.tap"
+SPECIFIC_TESTS=()
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -26,6 +27,10 @@ while [[ $# -gt 0 ]]; do
 		OUTPUT_FILE="$2"
 		shift 2
 		;;
+	--test)
+		SPECIFIC_TESTS+=("$2")
+		shift 2
+		;;
 	-h | --help)
 		echo "Usage: $0 [OPTIONS]"
 		echo "Run Bats tests for bash functions"
@@ -33,6 +38,7 @@ while [[ $# -gt 0 ]]; do
 		echo "Options:"
 		echo "  --ci              Run in CI mode (installs dependencies, exits on failure)"
 		echo "  --output FILE     Output file for test results (default: test-results.tap)"
+		echo "  --test FILE       Run specific test file (can be used multiple times)"
 		echo "  -h, --help        Show this help message"
 		exit 0
 		;;
@@ -99,10 +105,28 @@ TESTS_DIR="${SCRIPT_DIR}"
 # Find all .bats test files
 echo -e "${BLUE}🔍 Discovering test files...${NC}"
 TEST_FILES=()
-while IFS= read -r -d '' file; do
-	TEST_FILES+=("$file")
-	echo "  📝 Found: $(basename "$file")"
-done < <(find "$TESTS_DIR" -name "*.bats" -print0)
+
+if [ ${#SPECIFIC_TESTS[@]} -gt 0 ]; then
+	# Run specific tests
+	for test in "${SPECIFIC_TESTS[@]}"; do
+		if [ -f "${TESTS_DIR}/${test}" ]; then
+			TEST_FILES+=("${TESTS_DIR}/${test}")
+			echo "  📝 Found: $(basename "$test")"
+		elif [ -f "$test" ]; then
+			TEST_FILES+=("$test")
+			echo "  📝 Found: $(basename "$test")"
+		else
+			echo "  ❌ Test not found: $test"
+			exit 1
+		fi
+	done
+else
+	# Run all tests
+	while IFS= read -r -d '' file; do
+		TEST_FILES+=("$file")
+		echo "  📝 Found: $(basename "$file")"
+	done < <(find "$TESTS_DIR" -name "*.bats" -print0)
+fi
 
 if [ ${#TEST_FILES[@]} -eq 0 ]; then
 	echo -e "${YELLOW}⚠️  No test files found in $TESTS_DIR${NC}"

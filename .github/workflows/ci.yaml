@@ -58,9 +58,7 @@ jobs:
       - name: Verify dotfiles were applied
         run: |
           # Run verification using Bats tests
-          chmod +x tests/bash/run-tests.sh
-          # Run only the verify-dotfiles tests
-          bats tests/bash/verify-dotfiles.bats || echo "⚠️  Some dotfiles not yet applied (expected in CI)"
+          ./tests/bash/run-tests.sh --ci --test verify-dotfiles.bats || echo "⚠️  Some dotfiles not yet applied (expected in CI)"
 
       - name: Run chezmoi verify
         run: |
@@ -78,7 +76,7 @@ jobs:
       - name: Test Fish configuration
         run: |
           # Run Fish configuration tests using Bats
-          bats tests/bash/test-fish-config.bats || echo "⚠️  Fish tests skipped (Fish may not be installed)"
+          ./tests/bash/run-tests.sh --ci --test test-fish-config.bats || echo "⚠️  Fish tests skipped (Fish may not be installed)"
 
   test-light-server:
     name: Test Light Server Installation
