@@ -76,8 +76,30 @@ else {
     }
     
     if (-not $debianInstalled) {
-        Write-Host "Debian distribution not found. You can install it with:" -ForegroundColor Yellow
-        Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
+        Write-Host "Debian distribution not found. Installing..." -ForegroundColor Yellow
+        
+        # Check if running with admin privileges
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        
+        if (-not $isAdmin) {
+            Write-Host "⚠️  Debian installation requires administrator privileges." -ForegroundColor Yellow
+            Write-Host "Please run the following command in an elevated PowerShell:" -ForegroundColor Yellow
+            Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
+            exit 0
+        }
+        
+        # Install Debian
+        Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
+        wsl.exe --install -d Debian
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Debian installed successfully" -ForegroundColor Green
+            Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit 1
+        }
     }
     else {
         Write-Host "✅ Debian distribution is installed" -ForegroundColor Green
