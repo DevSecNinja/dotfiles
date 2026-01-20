@@ -47,7 +47,13 @@ if (-not (Test-Path $settingsFile)) {
     ],
     "profiles":
     {
-        "defaults": {},
+        "defaults":
+        {
+            "font":
+            {
+                "face": "FiraCode Nerd Font"
+            }
+        }
         "list":
         [
             {
