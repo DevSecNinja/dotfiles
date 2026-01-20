@@ -38,3 +38,7 @@ if [[ -d "$HOME/.config/shell/functions" ]]; then
         fi
     done
 fi
+
+# Set prompt colors
+autoload -U colors && colors
+PROMPT='%F{214}%n%F{red}@%F{white}%m:%F{214}%d$ %F{reset}'
