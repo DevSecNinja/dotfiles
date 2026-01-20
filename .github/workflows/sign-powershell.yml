@@ -2,15 +2,12 @@ name: Sign PowerShell Scripts
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
     paths:
       - '**.ps1'
       - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
-  pull_request:
-    paths:
-      - '**.ps1'
-      - '!**.ps1.tmpl'
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
