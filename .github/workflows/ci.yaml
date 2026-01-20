@@ -260,10 +260,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run Bash Tests
+      - name: Run install script
+        run: ./home/install.sh
+
+      - name: Verify Chezmoi installation
         run: |
-          chmod +x tests/bash/run-tests.sh
-          ./tests/bash/run-tests.sh --ci
+          if ! command -v "$HOME/.local/bin/chezmoi" >/dev/null 2>&1; then
+            echo "❌ Chezmoi not found"
+            exit 1
+          fi
+          echo "✅ Chezmoi installed successfully"
+
+      - name: Install zsh to also run those tests
+        run: sudo apt-get install -y
+
+      - name: Run Bash Tests
+        run: ./tests/bash/run-tests.sh --ci
 
       - name: Upload Test Results
         if: always()
