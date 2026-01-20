@@ -5,5 +5,6 @@
 
 # Initialize mise if available
 if command -v mise >/dev/null 2>&1; then
-    eval "$(mise activate zsh)"
+	# Safely evaluate mise activation, suppressing any error messages
+	eval "$(mise activate zsh 2>/dev/null)" 2>/dev/null || true
 fi

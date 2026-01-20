@@ -117,10 +117,10 @@ function Install-PowerShellModule {
     <#
     .SYNOPSIS
     Installs a PowerShell module using pwsh -Command for reliable installation.
-    
+
     .PARAMETER ModuleName
     The name of the module to install from PowerShell Gallery.
-    
+
     .EXAMPLE
     Install-PowerShellModule -ModuleName "oh-my-posh"
     #>
@@ -128,10 +128,10 @@ function Install-PowerShellModule {
         [Parameter(Mandatory)]
         [string]$ModuleName
     )
-    
+
     Write-Host "Installing module '$ModuleName'..." -NoNewline
     $result = pwsh -NoProfile -NonInteractive -Command "`$module = Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction SilentlyContinue -PassThru 2>&1; if (`$module) { `$module | Select-Object Name, Version | Format-Table -HideTableHeaders | Out-String } else { Write-Error 'Module installation failed' }" 2>&1
-    
+
     if ($LASTEXITCODE -eq 0) {
         if ($result) {
             # Parse the output to extract module name and version
