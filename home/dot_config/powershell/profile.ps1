@@ -43,7 +43,7 @@ if (Test-Path $completionsPath) {
 
 # Initialize oh-my-posh if available
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh | Invoke-Expression
+    oh-my-posh init pwsh --config ~/.ohmyposh.omp.yaml | Invoke-Expression
 }
 
 # Welcome message
