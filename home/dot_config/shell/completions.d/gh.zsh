@@ -6,5 +6,6 @@
 
 # Only generate completion dynamically if gh is available and not already in fpath
 if command -v gh >/dev/null 2>&1 && [[ ! -f "$(brew --prefix 2>/dev/null)/share/zsh/site-functions/_gh" ]]; then
-    eval "$(gh completion -s zsh)"
+	# Safely evaluate gh completion, suppressing any error messages
+	eval "$(gh completion -s zsh 2>/dev/null)" 2>/dev/null || true
 fi
