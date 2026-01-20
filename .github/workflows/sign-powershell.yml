@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
     paths:
       - '**.ps1'
       - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
