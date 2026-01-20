@@ -271,6 +271,9 @@ jobs:
           fi
           echo "✅ Chezmoi installed successfully"
 
+      - name: Install zsh to also run those tests
+        run: sudo apt-get install -y
+
       - name: Run Bash Tests
         run: ./tests/bash/run-tests.sh --ci
 
