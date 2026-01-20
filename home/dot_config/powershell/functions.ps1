@@ -112,6 +112,46 @@ function Show-Aliases {
     Write-Host ""
 }
 
+# Module installation utilities
+function Install-PowerShellModule {
+    <#
+    .SYNOPSIS
+    Installs a PowerShell module using pwsh -Command for reliable installation.
+    
+    .PARAMETER ModuleName
+    The name of the module to install from PowerShell Gallery.
+    
+    .EXAMPLE
+    Install-PowerShellModule -ModuleName "oh-my-posh"
+    #>
+    param (
+        [Parameter(Mandatory)]
+        [string]$ModuleName
+    )
+    
+    Write-Host "Installing module '$ModuleName'..." -NoNewline
+    $result = pwsh -NoProfile -NonInteractive -Command "`$module = Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction SilentlyContinue -PassThru 2>&1; if (`$module) { `$module | Select-Object Name, Version | Format-Table -HideTableHeaders | Out-String } else { Write-Error 'Module installation failed' }" 2>&1
+    
+    if ($LASTEXITCODE -eq 0) {
+        if ($result) {
+            # Parse the output to extract module name and version
+            $parsed = $result.Trim().Split(" ") | Where-Object {$_ -ne ""}
+            if ($parsed.Count -ge 2) {
+                $moduleInfo = [PSCustomObject]@{
+                    Name = $parsed[0]
+                    Version = $parsed[1]
+                }
+                Write-Host " [OK] Installed $($moduleInfo.Name) $($moduleInfo.Version)" -ForegroundColor Green
+                return $moduleInfo
+            }
+        }
+    } else {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Module installation failed: $result"
+        return $null
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
