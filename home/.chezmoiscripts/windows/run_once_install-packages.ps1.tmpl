@@ -5,62 +5,12 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Installing development tools ({{ .installType }} mode)..." -ForegroundColor Cyan
+Write-Host "Installing packages ({{ .installType }} mode)..." -ForegroundColor Cyan
 
 # Check if winget is available
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Write-Error "winget not found. Please install App Installer from Microsoft Store."
     exit 1
-}
-
-# Import PowerShellGet module for Install-Module cmdlet
-Write-Host "`nImporting PowerShellGet module..." -ForegroundColor Cyan
-try {
-    Import-Module PowerShellGet -Force -ErrorAction Stop
-    Write-Host "[OK] PowerShellGet module loaded" -ForegroundColor Green
-} catch {
-    Write-Host "[SKIP] PowerShellGet module not available. Skipping PowerShell module installation." -ForegroundColor Yellow
-    $skipModules = $true
-}
-
-if (-not $skipModules) {
-    Write-Host "`nInstalling PowerShell modules..." -ForegroundColor Cyan
-
-    # Install light mode modules (always)
-{{- range .packages.windows.powershell_modules.light }}
-    $module = {{ . | quote }}
-    Write-Host "Checking $module..." -NoNewline
-    if (Get-Module -ListAvailable -Name $module) {
-        Write-Host " [OK]" -ForegroundColor Green
-    } else {
-        Write-Host " Installing..." -ForegroundColor Yellow
-        try {
-            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
-            Write-Host "  [OK] $module installed" -ForegroundColor Green
-        } catch {
-            Write-Host "  [FAILED] Could not install $module`: $_" -ForegroundColor Red
-        }
-    }
-{{- end }}
-
-{{- if eq .installType "full" }}
-    # Install full mode modules (additional)
-{{- range .packages.windows.powershell_modules.full }}
-    $module = {{ . | quote }}
-    Write-Host "Checking $module..." -NoNewline
-    if (Get-Module -ListAvailable -Name $module) {
-        Write-Host " [OK]" -ForegroundColor Green
-    } else {
-        Write-Host " Installing..." -ForegroundColor Yellow
-        try {
-            Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
-            Write-Host "  [OK] $module installed" -ForegroundColor Green
-        } catch {
-            Write-Host "  [FAILED] Could not install $module`: $_" -ForegroundColor Red
-        }
-    }
-{{- end }}
-{{- end }}
 }
 
 Write-Host "`nInstalling WinGet packages..." -ForegroundColor Cyan

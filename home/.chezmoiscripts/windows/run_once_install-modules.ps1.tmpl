@@ -1,0 +1,25 @@
+{{- if eq .chezmoi.os "windows" -}}
+# Source PowerShell functions
+$functionsPath = "{{ .chezmoi.homeDir }}\.config\powershell\functions.ps1"
+if (-not (Test-Path $functionsPath)) {
+    Write-Error "Functions file not found at: $functionsPath"
+    exit 1
+}
+. $functionsPath
+
+Write-Host "`nInstalling PowerShell modules..." -ForegroundColor Cyan
+
+# Install light mode modules (always)
+{{- range .packages.windows.powershell_modules.light }}
+Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
+{{- end }}
+
+{{- if eq .installType "full" }}
+# Install full mode modules (additional)
+{{- range .packages.windows.powershell_modules.full }}
+Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
+{{- end }}
+{{- end }}
+
+Write-Host "`n[COMPLETE] All PowerShell modules installation finished!" -ForegroundColor Green
+{{- end }}
