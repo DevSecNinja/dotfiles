@@ -7,7 +7,16 @@ if (-not (Test-Path $functionsPath)) {
 }
 . $functionsPath
 
-Write-Host "`nInstalling PowerShell modules..." -ForegroundColor Cyan
+Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
+Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted #-PassThru
+
+Write-Host "`nInstalling PowerShell Resources..." -ForegroundColor Cyan
+Install-PSResource -Name NerdFonts -Scope CurrentUser
+
+Write-Host "`nInstalling PowerShell Fonts..." -ForegroundColor Cyan
+Install-NerdFont -Name FiraCode -Scope CurrentUser -Force
+
+Write-Host "`nInstalling PowerShell Modules..." -ForegroundColor Cyan
 
 # Install light mode modules (always)
 {{- range .packages.windows.powershell_modules.light }}
