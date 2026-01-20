@@ -41,4 +41,4 @@ fi
 
 # Set prompt colors
 autoload -U colors && colors
-PROMPT='%F{214}%n%F{red}@%F{white}%m:%F{214}%d$ %F{reset}'
+PROMPT='%F{214}%n%F{white}@%F{white}%m:%F{214}%d$ %F{reset}'
