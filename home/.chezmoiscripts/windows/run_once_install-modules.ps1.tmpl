@@ -1,6 +1,6 @@
 {{- if eq .chezmoi.os "windows" -}}
-# Source PowerShell functions
-$functionsPath = "{{ .chezmoi.homeDir }}\.config\powershell\functions.ps1"
+# Source PowerShell functions from chezmoi source directory
+$functionsPath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\functions.ps1"
 if (-not (Test-Path $functionsPath)) {
     Write-Error "Functions file not found at: $functionsPath"
     exit 1
