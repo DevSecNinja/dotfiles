@@ -25,6 +25,6 @@
       }
     }
   },
-  "postCreateCommand": "./install.sh",
+  "postCreateCommand": "./home/install.sh",
   "remoteUser": "vscode"
 }
