@@ -124,6 +124,27 @@ Describe "Profile Configuration" {
     It "Profile should display welcome message" {
         $script:ProfileContent | Should -Match "PowerShell Profile Loaded"
     }
+
+    It "Profile should check VS Code environment before changing directory" {
+        # Verify the profile skips directory change in VS Code
+        $script:ProfileContent | Should -Match 'TERM_PROGRAM.*vscode'
+    }
+
+    It "Profile should check current path for 'projects' directory" {
+        # Verify the profile checks if path contains 'projects'
+        $script:ProfileContent | Should -Match 'currentPath -notlike.*projects'
+    }
+
+    It "Profile should set location to projects folder" {
+        # Verify the profile constructs projects path and changes to it
+        $script:ProfileContent | Should -Match 'Join-Path.*USERPROFILE.*projects'
+        $script:ProfileContent | Should -Match 'Set-Location.*projectsPath'
+    }
+
+    It "Profile should verify projects folder exists before changing" {
+        # Verify the profile tests for directory existence
+        $script:ProfileContent | Should -Match 'Test-Path.*projectsPath'
+    }
 }
 
 Describe "PowerShell Functions" {

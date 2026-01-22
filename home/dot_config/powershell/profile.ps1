@@ -11,6 +11,21 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Set working directory to projects folder if not already there
+# Skip this if running in VS Code to preserve the opened folder location
+if ($ENV:TERM_PROGRAM -ne "vscode") {
+    $currentPath = (Get-Location).Path
+    $projectsPath = Join-Path $env:USERPROFILE "projects"
+
+    # Check if current path contains 'projects' (case-insensitive)
+    if ($currentPath -notlike "*projects*") {
+        # Not in projects directory, change to it if it exists
+        if (Test-Path $projectsPath) {
+            Set-Location $projectsPath
+        }
+    }
+}
+
 # Load functions and aliases
 . $PSScriptRoot\functions.ps1
 . $PSScriptRoot\aliases.ps1

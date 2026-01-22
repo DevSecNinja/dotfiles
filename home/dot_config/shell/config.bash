@@ -2,6 +2,25 @@
 # Bash configuration
 # This file should be sourced by ~/.bashrc or ~/.bash_profile
 
+# Set working directory to projects folder if not already there
+# Skip this if running in VS Code to preserve the opened folder location
+# Source - https://stackoverflow.com/a/2264537
+# Posted by alphaniner, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-01-22, License - CC BY-SA 4.0
+if [[ "$TERM_PROGRAM" != "vscode" ]]; then
+	current_path="$(pwd)"
+	projects_path="$HOME/projects"
+
+	# Check if current path contains 'projects' (case-insensitive)
+	# Using bash parameter expansion to convert to lowercase for comparison
+	if [[ ! "${current_path,,}" =~ "projects" ]]; then
+		# Not in projects directory, change to it if it exists
+		if [[ -d "$projects_path" ]]; then
+			cd "$projects_path" || true
+		fi
+	fi
+fi
+
 # Add custom paths
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 

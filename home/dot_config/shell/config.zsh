@@ -3,6 +3,22 @@
 # Zsh configuration
 # This file should be sourced by ~/.zshrc
 
+# Set working directory to projects folder if not already there
+# Skip this if running in VS Code to preserve the opened folder location
+if [[ "$TERM_PROGRAM" != "vscode" ]]; then
+	current_path="$(pwd)"
+	projects_path="$HOME/projects"
+
+	# Check if current path contains 'projects' (case-insensitive)
+	# Using parameter expansion to convert to lowercase for comparison
+	if [[ ! "${current_path:l}" =~ "projects" ]]; then
+		# Not in projects directory, change to it if it exists
+		if [[ -d "$projects_path" ]]; then
+			cd "$projects_path" || true
+		fi
+	fi
+fi
+
 # Add custom paths
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
