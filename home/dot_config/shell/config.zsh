@@ -10,7 +10,8 @@ if [[ "$TERM_PROGRAM" != "vscode" ]]; then
 	projects_path="$HOME/projects"
 
 	# Check if current path contains 'projects' (case-insensitive)
-	if [[ ! "$current_path" =~ [Pp][Rr][Oo][Jj][Ee][Cc][Tt][Ss] ]]; then
+	# Using parameter expansion to convert to lowercase for comparison
+	if [[ ! "${current_path:l}" =~ "projects" ]]; then
 		# Not in projects directory, change to it if it exists
 		if [[ -d "$projects_path" ]]; then
 			cd "$projects_path" || true
