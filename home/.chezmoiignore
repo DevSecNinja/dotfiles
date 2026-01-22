@@ -4,6 +4,8 @@ README.md
 .pre-commit-config.yaml
 requirements.txt
 tests/
+install.sh
+install.ps1
 
 {{ if ne .chezmoi.os "darwin" }}
 .chezmoiscripts/darwin/**
@@ -11,12 +13,10 @@ tests/
 
 {{ if eq .chezmoi.os "windows" }}
 .chezmoiscripts/linux/**
-install.sh
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
 .chezmoiscripts/windows/**
 Documents
 AppData
-install.ps1
 {{ end }}
