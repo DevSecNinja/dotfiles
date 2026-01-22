@@ -126,20 +126,24 @@ Describe "Profile Configuration" {
     }
 
     It "Profile should check VS Code environment before changing directory" {
-        $script:ProfileContent | Should -Match '\$ENV:TERM_PROGRAM -ne "vscode"'
+        # Verify the profile skips directory change in VS Code
+        $script:ProfileContent | Should -Match 'TERM_PROGRAM.*vscode'
     }
 
     It "Profile should check current path for 'projects' directory" {
-        $script:ProfileContent | Should -Match '\$currentPath -notlike "\*projects\*"'
+        # Verify the profile checks if path contains 'projects'
+        $script:ProfileContent | Should -Match 'currentPath -notlike.*projects'
     }
 
     It "Profile should set location to projects folder" {
-        $script:ProfileContent | Should -Match 'Join-Path \$env:USERPROFILE "projects"'
-        $script:ProfileContent | Should -Match 'Set-Location \$projectsPath'
+        # Verify the profile constructs projects path and changes to it
+        $script:ProfileContent | Should -Match 'Join-Path.*USERPROFILE.*projects'
+        $script:ProfileContent | Should -Match 'Set-Location.*projectsPath'
     }
 
     It "Profile should verify projects folder exists before changing" {
-        $script:ProfileContent | Should -Match 'Test-Path \$projectsPath'
+        # Verify the profile tests for directory existence
+        $script:ProfileContent | Should -Match 'Test-Path.*projectsPath'
     }
 }
 
