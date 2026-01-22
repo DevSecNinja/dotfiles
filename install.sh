@@ -9,7 +9,7 @@
 set -eu
 
 # POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188
-script_dir="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" && pwd -P)"
+script_dir="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 # Run the actual install script from the home directory
 exec "${script_dir}/home/install.sh"
