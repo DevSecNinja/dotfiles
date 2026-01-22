@@ -192,7 +192,7 @@ gh-add-ssh-keys() {
 		key_data=$(echo "$key" | awk '{print $1 " " $2}')
 
 		# Skip if key parsing failed
-		if [ -z "$key_data" ] || [ $(echo "$key_data" | wc -w) -ne 2 ]; then
+		if [ -z "$key_data" ] || [ "$(echo "$key_data" | wc -w)" -ne 2 ]; then
 			if [ "$verbose" = true ]; then
 				echo "⚠️  Key #${key_num} has unexpected format, skipping"
 			fi
