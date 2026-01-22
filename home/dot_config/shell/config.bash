@@ -34,6 +34,12 @@ else
 	export VISUAL=vim
 fi
 
+# Load chezmoi configuration variables
+if [ -f "$HOME/.config/shell/chezmoi.sh" ]; then
+	# shellcheck source=/dev/null
+	source "$HOME/.config/shell/chezmoi.sh"
+fi
+
 # Load common aliases
 if [ -f "$HOME/.config/shell/aliases.sh" ]; then
 	# shellcheck source=/dev/null

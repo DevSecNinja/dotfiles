@@ -11,6 +11,12 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Load chezmoi configuration variables
+$chezmoiConfig = Join-Path $PSScriptRoot "chezmoi.ps1"
+if (Test-Path $chezmoiConfig) {
+    . $chezmoiConfig
+}
+
 # Set working directory to projects folder if not already there
 # Skip this if running in VS Code to preserve the opened folder location
 if ($ENV:TERM_PROGRAM -ne "vscode") {

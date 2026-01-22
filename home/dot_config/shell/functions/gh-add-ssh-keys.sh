@@ -83,9 +83,25 @@ gh-add-ssh-keys() {
 
 	# Validation checks
 	if [ -z "$username" ]; then
-		echo "❌ GitHub username is required"
-		echo "Use --help for usage information"
-		return 1
+		# Check if CHEZMOI_GITHUB_USERNAME environment variable is set
+		if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
+			# Ask for confirmation before using the detected username
+			echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
+			printf "Do you want to use this username? (y/N): "
+			read -r response
+			if [[ "$response" =~ ^[Yy]$ ]]; then
+				username="$CHEZMOI_GITHUB_USERNAME"
+				echo "✅ Using GitHub username: $username"
+			else
+				echo "❌ GitHub username is required"
+				echo "Use --help for usage information"
+				return 1
+			fi
+		else
+			echo "❌ GitHub username is required"
+			echo "Use --help for usage information"
+			return 1
+		fi
 	fi
 
 	# Check for required commands
