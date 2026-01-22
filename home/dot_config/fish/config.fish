@@ -4,6 +4,21 @@
 # Set greeting
 set -g fish_greeting ""
 
+# Set working directory to projects folder if not already there
+# Skip this if running in VS Code to preserve the opened folder location
+if test "$TERM_PROGRAM" != "vscode"
+    set current_path (pwd)
+    set projects_path "$HOME/projects"
+
+    # Check if current path contains 'projects' (case-insensitive)
+    if not string match -qi "*projects*" $current_path
+        # Not in projects directory, change to it if it exists
+        if test -d $projects_path
+            cd $projects_path
+        end
+    end
+end
+
 # Add custom paths
 fish_add_path $HOME/.local/bin
 fish_add_path $HOME/bin
