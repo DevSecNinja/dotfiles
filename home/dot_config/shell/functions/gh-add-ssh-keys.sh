@@ -146,11 +146,16 @@ gh-add-ssh-keys() {
 	fi
 
 	# Extract public keys from JSON response
+	# Note: Using grep/sed instead of jq to avoid external dependencies
+	# This works for the standard GitHub API response format
 	local keys_array
 	keys_array=$(echo "$github_keys" | grep -Eo '"key":\s*"[^"]*"' | sed 's/"key":\s*"//g' | sed 's/"//g')
 
 	if [ -z "$keys_array" ]; then
 		echo "❌ Failed to parse SSH keys from GitHub response"
+		if [ "$verbose" = true ]; then
+			echo "ℹ️  API response format may have changed or be malformed"
+		fi
 		return 1
 	fi
 
@@ -181,8 +186,18 @@ gh-add-ssh-keys() {
 		key_num=$((key_num + 1))
 
 		# Extract just the key part (without comment)
+		# SSH keys typically have: key_type key_data [optional_comment]
+		# We match on key_type + key_data to avoid false positives from comments
 		local key_data
 		key_data=$(echo "$key" | awk '{print $1 " " $2}')
+
+		# Skip if key parsing failed
+		if [ -z "$key_data" ] || [ $(echo "$key_data" | wc -w) -ne 2 ]; then
+			if [ "$verbose" = true ]; then
+				echo "⚠️  Key #${key_num} has unexpected format, skipping"
+			fi
+			continue
+		fi
 
 		# Check if key already exists
 		if [ -n "$authorized_keys_content" ] && echo "$authorized_keys_content" | grep -qF "$key_data"; then
