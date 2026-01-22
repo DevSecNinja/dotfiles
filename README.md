@@ -15,6 +15,8 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 
 ```
 dotfiles/
+├── install.sh                     # Wrapper script for Coder support (Unix)
+├── install.ps1                    # Wrapper script for Coder support (Windows)
 ├── home/                          # Chezmoi source directory
 │   ├── dot_config/                # XDG config directory (~/.config/)
 │   │   ├── fish/                  # Fish shell configuration (Linux/macOS)
@@ -54,8 +56,8 @@ dotfiles/
 │   ├── dot_zshrc                  # Zsh configuration
 │   ├── dot_vimrc                  # Vim configuration
 │   ├── dot_tmux.conf              # Tmux configuration
-│   ├── install.sh                 # Installation script (Unix)
-│   └── install.ps1                # Installation script (Windows)
+│   ├── install.sh                 # Main installation script (Unix)
+│   └── install.ps1                # Main installation script (Windows)
 ├── tests/                         # Test files (Bats/Pester)
 │   ├── bash/                      # Bats tests for validation
 │   │   ├── validate-chezmoi.bats
@@ -116,6 +118,19 @@ sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja
 ```
 
 The dotfiles will automatically detect WSL and apply appropriate configurations.
+
+### Install in Coder Workspaces
+
+This repository supports [Coder](https://coder.com/) workspaces out of the box. The `install.sh` and `install.ps1` scripts in the repository root will be automatically discovered and executed by Coder when setting up a new workspace with dotfiles enabled.
+
+To use this dotfiles repository in Coder:
+
+1. Navigate to your Coder workspace settings
+2. Enable dotfiles support
+3. Set the dotfiles repository URL to: `https://github.com/DevSecNinja/dotfiles`
+4. Coder will automatically run `install.sh` (Linux/macOS) or `install.ps1` (Windows) during workspace setup
+
+For more information, see the [Coder Dotfiles Documentation](https://coder.com/docs/user-guides/workspace-dotfiles).
 
 ## 🔧 Customization
 
