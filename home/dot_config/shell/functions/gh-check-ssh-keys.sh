@@ -120,7 +120,13 @@ gh-check-ssh-keys() {
 	fi
 
 	# Check if response is empty or invalid
-	if [ -z "$github_keys" ] || [ "$github_keys" = "[]" ]; then
+	if [ -z "$github_keys" ]; then
+		echo "❌ Failed to fetch SSH keys from GitHub"
+		return 1
+	fi
+
+	# Check if user has no keys (empty array)
+	if [ "$github_keys" = "[]" ] || echo "$github_keys" | grep -q '^\[\s*\]$'; then
 		echo "❌ User '$username' has no public SSH keys on GitHub"
 		return 1
 	fi
@@ -133,9 +139,15 @@ gh-check-ssh-keys() {
 	keys_array=$(echo "$github_keys" | grep -Eo '"key":\s*"[^"]*"' | sed 's/"key":\s*"//g' | sed 's/"//g')
 
 	if [ -z "$keys_array" ]; then
-		echo "❌ Failed to parse SSH keys from GitHub response"
-		if [ "$verbose" = true ]; then
-			echo "ℹ️  API response format may have changed or be malformed"
+		# Check if it's an empty array (user has no keys) vs a parse error
+		# Strip whitespace and check if it's just []
+		if echo "$github_keys" | tr -d '\n\r ' | grep -q '^\[\]$'; then
+			echo "❌ User '$username' has no public SSH keys on GitHub"
+		else
+			echo "❌ Failed to parse SSH keys from GitHub response"
+			if [ "$verbose" = true ]; then
+				echo "ℹ️  API response format may have changed or be malformed"
+			fi
 		fi
 		return 1
 	fi
