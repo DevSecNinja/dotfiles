@@ -139,15 +139,9 @@ gh-add-ssh-keys() {
 		return 1
 	fi
 
-	# Check if response is empty or invalid
+	# Check if response is empty
 	if [ -z "$github_keys" ]; then
 		echo "❌ Failed to fetch SSH keys from GitHub"
-		return 1
-	fi
-
-	# Check if user has no keys (empty array)
-	if [ "$github_keys" = "[]" ] || echo "$github_keys" | grep -q '^\[\s*\]$'; then
-		echo "❌ User '$username' has no public SSH keys on GitHub"
 		return 1
 	fi
 
@@ -157,10 +151,10 @@ gh-add-ssh-keys() {
 	local keys_array
 	keys_array=$(echo "$github_keys" | grep -Eo '"key":\s*"[^"]*"' | sed 's/"key":\s*"//g' | sed 's/"//g')
 
+	# If no keys extracted, check if it's an empty array or a parse error
 	if [ -z "$keys_array" ]; then
-		# Check if it's an empty array (user has no keys) vs a parse error
-		# Strip whitespace and check if it's just []
-		if echo "$github_keys" | tr -d '\n\r ' | grep -q '^\[\]$'; then
+		# Strip whitespace and check if response is just an empty array []
+		if echo "$github_keys" | tr -d '\n\r\t ' | grep -q '^\[\]$'; then
 			echo "❌ User '$username' has no public SSH keys on GitHub"
 		else
 			echo "❌ Failed to parse SSH keys from GitHub response"
@@ -179,10 +173,26 @@ gh-add-ssh-keys() {
 		echo "📋 Found $total_keys SSH key(s) for user '$username' on GitHub"
 	fi
 
-	# Check if authorized_keys exists
+	# Check if authorized_keys exists, if not create it with proper permissions
 	local authorized_keys_content=""
 	if [ -f "$authorized_keys_file" ]; then
 		authorized_keys_content=$(cat "$authorized_keys_file")
+	else
+		# Create authorized_keys with correct permissions before writing to it
+		# This prevents a security window where the file could have wrong permissions
+		if [ "$dry_run" = false ]; then
+			touch "$authorized_keys_file" || {
+				echo "❌ Failed to create: $authorized_keys_file"
+				return 1
+			}
+			chmod 600 "$authorized_keys_file" || {
+				echo "❌ Failed to set permissions on: $authorized_keys_file"
+				return 1
+			}
+			if [ "$verbose" = true ]; then
+				echo "📝 Created $authorized_keys_file with mode 600"
+			fi
+		fi
 	fi
 
 	# Process each key

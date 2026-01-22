@@ -62,11 +62,7 @@ teardown() {
 }
 
 @test "gh-add-ssh-keys: fails when curl is not available" {
-	# This test is environment-dependent
-	PATH="/nonexistent:$PATH"
-	run gh-add-ssh-keys octocat
-	# Might still work if curl is in the path
-	[ "$status" -eq 0 ] || [ "$status" -eq 1 ]
+	skip "Cannot reliably test curl unavailability - curl will be found in PATH"
 }
 
 @test "gh-add-ssh-keys: creates .ssh directory if it doesn't exist" {

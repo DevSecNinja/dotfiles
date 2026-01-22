@@ -69,12 +69,7 @@ teardown() {
 }
 
 @test "gh-check-ssh-keys: fails when curl is not available" {
-	# Create a wrapper that hides curl
-	PATH="/nonexistent:$PATH"
-	run gh-check-ssh-keys octocat
-	# Should fail, but might not if curl is still in path
-	# This test is environment-dependent
-	[ "$status" -eq 0 ] || [ "$status" -eq 1 ] || [ "$status" -eq 2 ]
+	skip "Cannot reliably test curl unavailability - curl will be found in PATH"
 }
 
 @test "gh-check-ssh-keys: fails when authorized_keys does not exist" {
