@@ -35,15 +35,23 @@ teardown() {
 	unset CHEZMOI_GITHUB_USERNAME
 }
 
-@test "gh-add-ssh-keys: uses CHEZMOI_GITHUB_USERNAME when no username provided" {
+@test "gh-add-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Run with no username argument - should prompt for confirmation
-	# Since it's interactive, we can't test the full flow without mocking input
-	# But we can verify the error message includes the environment variable
-	run gh-add-ssh-keys
-	[ "$status" -eq 1 ]
-	[[ "$output" =~ "testuser" ]] || [[ "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
+	# Create a wrapper script that sources the function and runs it
+	cat > "$TEST_DIR/test-script.sh" <<SCRIPT
+#!/bin/bash
+source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/gh-add-ssh-keys.sh"
+export CHEZMOI_GITHUB_USERNAME="testuser"
+gh-add-ssh-keys 2>&1
+SCRIPT
+	chmod +x "$TEST_DIR/test-script.sh"
+
+	# Run with timeout - will exit when read times out
+	run timeout 2 bash "$TEST_DIR/test-script.sh"
+
+	# Should show the detected username in output
+	[[ "$output" =~ "testuser" ]]
 }
 
 @test "gh-add-ssh-keys: prefers explicit username over environment variable" {
@@ -67,25 +75,41 @@ teardown() {
 	run gh-add-ssh-keys
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "GitHub username is required" ]]
+	# Should NOT mention the environment variable when it's not set
+	[[ ! "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
 }
 
-@test "gh-check-ssh-keys: uses CHEZMOI_GITHUB_USERNAME when no username provided" {
+@test "gh-check-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Run with no username argument - should prompt for confirmation
-	run gh-check-ssh-keys
-	[ "$status" -eq 1 ] || [ "$status" -eq 2 ]
-	[[ "$output" =~ "testuser" ]] || [[ "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
+	# Create a wrapper script that sources the function and runs it
+	cat > "$TEST_DIR/test-script2.sh" <<SCRIPT
+#!/bin/bash
+source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/gh-check-ssh-keys.sh"
+export CHEZMOI_GITHUB_USERNAME="testuser"
+gh-check-ssh-keys 2>&1
+SCRIPT
+	chmod +x "$TEST_DIR/test-script2.sh"
+
+	# Run with timeout - will exit when read times out
+	run timeout 2 bash "$TEST_DIR/test-script2.sh"
+
+	# Should show the detected username in output
+	[[ "$output" =~ "testuser" ]]
 }
 
 @test "gh-check-ssh-keys: prefers explicit username over environment variable" {
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
+	# Create authorized_keys so function proceeds to check username
+	touch "$HOME/.ssh/authorized_keys"
+	chmod 600 "$HOME/.ssh/authorized_keys"
+
 	# Run with explicit username - should use that instead
 	run gh-check-ssh-keys explicit-user
 	[ "$status" -eq 0 ] || [ "$status" -eq 1 ] || [ "$status" -eq 2 ]
 
-	# Should mention explicit-user, not testuser
+	# Should mention explicit-user
 	[[ "$output" =~ "explicit-user" ]]
 }
 
@@ -97,6 +121,8 @@ teardown() {
 	run gh-check-ssh-keys
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "GitHub username is required" ]]
+	# Should NOT mention the environment variable when it's not set
+	[[ ! "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
 }
 
 @test "gh-add-ssh-keys: handles empty CHEZMOI_GITHUB_USERNAME" {
