@@ -80,11 +80,19 @@ gh-check-ssh-keys() {
 			# Ask for confirmation before using the detected username
 			echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
 			printf "Do you want to use this username? (y/N): "
-			read -r response
-			if [[ "$response" =~ ^[Yy]$ ]]; then
-				username="$CHEZMOI_GITHUB_USERNAME"
-				echo "✅ Using GitHub username: $username"
+			# Use read with timeout to prevent hanging in non-interactive environments
+			if read -t 30 -r response; then
+				if [[ "$response" =~ ^[Yy]$ ]]; then
+					username="$CHEZMOI_GITHUB_USERNAME"
+					echo "✅ Using GitHub username: $username"
+				else
+					echo "❌ GitHub username is required"
+					echo "Use --help for usage information"
+					return 1
+				fi
 			else
+				# Timeout or no input
+				echo ""
 				echo "❌ GitHub username is required"
 				echo "Use --help for usage information"
 				return 1

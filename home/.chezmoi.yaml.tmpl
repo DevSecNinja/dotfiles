@@ -47,12 +47,13 @@
 
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
+{{- $githubEmailPattern := "^[0-9]+\\+([^@]+)@users\\.noreply\\.github\\.com$" -}}
 {{- if hasKey . "githubUsername" -}}
 {{-   $githubUsername = .githubUsername -}}
 {{- else -}}
-{{-   $match := regexMatch "^[0-9]+\\+([^@]+)@users\\.noreply\\.github\\.com$" $email -}}
+{{-   $match := regexMatch $githubEmailPattern $email -}}
 {{-   if $match -}}
-{{-     $githubUsername = regexReplaceAll "^[0-9]+\\+([^@]+)@users\\.noreply\\.github\\.com$" $email "${1}" -}}
+{{-     $githubUsername = regexReplaceAll $githubEmailPattern $email "${1}" -}}
 {{-   else if $interactive -}}
 {{-     $githubUsername = promptString "GitHub username (optional)" "" -}}
 {{-   end -}}

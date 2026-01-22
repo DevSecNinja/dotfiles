@@ -1,6 +1,9 @@
 #!/usr/bin/env bats
 # Tests for GitHub username environment variable integration
 
+# Test configuration
+readonly TIMEOUT_SECONDS=2
+
 # Setup function runs before each test
 setup() {
 	# Load the functions
@@ -35,20 +38,29 @@ teardown() {
 	unset CHEZMOI_GITHUB_USERNAME
 }
 
+# Helper function to create wrapper scripts for testing functions with timeout
+create_wrapper_script() {
+	local script_name=$1
+	local function_name=$2
+	local function_file=$3
+
+	cat >"$TEST_DIR/$script_name" <<SCRIPT
+#!/bin/bash
+source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/$function_file"
+export CHEZMOI_GITHUB_USERNAME="testuser"
+$function_name 2>&1
+SCRIPT
+	chmod +x "$TEST_DIR/$script_name"
+}
+
 @test "gh-add-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Create a wrapper script that sources the function and runs it
-	cat > "$TEST_DIR/test-script.sh" <<SCRIPT
-#!/bin/bash
-source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/gh-add-ssh-keys.sh"
-export CHEZMOI_GITHUB_USERNAME="testuser"
-gh-add-ssh-keys 2>&1
-SCRIPT
-	chmod +x "$TEST_DIR/test-script.sh"
+	# Create a wrapper script using helper function
+	create_wrapper_script "test-script.sh" "gh-add-ssh-keys" "gh-add-ssh-keys.sh"
 
 	# Run with timeout - will exit when read times out
-	run timeout 2 bash "$TEST_DIR/test-script.sh"
+	run timeout "$TIMEOUT_SECONDS" bash "$TEST_DIR/test-script.sh"
 
 	# Should show the detected username in output
 	[[ "$output" =~ "testuser" ]]
@@ -82,17 +94,11 @@ SCRIPT
 @test "gh-check-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Create a wrapper script that sources the function and runs it
-	cat > "$TEST_DIR/test-script2.sh" <<SCRIPT
-#!/bin/bash
-source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/gh-check-ssh-keys.sh"
-export CHEZMOI_GITHUB_USERNAME="testuser"
-gh-check-ssh-keys 2>&1
-SCRIPT
-	chmod +x "$TEST_DIR/test-script2.sh"
+	# Create a wrapper script using helper function
+	create_wrapper_script "test-script2.sh" "gh-check-ssh-keys" "gh-check-ssh-keys.sh"
 
 	# Run with timeout - will exit when read times out
-	run timeout 2 bash "$TEST_DIR/test-script2.sh"
+	run timeout "$TIMEOUT_SECONDS" bash "$TEST_DIR/test-script2.sh"
 
 	# Should show the detected username in output
 	[[ "$output" =~ "testuser" ]]
