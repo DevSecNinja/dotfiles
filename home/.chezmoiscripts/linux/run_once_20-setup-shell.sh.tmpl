@@ -43,6 +43,13 @@ if [[ "{{ .chezmoi.os }}" != "linux" ]]; then
     exit 0
 fi
 
+# Skip shell setup in CI environments
+# The chsh command may fail or require interaction in CI containers
+if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    log_info "Skipping shell setup in CI environment"
+    exit 0
+fi
+
 log_info "Setting up default shell on Linux..."
 
 # Detect available shells in priority order: fish > zsh
@@ -65,8 +72,8 @@ fi
 
 # Verify shell version
 if [[ "$SHELL_NAME" == "Fish" ]]; then
-    # Fish outputs: 'fish, version X.Y.Z' - extract version after 'version'
-    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | sed 's/.*version //')
+    # Fish outputs: 'fish, version X.Y.Z' - extract third field for consistency with macOS
+    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $3}')
 else
     # zsh outputs: 'zsh X.Y.Z (arch)' - extract second field
     SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $2}')
