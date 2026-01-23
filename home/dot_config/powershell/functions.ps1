@@ -193,7 +193,7 @@ function Install-GitPowerShellModule {
     # Check if module already exists
     if (Test-Path $targetPath) {
         Write-Host " [OK] Already exists at $targetPath" -ForegroundColor Yellow
-        
+
         # Try to update if it's a git repository
         if (Test-Path (Join-Path $targetPath ".git")) {
             Write-Host "  Updating..." -NoNewline
@@ -213,7 +213,7 @@ function Install-GitPowerShellModule {
                 Pop-Location
             }
         }
-        
+
         # Ensure the module path is in PSModulePath
         Add-ToPSModulePath -Path $modulesDir
         return [PSCustomObject]@{
@@ -234,13 +234,13 @@ function Install-GitPowerShellModule {
     try {
         $cloneCmd = "git clone --quiet '$Url' '$targetPath' 2>&1"
         $result = pwsh -NoProfile -NonInteractive -Command $cloneCmd 2>&1
-        
+
         if ($LASTEXITCODE -eq 0 -and (Test-Path $targetPath)) {
             Write-Host " [OK] Cloned to $targetPath" -ForegroundColor Green
-            
+
             # Ensure the module path is in PSModulePath
             Add-ToPSModulePath -Path $modulesDir
-            
+
             return [PSCustomObject]@{
                 Name = $Name
                 Path = $targetPath
@@ -280,21 +280,21 @@ function Add-ToPSModulePath {
 
     # Get current PSModulePath from environment
     $currentPath = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
-    
+
     # Split into array and check if path already exists
     $pathArray = $currentPath -split [IO.Path]::PathSeparator | Where-Object { $_ }
-    $pathExists = $pathArray | Where-Object { 
-        [System.IO.Path]::GetFullPath($_) -eq $Path 
+    $pathExists = $pathArray | Where-Object {
+        [System.IO.Path]::GetFullPath($_) -eq $Path
     }
 
     if (-not $pathExists) {
         # Add to user's PSModulePath permanently
         $newPath = $currentPath + [IO.Path]::PathSeparator + $Path
         [Environment]::SetEnvironmentVariable("PSModulePath", $newPath, "User")
-        
+
         # Also update current session
         $env:PSModulePath = $env:PSModulePath + [IO.Path]::PathSeparator + $Path
-        
+
         Write-Host "  Added $Path to PSModulePath" -ForegroundColor Cyan
     }
 }
