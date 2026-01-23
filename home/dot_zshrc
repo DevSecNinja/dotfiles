@@ -4,6 +4,16 @@
 # Add this line to your ~/.zshrc:
 # [ -f ~/.config/shell/config.zsh ] && source ~/.config/shell/config.zsh
 
+# Switch to fish if available (preferred shell)
+# This approach uses exec to replace the current shell process,
+# which doesn't require password or chsh permissions.
+# Source: https://unix.stackexchange.com/a/136424
+if command -v fish >/dev/null 2>&1; then
+    export SHELL=$(command -v fish)
+    # Only exec if not already in fish
+    [ -z "$FISH_VERSION" ] && exec "$SHELL" -l
+fi
+
 # Zsh-specific configuration
 setopt AUTO_CD              # cd by typing directory name if it's not a command
 setopt CORRECT              # command auto-correction

@@ -1,1 +1,16 @@
+#!/bin/zsh
+# Set default shell to fish (preferred) or continue with zsh
+# This approach uses exec to replace the current shell process,
+# which doesn't require password or chsh permissions.
+# Source: https://unix.stackexchange.com/a/136424
+
+# Try fish first (preferred shell)
+if command -v fish >/dev/null 2>&1; then
+    export SHELL=$(command -v fish)
+    # Only exec if not already in fish
+    [ -z "$FISH_VERSION" ] && exec "$SHELL" -l
+fi
+
+# If we're still here, fish is not available, continue with zsh setup
+# Initialize Homebrew for zsh
 eval "$(brew shellenv)"
