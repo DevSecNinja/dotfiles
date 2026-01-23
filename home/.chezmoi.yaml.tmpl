@@ -92,7 +92,7 @@
 {{-       else if regexMatch "(?i)DomainName\\s*:\\s*(.+)" $dsregOutput -}}
 {{-         $entraIDDomain = regexReplaceAll "(?i).*DomainName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
 {{-       end -}}
-{{-       $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://" $dsregOutput -}}
+{{-       $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://[^\\s]*\\.microsoft\\.com" $dsregOutput -}}
 {{-       if $entraIDDomain -}}
 {{-         $isWork = hasSuffix "microsoft.com" $entraIDDomain -}}
 {{-       end -}}
