@@ -9,12 +9,12 @@ set -gx CHEZMOI_GITHUB_USERNAME "{{ .githubUsername }}"
 # Windows Enterprise Environment Detection (works on Windows and WSL)
 set -gx CHEZMOI_IS_ENTRA_ID_JOINED "{{ .isEntraIDJoined }}"
 set -gx CHEZMOI_IS_INTUNE_JOINED "{{ .isIntuneJoined }}"
-set -gx CHEZMOI_IS_ENTERPRISE_JOINED "{{ .isEnterpriseJoined }}"
-set -gx CHEZMOI_IS_DOMAIN_JOINED "{{ .isDomainJoined }}"
-{{- if .tenantName }}
-set -gx CHEZMOI_TENANT_NAME "{{ .tenantName }}"
+set -gx CHEZMOI_IS_ENTRA_REGISTERED "{{ .isEntraRegistered }}"
+set -gx CHEZMOI_IS_AD_DOMAIN_JOINED "{{ .isADDomainJoined }}"
+{{- if .entraIDTenantName }}
+set -gx CHEZMOI_ENTRA_ID_TENANT_NAME "{{ .entraIDTenantName }}"
 {{- end }}
-{{- if .tenantId }}
-set -gx CHEZMOI_TENANT_ID "{{ .tenantId }}"
+{{- if .entraIDTenantId }}
+set -gx CHEZMOI_ENTRA_ID_TENANT_ID "{{ .entraIDTenantId }}"
 {{- end }}
 set -gx CHEZMOI_IS_WORK "{{ .isWork }}"

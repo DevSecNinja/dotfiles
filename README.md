@@ -32,16 +32,16 @@ The dotfiles repository provides several variables that can be used in templates
 ### Windows Enterprise (Windows and WSL)
 - `isEntraIDJoined` - Device is Entra ID (Azure AD) joined (`true`/`false`)
 - `isIntuneJoined` - Device is Intune (MDM) enrolled (`true`/`false`)
-- `isEnterpriseJoined` - Device is enterprise joined (`true`/`false`)
-- `isDomainJoined` - Device is domain joined (`true`/`false`)
-- `tenantName` - Entra ID tenant name (e.g., `Microsoft`)
-- `tenantId` - Entra ID tenant ID (GUID)
+- `isEntraRegistered` - Device is Entra ID registered/workplace joined (`true`/`false`)
+- `isADDomainJoined` - Device is Active Directory domain joined (`true`/`false`)
+- `entraIDTenantName` - Entra ID tenant name (e.g., `Microsoft`)
+- `entraIDTenantId` - Entra ID tenant ID (GUID)
 - `isWork` - Device is joined to a `*microsoft.com` tenant (`true`/`false`)
 
 These variables are automatically exposed as environment variables in your shell:
-- **PowerShell**: `$env:CHEZMOI_*` (e.g., `$env:CHEZMOI_IS_ENTRA_ID_JOINED`, `$env:CHEZMOI_TENANT_NAME`)
-- **Bash/Zsh**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_TENANT_NAME`)
-- **Fish**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_TENANT_NAME`)
+- **PowerShell**: `$env:CHEZMOI_*` (e.g., `$env:CHEZMOI_IS_ENTRA_ID_JOINED`, `$env:CHEZMOI_ENTRA_ID_TENANT_NAME`)
+- **Bash/Zsh**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_ENTRA_ID_TENANT_NAME`)
+- **Fish**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_ENTRA_ID_TENANT_NAME`)
 
 ## 📁 Structure
 

@@ -10,12 +10,12 @@ export CHEZMOI_GITHUB_USERNAME="{{ .githubUsername }}"
 # Windows Enterprise Environment Detection (works on Windows and WSL)
 export CHEZMOI_IS_ENTRA_ID_JOINED="{{ .isEntraIDJoined }}"
 export CHEZMOI_IS_INTUNE_JOINED="{{ .isIntuneJoined }}"
-export CHEZMOI_IS_ENTERPRISE_JOINED="{{ .isEnterpriseJoined }}"
-export CHEZMOI_IS_DOMAIN_JOINED="{{ .isDomainJoined }}"
-{{- if .tenantName }}
-export CHEZMOI_TENANT_NAME="{{ .tenantName }}"
+export CHEZMOI_IS_ENTRA_REGISTERED="{{ .isEntraRegistered }}"
+export CHEZMOI_IS_AD_DOMAIN_JOINED="{{ .isADDomainJoined }}"
+{{- if .entraIDTenantName }}
+export CHEZMOI_ENTRA_ID_TENANT_NAME="{{ .entraIDTenantName }}"
 {{- end }}
-{{- if .tenantId }}
-export CHEZMOI_TENANT_ID="{{ .tenantId }}"
+{{- if .entraIDTenantId }}
+export CHEZMOI_ENTRA_ID_TENANT_ID="{{ .entraIDTenantId }}"
 {{- end }}
 export CHEZMOI_IS_WORK="{{ .isWork }}"
