@@ -10,6 +10,35 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Cross-Platform**: Works seamlessly on Linux, macOS, Windows (PowerShell), and WSL
 - **Custom Functions Library**: Reusable shell functions for common tasks (git operations, brew updates, file management)
 - **Automated Validation**: Pre-commit hooks and validation scripts ensure configuration quality
+- **Windows Enterprise Detection**: Automatic detection of Entra ID (Azure AD) and Intune enrollment status
+
+## 🔧 Chezmoi Variables
+
+The dotfiles repository provides several variables that can be used in templates and scripts:
+
+### User Information
+- `firstname` / `lastname` / `name` - Your name (prompted on first run)
+- `username` - System username (prompted on first run)
+- `email` - Your email address (prompted on first run)
+- `githubUsername` - Your GitHub username (auto-detected from email or git remote)
+
+### Environment Detection
+- `codespaces` - Running in GitHub Codespaces (`true`/`false`)
+- `devcontainer` - Running in a dev container (`true`/`false`)
+- `wsl` - Running in Windows Subsystem for Linux (`true`/`false`)
+- `ci` - Running in CI environment (`true`/`false`)
+- `installType` - Installation mode (`light` or `full`)
+
+### Windows Enterprise (Windows only)
+- `isEntraIDJoined` - Device is Entra ID (Azure AD) joined (`true`/`false`)
+- `isIntuneJoined` - Device is Intune (MDM) enrolled (`true`/`false`)
+- `entraIDDomain` - Entra ID domain name (e.g., `contoso.com`)
+- `isWork` - Device is joined to a `*microsoft.com` domain (`true`/`false`)
+
+These variables are automatically exposed as environment variables in your shell:
+- **PowerShell**: `$env:CHEZMOI_*` (e.g., `$env:CHEZMOI_IS_ENTRA_ID_JOINED`)
+- **Bash/Zsh**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`)
+- **Fish**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`)
 
 ## 📁 Structure
 
