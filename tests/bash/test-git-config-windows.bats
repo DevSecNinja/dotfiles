@@ -24,8 +24,10 @@ setup() {
 	fi
 
 	# Test the Git config template rendering for Windows
+	# Using chezmoi data structure to simulate Windows OS without WSL
 	cat >/tmp/test_git_config_windows.tmpl <<'EOF'
-{{- $isWindows := true -}}
+{{- /* Simulate Windows OS data */ -}}
+{{- $chezmoi := dict "os" "windows" -}}
 {{- $wsl := false -}}
 [core]
 	editor = vim
@@ -33,7 +35,7 @@ setup() {
 	excludesfile = ~/.config/git/ignore
 {{- if $wsl }}
 	sshCommand = ssh.exe
-{{- else if $isWindows }}
+{{- else if eq $chezmoi.os "windows" }}
 	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
 {{- end }}
 EOF
@@ -54,8 +56,10 @@ EOF
 	fi
 
 	# Test that WSL configuration takes precedence
+	# Using chezmoi data structure to simulate WSL environment
 	cat >/tmp/test_git_config_wsl.tmpl <<'EOF'
-{{- $isWindows := true -}}
+{{- /* Simulate WSL environment */ -}}
+{{- $chezmoi := dict "os" "linux" -}}
 {{- $wsl := true -}}
 [core]
 	editor = vim
@@ -63,7 +67,7 @@ EOF
 	excludesfile = ~/.config/git/ignore
 {{- if $wsl }}
 	sshCommand = ssh.exe
-{{- else if $isWindows }}
+{{- else if eq $chezmoi.os "windows" }}
 	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
 {{- end }}
 EOF
@@ -85,8 +89,10 @@ EOF
 	fi
 
 	# Test that Linux config doesn't set sshCommand
+	# Using chezmoi data structure to simulate native Linux (not WSL)
 	cat >/tmp/test_git_config_linux.tmpl <<'EOF'
-{{- $isWindows := false -}}
+{{- /* Simulate native Linux (not WSL) */ -}}
+{{- $chezmoi := dict "os" "linux" -}}
 {{- $wsl := false -}}
 [core]
 	editor = vim
@@ -94,7 +100,7 @@ EOF
 	excludesfile = ~/.config/git/ignore
 {{- if $wsl }}
 	sshCommand = ssh.exe
-{{- else if $isWindows }}
+{{- else if eq $chezmoi.os "windows" }}
 	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
 {{- end }}
 EOF
