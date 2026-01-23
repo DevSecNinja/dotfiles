@@ -110,11 +110,13 @@
 {{-     $isEntraIDJoined = regexMatch "(?i)AzureAdJoined\\s*:\\s*YES" $dsregOutput -}}
 {{-     $isEntraRegistered = regexMatch "(?i)WorkplaceJoined\\s*:\\s*YES" $dsregOutput -}}
 {{-     $isADDomainJoined = regexMatch "(?i)DomainJoined\\s*:\\s*YES" $dsregOutput -}}
-{{-     if regexMatch "(?i)TenantName\\s*:\\s*(.+)" $dsregOutput -}}
-{{-       $entraIDTenantName = regexReplaceAll "(?i).*TenantName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     $tenantNameLine := regexFind "(?i)TenantName\\s*:[^\\r\\n]+" $dsregOutput -}}
+{{-     if $tenantNameLine -}}
+{{-       $entraIDTenantName = regexReplaceAll "(?i)^.*TenantName\\s*:\\s*" $tenantNameLine "" | trim -}}
 {{-     end -}}
-{{-     if regexMatch "(?i)TenantId\\s*:\\s*(.+)" $dsregOutput -}}
-{{-       $entraIDTenantId = regexReplaceAll "(?i).*TenantId\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     $tenantIdLine := regexFind "(?i)TenantId\\s*:[^\\r\\n]+" $dsregOutput -}}
+{{-     if $tenantIdLine -}}
+{{-       $entraIDTenantId = regexReplaceAll "(?i)^.*TenantId\\s*:\\s*" $tenantIdLine "" | trim -}}
 {{-     end -}}
 {{-     $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://[^\\s]*\\.microsoft\\.com" $dsregOutput -}}
 {{-     if $entraIDTenantName -}}
