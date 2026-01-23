@@ -1,0 +1,31 @@
+#!/bin/bash
+# Set default shell to fish (preferred) or zsh (fallback)
+# This approach uses exec to replace the current shell process,
+# which doesn't require password or chsh permissions.
+# Source: https://unix.stackexchange.com/a/136424
+
+# Only run interactively
+case $- in
+    *i*) ;;
+      *) return 0;;
+esac
+
+# Try fish first (preferred shell)
+if command -v fish >/dev/null 2>&1; then
+    export SHELL=$(command -v fish)
+    # Only exec if not already in fish
+    [ -z "$FISH_VERSION" ] && exec "$SHELL" -l
+fi
+
+# Fall back to zsh if fish not available
+if command -v zsh >/dev/null 2>&1; then
+    export SHELL=$(command -v zsh)
+    # Only exec if not already in zsh
+    [ -z "$ZSH_VERSION" ] && exec "$SHELL" -l
+fi
+
+# If we get here, neither fish nor zsh are available, continue with bash
+# Source bashrc for bash configuration
+if [ -f "$HOME/.bashrc" ]; then
+    source "$HOME/.bashrc"
+fi
