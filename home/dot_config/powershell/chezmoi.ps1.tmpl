@@ -5,3 +5,13 @@
 # Set GitHub username from chezmoi config for use in scripts
 $env:CHEZMOI_GITHUB_USERNAME = "{{ .githubUsername }}"
 {{- end }}
+
+{{- if eq .chezmoi.os "windows" }}
+# Windows Enterprise Environment Detection
+$env:CHEZMOI_IS_ENTRA_ID_JOINED = "{{ .isEntraIDJoined }}"
+$env:CHEZMOI_IS_INTUNE_JOINED = "{{ .isIntuneJoined }}"
+{{- if .entraIDDomain }}
+$env:CHEZMOI_ENTRA_ID_DOMAIN = "{{ .entraIDDomain }}"
+{{- end }}
+$env:CHEZMOI_IS_WORK = "{{ .isWork }}"
+{{- end }}

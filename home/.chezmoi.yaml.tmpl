@@ -76,6 +76,30 @@
 {{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") | not | not -}}
 {{- $wsl:= and (lookPath "wslinfo") (output "wslinfo" "--version" | trim | ne "") | not | not -}}
 
+{{- /* Windows Entra ID and Intune detection */ -}}
+{{- $isEntraIDJoined := false -}}
+{{- $isIntuneJoined := false -}}
+{{- $entraIDDomain := "" -}}
+{{- $isWork := false -}}
+
+{{- if eq .chezmoi.os "windows" -}}
+{{-   if lookPath "dsregcmd.exe" -}}
+{{-     $dsregOutput := output "cmd.exe" "/c" "dsregcmd.exe /status" | trim -}}
+{{-     if $dsregOutput -}}
+{{-       $isEntraIDJoined = regexMatch "(?i)AzureAdJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-       if regexMatch "(?i)TenantName\\s*:\\s*(.+)" $dsregOutput -}}
+{{-         $entraIDDomain = regexReplaceAll "(?i).*TenantName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-       else if regexMatch "(?i)DomainName\\s*:\\s*(.+)" $dsregOutput -}}
+{{-         $entraIDDomain = regexReplaceAll "(?i).*DomainName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-       end -}}
+{{-       $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://" $dsregOutput -}}
+{{-       if $entraIDDomain -}}
+{{-         $isWork = hasSuffix "microsoft.com" $entraIDDomain -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- $hostname := .chezmoi.hostname -}}
@@ -126,3 +150,7 @@ data:
   email: {{ $email | quote }}
   githubUsername: {{ $githubUsername | quote }}
   installType: {{ $installType | quote }}
+  isEntraIDJoined: {{ $isEntraIDJoined }}
+  isIntuneJoined: {{ $isIntuneJoined }}
+  entraIDDomain: {{ $entraIDDomain | quote }}
+  isWork: {{ $isWork }}
