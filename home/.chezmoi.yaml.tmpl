@@ -76,26 +76,49 @@
 {{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") | not | not -}}
 {{- $wsl:= and (lookPath "wslinfo") (output "wslinfo" "--version" | trim | ne "") | not | not -}}
 
-{{- /* Windows Entra ID and Intune detection */ -}}
+{{- /* Windows Entra ID and Intune detection (works on Windows and WSL) */ -}}
 {{- $isEntraIDJoined := false -}}
 {{- $isIntuneJoined := false -}}
-{{- $entraIDDomain := "" -}}
+{{- $isEnterpriseJoined := false -}}
+{{- $isDomainJoined := false -}}
+{{- $tenantName := "" -}}
+{{- $tenantId := "" -}}
 {{- $isWork := false -}}
 
-{{- if eq .chezmoi.os "windows" -}}
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $dsregPath := "" -}}
+{{- if $isWindows -}}
 {{-   if lookPath "dsregcmd.exe" -}}
-{{-     $dsregOutput := output "cmd.exe" "/c" "dsregcmd.exe /status" | trim -}}
-{{-     if $dsregOutput -}}
-{{-       $isEntraIDJoined = regexMatch "(?i)AzureAdJoined\\s*:\\s*YES" $dsregOutput -}}
-{{-       if regexMatch "(?i)TenantName\\s*:\\s*(.+)" $dsregOutput -}}
-{{-         $entraIDDomain = regexReplaceAll "(?i).*TenantName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
-{{-       else if regexMatch "(?i)DomainName\\s*:\\s*(.+)" $dsregOutput -}}
-{{-         $entraIDDomain = regexReplaceAll "(?i).*DomainName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
-{{-       end -}}
-{{-       $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://[^\\s]*\\.microsoft\\.com" $dsregOutput -}}
-{{-       if $entraIDDomain -}}
-{{-         $isWork = hasSuffix "microsoft.com" $entraIDDomain -}}
-{{-       end -}}
+{{-     $dsregPath = "dsregcmd.exe" -}}
+{{-   end -}}
+{{- else if $wsl -}}
+{{-   if lookPath "dsregcmd.exe" -}}
+{{-     $dsregPath = "dsregcmd.exe" -}}
+{{-   else if stat "/mnt/c/Windows/System32/dsregcmd.exe" -}}
+{{-     $dsregPath = "/mnt/c/Windows/System32/dsregcmd.exe" -}}
+{{-   end -}}
+{{- end -}}
+
+{{- if $dsregPath -}}
+{{-   $dsregOutput := "" -}}
+{{-   if $isWindows -}}
+{{-     $dsregOutput = output "cmd.exe" "/c" "dsregcmd.exe /status" | trim -}}
+{{-   else -}}
+{{-     $dsregOutput = output $dsregPath "/status" | trim -}}
+{{-   end -}}
+{{-   if $dsregOutput -}}
+{{-     $isEntraIDJoined = regexMatch "(?i)AzureAdJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     $isEnterpriseJoined = regexMatch "(?i)EnterpriseJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     $isDomainJoined = regexMatch "(?i)DomainJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     if regexMatch "(?i)TenantName\\s*:\\s*(.+)" $dsregOutput -}}
+{{-       $tenantName = regexReplaceAll "(?i).*TenantName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     end -}}
+{{-     if regexMatch "(?i)TenantId\\s*:\\s*(.+)" $dsregOutput -}}
+{{-       $tenantId = regexReplaceAll "(?i).*TenantId\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     end -}}
+{{-     $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://[^\\s]*\\.microsoft\\.com" $dsregOutput -}}
+{{-     if $tenantName -}}
+{{-       $isWork = hasSuffix "microsoft.com" $tenantName -}}
 {{-     end -}}
 {{-   end -}}
 {{- end -}}
@@ -152,5 +175,8 @@ data:
   installType: {{ $installType | quote }}
   isEntraIDJoined: {{ $isEntraIDJoined }}
   isIntuneJoined: {{ $isIntuneJoined }}
-  entraIDDomain: {{ $entraIDDomain | quote }}
+  isEnterpriseJoined: {{ $isEnterpriseJoined }}
+  isDomainJoined: {{ $isDomainJoined }}
+  tenantName: {{ $tenantName | quote }}
+  tenantId: {{ $tenantId | quote }}
   isWork: {{ $isWork }}

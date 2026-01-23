@@ -6,12 +6,15 @@
 $env:CHEZMOI_GITHUB_USERNAME = "{{ .githubUsername }}"
 {{- end }}
 
-{{- if eq .chezmoi.os "windows" }}
-# Windows Enterprise Environment Detection
+# Windows Enterprise Environment Detection (works on Windows and WSL)
 $env:CHEZMOI_IS_ENTRA_ID_JOINED = "{{ .isEntraIDJoined }}"
 $env:CHEZMOI_IS_INTUNE_JOINED = "{{ .isIntuneJoined }}"
-{{- if .entraIDDomain }}
-$env:CHEZMOI_ENTRA_ID_DOMAIN = "{{ .entraIDDomain }}"
+$env:CHEZMOI_IS_ENTERPRISE_JOINED = "{{ .isEnterpriseJoined }}"
+$env:CHEZMOI_IS_DOMAIN_JOINED = "{{ .isDomainJoined }}"
+{{- if .tenantName }}
+$env:CHEZMOI_TENANT_NAME = "{{ .tenantName }}"
+{{- end }}
+{{- if .tenantId }}
+$env:CHEZMOI_TENANT_ID = "{{ .tenantId }}"
 {{- end }}
 $env:CHEZMOI_IS_WORK = "{{ .isWork }}"
-{{- end }}
