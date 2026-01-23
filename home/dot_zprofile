@@ -3,6 +3,10 @@
 # This approach uses exec to replace the current shell process,
 # which doesn't require password or chsh permissions.
 # Source: https://unix.stackexchange.com/a/136424
+# Note: This is in both .zprofile and .zshrc because:
+# - .zprofile is loaded for login shells
+# - .zshrc is loaded for interactive non-login shells
+# The FISH_VERSION check prevents issues if both files are sourced
 
 # Try fish first (preferred shell)
 if command -v fish >/dev/null 2>&1; then

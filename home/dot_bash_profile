@@ -7,7 +7,7 @@
 # Only run interactively
 case $- in
     *i*) ;;
-      *) return;;
+      *) exit 0;;
 esac
 
 # Try fish first (preferred shell)
