@@ -76,6 +76,53 @@
 {{- $devcontainer:= or $remoteContainers (stat "/.dockerenv") | not | not -}}
 {{- $wsl:= and (lookPath "wslinfo") (output "wslinfo" "--version" | trim | ne "") | not | not -}}
 
+{{- /* Windows Entra ID and Intune detection (works on Windows and WSL) */ -}}
+{{- $isEntraIDJoined := false -}}
+{{- $isIntuneJoined := false -}}
+{{- $isEntraRegistered := false -}}
+{{- $isADDomainJoined := false -}}
+{{- $entraIDTenantName := "" -}}
+{{- $entraIDTenantId := "" -}}
+{{- $isWork := false -}}
+
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $dsregPath := "" -}}
+{{- if $isWindows -}}
+{{-   if lookPath "dsregcmd.exe" -}}
+{{-     $dsregPath = "dsregcmd.exe" -}}
+{{-   end -}}
+{{- else if $wsl -}}
+{{-   if lookPath "dsregcmd.exe" -}}
+{{-     $dsregPath = "dsregcmd.exe" -}}
+{{-   else if stat "/mnt/c/Windows/System32/dsregcmd.exe" -}}
+{{-     $dsregPath = "/mnt/c/Windows/System32/dsregcmd.exe" -}}
+{{-   end -}}
+{{- end -}}
+
+{{- if $dsregPath -}}
+{{-   $dsregOutput := "" -}}
+{{-   if $isWindows -}}
+{{-     $dsregOutput = output "cmd.exe" "/c" "dsregcmd.exe /status" | trim -}}
+{{-   else -}}
+{{-     $dsregOutput = output $dsregPath "/status" | trim -}}
+{{-   end -}}
+{{-   if $dsregOutput -}}
+{{-     $isEntraIDJoined = regexMatch "(?i)AzureAdJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     $isEntraRegistered = regexMatch "(?i)WorkplaceJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     $isADDomainJoined = regexMatch "(?i)DomainJoined\\s*:\\s*YES" $dsregOutput -}}
+{{-     if regexMatch "(?i)TenantName\\s*:\\s*(.+)" $dsregOutput -}}
+{{-       $entraIDTenantName = regexReplaceAll "(?i).*TenantName\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     end -}}
+{{-     if regexMatch "(?i)TenantId\\s*:\\s*(.+)" $dsregOutput -}}
+{{-       $entraIDTenantId = regexReplaceAll "(?i).*TenantId\\s*:\\s*([^\\r\\n]+).*" $dsregOutput "${1}" | trim -}}
+{{-     end -}}
+{{-     $isIntuneJoined = regexMatch "(?i)MdmUrl\\s*:\\s*https?://[^\\s]*\\.microsoft\\.com" $dsregOutput -}}
+{{-     if $entraIDTenantName -}}
+{{-       $isWork = hasSuffix "microsoft.com" $entraIDTenantName -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- $hostname := .chezmoi.hostname -}}
@@ -126,3 +173,10 @@ data:
   email: {{ $email | quote }}
   githubUsername: {{ $githubUsername | quote }}
   installType: {{ $installType | quote }}
+  isEntraIDJoined: {{ $isEntraIDJoined }}
+  isIntuneJoined: {{ $isIntuneJoined }}
+  isEntraRegistered: {{ $isEntraRegistered }}
+  isADDomainJoined: {{ $isADDomainJoined }}
+  entraIDTenantName: {{ $entraIDTenantName | quote }}
+  entraIDTenantId: {{ $entraIDTenantId | quote }}
+  isWork: {{ $isWork }}
