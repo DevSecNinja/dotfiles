@@ -65,7 +65,8 @@ fi
 if [[ "$SHELL_NAME" == "Fish" ]]; then
     SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $3}')
 else
-    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $1}')
+    # zsh --version outputs 'zsh X.Y.Z', so extract second field
+    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $2}')
 fi
 log_info "Found $SHELL_NAME version: $SHELL_VERSION"
 
@@ -85,6 +86,8 @@ else
 fi
 
 # Check current shell
+# Note: Using getent on Linux (portable across distributions)
+# macOS uses: dscl . -read ~/ UserShell | awk '{print $2}'
 CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
 log_info "Current shell: $CURRENT_SHELL"
 
