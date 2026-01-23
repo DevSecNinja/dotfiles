@@ -32,6 +32,7 @@
 	last = log -1 HEAD
 	visual = log --oneline --graph --all
 	amend = commit --amend --no-edit
+	config-list = config --list --show-origin
 
 {{- if and (eq .chezmoi.os "darwin") (not .codespaces) }}
 [credential]
