@@ -47,23 +47,23 @@ create_wrapper_script() {
 	cat >"$TEST_DIR/$script_name" <<SCRIPT
 #!/bin/bash
 source "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/$function_file"
-export CHEZMOI_GITHUB_USERNAME="testuser"
 $function_name 2>&1
 SCRIPT
 	chmod +x "$TEST_DIR/$script_name"
 }
 
-@test "gh-add-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
+@test "gh-add-ssh-keys: shows username when CHEZMOI_GITHUB_USERNAME is set" {
+	# This test validates that when CHEZMOI_GITHUB_USERNAME is set,
+	# it's mentioned in the output even if we can't interact with the prompt.
+	# We test the non-TTY code path which shows the helpful message.
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Create a wrapper script using helper function
-	create_wrapper_script "test-script.sh" "gh-add-ssh-keys" "gh-add-ssh-keys.sh"
+	# Run in non-TTY mode to avoid hanging
+	run bash -c "source home/dot_config/shell/functions/gh-add-ssh-keys.sh && gh-add-ssh-keys < /dev/null"
 
-	# Run with timeout - will exit when read times out
-	run timeout "$TIMEOUT_SECONDS" bash "$TEST_DIR/test-script.sh"
-
-	# Should show the detected username in output
-	[[ "$output" =~ "testuser" ]]
+	# Should show the username and explain it can't confirm
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"testuser"* ]]
 }
 
 @test "gh-add-ssh-keys: prefers explicit username over environment variable" {
@@ -88,20 +88,21 @@ SCRIPT
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "GitHub username is required" ]]
 	# Should NOT mention the environment variable when it's not set
-	[[ ! "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
+	[[ "$output" != *"CHEZMOI_GITHUB_USERNAME"* ]]
 }
 
-@test "gh-check-ssh-keys: detects CHEZMOI_GITHUB_USERNAME environment variable" {
+@test "gh-check-ssh-keys: shows username when CHEZMOI_GITHUB_USERNAME is set" {
+	# This test validates that when CHEZMOI_GITHUB_USERNAME is set,
+	# it's mentioned in the output even if we can't interact with the prompt.
+	# We test the non-TTY code path which shows the helpful message.
 	export CHEZMOI_GITHUB_USERNAME="testuser"
 
-	# Create a wrapper script using helper function
-	create_wrapper_script "test-script2.sh" "gh-check-ssh-keys" "gh-check-ssh-keys.sh"
+	# Run in non-TTY mode to avoid hanging
+	run bash -c "source home/dot_config/shell/functions/gh-check-ssh-keys.sh && gh-check-ssh-keys < /dev/null"
 
-	# Run with timeout - will exit when read times out
-	run timeout "$TIMEOUT_SECONDS" bash "$TEST_DIR/test-script2.sh"
-
-	# Should show the detected username in output
-	[[ "$output" =~ "testuser" ]]
+	# Should show the username and explain it can't confirm
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"testuser"* ]]
 }
 
 @test "gh-check-ssh-keys: prefers explicit username over environment variable" {
@@ -128,7 +129,7 @@ SCRIPT
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "GitHub username is required" ]]
 	# Should NOT mention the environment variable when it's not set
-	[[ ! "$output" =~ "CHEZMOI_GITHUB_USERNAME" ]]
+	[[ "$output" != *"CHEZMOI_GITHUB_USERNAME"* ]]
 }
 
 @test "gh-add-ssh-keys: handles empty CHEZMOI_GITHUB_USERNAME" {
@@ -147,4 +148,28 @@ SCRIPT
 	run gh-check-ssh-keys
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "GitHub username is required" ]]
+}
+
+@test "gh-add-ssh-keys: fails in non-TTY with helpful message" {
+	export CHEZMOI_GITHUB_USERNAME="testuser"
+
+	# Run without TTY by redirecting stdin from /dev/null
+	run bash -c "export BATS_TEST_DIRNAME='${BATS_TEST_DIRNAME}' && source home/dot_config/shell/functions/gh-add-ssh-keys.sh && gh-add-ssh-keys < /dev/null"
+
+	# Should fail and explain that it cannot confirm in non-interactive mode
+	[ "$status" -eq 1 ]
+	[[ "$output" =~ "testuser" ]]
+	[[ "$output" =~ "cannot confirm in non-interactive mode" ]]
+}
+
+@test "gh-check-ssh-keys: fails in non-TTY with helpful message" {
+	export CHEZMOI_GITHUB_USERNAME="testuser"
+
+	# Run without TTY by redirecting stdin from /dev/null
+	run bash -c "export BATS_TEST_DIRNAME='${BATS_TEST_DIRNAME}' && source home/dot_config/shell/functions/gh-check-ssh-keys.sh && gh-check-ssh-keys < /dev/null"
+
+	# Should fail and explain that it cannot confirm in non-interactive mode
+	[ "$status" -eq 1 ]
+	[[ "$output" =~ "testuser" ]]
+	[[ "$output" =~ "cannot confirm in non-interactive mode" ]]
 }

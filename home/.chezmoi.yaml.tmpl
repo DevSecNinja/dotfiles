@@ -47,6 +47,7 @@
 
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
+{{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
 {{- $githubEmailPattern := "^[0-9]+\\+([^@]+)@users\\.noreply\\.github\\.com$" -}}
 {{- if hasKey . "githubUsername" -}}
 {{-   $githubUsername = .githubUsername -}}
@@ -54,8 +55,17 @@
 {{-   $match := regexMatch $githubEmailPattern $email -}}
 {{-   if $match -}}
 {{-     $githubUsername = regexReplaceAll $githubEmailPattern $email "${1}" -}}
-{{-   else if $interactive -}}
-{{-     $githubUsername = promptString "GitHub username (optional)" "" -}}
+{{-   else -}}
+{{-     $gitRemote := output "git" "config" "--get" "remote.origin.url" | trim -}}
+{{-     if $gitRemote -}}
+{{-       $repoUrlPattern := "github\\.com[:/]([^/]+)" -}}
+{{-       if regexMatch $repoUrlPattern $gitRemote -}}
+{{-         $githubUsername = regexReplaceAll $repoUrlPattern $gitRemote "${1}" -}}
+{{-       end -}}
+{{-     end -}}
+{{-     if and $interactive (eq $githubUsername "") -}}
+{{-       $githubUsername = promptString "GitHub username (optional)" "" -}}
+{{-     end -}}
 {{-   end -}}
 {{- end -}}
 
