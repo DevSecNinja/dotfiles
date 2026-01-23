@@ -5,7 +5,6 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 ## ✨ Features
 
 - **Multi-Shell Support**: Configurations for Fish, Bash, Zsh (Linux/macOS) and PowerShell (Windows) with unified aliases and custom functions
-- **Automatic Shell Setup**: Sets Fish as the default shell during installation (with zsh fallback on Linux)
 - **Git Configuration**: Pre-configured with templates for user info and global ignore patterns
 - **Editor Configurations**: Vim and Tmux with sensible defaults
 - **Cross-Platform**: Works seamlessly on Linux, macOS, Windows (PowerShell), and WSL
