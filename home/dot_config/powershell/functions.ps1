@@ -230,12 +230,26 @@ function Install-GitPowerShellModule {
         return $null
     }
 
-    # Clone the repository using pwsh to avoid path issues
-    try {
-        $cloneCmd = "git clone --quiet '$Url' '$targetPath' 2>&1"
-        $result = pwsh -NoProfile -NonInteractive -Command $cloneCmd 2>&1
+    # Validate URL format to prevent command injection
+    if ($Url -notmatch '^https://github\.com/.+/.+\.git$') {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Invalid Git URL format. Only GitHub HTTPS URLs are supported (e.g., https://github.com/user/repo.git)"
+        return $null
+    }
 
-        if ($LASTEXITCODE -eq 0 -and (Test-Path $targetPath)) {
+    # Clone the repository using git command directly with proper escaping
+    try {
+        # Use git directly with proper parameter passing (not string interpolation)
+        Push-Location $modulesDir
+        try {
+            git clone --quiet $Url $Destination 2>&1 | Out-Null
+            $cloneSuccess = $LASTEXITCODE -eq 0
+        }
+        finally {
+            Pop-Location
+        }
+
+        if ($cloneSuccess -and (Test-Path $targetPath)) {
             Write-Host " [OK] Cloned to $targetPath" -ForegroundColor Green
 
             # Ensure the module path is in PSModulePath
@@ -248,7 +262,7 @@ function Install-GitPowerShellModule {
             }
         } else {
             Write-Host " [FAILED]" -ForegroundColor Red
-            Write-Error "Failed to clone repository: $result"
+            Write-Error "Failed to clone repository from $Url"
             return $null
         }
     }
@@ -275,27 +289,52 @@ function Add-ToPSModulePath {
         [string]$Path
     )
 
-    # Normalize the path
-    $Path = [System.IO.Path]::GetFullPath($Path)
+    try {
+        # Normalize the path with error handling
+        $normalizedPath = [System.IO.Path]::GetFullPath($Path)
 
-    # Get current PSModulePath from environment
-    $currentPath = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
+        # Get current PSModulePath from environment
+        $currentPath = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
+        if (-not $currentPath) {
+            $currentPath = ""
+        }
 
-    # Split into array and check if path already exists
-    $pathArray = $currentPath -split [IO.Path]::PathSeparator | Where-Object { $_ }
-    $pathExists = $pathArray | Where-Object {
-        [System.IO.Path]::GetFullPath($_) -eq $Path
+        # Split into array and check if path already exists
+        $pathArray = $currentPath -split [IO.Path]::PathSeparator | Where-Object { $_ }
+        $pathExists = $false
+
+        foreach ($existingPath in $pathArray) {
+            try {
+                $normalizedExisting = [System.IO.Path]::GetFullPath($existingPath)
+                if ($normalizedExisting -eq $normalizedPath) {
+                    $pathExists = $true
+                    break
+                }
+            }
+            catch {
+                # Skip invalid paths in existing PSModulePath
+                Write-Verbose "Skipping invalid path in PSModulePath: $existingPath"
+                continue
+            }
+        }
+
+        if (-not $pathExists) {
+            # Add to user's PSModulePath permanently
+            if ($currentPath) {
+                $newPath = $currentPath + [IO.Path]::PathSeparator + $normalizedPath
+            } else {
+                $newPath = $normalizedPath
+            }
+            [Environment]::SetEnvironmentVariable("PSModulePath", $newPath, "User")
+
+            # Also update current session
+            $env:PSModulePath = $env:PSModulePath + [IO.Path]::PathSeparator + $normalizedPath
+
+            Write-Host "  Added $normalizedPath to PSModulePath" -ForegroundColor Cyan
+        }
     }
-
-    if (-not $pathExists) {
-        # Add to user's PSModulePath permanently
-        $newPath = $currentPath + [IO.Path]::PathSeparator + $Path
-        [Environment]::SetEnvironmentVariable("PSModulePath", $newPath, "User")
-
-        # Also update current session
-        $env:PSModulePath = $env:PSModulePath + [IO.Path]::PathSeparator + $Path
-
-        Write-Host "  Added $Path to PSModulePath" -ForegroundColor Cyan
+    catch {
+        Write-Warning "Failed to add path to PSModulePath: $_"
     }
 }
 
