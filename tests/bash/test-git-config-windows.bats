@@ -11,6 +11,18 @@ setup() {
 
 	# Ensure PATH includes ~/.local/bin for chezmoi
 	export PATH="${HOME}/.local/bin:${PATH}"
+
+	# Create temporary file for tests
+	TEST_TEMPLATE="$(mktemp)"
+	export TEST_TEMPLATE
+}
+
+# Teardown function runs after each test
+teardown() {
+	# Clean up temporary file if it exists
+	if [ -n "$TEST_TEMPLATE" ] && [ -f "$TEST_TEMPLATE" ]; then
+		rm -f "$TEST_TEMPLATE"
+	fi
 }
 
 @test "git-config-windows: Git config template exists" {
@@ -25,7 +37,7 @@ setup() {
 
 	# Test the Git config template rendering for Windows
 	# Using chezmoi data structure to simulate Windows OS without WSL
-	cat >/tmp/test_git_config_windows.tmpl <<'EOF'
+	cat >"$TEST_TEMPLATE" <<'EOF'
 {{- /* Simulate Windows OS data */ -}}
 {{- $chezmoi := dict "os" "windows" -}}
 {{- $wsl := false -}}
@@ -40,13 +52,11 @@ setup() {
 {{- end }}
 EOF
 
-	run chezmoi execute-template </tmp/test_git_config_windows.tmpl
+	run chezmoi execute-template <"$TEST_TEMPLATE"
 	[ "$status" -eq 0 ]
 
 	# Verify the output contains Windows SSH command
 	[[ "$output" == *'sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"'* ]]
-
-	rm -f /tmp/test_git_config_windows.tmpl
 }
 
 @test "git-config-windows: WSL sshCommand takes precedence over Windows" {
@@ -57,7 +67,7 @@ EOF
 
 	# Test that WSL configuration takes precedence
 	# Using chezmoi data structure to simulate WSL environment
-	cat >/tmp/test_git_config_wsl.tmpl <<'EOF'
+	cat >"$TEST_TEMPLATE" <<'EOF'
 {{- /* Simulate WSL environment */ -}}
 {{- $chezmoi := dict "os" "linux" -}}
 {{- $wsl := true -}}
@@ -72,14 +82,12 @@ EOF
 {{- end }}
 EOF
 
-	run chezmoi execute-template </tmp/test_git_config_wsl.tmpl
+	run chezmoi execute-template <"$TEST_TEMPLATE"
 	[ "$status" -eq 0 ]
 
 	# Verify the output contains WSL SSH command (not Windows)
 	[[ "$output" == *'sshCommand = ssh.exe'* ]]
 	[[ "$output" != *'C:/Windows/System32/OpenSSH/ssh.exe'* ]]
-
-	rm -f /tmp/test_git_config_wsl.tmpl
 }
 
 @test "git-config-windows: Linux does not have sshCommand" {
@@ -90,7 +98,7 @@ EOF
 
 	# Test that Linux config doesn't set sshCommand
 	# Using chezmoi data structure to simulate native Linux (not WSL)
-	cat >/tmp/test_git_config_linux.tmpl <<'EOF'
+	cat >"$TEST_TEMPLATE" <<'EOF'
 {{- /* Simulate native Linux (not WSL) */ -}}
 {{- $chezmoi := dict "os" "linux" -}}
 {{- $wsl := false -}}
@@ -105,11 +113,9 @@ EOF
 {{- end }}
 EOF
 
-	run chezmoi execute-template </tmp/test_git_config_linux.tmpl
+	run chezmoi execute-template <"$TEST_TEMPLATE"
 	[ "$status" -eq 0 ]
 
 	# Verify the output does not contain sshCommand
 	[[ "$output" != *'sshCommand'* ]]
-
-	rm -f /tmp/test_git_config_linux.tmpl
 }
