@@ -63,9 +63,10 @@ fi
 
 # Verify shell version
 if [[ "$SHELL_NAME" == "Fish" ]]; then
-    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $3}')
+    # Fish outputs: 'fish, version X.Y.Z' - extract version after 'version'
+    SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | sed 's/.*version //')
 else
-    # zsh --version outputs 'zsh X.Y.Z', so extract second field
+    # zsh outputs: 'zsh X.Y.Z (arch)' - extract second field
     SHELL_VERSION=$("$SHELL_PATH" --version 2>/dev/null | awk '{print $2}')
 fi
 log_info "Found $SHELL_NAME version: $SHELL_VERSION"
@@ -86,9 +87,15 @@ else
 fi
 
 # Check current shell
-# Note: Using getent on Linux (portable across distributions)
+# Note: Using getent on Linux (portable across most distributions)
 # macOS uses: dscl . -read ~/ UserShell | awk '{print $2}'
-CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
+# Fallback to $SHELL environment variable if getent is not available
+if command -v getent >/dev/null 2>&1; then
+    CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
+else
+    log_warning "getent not available, using \$SHELL environment variable"
+    CURRENT_SHELL="$SHELL"
+fi
 log_info "Current shell: $CURRENT_SHELL"
 
 # Change default shell if not already set
@@ -96,6 +103,7 @@ if [[ "$CURRENT_SHELL" == "$SHELL_PATH" ]]; then
     log_success "$SHELL_NAME is already your default shell"
 else
     log_warning "Changing default shell to $SHELL_NAME..."
+    log_info "Note: This may require entering your password"
 
     if chsh -s "$SHELL_PATH"; then
         log_success "Default shell changed to $SHELL_NAME"
