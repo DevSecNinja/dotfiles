@@ -36,7 +36,7 @@ The dotfiles repository provides several variables that can be used in templates
 - `isADDomainJoined` - Device is Active Directory domain joined (`true`/`false`)
 - `entraIDTenantName` - Entra ID tenant name (e.g., `Microsoft`)
 - `entraIDTenantId` - Entra ID tenant ID (GUID)
-- `isWork` - Device is joined to a `*microsoft.com` tenant (`true`/`false`)
+- `isWork` - Device is joined to a `*Microsoft` tenant (`true`/`false`)
 
 These variables are automatically exposed as environment variables in your shell:
 - **PowerShell**: `$env:CHEZMOI_*` (e.g., `$env:CHEZMOI_IS_ENTRA_ID_JOINED`, `$env:CHEZMOI_ENTRA_ID_TENANT_NAME`)
