@@ -180,6 +180,20 @@ function Install-GitPowerShellModule {
         [string]$Destination
     )
 
+    # Validate Destination to prevent path traversal attacks
+    if ($Destination -match '\.\.' -or $Destination -match '[/\\]' -or $Destination -match '^[a-zA-Z]:') {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Invalid destination name. Destination must be a simple folder name without path traversal characters (e.g., 'MyModule', not '../MyModule' or 'C:\MyModule')"
+        return $null
+    }
+
+    # Additional validation: ensure destination doesn't contain invalid characters
+    if ($Destination -match '[<>:"|?*\x00-\x1F]') {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Invalid destination name. Contains invalid path characters."
+        return $null
+    }
+
     # Determine PowerShell modules directory
     $modulesDir = Join-Path $env:USERPROFILE "Documents\PowerShell\Modules"
     if (-not (Test-Path $modulesDir)) {
@@ -187,6 +201,15 @@ function Install-GitPowerShellModule {
     }
 
     $targetPath = Join-Path $modulesDir $Destination
+
+    # Additional safety check: ensure target path is within modules directory
+    $normalizedTarget = [System.IO.Path]::GetFullPath($targetPath)
+    $normalizedModulesDir = [System.IO.Path]::GetFullPath($modulesDir)
+    if (-not $normalizedTarget.StartsWith($normalizedModulesDir)) {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Security violation: Target path escapes modules directory"
+        return $null
+    }
 
     Write-Host "Installing Git module '$Name'..." -NoNewline
 
@@ -199,11 +222,31 @@ function Install-GitPowerShellModule {
             Write-Host "  Updating..." -NoNewline
             Push-Location $targetPath
             try {
-                pwsh -NoProfile -NonInteractive -Command "git pull --quiet" 2>&1 | Out-Null
+                # Use git fetch and reset for a clean update (avoids merge conflicts)
+                git fetch --quiet origin 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host " [OK] Updated" -ForegroundColor Green
+                    # Get the default branch name
+                    $defaultBranch = git symbolic-ref refs/remotes/origin/HEAD 2>&1 | ForEach-Object { $_ -replace 'refs/remotes/origin/', '' }
+                    if (-not $defaultBranch) {
+                        $defaultBranch = "main"  # Fallback to main if detection fails
+                    }
+
+                    # Reset to remote branch
+                    git reset --hard "origin/$defaultBranch" --quiet 2>&1 | Out-Null
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host " [OK] Updated" -ForegroundColor Green
+                    } else {
+                        Write-Host " [WARN] Reset failed, trying pull" -ForegroundColor Yellow
+                        # Fallback to pull if reset fails
+                        git pull --quiet 2>&1 | Out-Null
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Host " [OK] Updated" -ForegroundColor Green
+                        } else {
+                            Write-Host " [WARN] Update failed" -ForegroundColor Yellow
+                        }
+                    }
                 } else {
-                    Write-Host " [WARN] Update failed" -ForegroundColor Yellow
+                    Write-Host " [WARN] Fetch failed" -ForegroundColor Yellow
                 }
             }
             catch {
