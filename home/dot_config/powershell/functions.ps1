@@ -152,6 +152,153 @@ function Install-PowerShellModule {
     }
 }
 
+function Install-GitPowerShellModule {
+    <#
+    .SYNOPSIS
+    Installs a PowerShell module from a Git repository.
+
+    .PARAMETER Name
+    The display name of the module for logging purposes.
+
+    .PARAMETER Url
+    The Git repository URL to clone from.
+
+    .PARAMETER Destination
+    The destination folder name within the PowerShell modules directory.
+
+    .EXAMPLE
+    Install-GitPowerShellModule -Name "PowerShell-Modules" -Url "https://github.com/DevSecNinja/PowerShell-Modules.git" -Destination "DevSecNinja.PowerShell"
+    #>
+    param (
+        [Parameter(Mandatory)]
+        [string]$Name,
+
+        [Parameter(Mandatory)]
+        [string]$Url,
+
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    # Determine PowerShell modules directory
+    $modulesDir = Join-Path $env:USERPROFILE "Documents\PowerShell\Modules"
+    if (-not (Test-Path $modulesDir)) {
+        New-Item -ItemType Directory -Path $modulesDir -Force | Out-Null
+    }
+
+    $targetPath = Join-Path $modulesDir $Destination
+
+    Write-Host "Installing Git module '$Name'..." -NoNewline
+
+    # Check if module already exists
+    if (Test-Path $targetPath) {
+        Write-Host " [OK] Already exists at $targetPath" -ForegroundColor Yellow
+        
+        # Try to update if it's a git repository
+        if (Test-Path (Join-Path $targetPath ".git")) {
+            Write-Host "  Updating..." -NoNewline
+            Push-Location $targetPath
+            try {
+                pwsh -NoProfile -NonInteractive -Command "git pull --quiet" 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " [OK] Updated" -ForegroundColor Green
+                } else {
+                    Write-Host " [WARN] Update failed" -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host " [WARN] Update failed: $_" -ForegroundColor Yellow
+            }
+            finally {
+                Pop-Location
+            }
+        }
+        
+        # Ensure the module path is in PSModulePath
+        Add-ToPSModulePath -Path $modulesDir
+        return [PSCustomObject]@{
+            Name = $Name
+            Path = $targetPath
+            Status = "Exists"
+        }
+    }
+
+    # Check if git is available
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Git is not installed or not in PATH. Please install Git first."
+        return $null
+    }
+
+    # Clone the repository using pwsh to avoid path issues
+    try {
+        $cloneCmd = "git clone --quiet '$Url' '$targetPath' 2>&1"
+        $result = pwsh -NoProfile -NonInteractive -Command $cloneCmd 2>&1
+        
+        if ($LASTEXITCODE -eq 0 -and (Test-Path $targetPath)) {
+            Write-Host " [OK] Cloned to $targetPath" -ForegroundColor Green
+            
+            # Ensure the module path is in PSModulePath
+            Add-ToPSModulePath -Path $modulesDir
+            
+            return [PSCustomObject]@{
+                Name = $Name
+                Path = $targetPath
+                Status = "Installed"
+            }
+        } else {
+            Write-Host " [FAILED]" -ForegroundColor Red
+            Write-Error "Failed to clone repository: $result"
+            return $null
+        }
+    }
+    catch {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        Write-Error "Failed to clone repository: $_"
+        return $null
+    }
+}
+
+function Add-ToPSModulePath {
+    <#
+    .SYNOPSIS
+    Adds a directory to the PSModulePath if it's not already present.
+
+    .PARAMETER Path
+    The path to add to PSModulePath.
+
+    .EXAMPLE
+    Add-ToPSModulePath -Path "C:\Users\username\Documents\PowerShell\Modules"
+    #>
+    param (
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    # Normalize the path
+    $Path = [System.IO.Path]::GetFullPath($Path)
+
+    # Get current PSModulePath from environment
+    $currentPath = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
+    
+    # Split into array and check if path already exists
+    $pathArray = $currentPath -split [IO.Path]::PathSeparator | Where-Object { $_ }
+    $pathExists = $pathArray | Where-Object { 
+        [System.IO.Path]::GetFullPath($_) -eq $Path 
+    }
+
+    if (-not $pathExists) {
+        # Add to user's PSModulePath permanently
+        $newPath = $currentPath + [IO.Path]::PathSeparator + $Path
+        [Environment]::SetEnvironmentVariable("PSModulePath", $newPath, "User")
+        
+        # Also update current session
+        $env:PSModulePath = $env:PSModulePath + [IO.Path]::PathSeparator + $Path
+        
+        Write-Host "  Added $Path to PSModulePath" -ForegroundColor Cyan
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

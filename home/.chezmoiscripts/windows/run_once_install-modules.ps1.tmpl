@@ -34,6 +34,12 @@ Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
 {{- range .packages.windows.powershell_modules.full }}
 Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
 {{- end }}
+
+# Install Git-based PowerShell modules (full mode only)
+Write-Host "`nInstalling Git-based PowerShell Modules..." -ForegroundColor Cyan
+{{- range .packages.windows.powershell_git_modules.full }}
+Install-GitPowerShellModule -Name {{ .name | quote }} -Url {{ .url | quote }} -Destination {{ .destination | quote }} | Out-Null
+{{- end }}
 {{- end }}
 
 Write-Host "`n[COMPLETE] All PowerShell modules installation finished!" -ForegroundColor Green
