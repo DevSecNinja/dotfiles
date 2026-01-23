@@ -1,0 +1,7 @@
+# Chezmoi configuration variables
+# This file is auto-generated from chezmoi template
+
+{{- if .githubUsername }}
+# Set GitHub username from chezmoi config for use in scripts
+$env:CHEZMOI_GITHUB_USERNAME = "{{ .githubUsername }}"
+{{- end }}

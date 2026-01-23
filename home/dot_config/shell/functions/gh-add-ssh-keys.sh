@@ -83,9 +83,42 @@ gh-add-ssh-keys() {
 
 	# Validation checks
 	if [ -z "$username" ]; then
-		echo "❌ GitHub username is required"
-		echo "Use --help for usage information"
-		return 1
+		# Check if CHEZMOI_GITHUB_USERNAME environment variable is set
+		if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
+			# Check if we're in an interactive environment (stdin is a TTY)
+			if [ -t 0 ]; then
+				# Ask for confirmation before using the detected username
+				echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
+				printf "Do you want to use this username? (y/N): "
+				# Use read with timeout to prevent hanging in non-interactive environments
+				if read -t 30 -r response; then
+					if [[ "$response" =~ ^[Yy]$ ]]; then
+						username="$CHEZMOI_GITHUB_USERNAME"
+						echo "✅ Using GitHub username: $username"
+					else
+						echo "❌ GitHub username is required"
+						echo "Use --help for usage information"
+						return 1
+					fi
+				else
+					# Timeout or no input
+					echo ""
+					echo "❌ GitHub username is required"
+					echo "Use --help for usage information"
+					return 1
+				fi
+			else
+				# Non-interactive environment - cannot prompt for confirmation
+				echo "❌ GitHub username is required"
+				echo "💡 Detected CHEZMOI_GITHUB_USERNAME='$CHEZMOI_GITHUB_USERNAME' but cannot confirm in non-interactive mode"
+				echo "Use --help for usage information"
+				return 1
+			fi
+		else
+			echo "❌ GitHub username is required"
+			echo "Use --help for usage information"
+			return 1
+		fi
 	fi
 
 	# Check for required commands

@@ -45,6 +45,30 @@
 {{-   $email = promptString "email" $email -}}
 {{- end -}}
 
+{{- /* Extract GitHub username from email or prompt */ -}}
+{{- $githubUsername := "" -}}
+{{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
+{{- $githubEmailPattern := "^[0-9]+\\+([^@]+)@users\\.noreply\\.github\\.com$" -}}
+{{- if hasKey . "githubUsername" -}}
+{{-   $githubUsername = .githubUsername -}}
+{{- else -}}
+{{-   $match := regexMatch $githubEmailPattern $email -}}
+{{-   if $match -}}
+{{-     $githubUsername = regexReplaceAll $githubEmailPattern $email "${1}" -}}
+{{-   else -}}
+{{-     $gitRemote := output "git" "config" "--get" "remote.origin.url" | trim -}}
+{{-     if $gitRemote -}}
+{{-       $repoUrlPattern := "github\\.com[:/]([^/]+)" -}}
+{{-       if regexMatch $repoUrlPattern $gitRemote -}}
+{{-         $githubUsername = regexReplaceAll $repoUrlPattern $gitRemote "${1}" -}}
+{{-       end -}}
+{{-     end -}}
+{{-     if and $interactive (eq $githubUsername "") -}}
+{{-       $githubUsername = promptString "GitHub username (optional)" "" -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+
 {{- if $interactive -}}
 {{-   writeToStdout "💡 Tip: you can re-enter your details with `chezmoi init --data=false`.\n" -}}
 {{- end -}}
@@ -100,4 +124,5 @@ data:
   wsl: {{ $wsl }}
   ci: {{ $ci }}
   email: {{ $email | quote }}
+  githubUsername: {{ $githubUsername | quote }}
   installType: {{ $installType | quote }}
