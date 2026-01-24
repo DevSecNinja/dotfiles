@@ -94,3 +94,49 @@ setup() {
 	run grep -i "nested" "$bash_profile"
 	[ "$status" -eq 0 ]
 }
+
+@test "test-bash-from-fish: bash_profile checks parent process" {
+	local bash_profile="$REPO_ROOT/home/dot_bash_profile"
+
+	if [ ! -f "$bash_profile" ]; then
+		skip "bash_profile not found"
+	fi
+
+	# Check that there's a function to check if parent is fish
+	run grep -q "_parent_is_fish" "$bash_profile"
+	[ "$status" -eq 0 ]
+
+	# Check that the function checks /proc (Linux) or ps (macOS)
+	run bash -c "grep -A 10 '_parent_is_fish' '$bash_profile' | grep -q 'proc\|ps.*PPID'"
+	[ "$status" -eq 0 ]
+}
+
+@test "test-bash-from-fish: bash from fish with parent check works" {
+	if ! command -v bash >/dev/null 2>&1; then
+		skip "Bash not installed"
+	fi
+
+	local bash_profile="$REPO_ROOT/home/dot_bash_profile"
+
+	if [ ! -f "$bash_profile" ]; then
+		skip "bash_profile not found"
+	fi
+
+	# Simulate bash invoked from fish (parent is bash in this test)
+	# The bash_profile should NOT exec to fish even if SHLVL=1 and IN_FISH_SHELL not set
+	# because the parent process check will detect we're from bash (not from systemd/init)
+	output=$(bash --noprofile --norc -c "
+		export SHLVL=1
+		unset IN_FISH_SHELL
+		source '$bash_profile'
+		echo \$BASH_VERSION
+	" 2>&1)
+
+	# Should output bash version (meaning we stayed in bash due to parent check)
+	[[ "$output" =~ [0-9]+\.[0-9]+ ]] || {
+		echo "ERROR: Expected bash version, got: $output"
+		echo "Parent check should prevent exec to fish when parent is bash"
+		return 1
+	}
+}
+
