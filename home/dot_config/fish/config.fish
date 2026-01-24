@@ -4,10 +4,6 @@
 # Set greeting
 set -g fish_greeting ""
 
-# Set environment variable to indicate we're in fish
-# This helps bash/zsh profiles detect when they're started from within fish
-set -gx IN_FISH_SHELL 1
-
 # Set working directory to projects folder if not already there
 # Skip this if running in VS Code to preserve the opened folder location
 if test "$TERM_PROGRAM" != "vscode"
