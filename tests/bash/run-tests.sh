@@ -145,9 +145,9 @@ echo ""
 if [ "$CI_MODE" = true ]; then
 	# In CI mode, save output to file
 	if [ "$OUTPUT_FORMAT" = "junit" ]; then
-		# Use JUnit report formatter for CI
-		# Note: --report-formatter generates files named after test files, not a single report.xml
-		# We'll use --formatter junit and redirect to create a single unified report
+		# Use JUnit formatter for CI
+		# Using --formatter junit with stdout redirection creates a single unified report
+		# instead of multiple files (one per test file) that --report-formatter would create
 		bats --formatter junit "${TEST_FILES[@]}" >"$OUTPUT_FILE"
 		EXIT_CODE=$?
 	else
@@ -189,7 +189,7 @@ if [ "$CI_MODE" = true ]; then
 					ERRORS=$(xmllint --xpath "count(//testcase/error)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
 					echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS"
 				else
-					echo "  ⚠️  Warning: Could not parse XML report"
+					echo "  ⚠️  Warning: XML report is malformed or empty. Check test execution for errors."
 				fi
 			else
 				echo "  ℹ️  xmllint not available for detailed summary"
