@@ -145,13 +145,11 @@ echo ""
 if [ "$CI_MODE" = true ]; then
 	# In CI mode, save output to file
 	if [ "$OUTPUT_FORMAT" = "junit" ]; then
-		# Use JUnit formatter for CI
-		bats --formatter junit --output . "${TEST_FILES[@]}"
+		# Use JUnit report formatter for CI
+		# Note: --report-formatter generates files named after test files, not a single report.xml
+		# We'll use --formatter junit and redirect to create a single unified report
+		bats --formatter junit "${TEST_FILES[@]}" >"$OUTPUT_FILE"
 		EXIT_CODE=$?
-		# Rename the output file to match expected name
-		if [ -f "report.xml" ]; then
-			mv report.xml "$OUTPUT_FILE"
-		fi
 	else
 		# Use TAP format
 		bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"
@@ -184,10 +182,17 @@ if [ "$CI_MODE" = true ]; then
 			echo "  JUnit XML report generated: $OUTPUT_FILE"
 			# Display a simple summary from JUnit XML
 			if command -v xmllint >/dev/null 2>&1; then
-				TOTAL=$(xmllint --xpath "count(//testcase)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
-				FAILURES=$(xmllint --xpath "count(//testcase/failure)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
-				ERRORS=$(xmllint --xpath "count(//testcase/error)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
-				echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS"
+				# Validate XML first
+				if xmllint --noout "$OUTPUT_FILE" 2>/dev/null; then
+					TOTAL=$(xmllint --xpath "count(//testcase)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+					FAILURES=$(xmllint --xpath "count(//testcase/failure)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+					ERRORS=$(xmllint --xpath "count(//testcase/error)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+					echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS"
+				else
+					echo "  ⚠️  Warning: Could not parse XML report"
+				fi
+			else
+				echo "  ℹ️  xmllint not available for detailed summary"
 			fi
 		else
 			# TAP format summary
