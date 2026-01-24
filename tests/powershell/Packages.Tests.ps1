@@ -248,6 +248,72 @@ Describe "Windows Package Configuration" {
             }
         }
     }
+
+    Context "PowerShell Git Modules" {
+        It "Should have PowerShell Git modules section" {
+            $script:ChezmoiData.packages.windows.powershell_git_modules | Should -Not -BeNullOrEmpty
+        }
+
+        It "Should have PowerShell Git light mode modules (can be empty)" {
+            # Light mode can have an empty array
+            $script:ChezmoiData.packages.windows.powershell_git_modules | Get-Member -Name "light" | Should -Not -BeNullOrEmpty
+        }
+
+        It "Should have PowerShell Git full mode modules" {
+            $script:ChezmoiData.packages.windows.powershell_git_modules.full | Should -Not -BeNullOrEmpty
+        }
+
+        It "Full mode should include Git-based modules" {
+            $fullGitModules = $script:ChezmoiData.packages.windows.powershell_git_modules.full
+            # At least one module should be defined
+            $fullGitModules.Count | Should -BeGreaterThan 0
+        }
+
+        It "Git modules should have required properties (name, url, destination)" {
+            $allGitModules = @()
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
+            }
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.full) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.full
+            }
+
+            foreach ($module in $allGitModules) {
+                $module.name | Should -Not -BeNullOrEmpty
+                $module.url | Should -Not -BeNullOrEmpty
+                $module.destination | Should -Not -BeNullOrEmpty
+            }
+        }
+
+        It "Git module URLs should be valid GitHub URLs" {
+            $allGitModules = @()
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
+            }
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.full) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.full
+            }
+
+            foreach ($module in $allGitModules) {
+                $module.url | Should -Match "^https://github\.com/.+/.+\.git$"
+            }
+        }
+
+        It "Git module destinations should not contain invalid path characters" {
+            $allGitModules = @()
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
+            }
+            if ($script:ChezmoiData.packages.windows.powershell_git_modules.full) {
+                $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.full
+            }
+
+            foreach ($module in $allGitModules) {
+                # Windows invalid path characters: < > : " | ? * and control characters
+                $module.destination | Should -Not -Match '[<>:"|?*\x00-\x1F]'
+            }
+        }
+    }
 }
 
 Describe "Linux Package Configuration" {

@@ -97,6 +97,20 @@ packages:
       light: []
       full:
         - oh-my-posh
+        - Pester
+
+    # PowerShell modules from Git repositories (installed via git clone)
+    # Only installed in full mode on Windows
+    powershell_git_modules:
+      light: []
+      full:
+        - name: "PowerShell-Modules"
+          url: "https://github.com/DevSecNinja/PowerShell-Modules.git"
+          # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
+          destination: "DevSecNinja.PowerShell"
+        - name: "O365-MailAlias"
+          url: "https://github.com/DevSecNinja/O365-MailAlias.git"
+          destination: "DevSecNinja.O365.MailAlias"
 
 # VS Code extensions (optional, separate from package installation)
 extensions:
