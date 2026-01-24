@@ -13,20 +13,15 @@ esac
 # Try fish first (preferred shell)
 if command -v fish >/dev/null 2>&1; then
     export SHELL=$(command -v fish)
-    # Only exec if:
-    # - Not already in fish (FISH_VERSION not set)
-    # - And not in a nested shell (SHLVL = 1, meaning this is the initial login shell)
-    # This allows users to explicitly run 'bash' from fish without being kicked back to fish
-    [ -z "$FISH_VERSION" ] && [ "$SHLVL" -eq 1 ] && exec "$SHELL" -l
+    # Only exec if not already in fish
+    [ -z "$FISH_VERSION" ] && exec "$SHELL" -l
 fi
 
 # Fall back to zsh if fish not available
 if command -v zsh >/dev/null 2>&1; then
     export SHELL=$(command -v zsh)
-    # Only exec if:
-    # - Not already in zsh (ZSH_VERSION not set)
-    # - And not in a nested shell (SHLVL = 1)
-    [ -z "$ZSH_VERSION" ] && [ "$SHLVL" -eq 1 ] && exec "$SHELL" -l
+    # Only exec if not already in zsh
+    [ -z "$ZSH_VERSION" ] && exec "$SHELL" -l
 fi
 
 # If we get here, neither fish nor zsh are available, continue with bash
