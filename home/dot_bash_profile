@@ -16,14 +16,14 @@ _parent_is_fish() {
     if [ -f "/proc/$PPID/comm" ]; then
         [ "$(cat "/proc/$PPID/comm" 2>/dev/null)" = "fish" ] && return 0
     fi
-    
+
     # Check parent process name on macOS/BSD
     if command -v ps >/dev/null 2>&1; then
         local parent_cmd
         parent_cmd=$(ps -p "$PPID" -o comm= 2>/dev/null | tr -d ' ')
         [[ "$parent_cmd" == *"fish"* ]] && return 0
     fi
-    
+
     return 1
 }
 
