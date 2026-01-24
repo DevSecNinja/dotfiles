@@ -41,7 +41,8 @@ while [[ $# -gt 0 ]]; do
 		echo "Options:"
 		echo "  --ci              Run in CI mode (installs dependencies, exits on failure)"
 		echo "                    Automatically uses JUnit XML format for test results"
-		echo "  --output FILE     Output file for test results (default: test-results.tap)"
+		echo "  --output FILE     Output file for test results"
+		echo "                    (default: test-results.tap, or test-results.xml in CI mode)"
 		echo "  --test FILE       Run specific test file (can be used multiple times)"
 		echo "  -h, --help        Show this help message"
 		exit 0
