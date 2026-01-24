@@ -107,6 +107,11 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTS_DIR="${SCRIPT_DIR}"
 
+# Make OUTPUT_FILE path absolute if it's relative
+if [[ ! "$OUTPUT_FILE" = /* ]]; then
+	OUTPUT_FILE="${SCRIPT_DIR}/${OUTPUT_FILE}"
+fi
+
 # Find all .bats test files
 echo -e "${BLUE}🔍 Discovering test files...${NC}"
 TEST_FILES=()
