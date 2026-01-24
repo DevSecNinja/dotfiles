@@ -10,46 +10,24 @@ case $- in
       *) return 0;;
 esac
 
-# Helper function to check if parent process is fish
-_parent_is_fish() {
-    # Check parent process name on Linux
-    if [ -f "/proc/$PPID/comm" ]; then
-        [ "$(cat "/proc/$PPID/comm" 2>/dev/null)" = "fish" ] && return 0
-    fi
-
-    # Check parent process name on macOS/BSD
-    if command -v ps >/dev/null 2>&1; then
-        local parent_cmd
-        parent_cmd=$(ps -p "$PPID" -o comm= 2>/dev/null | tr -d ' ')
-        [[ "$parent_cmd" == *"fish"* ]] && return 0
-    fi
-
-    return 1
-}
-
 # Try fish first (preferred shell)
 if command -v fish >/dev/null 2>&1; then
+    export SHELL=$(command -v fish)
     # Only exec if:
-    # - Not already in fish (FISH_VERSION not set)
-    # - Not started from fish (IN_FISH_SHELL not set AND parent is not fish)
+    # - Not already in fish (FISH_VERSION not set AND IN_FISH_SHELL not set)
     # - And not in a nested shell (SHLVL = 1, meaning this is the initial login shell)
     # This allows users to explicitly run 'bash' from fish without being kicked back to fish
-    if [ -z "$FISH_VERSION" ] && [ -z "$IN_FISH_SHELL" ] && [ "$SHLVL" -eq 1 ] && ! _parent_is_fish; then
-        export SHELL=$(command -v fish)
-        exec "$SHELL" -l
-    fi
+    [ -z "$FISH_VERSION" ] && [ -z "$IN_FISH_SHELL" ] && [ "$SHLVL" -eq 1 ] && exec "$SHELL" -l
 fi
 
 # Fall back to zsh if fish not available
 if command -v zsh >/dev/null 2>&1; then
+    export SHELL=$(command -v zsh)
     # Only exec if:
     # - Not already in zsh (ZSH_VERSION not set)
-    # - Not started from fish (IN_FISH_SHELL not set AND parent is not fish)
+    # - Not started from fish (IN_FISH_SHELL not set)
     # - And not in a nested shell (SHLVL = 1)
-    if [ -z "$ZSH_VERSION" ] && [ -z "$IN_FISH_SHELL" ] && [ "$SHLVL" -eq 1 ] && ! _parent_is_fish; then
-        export SHELL=$(command -v zsh)
-        exec "$SHELL" -l
-    fi
+    [ -z "$ZSH_VERSION" ] && [ -z "$IN_FISH_SHELL" ] && [ "$SHLVL" -eq 1 ] && exec "$SHELL" -l
 fi
 
 # If we get here, neither fish nor zsh are available, continue with bash
