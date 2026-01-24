@@ -12,7 +12,7 @@
 
 **Used in:**
 - `.github/workflows/ci.yaml` (test-bash-scripts job) - Linux variant
-- `.github/workflows/ci.yaml` (test-powershell-scripts job) - Windows variant
+- `.github/workflows/ci.yaml` (test-powershell-scripts job) - Windows variant (note: PowerShell refers to the testing framework, the job name uses lowercase)
 
 **Purpose:** Publishes JUnit XML test results as GitHub Checks
 
@@ -164,10 +164,10 @@
 - ✅ Supports JUnit, TAP, dotnet-trx, mocha, jest-junit
 - ✅ Creates GitHub Checks
 - ✅ Code annotations for failures
-- ✅ Works on Linux only (no Windows support)
+- ✅ Works on Linux only (no Windows support as of January 2026)
 
 **Trade-offs vs EnricoMi:**
-- ❌ No Windows support (EnricoMi has `/windows` variant)
+- ❌ No Windows support (as of January 2026; EnricoMi has `/windows` variant)
 - ❌ Fewer test format options
 - ✅ Simpler configuration
 - ✅ Active development
