@@ -164,10 +164,10 @@
 - ✅ Supports JUnit, TAP, dotnet-trx, mocha, jest-junit
 - ✅ Creates GitHub Checks
 - ✅ Code annotations for failures
-- ✅ Works on Linux only (no Windows support as of January 2026)
+- ✅ Works on Linux only (no Windows support as of last assessment)
 
 **Trade-offs vs EnricoMi:**
-- ❌ No Windows support (as of January 2026; EnricoMi has `/windows` variant)
+- ❌ No Windows support (as of last assessment; EnricoMi has `/windows` variant)
 - ❌ Fewer test format options
 - ✅ Simpler configuration
 - ✅ Active development
