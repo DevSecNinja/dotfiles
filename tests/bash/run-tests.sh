@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 # Default values
 CI_MODE=false
 OUTPUT_FILE="test-results.tap"
+OUTPUT_FORMAT="tap"
 SPECIFIC_TESTS=()
 
 # Parse arguments
@@ -21,6 +22,8 @@ while [[ $# -gt 0 ]]; do
 	case $1 in
 	--ci)
 		CI_MODE=true
+		OUTPUT_FORMAT="junit"
+		OUTPUT_FILE="test-results.xml"
 		shift
 		;;
 	--output)
@@ -37,6 +40,7 @@ while [[ $# -gt 0 ]]; do
 		echo ""
 		echo "Options:"
 		echo "  --ci              Run in CI mode (installs dependencies, exits on failure)"
+		echo "                    Automatically uses JUnit XML format for test results"
 		echo "  --output FILE     Output file for test results (default: test-results.tap)"
 		echo "  --test FILE       Run specific test file (can be used multiple times)"
 		echo "  -h, --help        Show this help message"
@@ -140,8 +144,19 @@ echo ""
 # Run tests
 if [ "$CI_MODE" = true ]; then
 	# In CI mode, save output to file
-	bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"
-	EXIT_CODE=$?
+	if [ "$OUTPUT_FORMAT" = "junit" ]; then
+		# Use JUnit formatter for CI
+		bats --formatter junit --output . "${TEST_FILES[@]}"
+		EXIT_CODE=$?
+		# Rename the output file to match expected name
+		if [ -f "report.xml" ]; then
+			mv report.xml "$OUTPUT_FILE"
+		fi
+	else
+		# Use TAP format
+		bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"
+		EXIT_CODE=$?
+	fi
 else
 	# In interactive mode, show output directly (no file needed)
 	bats "${TEST_FILES[@]}"
@@ -165,12 +180,26 @@ if [ "$CI_MODE" = true ]; then
 	echo ""
 	echo -e "${BLUE}📊 Test Results Summary:${NC}"
 	if [ -f "$OUTPUT_FILE" ]; then
-		grep -E "^(ok|not ok)" "$OUTPUT_FILE" | sort | uniq -c || echo "  No test results found"
+		if [ "$OUTPUT_FORMAT" = "junit" ]; then
+			echo "  JUnit XML report generated: $OUTPUT_FILE"
+			# Display a simple summary from JUnit XML
+			if command -v xmllint >/dev/null 2>&1; then
+				TOTAL=$(xmllint --xpath "count(//testcase)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				FAILURES=$(xmllint --xpath "count(//testcase/failure)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				ERRORS=$(xmllint --xpath "count(//testcase/error)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS"
+			fi
+		else
+			# TAP format summary
+			grep -E "^(ok|not ok)" "$OUTPUT_FILE" | sort | uniq -c || echo "  No test results found"
+		fi
 	fi
 
-	echo ""
-	echo -e "${BLUE}📋 Full Test Output:${NC}"
-	cat "$OUTPUT_FILE"
+	if [ "$OUTPUT_FORMAT" = "tap" ]; then
+		echo ""
+		echo -e "${BLUE}📋 Full Test Output:${NC}"
+		cat "$OUTPUT_FILE"
+	fi
 fi
 
 exit $EXIT_CODE

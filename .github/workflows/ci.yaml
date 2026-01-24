@@ -369,13 +369,13 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: bats-test-results
-          path: tests/bash/test-results.tap
+          path: tests/bash/test-results.xml
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: tests/bash/test-results.tap
+          files: tests/bash/test-results.xml
           check_name: 'Bash Test Results (Bats)'
           comment_mode: off
 
