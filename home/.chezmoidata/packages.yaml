@@ -104,13 +104,13 @@ packages:
     powershell_git_modules:
       light: []
       full:
-        - name: "PowerShell-Modules"
-          url: "https://github.com/DevSecNinja/PowerShell-Modules.git"
+        - name: "PowerShell"
+          url: "https://github.com/DevSecNinja/PowerShell.git"
           # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
           destination: "DevSecNinja.PowerShell"
-        - name: "O365-MailAlias"
-          url: "https://github.com/DevSecNinja/O365-MailAlias.git"
-          destination: "DevSecNinja.O365.MailAlias"
+        - name: "Office 365 Mail Alias"
+          url: "https://github.com/DevSecNinja/Office365AliasModule.git"
+          destination: "DevSecNinja.Office365AliasModule"
 
 # VS Code extensions (optional, separate from package installation)
 extensions:
