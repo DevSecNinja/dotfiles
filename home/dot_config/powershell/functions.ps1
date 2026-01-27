@@ -294,37 +294,76 @@ function Install-GitPowerShellModule {
 
     # Clone the repository using git command directly with proper escaping
     try {
+        # Clone to a temporary location first to check for module structure
+        $tempClonePath = Join-Path $modulesDir "$Destination-temp-$(Get-Random)"
+
         # Use git directly with proper parameter passing (not string interpolation)
         # Use -- separator to prevent argument injection
         Push-Location $modulesDir
         try {
-            git clone --quiet $Url -- $Destination 2>&1 | Out-Null
+            git clone --quiet $Url -- $tempClonePath 2>&1 | Out-Null
             $cloneSuccess = $LASTEXITCODE -eq 0
         }
         finally {
             Pop-Location
         }
 
-        if ($cloneSuccess -and (Test-Path $targetPath)) {
-            Write-Host " [OK] Cloned to $targetPath" -ForegroundColor Green
-
-            # Ensure the module path is in PSModulePath
-            Add-ToPSModulePath -Path $modulesDir
-
-            return [PSCustomObject]@{
-                Name = $Name
-                Path = $targetPath
-                Status = "Installed"
-            }
-        } else {
+        if (-not $cloneSuccess -or -not (Test-Path $tempClonePath)) {
             Write-Host " [FAILED]" -ForegroundColor Red
             Write-Error "Failed to clone repository from $Url"
+            if (Test-Path $tempClonePath) {
+                Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
+            }
             return $null
+        }
+
+        # Check if a 'module' subfolder exists (case-insensitive)
+        $moduleSubfolder = Join-Path $tempClonePath "module"
+        $finalSourcePath = $tempClonePath
+
+        if (Test-Path $moduleSubfolder) {
+            # Module contents are in a subfolder - use that as the source
+            $finalSourcePath = $moduleSubfolder
+            Write-Host " [OK] Found module subfolder" -ForegroundColor Cyan
+        }
+
+        # Move the appropriate content to the final destination
+        if (Test-Path $targetPath) {
+            # Remove existing installation first
+            Remove-Item -Path $targetPath -Recurse -Force -ErrorAction Stop
+        }
+
+        # Move the contents to the final destination
+        Move-Item -Path $finalSourcePath -Destination $targetPath -Force -ErrorAction Stop
+
+        # Clean up temporary clone if different from what we moved
+        if ($finalSourcePath -ne $tempClonePath -and (Test-Path $tempClonePath)) {
+            Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        Write-Host " [OK] Installed to $targetPath" -ForegroundColor Green
+
+        # Ensure the module path is in PSModulePath
+        Add-ToPSModulePath -Path $modulesDir
+
+        return [PSCustomObject]@{
+            Name = $Name
+            Path = $targetPath
+            Status = "Installed"
         }
     }
     catch {
         Write-Host " [FAILED]" -ForegroundColor Red
-        Write-Error "Failed to clone repository: $_"
+        Write-Error "Failed to install module: $_"
+
+        # Clean up on failure
+        if ($tempClonePath -and (Test-Path $tempClonePath)) {
+            Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $targetPath) {
+            Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
         return $null
     }
 }
