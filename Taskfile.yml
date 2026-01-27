@@ -1,3 +1,4 @@
+---
 version: '3'
 
 # Taskfile for dotfiles repository
@@ -104,13 +105,17 @@ tasks:
     desc: Format shell scripts with shfmt
     dir: "{{.REPO_ROOT}}"
     cmds:
-      - shfmt -w -i 2 -ci home/**/*.sh 2>/dev/null || echo "shfmt not available, skipping"
+      - >
+        shfmt -w -i 2 -ci home/**/*.sh 2>/dev/null ||
+        echo "shfmt not available, skipping"
 
   lint:
     desc: Lint shell scripts with shellcheck
     dir: "{{.REPO_ROOT}}"
     cmds:
-      - find home -name "*.sh" -type f -exec shellcheck {} + || echo "shellcheck not available or found issues"
+      - >
+        find home -name "*.sh" -type f -exec shellcheck {} + ||
+        echo "shellcheck not available or found issues"
 
   setup:
     desc: Setup development environment
