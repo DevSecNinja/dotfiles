@@ -13,7 +13,8 @@ function which($name) {
 function touch($file) {
     if (Test-Path $file) {
         (Get-Item $file).LastWriteTime = Get-Date
-    } else {
+    }
+    else {
         New-Item -ItemType File -Path $file | Out-Null
     }
 }
@@ -135,17 +136,18 @@ function Install-PowerShellModule {
     if ($LASTEXITCODE -eq 0) {
         if ($result) {
             # Parse the output to extract module name and version
-            $parsed = $result.Trim().Split(" ") | Where-Object {$_ -ne ""}
+            $parsed = $result.Trim().Split(" ") | Where-Object { $_ -ne "" }
             if ($parsed.Count -ge 2) {
                 $moduleInfo = [PSCustomObject]@{
-                    Name = $parsed[0]
+                    Name    = $parsed[0]
                     Version = $parsed[1]
                 }
                 Write-Host " [OK] Installed $($moduleInfo.Name) $($moduleInfo.Version)" -ForegroundColor Green
                 return $moduleInfo
             }
         }
-    } else {
+    }
+    else {
         Write-Host " [FAILED]" -ForegroundColor Red
         Write-Error "Module installation failed: $result"
         return $null
@@ -247,17 +249,20 @@ function Install-GitPowerShellModule {
                     git reset --hard "origin/$defaultBranch" --quiet 2>&1 | Out-Null
                     if ($LASTEXITCODE -eq 0) {
                         Write-Host " [OK] Updated" -ForegroundColor Green
-                    } else {
+                    }
+                    else {
                         Write-Host " [WARN] Reset failed, trying pull" -ForegroundColor Yellow
                         # Fallback to pull if reset fails
                         git pull --quiet 2>&1 | Out-Null
                         if ($LASTEXITCODE -eq 0) {
                             Write-Host " [OK] Updated" -ForegroundColor Green
-                        } else {
+                        }
+                        else {
                             Write-Host " [WARN] Update failed" -ForegroundColor Yellow
                         }
                     }
-                } else {
+                }
+                else {
                     Write-Host " [WARN] Fetch failed" -ForegroundColor Yellow
                 }
             }
@@ -272,8 +277,8 @@ function Install-GitPowerShellModule {
         # Ensure the module path is in PSModulePath
         Add-ToPSModulePath -Path $modulesDir
         return [PSCustomObject]@{
-            Name = $Name
-            Path = $targetPath
+            Name   = $Name
+            Path   = $targetPath
             Status = "Exists"
         }
     }
@@ -294,76 +299,38 @@ function Install-GitPowerShellModule {
 
     # Clone the repository using git command directly with proper escaping
     try {
-        # Clone to a temporary location first to check for module structure
-        $tempClonePath = Join-Path $modulesDir "$Destination-temp-$(Get-Random)"
-
         # Use git directly with proper parameter passing (not string interpolation)
         # Use -- separator to prevent argument injection
         Push-Location $modulesDir
         try {
-            git clone --quiet $Url -- $tempClonePath 2>&1 | Out-Null
+            git clone --quiet $Url -- $Destination 2>&1 | Out-Null
             $cloneSuccess = $LASTEXITCODE -eq 0
         }
         finally {
             Pop-Location
         }
 
-        if (-not $cloneSuccess -or -not (Test-Path $tempClonePath)) {
+        if ($cloneSuccess -and (Test-Path $targetPath)) {
+            Write-Host " [OK] Cloned to $targetPath" -ForegroundColor Green
+
+            # Ensure the module path is in PSModulePath
+            Add-ToPSModulePath -Path $modulesDir
+
+            return [PSCustomObject]@{
+                Name   = $Name
+                Path   = $targetPath
+                Status = "Installed"
+            }
+        }
+        else {
             Write-Host " [FAILED]" -ForegroundColor Red
             Write-Error "Failed to clone repository from $Url"
-            if (Test-Path $tempClonePath) {
-                Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
-            }
             return $null
-        }
-
-        # Check if a 'module' subfolder exists (case-insensitive)
-        $moduleSubfolder = Join-Path $tempClonePath "module"
-        $finalSourcePath = $tempClonePath
-
-        if (Test-Path $moduleSubfolder) {
-            # Module contents are in a subfolder - use that as the source
-            $finalSourcePath = $moduleSubfolder
-            Write-Host " [OK] Found module subfolder" -ForegroundColor Cyan
-        }
-
-        # Move the appropriate content to the final destination
-        if (Test-Path $targetPath) {
-            # Remove existing installation first
-            Remove-Item -Path $targetPath -Recurse -Force -ErrorAction Stop
-        }
-
-        # Move the contents to the final destination
-        Move-Item -Path $finalSourcePath -Destination $targetPath -Force -ErrorAction Stop
-
-        # Clean up temporary clone if different from what we moved
-        if ($finalSourcePath -ne $tempClonePath -and (Test-Path $tempClonePath)) {
-            Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-
-        Write-Host " [OK] Installed to $targetPath" -ForegroundColor Green
-
-        # Ensure the module path is in PSModulePath
-        Add-ToPSModulePath -Path $modulesDir
-
-        return [PSCustomObject]@{
-            Name = $Name
-            Path = $targetPath
-            Status = "Installed"
         }
     }
     catch {
         Write-Host " [FAILED]" -ForegroundColor Red
-        Write-Error "Failed to install module: $_"
-
-        # Clean up on failure
-        if ($tempClonePath -and (Test-Path $tempClonePath)) {
-            Remove-Item -Path $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        if (Test-Path $targetPath) {
-            Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-
+        Write-Error "Failed to clone repository: $_"
         return $null
     }
 }
@@ -417,7 +384,8 @@ function Add-ToPSModulePath {
             # Add to user's PSModulePath permanently
             if ($currentPath) {
                 $newPath = $currentPath + [IO.Path]::PathSeparator + $normalizedPath
-            } else {
+            }
+            else {
                 $newPath = $normalizedPath
             }
             [Environment]::SetEnvironmentVariable("PSModulePath", $newPath, "User")
@@ -436,8 +404,8 @@ function Add-ToPSModulePath {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCByF3biQmm4g3JF
-# dKJWUeFO49GuRJdhg0oDnj/u0HWViaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDp/VSUYc7qDH2W
+# csMtHyFBjZ1FZlguVyimNTbRa/8d46CCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -571,33 +539,33 @@ function Add-ToPSModulePath {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCAkWWaQvRG75CDeOdLtQyq0ok8mEG0n5tQgsU83n/W4ATANBgkqhkiG
-# 9w0BAQEFAASCAgBLJzGGSWBqGYp2QjzPEYnH8zV907CPWkdTcLYxqgxGDUUBU0Cy
-# hE9c85TmW1I2/jeedmfxMeiYEMm0+G7m25+r/6quhdO83HILk/SAK2BHbYQOxgwm
-# maAiiERK/vlt4VefQ0tBkpdoRJJ5qsAUBjjrbMZEaSVt5Y9tKz2sWkdNZPz572D6
-# 0QoSMwxTECUYzt4rgan04c+R5UECSUBlEQ3Y/U9rd+NpO5eZqd1T+3/lLmqgK+zR
-# mRKIdtGRqoGXHWX8yQeAYQwnJyxEuvZCuPXwjxtR9p6OpOq1dCFbkwdkMVK3OFQc
-# bbsXa06mZqwW0zxcm2Ilf2IyZmi1Eqn9p635gMws43UsoZWji5zEu6fgS03HtJeq
-# yPLfrB2YtHNfL/eObJz3RJ+xtZXr/SWu5i4N6bz2ssZPtB5esoWys9UXU+2ixMG0
-# lQixSI5R98yqyT9Mu7qEj9M6xMv7XvLLKWlHH/5C4zjFl+wIbOvTb6zAbCMFZFi3
-# M/dKxL4/O6Il9ivA6Xy5qZ7eto34iN3runlJLY5ThpLIuKvKuoBvmCNL1LHMgr5G
-# GnFgAyF9xMHS2+UZYQVSLi8i0lcbYzPmBucYGIlQ/990xi5+J8Qy9H51t43zWFgg
-# EfioqLG6Jrq8ltJVuXfezoLnUkMT0C1J6x44m4TzU4t/OYVEd2TlgXTIO6GCAyYw
+# DQEJBDEiBCDlyciRlgooM/RU1qY4Kdol1jgQUAWx69yYo2/BlbgFvTANBgkqhkiG
+# 9w0BAQEFAASCAgCCpQP4JvVU+/ASbBb9KJBRPYAu/nHzvNQk94hLtSYmu8FXlq8c
+# VCkL9H9/HTYRijUr+2luTObnkJPpvGluZ8XG00247dRSietRoWCl4oq/fkA5gEuw
+# BQpcCoezOROkXNDHvSwQHBBMyRn9f7m2MQqKqGRX1U3SOnbjtPWUatGTe7H0+GbL
+# 6Iiar8KF/sp7crDJxJoUMa+KaKI5JsZqIHdJumDKxdsF7g2Pzupz2fO1IWH3kPG2
+# F9xGNvGqVLlRNRkgfO/BW4qsis7JWpf6mvMXpQ1XHZhZxDeSEzlV/HXGDb5VVKOv
+# Sg7bd75leZzeiHcVOBO8suoeuFddCbIv9TfSjxHvNt4mNY/t08Yzrt8BlPrhnk5T
+# 6G/8WkHbdxe5YTECLmaNDGtO7z5sGaOtt6fWvkWGcijgSUUYty7wcAOYIczhmeE6
+# nF6vQa7OWil224x9N3qwa9PyRVzIVI8C9Z3iEw5jwocG7A9e6hd9hXT3P3c1q/3R
+# hoGr3BzfY0oXGCWAqpx0dT+yHZe31AAPpDwbHIflK5dhK8DOWWkC7TGrVUbhx8fd
+# bEugJiyJS798ovZwW8VwZcqOZJ5ksyqyH6MgVy8yd2cx5vN/SRauHniXuBju+9Le
+# GlEel8mD+sTLwGJlny7KdbdEncdqEPtZFtcN/FvnhKT/ksqtvNcf3aSboqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMjcyMjAxMDhaMC8GCSqGSIb3DQEJBDEi
-# BCCay9nS0xt1gHtDD3cjg8mzy4AUM+5MM1tonDB5FOn5mzANBgkqhkiG9w0BAQEF
-# AASCAgCChTfEsfhb1RqVpMOWe6eb66n/1zQyqUUvPCXbvJp+VKsipfroXYn3Vt8V
-# DGjrszn+zWOzUUuzev+oHMFPiB8VC8YybwCXJd/wk2BYiSZlYvuuYUCmpPyUwHy7
-# U7kspnw+AbdWHI20J7wWdUjUlLqoH7TS6juMmGw/vt1aQn3b+UwkXOfdjnGAmAXd
-# 6VdKqDacgD6uH1FwT60auUQnP0dOGztbmNdSa6OZZ0HAZNrdo/9N3TmzOFjN21ht
-# WhzJvdgYwtkaJTZx3fihi6CPQorU+cmVlx+S0XssX/Sl1gpIEbJHdOdvKmVKmkNS
-# 6cw5wX9/Bo0gysNa/uXJGakxnuv0CrECdW+GJgnOwNqKj37g+XrrQGlJG/SQzBn2
-# 6LVqJeDxpQtKkefVODNQNHHhO6YJyQZK43oJf3Atudx3+ADeZYgdHj5BWjf+VUUX
-# s8vsFQd9JsX3IP4pSdEpJ8fUAPTYRX9ELjHJdwnYh7nvV2BVgq81/0b+MvebXGfS
-# J/6efyPjwQRdXuwaBW9o4v2VD0lphmj9PKZlLaj695BI094kVy8YvLljpsM6D9m4
-# OhP5dP90T4NYY2Hlf5RMFHTpCCo5bicZPs4NlTIF1RGvnXtBHzcNg9Pdj0RoYhXu
-# VW24hWY1DuRL2I84ESxQ6e/LQWEZqL3Xnp5I4h9DA0ScX+Hhgg==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMjQxNzQxNTVaMC8GCSqGSIb3DQEJBDEi
+# BCAHRpOIYI6LfgPLU4BS0BMygKlBBn7/1qmjniZ6tEI9hjANBgkqhkiG9w0BAQEF
+# AASCAgCd8V/bLPb+vwyWauM5ESxV6YGP6oekMVD54JcCmmKqUO9sLVIoD4R3WeON
+# MxJLFm2UaElq37PvCAuRAZEMR4u1mo7qaBkYtowBdPD/rOiuHcHBccbWmULmfRPZ
+# /WVnuPEq+sIldkMuGBT1PGNgWKl6pF5p6oNJ1MaA3bE6EmYvcF14+mjAQ1DtV57C
+# drf0LTWfcDIlnQP+X/rF3mBaMT+X2nHK/gETzScqFlh7+wSXThcwKlaXjNrm5p2v
+# Ae09/y4PUAspIhYHfWiyy5NXztODVGo/bnYov3cGEVoT7QO/zpQDlwfWizLyOL4U
+# CaCAfVgpqikVYY2wPzTEBSCDgK7U/+FQPXAbnorjEdrQMSKfyKRwNnP/JOZ9kKHR
+# apU3HGJObGvf6n1Onm3bSKdGYXExwAJkEEVjKaaKZr2ahxBLigYswsstY0T/ouXq
+# kTh5IlLjp3VTle2nggMOQnLnXu1kS+E9zG5LovC81qadHW4Dzj5BBgyIs4h0D7TI
+# +hE+bY5VjUZXLurrftyRSBzy6JuIimz/PSUa/4HCwikDPpHD/EKLNAfy/OZNpIbQ
+# Z1kB/ZgCtIhzFzjEUhAqxxpvtrONnmlqdv8ZBuNChvSd8U9GSyyaCyskxTlxzWHL
+# XwGig/wrGWZGoU6oLwwz79PWCrj5/Enzy9QcRdpez5nRU4kZXg==
 # SIG # End signature block
