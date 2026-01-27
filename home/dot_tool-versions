@@ -1,0 +1,13 @@
+# mise/asdf tool versions
+# This file defines default tool versions for mise
+# Usage: mise install (installs all tools listed here)
+# Override versions per project by creating a .tool-versions file in that project
+
+# Python - modern stable version
+python 3.12
+
+# Node.js - LTS version
+nodejs lts
+
+# Go - latest stable
+go latest

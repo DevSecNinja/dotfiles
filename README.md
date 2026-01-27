@@ -11,6 +11,8 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Custom Functions Library**: Reusable shell functions for common tasks (git operations, brew updates, file management)
 - **Automated Validation**: Pre-commit hooks and validation scripts ensure configuration quality
 - **Windows Enterprise Detection**: Automatic detection of Entra ID (Azure AD) and Intune enrollment status
+- **Tool Version Management**: Integrated [mise](https://mise.jdx.dev/) support for managing development tool versions (Python, Node.js, Go, etc.)
+- **Task Runner**: Built-in [Taskfile](https://taskfile.dev) for common development workflows and validation tasks
 
 ## 🔧 Chezmoi Variables
 
@@ -163,6 +165,83 @@ To use this dotfiles repository in Coder:
 4. Coder will automatically run `install.sh` (Linux/macOS) or `install.ps1` (Windows) during workspace setup
 
 For more information, see the [Coder Dotfiles Documentation](https://coder.com/docs/user-guides/workspace-dotfiles).
+
+## 🛠️ Tool Version Management with Mise
+
+This dotfiles repository includes [mise](https://mise.jdx.dev/) (formerly rtx) for managing development tool versions. Mise is automatically installed in full mode and activated in all supported shells.
+
+### Default Tools
+
+The `.tool-versions` file in your home directory defines default versions for:
+- **Python 3.12** - Modern stable version
+- **Node.js LTS** - Long-term support version
+- **Go** - Latest stable release
+
+### Using Mise
+
+```bash
+# Install all tools from .tool-versions
+mise install
+
+# Install a specific tool version
+mise install python@3.11
+
+# Set a tool version globally
+mise use --global python@3.12
+
+# Set a tool version for current project
+mise use python@3.11
+
+# List installed tools
+mise list
+
+# Update all tools
+mise upgrade
+```
+
+Mise automatically activates when you enter a directory with a `.tool-versions` or `.mise.toml` file, switching to the specified tool versions.
+
+## 📋 Task Runner
+
+The repository includes a [Taskfile](https://taskfile.dev) for common development workflows. Task is automatically installed in full mode.
+
+### Available Tasks
+
+```bash
+# Show all available tasks
+task --list
+
+# Run all validation checks
+task validate
+
+# Run pre-commit hooks
+task validate:pre-commit
+
+# Run test suite
+task validate:scripts
+
+# Test specific components
+task test:chezmoi   # Test Chezmoi config
+task test:shell     # Test shell scripts
+task test:fish      # Test Fish config
+
+# Preview Chezmoi changes
+task apply:dry-run
+
+# Apply dotfiles
+task apply
+
+# Show differences
+task diff
+
+# Setup development environment
+task setup
+
+# Clean temporary files
+task clean
+```
+
+For the full list of tasks and their descriptions, run `task --list` or view the `Taskfile.yml` in the repository root.
 
 ## 🔧 Customization
 

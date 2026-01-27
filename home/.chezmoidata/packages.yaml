@@ -24,6 +24,7 @@ packages:
       light: []
       full:
         - mise
+        - go-task
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
@@ -43,6 +44,7 @@ packages:
         - vim
         - wget
       full:
+        - go-task
         - mise
         - python@3
       # TODO: Homebrew: add support for casks * app store apps
@@ -97,6 +99,7 @@ packages:
         - Microsoft.WindowsTerminal
         - JanDeDobbeleer.OhMyPosh
         - Microsoft.WSL
+        - Task.Task
 
     # PowerShell modules (installed via PowerShellGet)
     powershell_modules:

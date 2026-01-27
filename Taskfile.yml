@@ -1,0 +1,119 @@
+version: '3'
+
+# Taskfile for dotfiles repository
+# Run 'task --list' to see all available tasks
+# Requires: go-task (https://taskfile.dev)
+
+vars:
+  REPO_ROOT:
+    sh: pwd
+  HOME_DIR: "{{.REPO_ROOT}}/home"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  validate:
+    desc: Run all validation checks
+    cmds:
+      - task: validate:pre-commit
+      - task: validate:scripts
+
+  validate:pre-commit:
+    desc: Run pre-commit hooks on all files
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - pre-commit run --all-files
+    sources:
+      - "**/*.sh"
+      - "**/*.fish"
+      - "**/*.ps1"
+      - "**/*.yaml"
+      - "**/*.yml"
+
+  validate:scripts:
+    desc: Run validation test suite
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - ./tests/bash/run-tests.sh --ci
+    sources:
+      - "tests/bash/**/*.bats"
+      - "home/**/*.sh"
+      - "home/**/*.fish"
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: validate
+
+  test:chezmoi:
+    desc: Test Chezmoi configuration
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - ./tests/bash/run-tests.sh --test validate-chezmoi.bats
+
+  test:shell:
+    desc: Test shell script syntax
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - ./tests/bash/run-tests.sh --test validate-shell-scripts.bats
+
+  test:fish:
+    desc: Test Fish configuration
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - ./tests/bash/run-tests.sh --test validate-fish-config.bats
+
+  install:deps:
+    desc: Install Python dependencies
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - pip3 install -r requirements.txt
+    sources:
+      - requirements.txt
+
+  apply:dry-run:
+    desc: Preview Chezmoi changes without applying
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - chezmoi apply --dry-run --source={{.HOME_DIR}}
+
+  apply:
+    desc: Apply dotfiles with Chezmoi
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - chezmoi apply --source={{.HOME_DIR}}
+
+  diff:
+    desc: Show differences between source and target
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - chezmoi diff --source={{.HOME_DIR}}
+
+  clean:
+    desc: Clean temporary files
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - rm -rf /tmp/dotfiles-*
+      - find . -type f -name "*.bak" -delete
+      - find . -type f -name "*~" -delete
+
+  format:
+    desc: Format shell scripts with shfmt
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - shfmt -w -i 2 -ci home/**/*.sh 2>/dev/null || echo "shfmt not available, skipping"
+
+  lint:
+    desc: Lint shell scripts with shellcheck
+    dir: "{{.REPO_ROOT}}"
+    cmds:
+      - find home -name "*.sh" -type f -exec shellcheck {} + || echo "shellcheck not available or found issues"
+
+  setup:
+    desc: Setup development environment
+    cmds:
+      - task: install:deps
+      - echo "Setup complete!"
