@@ -3,14 +3,7 @@
 
 # Initialize mise if available
 if (Get-Command mise -ErrorAction SilentlyContinue) {
-    try {
-        $miseActivation = mise activate pwsh 2>&1
-        if ($LASTEXITCODE -eq 0 -and $miseActivation) {
-            Invoke-Expression $miseActivation
-        }
-    } catch {
-        Write-Warning "Failed to initialize mise: $_"
-    }
+    mise activate pwsh | Out-String | Invoke-Expression
 }
 
 # SIG # Begin signature block
