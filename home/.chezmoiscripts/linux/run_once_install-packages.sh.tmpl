@@ -44,7 +44,8 @@ sudo dnf install -y {{ . | quote }}
     {{- end }}
 {{- else if eq .chezmoi.os "darwin" }}
 if ! command -v brew >/dev/null 2>&1; then
-    echo "❌ Homebrew not found. Please install Homebrew first."
+    echo "❌ Homebrew not found. Please run the Homebrew installation script first."
+    echo "   The script should have run automatically if you're in full mode."
     exit 1
 fi
 
