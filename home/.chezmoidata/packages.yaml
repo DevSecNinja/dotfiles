@@ -39,6 +39,7 @@ packages:
         - vim
         - wget
       full:
+        - mise
         - python@3
       # TODO: Homebrew: add support for casks * app store apps
       # Move them under brew (brew.brew and brew.cask and brew.app-store)
@@ -87,6 +88,7 @@ packages:
         - twpayne.chezmoi
       full:
         - Docker.DockerDesktop
+        - jdx.mise
         - Microsoft.VisualStudioCode
         - Microsoft.WindowsTerminal
         - JanDeDobbeleer.OhMyPosh
