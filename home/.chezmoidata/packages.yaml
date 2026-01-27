@@ -20,6 +20,10 @@ packages:
         - zsh
       full:
         - gh # GitHub CLI
+    brew:
+      light: []
+      full:
+        - mise
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
