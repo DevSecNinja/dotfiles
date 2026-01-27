@@ -6,8 +6,7 @@ version: '3'
 # Requires: go-task (https://taskfile.dev)
 
 vars:
-  REPO_ROOT:
-    sh: pwd
+  REPO_ROOT: "{{.TASKFILE_DIR}}"
   HOME_DIR: "{{.REPO_ROOT}}/home"
 
 tasks:
@@ -35,7 +34,8 @@ tasks:
       - "**/*.yml"
 
   validate:scripts:
-    desc: Run validation test suite
+    desc: Run validation test suite (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - ./tests/bash/run-tests.sh --ci
@@ -50,19 +50,22 @@ tasks:
       - task: validate
 
   test:chezmoi:
-    desc: Test Chezmoi configuration
+    desc: Test Chezmoi configuration (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - ./tests/bash/run-tests.sh --test validate-chezmoi.bats
 
   test:shell:
-    desc: Test shell script syntax
+    desc: Test shell script syntax (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - ./tests/bash/run-tests.sh --test validate-shell-scripts.bats
 
   test:fish:
-    desc: Test Fish configuration
+    desc: Test Fish configuration (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - ./tests/bash/run-tests.sh --test validate-fish-config.bats
@@ -94,7 +97,8 @@ tasks:
       - chezmoi diff --source={{.HOME_DIR}}
 
   clean:
-    desc: Clean temporary files
+    desc: Clean temporary files (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - rm -rf /tmp/dotfiles-*
@@ -102,7 +106,8 @@ tasks:
       - find . -type f -name "*~" -delete
 
   format:
-    desc: Format shell scripts with shfmt
+    desc: Format shell scripts with shfmt (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - >
@@ -110,7 +115,8 @@ tasks:
         echo "shfmt not available, skipping"
 
   lint:
-    desc: Lint shell scripts with shellcheck
+    desc: Lint shell scripts with shellcheck (Unix only)
+    platforms: [linux, darwin]
     dir: "{{.REPO_ROOT}}"
     cmds:
       - >

@@ -23,8 +23,8 @@ packages:
     brew:
       light: []
       full:
-        - mise
         - go-task
+        - mise
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
