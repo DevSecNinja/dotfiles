@@ -106,7 +106,7 @@ tasks:
     dir: "{{.REPO_ROOT}}"
     cmds:
       - >
-        shfmt -w -i 2 -ci home/**/*.sh 2>/dev/null ||
+        find home -name "*.sh" -type f -exec shfmt -w -i 2 -ci {} + 2>/dev/null ||
         echo "shfmt not available, skipping"
 
   lint:

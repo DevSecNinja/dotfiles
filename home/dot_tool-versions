@@ -6,8 +6,8 @@
 # Python - modern stable version
 python 3.12
 
-# Node.js - LTS version
-nodejs lts
+# Node.js - LTS version (pinned to Iron LTS)
+nodejs lts/iron
 
-# Go - latest stable
-go latest
+# Go - latest stable (pinned to 1.23)
+go 1.23
