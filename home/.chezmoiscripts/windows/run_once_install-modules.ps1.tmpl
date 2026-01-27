@@ -10,17 +10,13 @@ if (-not (Test-Path $functionsPath)) {
 Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
 Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted #-PassThru
 
-Write-Host "`nInstalling PowerShell Resources..." -ForegroundColor Cyan
-Install-PSResource -Name NerdFonts -Scope CurrentUser
-
 Write-Host "`nInstalling PowerShell Fonts..." -ForegroundColor Cyan
-# Install-NerdFont -Name FiraCode -Scope CurrentUser -Force
 
 # chezmoi uses Windows PowerShell which throws 'CouldNotAutoloadMatchingModule'
 # TODO: Make nice function for calling pwsh non-interactive. Also reuse in Install-PowerShellModule file.
 # TODO: Move font install after installing packages since package install will install pwsh
 # TODO: Make nice font install function that checks if font was installed successfully
-pwsh -NoProfile -NonInteractive -Command "Install-NerdFont -Name FiraCode -Scope CurrentUser" 2>&1
+pwsh -NoProfile -NonInteractive -Command "Install-PSResource -Name NerdFonts -Scope CurrentUser && Install-NerdFont -Name FiraCode -Scope CurrentUser" 2>&1
 
 Write-Host "`nInstalling PowerShell Modules..." -ForegroundColor Cyan
 
