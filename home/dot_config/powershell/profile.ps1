@@ -62,11 +62,6 @@ if (Test-Path $completionsPath) {
     }
 }
 
-# Initialize oh-my-posh if available
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --eval --config ~/.ohmyposh.omp.yaml | Invoke-Expression
-}
-
 # Welcome message
 Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
 Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
