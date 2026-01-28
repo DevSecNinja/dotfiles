@@ -29,7 +29,7 @@ _.path = ["~/.local/share/mise/shims"]
 PYTHONDONTWRITEBYTECODE = "1"  # Prevent .pyc files
 
 # Aliases for common commands
-[alias]
+[tool_alias]
 # Upgrade all tools
 upgrade = "mise upgrade"
 
