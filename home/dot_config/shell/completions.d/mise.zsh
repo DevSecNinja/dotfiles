@@ -8,7 +8,7 @@ if command -v mise >/dev/null 2>&1; then
 	# Activate mise (shell integration)
 	# Safely evaluate, suppressing any error messages
 	eval "$(mise activate zsh 2>/dev/null)" 2>/dev/null || true
-	
+
 	# Load completions
 	eval "$(mise completion zsh 2>/dev/null)" 2>/dev/null || true
 fi

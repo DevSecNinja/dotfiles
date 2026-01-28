@@ -7,7 +7,7 @@
 if command -v mise >/dev/null 2>&1; then
 	# Activate mise (shell integration)
 	eval "$(mise activate bash)"
-	
+
 	# Load completions
 	eval "$(mise completion bash --include-bash-completion-lib)"
 fi
