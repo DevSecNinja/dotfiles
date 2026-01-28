@@ -102,10 +102,21 @@ if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com
         log_info "Installing recommended Homebrew dependencies for Debian/Ubuntu..."
         sudo apt-get install -y build-essential procps curl file git 2>/dev/null || log_warning "Some dependencies may not have installed"
         {{- end }}
+
+        # Fix permissions for zsh completions to prevent compaudit warnings
+        # https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
+        log_info "Securing Homebrew completion files for zsh..."
+        if sudo chmod -R go-w "$(brew --prefix)/share" 2>/dev/null; then
+            log_success "Homebrew completion permissions secured"
+        else
+            log_warning "Could not secure completion permissions (non-critical)"
+        fi
     else
         log_error "Homebrew installation completed but brew command not found in PATH"
         log_info "You may need to restart your shell or run:"
         log_info "  eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
+        log_info "You may also need to secure completion permissions manually:"
+        log_info "  sudo chmod -R go-w \"\$(brew --prefix)/share\""
         exit 1
     fi
 else
