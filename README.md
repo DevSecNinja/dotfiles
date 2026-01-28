@@ -11,6 +11,8 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Custom Functions Library**: Reusable shell functions for common tasks (git operations, brew updates, file management)
 - **Automated Validation**: Pre-commit hooks and validation scripts ensure configuration quality
 - **Windows Enterprise Detection**: Automatic detection of Entra ID (Azure AD) and Intune enrollment status
+- **Task Automation**: Integrated [Task](https://taskfile.dev/) runner for common operations (validation, testing, installation)
+- **Tool Version Management**: [mise](https://mise.jdx.dev/) for managing development tool versions
 
 ## 🔧 Chezmoi Variables
 
@@ -224,6 +226,82 @@ Hooks will automatically run on `git commit`. The checks include:
 - 🎨 Shell script formatting (shfmt)
 
 These scripts and hooks are also used in the GitHub Actions CI pipeline to ensure quality.
+
+## 🛠️ Development Tools
+
+This repository includes [Task](https://taskfile.dev/) and [mise](https://mise.jdx.dev/) for streamlined development:
+
+### Task Runner
+
+Task provides convenient commands for common operations:
+
+```bash
+# List all available tasks
+task --list
+
+# Install all dependencies (mise, go-task, Python packages)
+task install:all
+
+# Run all validation checks (required before commit)
+task validate:all
+
+# Run specific validations
+task validate:chezmoi      # Validate Chezmoi config
+task validate:shell        # Validate shell scripts
+task validate:fish         # Validate Fish config
+
+# Run tests
+task test:all              # All tests
+task test:chezmoi-apply    # Test Chezmoi apply
+
+# Chezmoi operations
+task chezmoi:init          # Preview changes (dry-run)
+task chezmoi:diff          # Show differences
+task chezmoi:verify        # Verify applied files
+
+# Development setup
+task dev:setup             # Complete dev environment setup
+
+# CI tasks
+task ci:validate           # Run CI validation pipeline
+```
+
+### Mise (Tool Version Manager)
+
+Mise manages tool versions defined in [.mise.toml](.mise.toml):
+
+```bash
+# Install mise-managed tools
+mise install
+
+# Show installed tools
+mise list
+
+# Upgrade all tools
+mise upgrade
+
+# Check mise configuration
+mise doctor
+```
+
+**Full mode installations** automatically install both Task and mise. **Light mode** installs only mise.
+
+### Installation Modes
+
+The repository supports two installation modes:
+
+- **Light mode** (servers, CI, codespaces): Essential tools only
+- **Full mode** (dev servers, workstations): Full development tooling including Task and mise
+
+The mode is auto-detected based on:
+- Hostname patterns (SVLDEV* = full, SVL* = light)
+- Environment (codespaces, devcontainer, CI = light)
+- Default = full mode
+
+To change modes:
+```bash
+chezmoi init --data=false
+```
 
 ## 📚 Learn More
 

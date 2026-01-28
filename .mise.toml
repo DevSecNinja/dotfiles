@@ -1,0 +1,60 @@
+# mise configuration for dotfiles repository
+# https://mise.jdx.dev/configuration.html
+
+# Global tool versions used in this project
+[tools]
+# Python for pre-commit and validation scripts
+python = "3.12"
+
+# Go Task for task runner
+go-task = "latest"
+
+# Chezmoi for dotfile management
+chezmoi = "latest"
+
+# Bats for bash testing
+bats = "latest"
+
+# Additional tools for development (commented out by default)
+# Uncomment based on your needs
+# node = "lts"
+# go = "1.22"
+
+# Environment variables
+[env]
+# Add mise bin directory to PATH
+_.path = ["~/.local/share/mise/shims"]
+
+# Python settings
+PYTHONDONTWRITEBYTECODE = "1"  # Prevent .pyc files
+
+# Aliases for common commands
+[alias]
+# Upgrade all tools
+upgrade = "mise upgrade"
+
+# Settings for specific tools
+[settings]
+# Auto-activate mise when entering directory
+experimental = true
+
+# Legacy version file support (.python-version, .node-version, etc.)
+legacy_version_file = true
+
+# Verbose mode for debugging
+verbose = false
+
+# Tasks (experimental feature - complements Taskfile.yml)
+# Uncomment to use mise tasks instead of or alongside go-task
+# [tasks]
+# [tasks.validate]
+# description = "Run all validation checks"
+# run = "./tests/bash/run-tests.sh --ci && pre-commit run --all-files"
+
+# [tasks.test]
+# description = "Run tests"
+# run = "./tests/bash/run-tests.sh --ci"
+
+# [tasks.install]
+# description = "Install dependencies"
+# run = "pip3 install -r requirements.txt"

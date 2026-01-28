@@ -1,0 +1,243 @@
+# Taskfile for dotfiles repository
+# https://taskfile.dev
+version: '3'
+
+vars:
+  PYTHON: python3
+  PIP: pip3
+  CHEZMOI: chezmoi
+  TEST_DIR: tests/bash
+  TEST_RUNNER: '{{.TEST_DIR}}/run-tests.sh'
+
+tasks:
+  # Default task - show available tasks
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  # Installation tasks
+  install:deps:
+    desc: Install Python dependencies (required for validation)
+    cmds:
+      - '{{.PIP}} install -r requirements.txt'
+    sources:
+      - requirements.txt
+    generates:
+      - .venv/**/*
+    preconditions:
+      - sh: command -v {{.PIP}}
+        msg: 'pip3 is not installed'
+
+  install:mise:
+    desc: Install mise if not present
+    cmds:
+      - |
+        if ! command -v mise >/dev/null 2>&1; then
+          echo "Installing mise..."
+          curl https://mise.run | sh
+        else
+          echo "✅ mise already installed"
+        fi
+    status:
+      - command -v mise
+
+  install:task:
+    desc: Install go-task using mise
+    deps:
+      - install:mise
+    cmds:
+      - mise install go-task@latest
+      - mise use --global go-task@latest
+    status:
+      - command -v task
+
+  install:all:
+    desc: Install all development dependencies
+    deps:
+      - install:deps
+      - install:mise
+      - install:task
+
+  # Validation tasks
+  validate:all:
+    desc: Run all validation checks (required before commit)
+    deps:
+      - install:deps
+    cmds:
+      - task: validate:tests
+      - task: validate:precommit
+
+  validate:tests:
+    desc: Run validation tests via Bats
+    deps:
+      - install:deps
+    cmds:
+      - '{{.TEST_RUNNER}}'
+
+  validate:tests-ci:
+    desc: Run validation tests via Bats in CI mode
+    deps:
+      - install:deps
+    cmds:
+      - '{{.TEST_RUNNER}} --ci'
+
+  validate:chezmoi:
+    desc: Validate Chezmoi configuration syntax
+    cmds:
+      - '{{.TEST_RUNNER}} --test validate-chezmoi.bats'
+
+  validate:shell:
+    desc: Validate shell script syntax
+    cmds:
+      - '{{.TEST_RUNNER}} --test validate-shell-scripts.bats'
+
+  validate:fish:
+    desc: Validate Fish configuration syntax
+    cmds:
+      - '{{.TEST_RUNNER}} --test validate-fish-config.bats'
+
+  validate:precommit:
+    desc: Run pre-commit hooks on all files
+    deps:
+      - install:deps
+    cmds:
+      - pre-commit run --all-files
+
+  # Testing tasks
+  test:all:
+    desc: Run all tests (validation + functional)
+    deps:
+      - validate:tests
+    cmds:
+      - task: test:chezmoi-apply
+      - task: test:fish-config
+
+  test:chezmoi-apply:
+    desc: Test Chezmoi apply (dry-run)
+    cmds:
+      - '{{.TEST_RUNNER}} --test test-chezmoi-apply.bats'
+
+  test:fish-config:
+    desc: Test Fish configuration loads without errors
+    cmds:
+      - '{{.TEST_RUNNER}} --test test-fish-config.bats'
+
+  test:specific:
+    desc: Run a specific test file (usage - task test:specific -- TESTFILE=validate-chezmoi.bats)
+    cmds:
+      - '{{.TEST_RUNNER}} --test {{.TESTFILE}}'
+    preconditions:
+      - sh: test -n "{{.TESTFILE}}"
+        msg: 'TESTFILE variable is required. Usage: task test:specific -- TESTFILE=validate-chezmoi.bats'
+
+  # Chezmoi tasks
+  chezmoi:init:
+    desc: Initialize Chezmoi (dry-run preview)
+    cmds:
+      - '{{.CHEZMOI}} init --apply --dry-run --source=.'
+
+  chezmoi:apply:
+    desc: Apply Chezmoi configuration (WARNING - modifies files)
+    cmds:
+      - '{{.CHEZMOI}} apply --source=.'
+    preconditions:
+      - sh: '[ "{{.CLI_ARGS}}" = "--force" ]'
+        msg: 'This will modify your dotfiles. Run with: task chezmoi:apply -- --force'
+
+  chezmoi:diff:
+    desc: Show differences between current and target state
+    cmds:
+      - '{{.CHEZMOI}} diff --source=.'
+
+  chezmoi:verify:
+    desc: Verify applied dotfiles match source
+    cmds:
+      - '{{.CHEZMOI}} verify'
+
+  chezmoi:doctor:
+    desc: Run Chezmoi doctor to check for issues
+    cmds:
+      - '{{.CHEZMOI}} doctor'
+
+  # Development tasks
+  dev:setup:
+    desc: Complete development environment setup
+    cmds:
+      - task: install:all
+      - task: validate:all
+      - echo "✅ Development environment setup complete!"
+
+  dev:precommit:
+    desc: Setup pre-commit hooks
+    deps:
+      - install:deps
+    cmds:
+      - pre-commit install
+      - echo "✅ Pre-commit hooks installed"
+
+  # CI tasks
+  ci:validate:
+    desc: Run CI validation pipeline
+    cmds:
+      - task: install:deps
+      - task: validate:all
+
+  ci:test:
+    desc: Run CI test pipeline
+    cmds:
+      - task: ci:validate
+      - task: test:all
+
+  # Cleanup tasks
+  clean:test-results:
+    desc: Remove test result files
+    cmds:
+      - rm -f {{.TEST_DIR}}/test-results.xml {{.TEST_DIR}}/test-results.tap
+
+  clean:cache:
+    desc: Clean Python cache files
+    cmds:
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+      - find . -type f -name '*.pyc' -delete 2>/dev/null || true
+
+  clean:all:
+    desc: Clean all generated files
+    deps:
+      - clean:test-results
+      - clean:cache
+
+  # Info tasks
+  info:env:
+    desc: Show environment information
+    cmds:
+      - |
+        echo "📋 Environment Information"
+        echo "=========================="
+        echo "OS: $(uname -s)"
+        echo "Hostname: $(hostname)"
+        echo "Chezmoi: $(command -v chezmoi && chezmoi --version || echo 'not installed')"
+        echo "Fish: $(command -v fish && fish --version || echo 'not installed')"
+        echo "Python: $({{.PYTHON}} --version)"
+        echo "Pip: $({{.PIP}} --version)"
+        echo "Mise: $(command -v mise && mise --version || echo 'not installed')"
+        echo "Task: $(command -v task && task --version || echo 'not installed')"
+        echo "Pre-commit: $(command -v pre-commit && pre-commit --version || echo 'not installed')"
+
+  info:packages:
+    desc: Show packages that would be installed
+    cmds:
+      - |
+        echo "📦 Package Information"
+        echo "====================="
+        if command -v yq >/dev/null 2>&1; then
+          echo ""
+          echo "Light mode packages:"
+          yq eval '.packages.linux.apt.light[]' home/.chezmoidata/packages.yaml 2>/dev/null || echo "Cannot read packages.yaml"
+          echo ""
+          echo "Full mode additional packages:"
+          yq eval '.packages.linux.apt.full[]' home/.chezmoidata/packages.yaml 2>/dev/null || echo "Cannot read packages.yaml"
+        else
+          echo "Install yq to display package information: apt install yq"
+        fi
