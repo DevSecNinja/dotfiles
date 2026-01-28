@@ -1,9 +1,14 @@
 # mise (rtx) initialization for PowerShell
-# Note: 'mise activate' handles its own completion setup
+# Note: 'mise activate' handles shell integration (PATH, hooks)
+# Completions are generated separately using 'mise completion powershell'
 
 # Initialize mise if available
 if (Get-Command mise -ErrorAction SilentlyContinue) {
+    # Activate mise (shell integration)
     mise activate pwsh | Out-String | Invoke-Expression
+    
+    # Load completions
+    mise completion powershell | Out-String | Invoke-Expression
 }
 
 # SIG # Begin signature block
