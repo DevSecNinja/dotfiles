@@ -11,6 +11,8 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
     # Suppress errors from PSConsoleReadLine not being initialized yet
     # and from missing usage CLI (required for mise completions)
     try {
+        $savedErrorActionPreference = $ErrorActionPreference
+        $savedWarningPreference = $WarningPreference
         $ErrorActionPreference = 'SilentlyContinue'
         $WarningPreference = 'SilentlyContinue'
         mise completion powershell 2>$null | Out-String | Invoke-Expression
@@ -19,8 +21,8 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
         # Silently ignore completion errors - they don't affect functionality
     }
     finally {
-        $ErrorActionPreference = 'Continue'
-        $WarningPreference = 'Continue'
+        $ErrorActionPreference = $savedErrorActionPreference
+        $WarningPreference = $savedWarningPreference
     }
 }
 
