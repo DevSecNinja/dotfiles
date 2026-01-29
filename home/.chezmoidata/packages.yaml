@@ -9,6 +9,7 @@ packages:
     apt:
       light:
         - curl
+        - fastfetch
         - fish
         - git
         - jq
