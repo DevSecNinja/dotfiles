@@ -83,7 +83,7 @@ log_info "Downloading and running Homebrew installation script from https://brew
 log_warning "This may require sudo access and may prompt for your password"
 
 # Attempt Homebrew installation (non-blocking, will continue if it fails)
-if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1; then
+if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
     log_success "Homebrew installed successfully!"
 
     # Try to find Homebrew in standard locations
