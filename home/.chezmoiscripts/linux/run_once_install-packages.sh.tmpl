@@ -3,42 +3,99 @@
 # Light mode: installs essential packages only
 # Full mode: installs light + additional development packages
 
-set -e
+# Don't exit on error - we want to continue even if some packages fail
+set +e
 
 echo "🔧 Installing development tools ({{ .installType }} mode)..."
 
 {{- if eq .chezmoi.os "linux" }}
     {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+
+# Check if running with sudo privileges
+if [ "$EUID" -eq 0 ]; then
+    echo "⚠️  Running as root, commands will execute directly"
+    SUDO_CMD=""
+elif command -v sudo >/dev/null 2>&1; then
+    SUDO_CMD="sudo"
+else
+    echo "⚠️  Warning: sudo is not available and not running as root"
+    echo "   Skipping package installation as it requires elevated privileges"
+    exit 0
+fi
+
 echo "📦 Updating package lists..."
-sudo apt-get update
+$SUDO_CMD apt-get update
 
 echo "📦 Installing packages with APT..."
 # Install light mode packages (always)
 {{- range .packages.linux.apt.light }}
 echo "Installing {{ . }}..."
-sudo apt-get install -y {{ . | quote }}
+if $SUDO_CMD apt-get install -y {{ . | quote }} 2>&1; then
+    echo "✅ Successfully installed {{ . }}"
+else
+    exit_code=$?
+    if [ $exit_code -eq 100 ]; then
+        echo "⚠️  Warning: Package {{ . }} not found in repositories"
+    else
+        echo "⚠️  Warning: Failed to install {{ . }} (exit code: $exit_code)"
+    fi
+    echo "   Continuing with remaining packages..."
+fi
 {{- end }}
 
 {{- if eq .installType "full" }}
 # Install full mode packages (additional)
 {{- range .packages.linux.apt.full }}
 echo "Installing {{ . }}..."
-sudo apt-get install -y {{ . | quote }}
+if $SUDO_CMD apt-get install -y {{ . | quote }} 2>&1; then
+    echo "✅ Successfully installed {{ . }}"
+else
+    exit_code=$?
+    if [ $exit_code -eq 100 ]; then
+        echo "⚠️  Warning: Package {{ . }} not found in repositories"
+    else
+        echo "⚠️  Warning: Failed to install {{ . }} (exit code: $exit_code)"
+    fi
+    echo "   Continuing with remaining packages..."
+fi
 {{- end }}
 {{- end }}
     {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+
+# Check if running with sudo privileges
+if [ "$EUID" -eq 0 ]; then
+    echo "⚠️  Running as root, commands will execute directly"
+    SUDO_CMD=""
+elif command -v sudo >/dev/null 2>&1; then
+    SUDO_CMD="sudo"
+else
+    echo "⚠️  Warning: sudo is not available and not running as root"
+    echo "   Skipping package installation as it requires elevated privileges"
+    exit 0
+fi
+
 echo "📦 Installing packages with DNF..."
 # Install light mode packages (always)
 {{- range .packages.linux.dnf.light }}
 echo "Installing {{ . }}..."
-sudo dnf install -y {{ . | quote }}
+if $SUDO_CMD dnf install -y {{ . | quote }} 2>&1; then
+    echo "✅ Successfully installed {{ . }}"
+else
+    echo "⚠️  Warning: Failed to install {{ . }}"
+    echo "   Continuing with remaining packages..."
+fi
 {{- end }}
 
 {{- if eq .installType "full" }}
 # Install full mode packages (additional)
 {{- range .packages.linux.dnf.full }}
 echo "Installing {{ . }}..."
-sudo dnf install -y {{ . | quote }}
+if $SUDO_CMD dnf install -y {{ . | quote }} 2>&1; then
+    echo "✅ Successfully installed {{ . }}"
+else
+    echo "⚠️  Warning: Failed to install {{ . }}"
+    echo "   Continuing with remaining packages..."
+fi
 {{- end }}
 {{- end }}
     {{- end }}

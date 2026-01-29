@@ -7,6 +7,11 @@ packages:
   linux:
     # APT packages (Debian/Ubuntu)
     apt:
+      # PPAs to install (Ubuntu/derivatives only)
+      ppas:
+        light:
+          - ppa:zhangsongcui3371/fastfetch
+        full: []
       light:
         - curl
         - fastfetch
