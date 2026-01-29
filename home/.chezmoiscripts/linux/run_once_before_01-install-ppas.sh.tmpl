@@ -4,7 +4,8 @@
 # Light mode: installs essential PPAs only
 # Full mode: installs light + additional PPAs
 
-set -e
+# Don't exit on error - we want to continue even if some PPAs fail
+set +e
 
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
 {{- if or .packages.linux.apt.ppas.light .packages.linux.apt.ppas.full }}
@@ -33,11 +34,10 @@ fi
 # Check if add-apt-repository is available
 if ! command -v add-apt-repository >/dev/null 2>&1; then
     echo "📦 Installing software-properties-common for add-apt-repository..."
+    $SUDO_CMD apt-get update
     if [ -n "$DEBIAN_FRONTEND_VALUE" ]; then
-        DEBIAN_FRONTEND=$DEBIAN_FRONTEND_VALUE $SUDO_CMD apt-get update
         DEBIAN_FRONTEND=$DEBIAN_FRONTEND_VALUE $SUDO_CMD apt-get install -y software-properties-common
     else
-        $SUDO_CMD apt-get update
         $SUDO_CMD apt-get install -y software-properties-common
     fi
 fi
@@ -45,7 +45,7 @@ fi
 # Install light mode PPAs (always)
 {{- range .packages.linux.apt.ppas.light }}
 echo "Adding PPA: {{ . }}"
-if $SUDO_CMD add-apt-repository -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
     echo "✅ Successfully added PPA: {{ . }}"
 else
     echo "⚠️  Warning: Failed to add PPA: {{ . }}"
@@ -57,7 +57,7 @@ fi
 # Install full mode PPAs (additional)
 {{- range .packages.linux.apt.ppas.full }}
 echo "Adding PPA: {{ . }}"
-if $SUDO_CMD add-apt-repository -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
     echo "✅ Successfully added PPA: {{ . }}"
 else
     echo "⚠️  Warning: Failed to add PPA: {{ . }}"

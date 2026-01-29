@@ -8,9 +8,6 @@ set +e
 
 echo "🔧 Installing development tools ({{ .installType }} mode)..."
 
-{{- if eq .chezmoi.os "linux" }}
-    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
-
 # Check if running with sudo privileges
 if [ "$EUID" -eq 0 ]; then
     echo "⚠️  Running as root, commands will execute directly"
@@ -23,6 +20,9 @@ else
     exit 0
 fi
 
+{{- if eq .chezmoi.os "linux" }}
+    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+
 echo "📦 Updating package lists..."
 $SUDO_CMD apt-get update
 
@@ -30,7 +30,7 @@ echo "📦 Installing packages with APT..."
 # Install light mode packages (always)
 {{- range .packages.linux.apt.light }}
 echo "Installing {{ . }}..."
-if $SUDO_CMD apt-get install -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD apt-get install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
 else
     exit_code=$?
@@ -47,7 +47,7 @@ fi
 # Install full mode packages (additional)
 {{- range .packages.linux.apt.full }}
 echo "Installing {{ . }}..."
-if $SUDO_CMD apt-get install -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD apt-get install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
 else
     exit_code=$?
@@ -62,23 +62,11 @@ fi
 {{- end }}
     {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
 
-# Check if running with sudo privileges
-if [ "$EUID" -eq 0 ]; then
-    echo "⚠️  Running as root, commands will execute directly"
-    SUDO_CMD=""
-elif command -v sudo >/dev/null 2>&1; then
-    SUDO_CMD="sudo"
-else
-    echo "⚠️  Warning: sudo is not available and not running as root"
-    echo "   Skipping package installation as it requires elevated privileges"
-    exit 0
-fi
-
 echo "📦 Installing packages with DNF..."
 # Install light mode packages (always)
 {{- range .packages.linux.dnf.light }}
 echo "Installing {{ . }}..."
-if $SUDO_CMD dnf install -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD dnf install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
 else
     echo "⚠️  Warning: Failed to install {{ . }}"
@@ -90,7 +78,7 @@ fi
 # Install full mode packages (additional)
 {{- range .packages.linux.dnf.full }}
 echo "Installing {{ . }}..."
-if $SUDO_CMD dnf install -y {{ . | quote }} 2>&1; then
+if $SUDO_CMD dnf install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
 else
     echo "⚠️  Warning: Failed to install {{ . }}"
