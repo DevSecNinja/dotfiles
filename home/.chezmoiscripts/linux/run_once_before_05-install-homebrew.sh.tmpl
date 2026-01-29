@@ -82,14 +82,23 @@ fi
 log_info "Downloading and running Homebrew installation script from https://brew.sh"
 log_warning "This may require sudo access and may prompt for your password"
 
-if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+# Attempt Homebrew installation (non-blocking, will continue if it fails)
+if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 2>&1; then
     log_success "Homebrew installed successfully!"
 
-    # Add Homebrew to PATH for this session
-    BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
-    if [[ -x "$BREW_PATH" ]]; then
-        eval "$($BREW_PATH shellenv)"
+    # Try to find Homebrew in standard locations
+    BREW_PATH=""
+    if [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
+        BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
         log_info "Homebrew installed at: /home/linuxbrew/.linuxbrew"
+    elif [[ -x "$HOME/.linuxbrew/bin/brew" ]]; then
+        BREW_PATH="$HOME/.linuxbrew/bin/brew"
+        log_info "Homebrew installed at: $HOME/.linuxbrew"
+    fi
+
+    # Add Homebrew to PATH for this session if found
+    if [[ -n "$BREW_PATH" ]]; then
+        eval "$($BREW_PATH shellenv)"
     fi
 
     # Verify installation
@@ -112,17 +121,22 @@ if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com
             log_warning "Could not secure completion permissions (non-critical)"
         fi
     else
-        log_error "Homebrew installation completed but brew command not found in PATH"
+        log_warning "Homebrew installation completed but brew command not found in PATH"
         log_info "You may need to restart your shell or run:"
-        log_info "  eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
+        log_info "  eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" # or"
+        log_info "  eval \"\$($HOME/.linuxbrew/bin/brew shellenv)\""
         log_info "You may also need to secure completion permissions manually:"
         log_info "  sudo chmod -R go-w \"\$(brew --prefix)/share\""
-        exit 1
+        log_info "Continuing without Homebrew..."
+        exit 0
     fi
 else
-    log_error "Failed to install Homebrew"
-    log_info "Please visit https://brew.sh for manual installation instructions"
-    exit 1
+    log_warning "Failed to install Homebrew"
+    log_info "This is often due to insufficient permissions on shared/WSL systems."
+    log_info "Homebrew is optional - continuing with dotfiles installation."
+    log_info "If you need Homebrew, you can install it manually later:"
+    log_info "  Visit https://brew.sh for installation instructions"
+    exit 0
 fi
 
 log_success "Homebrew setup completed successfully!"
