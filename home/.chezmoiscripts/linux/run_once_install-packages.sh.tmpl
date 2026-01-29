@@ -42,6 +42,33 @@ sudo dnf install -y {{ . | quote }}
 {{- end }}
 {{- end }}
     {{- end }}
+
+{{- if eq .installType "full" }}
+# Check if Homebrew packages are defined for Linux
+{{- if or .packages.linux.brew.light .packages.linux.brew.full }}
+echo ""
+if command -v brew >/dev/null 2>&1; then
+    echo "📦 Installing packages with Homebrew..."
+    {{- range .packages.linux.brew.light }}
+    echo "Installing {{ . }}..."
+    brew install {{ . | quote }}
+    {{- end }}
+    {{- range .packages.linux.brew.full }}
+    echo "Installing {{ . }}..."
+    brew install {{ . | quote }}
+    {{- end }}
+else
+    echo "⚠️  Homebrew not available. Skipping Homebrew packages:"
+    {{- range .packages.linux.brew.light }}
+    echo "  - {{ . }} (not installed)"
+    {{- end }}
+    {{- range .packages.linux.brew.full }}
+    echo "  - {{ . }} (not installed)"
+    {{- end }}
+    echo "ℹ️  You can install Homebrew later from https://brew.sh"
+fi
+{{- end }}
+{{- end }}
 {{- else if eq .chezmoi.os "darwin" }}
 if ! command -v brew >/dev/null 2>&1; then
     echo "❌ Homebrew not found. Please run the Homebrew installation script first."

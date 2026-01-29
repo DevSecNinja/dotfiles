@@ -78,12 +78,34 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
     exit 1
 fi
 
+# Check for sudo permissions (only relevant on Linux)
+{{- if eq .chezmoi.os "linux" }}
+log_info "Checking for sudo permissions..."
+if ! sudo -n true 2>/dev/null; then
+    log_warning "Sudo access not available without password prompt"
+    log_warning "Homebrew installation requires sudo permissions to create /home/linuxbrew/.linuxbrew"
+    log_info "On Linux, Homebrew is optional. Continuing without Homebrew..."
+    log_info "You can install Homebrew manually later if needed: https://brew.sh"
+    exit 0
+fi
+log_success "Sudo permissions available"
+{{- end }}
+
 # Install Homebrew using official installation script
 log_info "Downloading and running Homebrew installation script from https://brew.sh"
+{{- if eq .chezmoi.os "linux" }}
 log_warning "This may require sudo access and may prompt for your password"
+{{- end }}
+
+# Set NONINTERACTIVE based on environment (CI, Codespaces, or Devcontainer = non-interactive)
+{{- if or .ci .codespaces .devcontainer }}
+NONINTERACTIVE=1
+{{- else }}
+NONINTERACTIVE=0
+{{- end }}
 
 # Attempt Homebrew installation - optional on Linux, required on macOS
-if NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+if NONINTERACTIVE=$NONINTERACTIVE /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
     log_success "Homebrew installed successfully!"
 
     # Try to find Homebrew in standard locations (macOS and Linux)
