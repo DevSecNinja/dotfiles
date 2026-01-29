@@ -7,8 +7,14 @@ packages:
   linux:
     # APT packages (Debian/Ubuntu)
     apt:
+      # PPAs to install (Ubuntu/derivatives only)
+      ppas:
+        light:
+          - ppa:zhangsongcui3371/fastfetch
+        full: []
       light:
         - curl
+        - fastfetch
         - fish
         - git
         - jq
@@ -89,6 +95,7 @@ packages:
     # WinGet packages
     winget:
       light:
+        - Fastfetch-cli.Fastfetch
         - Git.Git
         - Microsoft.PowerShell
         - twpayne.chezmoi

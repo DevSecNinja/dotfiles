@@ -1,0 +1,82 @@
+#!/bin/bash
+# This script installs PPAs before package installation
+# PPAs are defined in .chezmoidata/packages.yaml under packages.linux.apt.ppas
+# Light mode: installs essential PPAs only
+# Full mode: installs light + additional PPAs
+
+# Don't exit on error - we want to continue even if some PPAs fail
+set +e
+
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
+{{- if or .packages.linux.apt.ppas.light .packages.linux.apt.ppas.full }}
+
+echo "📦 Installing PPAs ({{ .installType }} mode)..."
+
+# Check if running with sudo privileges
+if [ "$EUID" -eq 0 ]; then
+    echo "⚠️  Running as root, sudo commands will execute directly"
+    SUDO_CMD=""
+elif command -v sudo >/dev/null 2>&1; then
+    SUDO_CMD="sudo"
+else
+    echo "⚠️  Warning: sudo is not available and not running as root"
+    echo "   Skipping PPA installation as it requires elevated privileges"
+    exit 0
+fi
+
+# Check if running interactively
+if [ -t 0 ]; then
+    DEBIAN_FRONTEND_VALUE=""
+else
+    DEBIAN_FRONTEND_VALUE="noninteractive"
+fi
+
+# Check if add-apt-repository is available
+if ! command -v add-apt-repository >/dev/null 2>&1; then
+    echo "📦 Installing software-properties-common for add-apt-repository..."
+    $SUDO_CMD apt-get update
+    if [ -n "$DEBIAN_FRONTEND_VALUE" ]; then
+        DEBIAN_FRONTEND=$DEBIAN_FRONTEND_VALUE $SUDO_CMD apt-get install -y software-properties-common
+    else
+        $SUDO_CMD apt-get install -y software-properties-common
+    fi
+fi
+
+# Install light mode PPAs (always)
+{{- range .packages.linux.apt.ppas.light }}
+echo "Adding PPA: {{ . }}"
+if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
+    echo "✅ Successfully added PPA: {{ . }}"
+else
+    echo "⚠️  Warning: Failed to add PPA: {{ . }}"
+    echo "   Continuing with remaining PPAs..."
+fi
+{{- end }}
+
+{{- if eq .installType "full" }}
+# Install full mode PPAs (additional)
+{{- range .packages.linux.apt.ppas.full }}
+echo "Adding PPA: {{ . }}"
+if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
+    echo "✅ Successfully added PPA: {{ . }}"
+else
+    echo "⚠️  Warning: Failed to add PPA: {{ . }}"
+    echo "   Continuing with remaining PPAs..."
+fi
+{{- end }}
+{{- end }}
+
+echo "📦 Updating package lists after adding PPAs..."
+if [ -n "$DEBIAN_FRONTEND_VALUE" ]; then
+    DEBIAN_FRONTEND=$DEBIAN_FRONTEND_VALUE $SUDO_CMD apt-get update
+else
+    $SUDO_CMD apt-get update
+fi
+
+echo "✅ PPA installation complete ({{ .installType }} mode)!"
+{{- else }}
+echo "ℹ️  No PPAs defined, skipping PPA installation"
+{{- end }}
+{{- else }}
+echo "ℹ️  PPA installation only supported on Ubuntu/Debian, skipping"
+{{- end }}
