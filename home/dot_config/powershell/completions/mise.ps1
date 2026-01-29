@@ -23,6 +23,7 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
     finally {
         $ErrorActionPreference = $_miseErrorPref
         $WarningPreference = $_miseWarnPref
+        Remove-Variable -Name '_miseErrorPref', '_miseWarnPref' -ErrorAction SilentlyContinue
     }
 }
 
