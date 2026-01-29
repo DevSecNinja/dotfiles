@@ -8,7 +8,20 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
     mise activate pwsh | Out-String | Invoke-Expression
 
     # Load completions
-    mise completion powershell | Out-String | Invoke-Expression
+    # Suppress errors from PSConsoleReadLine not being initialized yet
+    # and from missing usage CLI (required for mise completions)
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        $WarningPreference = 'SilentlyContinue'
+        mise completion powershell 2>$null | Out-String | Invoke-Expression
+    }
+    catch {
+        # Silently ignore completion errors - they don't affect functionality
+    }
+    finally {
+        $ErrorActionPreference = 'Continue'
+        $WarningPreference = 'Continue'
+    }
 }
 
 # SIG # Begin signature block
