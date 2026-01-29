@@ -62,6 +62,10 @@ if (Test-Path $completionsPath) {
     }
 }
 
+if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
+    horizonfetch
+}
+
 # Welcome message
 Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
 Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
