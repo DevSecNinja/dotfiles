@@ -97,11 +97,11 @@ log_info "Downloading and running Homebrew installation script from https://brew
 log_warning "This may require sudo access and may prompt for your password"
 {{- end }}
 
-# Set NONINTERACTIVE based on environment (CI, Codespaces, or Devcontainer = non-interactive)
-{{- if or .ci .codespaces .devcontainer }}
-NONINTERACTIVE=1
-{{- else }}
+# Set NONINTERACTIVE based on environment (interactive mode from Chezmoi config)
+{{- if .interactive }}
 NONINTERACTIVE=0
+{{- else }}
+NONINTERACTIVE=1
 {{- end }}
 
 # Attempt Homebrew installation - optional on Linux, required on macOS
