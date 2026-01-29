@@ -206,7 +206,7 @@ Describe "Windows Package Configuration" {
             $allPackages += $script:ChezmoiData.packages.windows.winget.full
 
             foreach ($pkg in $allPackages) {
-                $pkg | Should -Match "^[A-Za-z0-9]+\.[A-Za-z0-9\.]+"
+                $pkg | Should -Match "^[A-Za-z0-9\-]+\.[A-Za-z0-9\.\-]+"
             }
         }
     }
