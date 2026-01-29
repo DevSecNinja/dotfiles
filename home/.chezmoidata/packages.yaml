@@ -90,6 +90,7 @@ packages:
     # WinGet packages
     winget:
       light:
+        - Fastfetch-cli.Fastfetch
         - Git.Git
         - Microsoft.PowerShell
         - twpayne.chezmoi
