@@ -60,13 +60,13 @@ dotfiles/
 │   │   ├── linux/
 │   │   │   ├── run_once_setup-precommit.sh              # Pre-commit setup (runs once)
 │   │   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
-│   │   │   ├── run_once_install-packages.sh.tmpl      # Development tools
+│   │   │   ├── run_onchange_install-packages.sh.tmpl  # Development tools (runs on packages.yaml change)
 │   │   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks (auto)
 │   │   ├── darwin/
 │   │   │   └── run_once_before_10-setup-fish.sh.tmpl  # Fish setup (macOS)
 │   │   └── windows/
 │   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
-│   │       ├── run_once_install-packages.ps1.tmpl     # Development tools (winget)
+│   │       ├── run_onchange_install-packages.ps1.tmpl # Development tools (winget, runs on packages.yaml change)
 │   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing
@@ -121,13 +121,15 @@ chezmoi add --template ~/.local/bin/script.sh
 ### Script Execution Order
 
 Scripts run in this order:
-1. `run_once_before_*` - Before applying dotfiles
+1. `run_once_before_*` - Before applying dotfiles (runs once)
 2. Apply dotfiles
-3. `run_once_after_*` - After applying dotfiles
-4. `run_onchange_*` - When script content changes
-5. `run_*` - Every time
+3. `run_once_after_*` - After applying dotfiles (runs once)
+4. `run_onchange_*` - When script content or dependencies change
+5. `run_*` - Every time chezmoi apply is executed
 
 Numerical prefixes ensure order: `00-`, `01-`, `02-`, etc.
+
+**Note**: `run_onchange_*` scripts will re-run when their content changes or when tracked dependencies (like `packages.yaml`) are modified.
 
 ### Template Variables
 
