@@ -2,6 +2,9 @@
 # This script installs packages defined in .chezmoidata/packages.yaml
 # Light mode: installs essential packages only
 # Full mode: installs light + additional development packages
+#
+# chezmoi:run-onchange-trigger: packages.yaml checksum
+# Packages configuration hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
 
 # Don't exit on error - we want to continue even if some packages fail
 set +e
