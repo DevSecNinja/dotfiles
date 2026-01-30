@@ -2,6 +2,9 @@
 # PowerShell script to install packages defined in .chezmoidata/packages.yaml
 # Light mode: installs essential packages only
 # Full mode: installs light + additional development packages
+#
+# chezmoi:run-onchange-trigger: packages.yaml checksum
+# Packages configuration hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
 
 $ErrorActionPreference = "Stop"
 
