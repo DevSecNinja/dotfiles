@@ -91,6 +91,18 @@ fi
 # Check if Homebrew packages are defined for Linux
 {{- if or .packages.linux.brew.light .packages.linux.brew.full }}
 echo ""
+# Try to initialize Homebrew from standard locations if not already in PATH
+if ! command -v brew >/dev/null 2>&1; then
+    # Check standard Homebrew installation locations
+    if [ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
+        # Linux system-wide installation
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then
+        # Linux user-local installation
+        eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+    fi
+fi
+
 if command -v brew >/dev/null 2>&1; then
     echo "📦 Installing packages with Homebrew..."
     {{- range .packages.linux.brew.light }}
