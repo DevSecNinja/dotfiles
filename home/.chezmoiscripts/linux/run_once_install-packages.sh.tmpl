@@ -94,10 +94,10 @@ echo ""
 # Try to initialize Homebrew from standard locations if not already in PATH
 if ! command -v brew >/dev/null 2>&1; then
     # Check standard Homebrew installation locations
-    if [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
+    if [ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
         # Linux system-wide installation
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    elif [[ -x "$HOME/.linuxbrew/bin/brew" ]]; then
+    elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then
         # Linux user-local installation
         eval "$($HOME/.linuxbrew/bin/brew shellenv)"
     fi
