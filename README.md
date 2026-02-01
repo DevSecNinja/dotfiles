@@ -197,6 +197,7 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - 🏗️ Images are rebuilt weekly and on every devcontainer configuration change
 - ⚡ CI workflows use prebuilt images for faster test execution
 - 📦 Available at: `ghcr.io/devsecninja/dotfiles-devcontainer:latest`
+- 📖 See [PREBUILDS.md](PREBUILDS.md) for details on prebuild approaches
 
 **Using the DevContainer:**
 
@@ -210,7 +211,7 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
    - Navigate to this repository on GitHub
    - Click "Code" → "Codespaces" → "Create codespace on main"
    - The devcontainer will automatically build and configure
-   - **Optional:** Enable Codespaces prebuilds in repository settings for even faster startup
+   - **Optional:** Enable Codespaces prebuilds in repository settings for even faster startup (see [PREBUILDS.md](PREBUILDS.md) for the difference between our custom prebuild workflow and GitHub's native Codespaces prebuilds)
 
 3. **Testing the DevContainer:**
    ```bash
