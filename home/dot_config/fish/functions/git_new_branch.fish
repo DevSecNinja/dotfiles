@@ -100,28 +100,28 @@ function git_new_branch --description "Create and switch to a new branch for pro
     if test "$create_pr" = true
         if command -v gh >/dev/null 2>&1
             echo "Creating pull request..."
-            
+
             # Generate default PR title from branch name
             set -l default_title (string replace -a '-' ' ' -- $branch_name | string replace -a '_' ' ' | string replace 'feature/' '' | string trim)
-            
+
             # Prompt for PR title
             echo ""
             read -P "PR Title [$default_title]: " pr_title
             if test -z "$pr_title"
                 set pr_title $default_title
             end
-            
+
             # Prompt for PR description
             echo ""
             read -P "PR Description (press Enter for empty): " pr_body
-            
+
             # Create the PR
             if test -z "$pr_body"
                 gh pr create --base $base_branch --head $branch_name --title "$pr_title"
             else
                 gh pr create --base $base_branch --head $branch_name --title "$pr_title" --body "$pr_body"
             end
-            
+
             if test $status -eq 0
                 echo "✓ Pull request created successfully"
             else
