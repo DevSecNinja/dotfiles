@@ -58,9 +58,16 @@ check_directory() {
 echo "📦 Step 1: Verifying devcontainer features..."
 echo ""
 
-# Check Homebrew (from ghcr.io/devcontainers-extra/features/homebrew-package)
-# TODO: Homebrew feature temporarily disabled for troubleshooting
-# check_command "brew" "Homebrew"
+# Check Homebrew (installed by Chezmoi's run_once_before_05-install-homebrew.sh.tmpl in full mode)
+# Initialize Homebrew PATH if it exists
+if [ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
+	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+elif [ -f "/opt/homebrew/bin/brew" ]; then
+	eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -f "/usr/local/bin/brew" ]; then
+	eval "$(/usr/local/bin/brew shellenv)"
+fi
+check_command "brew" "Homebrew"
 
 # Check Git LFS (from ghcr.io/devcontainers/features/git-lfs)
 check_command "git-lfs" "Git LFS"
