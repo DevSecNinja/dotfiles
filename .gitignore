@@ -34,3 +34,6 @@ Thumbs.db
 **/test-results.xml
 **/test-results.tap
 test-results.tap
+
+# Task
+.task/**
