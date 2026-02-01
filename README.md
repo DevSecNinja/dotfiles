@@ -49,59 +49,68 @@ These variables are automatically exposed as environment variables in your shell
 
 ```
 dotfiles/
-├── install.sh                     # Wrapper script for Coder support (Unix)
-├── install.ps1                    # Wrapper script for Coder support (Windows)
-├── home/                          # Chezmoi source directory
-│   ├── dot_config/                # XDG config directory (~/.config/)
-│   │   ├── fish/                  # Fish shell configuration (Linux/macOS)
-│   │   │   ├── config.fish        # Main Fish config
-│   │   │   ├── conf.d/            # Configuration snippets (auto-loaded)
-│   │   │   │   └── aliases.fish   # Command aliases
-│   │   │   ├── functions/         # Custom Fish functions
+├── .devcontainer/               # DevContainer configuration
+│   └── devcontainer.json        # Container features and settings
+├── .github/
+│   ├── workflows/
+│   │   └── ci.yaml              # CI/CD pipeline with devcontainer tests
+│   └── scripts/
+│       ├── test-devcontainer.sh # DevContainer deployment test
+│       ├── test-light-server.sh # Light installation test
+│       └── test-dev-server.sh   # Full installation test
+├── install.sh                   # Wrapper script for Coder support (Unix)
+├── install.ps1                  # Wrapper script for Coder support (Windows)
+├── home/                        # Chezmoi source directory
+│   ├── dot_config/              # XDG config directory (~/.config/)
+│   │   ├── fish/                # Fish shell configuration (Linux/macOS)
+│   │   │   ├── config.fish      # Main Fish config
+│   │   │   ├── conf.d/          # Configuration snippets (auto-loaded)
+│   │   │   │   └── aliases.fish # Command aliases
+│   │   │   ├── functions/       # Custom Fish functions
 │   │   │   │   ├── fish_greeting.fish
 │   │   │   │   └── git_undo_commit.fish
-│   │   │   └── completions/       # Custom completions
-│   │   ├── powershell/            # PowerShell configuration (Windows)
-│   │   │   ├── profile.ps1        # Main PowerShell profile
-│   │   │   ├── aliases.ps1        # Command aliases
-│   │   │   ├── functions.ps1      # Custom functions
-│   │   │   └── scripts/           # PowerShell utility scripts
+│   │   │   └── completions/     # Custom completions
+│   │   ├── powershell/          # PowerShell configuration (Windows)
+│   │   │   ├── profile.ps1      # Main PowerShell profile
+│   │   │   ├── aliases.ps1      # Command aliases
+│   │   │   ├── functions.ps1    # Custom functions
+│   │   │   └── scripts/         # PowerShell utility scripts
 │   │   │       ├── New-SigningCert.ps1.tmpl      # Create code signing certificate
 │   │   │       ├── Import-SigningCert.ps1        # Import certificate
 │   │   │       └── Sign-PowerShellScripts.ps1    # Sign PowerShell scripts
-│   │   ├── git/                   # Git configuration
-│   │   │   ├── config.tmpl        # Git config with templating
-│   │   │   └── ignore             # Global gitignore
-│   │   └── shell/                 # Other shell configs (bash, zsh)
+│   │   ├── git/                 # Git configuration
+│   │   │   ├── config.tmpl      # Git config with templating
+│   │   │   └── ignore           # Global gitignore
+│   │   └── shell/               # Other shell configs (bash, zsh)
 │   │       ├── config.bash
 │   │       ├── config.zsh
-│   │       └── functions/         # Shared shell functions
-│   ├── AppData/                   # Windows-specific application data
+│   │       └── functions/       # Shared shell functions
+│   ├── AppData/                 # Windows-specific application data
 │   │   └── Local/Packages/
 │   │       └── Microsoft.WindowsTerminal_.../
 │   │           └── LocalState/
 │   │               └── settings.json  # Windows Terminal settings
-│   ├── Documents/                 # Windows PowerShell profiles
+│   ├── Documents/               # Windows PowerShell profiles
 │   │   ├── PowerShell/
 │   │   │   └── profile.ps1
 │   │   └── WindowsPowerShell/
 │   │       └── profile.ps1
-│   ├── dot_bashrc                 # Bash configuration
-│   ├── dot_zshrc                  # Zsh configuration
-│   ├── dot_vimrc                  # Vim configuration
-│   ├── dot_tmux.conf              # Tmux configuration
-│   ├── install.sh                 # Main installation script (Unix)
-│   └── install.ps1                # Main installation script (Windows)
-├── tests/                         # Test files (Bats/Pester)
-│   ├── bash/                      # Bats tests for validation
+│   ├── dot_bashrc               # Bash configuration
+│   ├── dot_zshrc                # Zsh configuration
+│   ├── dot_vimrc                # Vim configuration
+│   ├── dot_tmux.conf            # Tmux configuration
+│   ├── install.sh               # Main installation script (Unix)
+│   └── install.ps1              # Main installation script (Windows)
+├── tests/                       # Test files (Bats/Pester)
+│   ├── bash/                    # Bats tests for validation
 │   │   ├── validate-chezmoi.bats
 │   │   ├── validate-shell-scripts.bats
 │   │   ├── validate-fish-config.bats
 │   │   ├── test-chezmoi-apply.bats
 │   │   ├── test-fish-config.bats
 │   │   ├── verify-dotfiles.bats
-│   │   └── run-tests.sh           # Bats test runner
-│   └── powershell/                # Pester tests
+│   │   └── run-tests.sh         # Bats test runner
+│   └── powershell/              # Pester tests
 │       ├── Validate-Packages.Tests.ps1
 │       └── Invoke-PesterTests.ps1 # Pester test runner
 ├── README.md
@@ -165,6 +174,44 @@ To use this dotfiles repository in Coder:
 4. Coder will automatically run `install.sh` (Linux/macOS) or `install.ps1` (Windows) during workspace setup
 
 For more information, see the [Coder Dotfiles Documentation](https://coder.com/docs/user-guides/workspace-dotfiles).
+
+### Development Container (DevContainer)
+
+This repository includes a complete [DevContainer](https://containers.dev/) configuration for Visual Studio Code and GitHub Codespaces. The devcontainer provides a fully configured development environment with:
+
+**Pre-installed Features:**
+- 🍺 Homebrew package manager
+- 📦 Git LFS (Large File Storage)
+- 💻 PowerShell with Pester testing framework
+- 🐍 Python (latest version)
+- 🐙 GitHub CLI
+
+**Automatic Setup:**
+- ✅ Dotfiles automatically installed via `postCreateCommand`
+- ✅ Fish shell configured as default terminal
+- ✅ All configurations applied and verified
+- ✅ VSCode extensions pre-installed (GitHub Copilot, Pester)
+
+**Using the DevContainer:**
+
+1. **In VSCode:**
+   - Open this repository in VSCode
+   - Install the "Dev Containers" extension
+   - Click "Reopen in Container" when prompted
+   - Or use Command Palette: `Dev Containers: Reopen in Container`
+
+2. **In GitHub Codespaces:**
+   - Navigate to this repository on GitHub
+   - Click "Code" → "Codespaces" → "Create codespace on main"
+   - The devcontainer will automatically build and configure
+
+3. **Testing the DevContainer:**
+   ```bash
+   # Run the devcontainer test script
+   .github/scripts/test-devcontainer.sh
+   ```
+
+The CI pipeline automatically tests the complete devcontainer deployment, including feature installation, dotfiles setup, and postCreateCommand execution.
 
 ## 🔧 Customization
 

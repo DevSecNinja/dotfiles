@@ -14,7 +14,7 @@ FAILURES=0
 check_command() {
 	local cmd="$1"
 	local description="$2"
-	
+
 	if command -v "${cmd}" >/dev/null 2>&1; then
 		echo "  ✅ ${description}: ${cmd} is installed"
 		return 0
@@ -29,7 +29,7 @@ check_command() {
 check_file() {
 	local file="$1"
 	local description="$2"
-	
+
 	if [ -f "${file}" ]; then
 		echo "  ✅ ${description}: ${file} exists"
 		return 0
@@ -44,7 +44,7 @@ check_file() {
 check_directory() {
 	local dir="$1"
 	local description="$2"
-	
+
 	if [ -d "${dir}" ]; then
 		echo "  ✅ ${description}: ${dir} exists"
 		return 0
@@ -95,17 +95,17 @@ if check_command "chezmoi" "Chezmoi"; then
 	# Display chezmoi version
 	CHEZMOI_VERSION=$(chezmoi --version 2>/dev/null | head -1 || echo "unknown")
 	echo "    Version: ${CHEZMOI_VERSION}"
-	
+
 	# Check if dotfiles were applied
 	echo ""
 	echo "  Checking applied dotfiles..."
-	
+
 	# Essential dotfiles that should exist
 	check_file "${HOME}/.vimrc" "Vim configuration"
 	check_file "${HOME}/.tmux.conf" "Tmux configuration"
 	check_file "${HOME}/.config/fish/config.fish" "Fish shell configuration"
 	check_file "${HOME}/.config/git/config" "Git configuration"
-	
+
 	# Check Fish shell directories
 	check_directory "${HOME}/.config/fish/conf.d" "Fish conf.d directory"
 	check_directory "${HOME}/.config/fish/functions" "Fish functions directory"
@@ -125,7 +125,7 @@ if check_command "fish" "Fish shell"; then
 		echo "  ❌ Fish configuration has syntax errors"
 		FAILURES=$((FAILURES + 1))
 	fi
-	
+
 	# Test Fish shell loads successfully
 	echo "  Testing Fish shell initialization..."
 	if fish -c "exit" 2>/dev/null; then
@@ -151,7 +151,7 @@ echo "  ℹ️  Note: Extensions are installed by VSCode, not verifiable in CLI 
 echo ""
 echo "  Expected VSCode settings:"
 echo "    - editor.formatOnSave: true"
-echo "    - files.eol: \\n"
+echo "    - files.eol: newline"
 echo "    - terminal.integrated.defaultProfile.linux: fish"
 echo "  ℹ️  Note: Settings are applied by VSCode, not verifiable in CLI test"
 
@@ -162,7 +162,7 @@ echo ""
 if command -v chezmoi >/dev/null 2>&1; then
 	echo "  Managed files:"
 	chezmoi managed 2>/dev/null | head -20 || echo "    (unable to list managed files)"
-	
+
 	echo ""
 	echo "  Chezmoi data:"
 	chezmoi data 2>/dev/null | head -30 || echo "    (unable to display data)"
