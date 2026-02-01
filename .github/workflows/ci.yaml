@@ -43,6 +43,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
