@@ -52,5 +52,5 @@ jobs:
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
           cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
           # Only push on main and develop branches, PRs are built for validation only
-          push: always
+          push: filter
           refFilterForPush: refs/heads/main:latest,refs/heads/develop:develop
