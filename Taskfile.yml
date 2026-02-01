@@ -48,8 +48,8 @@ tasks:
     deps:
       - install:mise
     cmds:
-      - mise install go-task@latest
-      - mise use --global go-task@latest
+      - mise install task@latest
+      - mise use --global task@latest
     status:
       - command -v task
 
