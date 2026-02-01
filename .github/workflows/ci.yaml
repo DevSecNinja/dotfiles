@@ -43,7 +43,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -51,6 +50,14 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-devcontainer-${{ hashFiles('.devcontainer/devcontainer.json', 'home/install.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-devcontainer-
 
       - name: Install devcontainer CLI
         run: npm install -g @devcontainers/cli
@@ -61,9 +68,18 @@ jobs:
           echo "🏗️  Building and starting devcontainer from .devcontainer/devcontainer.json..."
 
           # Build and start the devcontainer (includes postCreateCommand execution)
-          devcontainer up --workspace-folder .
+          # Use cache for faster builds
+          BUILDX_NO_DEFAULT_ATTESTATIONS=1 devcontainer up --workspace-folder . \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max
 
           echo "✅ Devcontainer built and started successfully"
+
+      - name: Move cache
+        run: |
+          # Move cache to avoid growing cache size indefinitely
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
 
       - name: Test devcontainer deployment
         run: |
