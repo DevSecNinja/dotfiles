@@ -7,7 +7,7 @@
 python = "3.12"
 
 # Go Task for task runner
-go-task = "latest"
+task = "latest"
 
 # Chezmoi for dotfile management
 chezmoi = "latest"
