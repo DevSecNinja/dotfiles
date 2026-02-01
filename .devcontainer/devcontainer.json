@@ -1,5 +1,7 @@
 {
   "name": "dotfiles",
+  // Base image - prebuilt versions are available at ghcr.io/devsecninja/dotfiles-devcontainer:latest
+  // Codespaces prebuilds can be configured in repository settings for faster startup
   "image": "mcr.microsoft.com/devcontainers/base:debian-12",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {},

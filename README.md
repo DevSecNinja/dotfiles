@@ -192,6 +192,12 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - ✅ All configurations applied and verified
 - ✅ VSCode extensions pre-installed (GitHub Copilot, Pester)
 
+**Prebuilt Images:**
+- 🚀 Prebuilt devcontainer images are automatically built and published to GitHub Container Registry
+- 🏗️ Images are rebuilt weekly and on every devcontainer configuration change
+- ⚡ CI workflows use prebuilt images for faster test execution
+- 📦 Available at: `ghcr.io/devsecninja/dotfiles-devcontainer:latest`
+
 **Using the DevContainer:**
 
 1. **In VSCode:**
@@ -204,6 +210,7 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
    - Navigate to this repository on GitHub
    - Click "Code" → "Codespaces" → "Create codespace on main"
    - The devcontainer will automatically build and configure
+   - **Optional:** Enable Codespaces prebuilds in repository settings for even faster startup
 
 3. **Testing the DevContainer:**
    ```bash
