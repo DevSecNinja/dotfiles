@@ -211,7 +211,8 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
    - Navigate to this repository on GitHub
    - Click "Code" → "Codespaces" → "Create codespace on main"
    - The devcontainer will automatically build and configure
-   - **Optional:** Enable Codespaces prebuilds in repository settings for even faster startup (see [PREBUILDS.md](PREBUILDS.md) for the difference between our custom prebuild workflow and GitHub's native Codespaces prebuilds)
+   - **Optional:** Enable Codespaces prebuilds in repository settings for even faster startup
+     - See [PREBUILDS.md](PREBUILDS.md) for the difference between prebuild approaches
 
 3. **Testing the DevContainer:**
    ```bash

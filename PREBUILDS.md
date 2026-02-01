@@ -42,11 +42,11 @@ The workflow file `.github/workflows/devcontainer-prebuild.yaml` builds the devc
 
 ### Benefits
 
-✅ **Universal Access**: Any tool/environment can pull the prebuilt image from GHCR  
-✅ **CI/CD Integration**: Used in CI workflows for faster test execution  
-✅ **Full Control**: Custom caching strategies, build triggers, and tags  
-✅ **Weekly Refreshes**: Automatically picks up base image updates  
-✅ **Multi-Branch Support**: Separate images for `main` and `develop` branches  
+✅ **Universal Access**: Any tool/environment can pull the prebuilt image from GHCR
+✅ **CI/CD Integration**: Used in CI workflows for faster test execution
+✅ **Full Control**: Custom caching strategies, build triggers, and tags
+✅ **Weekly Refreshes**: Automatically picks up base image updates
+✅ **Multi-Branch Support**: Separate images for `main` and `develop` branches
 
 ### Where It's Used
 
@@ -90,16 +90,16 @@ When enabled in **Repository Settings → Codespaces → Prebuilds**:
 
 ### Benefits
 
-✅ **Zero Configuration**: No workflow files needed  
-✅ **Automatic Rebuilds**: GitHub handles everything  
-✅ **Faster Startup**: Codespaces start in seconds instead of minutes  
-✅ **GitHub Managed**: No need to manage container registry or caching  
+✅ **Zero Configuration**: No workflow files needed
+✅ **Automatic Rebuilds**: GitHub handles everything
+✅ **Faster Startup**: Codespaces start in seconds instead of minutes
+✅ **GitHub Managed**: No need to manage container registry or caching
 
 ### Limitations
 
-⚠️ **Codespaces Only**: Only benefits GitHub Codespaces users  
-⚠️ **No CI/CD Use**: Cannot be used in CI pipelines or local dev  
-⚠️ **Less Control**: Limited customization compared to custom workflows  
+⚠️ **Codespaces Only**: Only benefits GitHub Codespaces users
+⚠️ **No CI/CD Use**: Cannot be used in CI pipelines or local dev
+⚠️ **Less Control**: Limited customization compared to custom workflows
 
 ### How to Enable
 
@@ -221,7 +221,7 @@ This significantly speeds up CI runs by:
 
 ### Q: What about costs?
 
-**A:** 
+**A:**
 - **Custom workflow**: Uses GitHub Actions minutes and GHCR storage (both free for public repos)
 - **Codespaces prebuilds**: Uses Codespaces compute time (billed separately, free tier available)
 
