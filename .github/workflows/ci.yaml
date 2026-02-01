@@ -52,14 +52,19 @@ jobs:
       - name: Install devcontainer CLI
         run: npm install -g @devcontainers/cli
 
-      - name: Build and test devcontainer
+      - name: Build devcontainer
         run: |
+          set -e
           echo "🏗️  Building devcontainer from .devcontainer/devcontainer.json..."
 
           # Build the devcontainer
           devcontainer build --workspace-folder . --image-name test-devcontainer:latest
 
-          echo ""
+          echo "✅ Devcontainer built successfully"
+
+      - name: Test devcontainer deployment
+        run: |
+          set -e
           echo "🧪 Running devcontainer and executing tests..."
 
           # Run the container and execute the test script

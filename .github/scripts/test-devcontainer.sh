@@ -68,8 +68,8 @@ check_command "git-lfs" "Git LFS"
 if check_command "pwsh" "PowerShell"; then
 	# Check if Pester module is installed (specified in devcontainer.json)
 	echo "    Checking Pester module..."
-	if pwsh -NoProfile -Command "Get-Module -ListAvailable -Name Pester | Select-Object -First 1 -ExpandProperty Version" >/dev/null 2>&1; then
-		PESTER_VERSION=$(pwsh -NoProfile -Command "Get-Module -ListAvailable -Name Pester | Select-Object -First 1 -ExpandProperty Version" 2>/dev/null)
+	PESTER_VERSION=$(pwsh -NoProfile -Command "Get-Module -ListAvailable -Name Pester | Select-Object -First 1 -ExpandProperty Version" 2>/dev/null)
+	if [ -n "${PESTER_VERSION}" ]; then
 		echo "    ✅ Pester module installed: ${PESTER_VERSION}"
 	else
 		echo "    ❌ Pester module NOT installed"
