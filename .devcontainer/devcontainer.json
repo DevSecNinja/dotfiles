@@ -2,7 +2,6 @@
   "name": "dotfiles",
   "image": "mcr.microsoft.com/devcontainers/base:debian-12",
   "features": {
-    "ghcr.io/meaningful-ooo/devcontainer-features/homebrew:2": {},
     "ghcr.io/devcontainers/features/git-lfs:1": {},
     "ghcr.io/devcontainers/features/powershell:1": {
       "modules": "Pester==5.7.1"

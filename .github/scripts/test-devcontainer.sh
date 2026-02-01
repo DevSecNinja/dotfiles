@@ -59,7 +59,8 @@ echo "📦 Step 1: Verifying devcontainer features..."
 echo ""
 
 # Check Homebrew (from ghcr.io/devcontainers-extra/features/homebrew-package)
-check_command "brew" "Homebrew"
+# TODO: Homebrew feature temporarily disabled for troubleshooting
+# check_command "brew" "Homebrew"
 
 # Check Git LFS (from ghcr.io/devcontainers/features/git-lfs)
 check_command "git-lfs" "Git LFS"
