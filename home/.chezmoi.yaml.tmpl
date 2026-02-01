@@ -146,9 +146,9 @@
 {{-     writeToStdout "☁️  Codespaces detected - installing light dotfiles\n" -}}
 {{-   end -}}
 {{- else if $devcontainer -}}
-{{-   $installType = "light" -}}
+{{-   $installType = "full" -}}
 {{-   if $interactive -}}
-{{-     writeToStdout "🐳 Devcontainer detected - installing light dotfiles\n" -}}
+{{-     writeToStdout "🐳 Devcontainer detected - installing full dotfiles\n" -}}
 {{-   end -}}
 {{- else if $ci -}}
 {{-   $installType = "light" -}}
