@@ -223,13 +223,13 @@ Describe "Package Configuration" -Tag "Configuration" {
 
         It "Should be in the light mode packages (installed on all Windows systems)" {
             $content = Get-Content $script:PackagesYaml -Raw
-            
+
             # Find the powershell_modules section
             $lines = Get-Content $script:PackagesYaml
             $inPowerShellModules = $false
             $inLight = $false
             $foundModule = $false
-            
+
             foreach ($line in $lines) {
                 if ($line -match '^\s*powershell_modules:') {
                     $inPowerShellModules = $true
@@ -248,7 +248,7 @@ Describe "Package Configuration" -Tag "Configuration" {
                     $inPowerShellModules = $false
                 }
             }
-            
+
             $foundModule | Should -Be $true -Because "Microsoft.WinGet.Client should be in light mode packages"
         }
     }
