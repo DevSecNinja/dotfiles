@@ -99,16 +99,23 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
             $forceParam.SwitchParameter | Should -Be $true
         }
 
-        It "Should skip detection when Force is used" -Skip:(-not $script:WingetAvailable -and -not $script:WingetModuleAvailable) {
-            # Mock Test-WingetUpdates to track if it's called
-            $testWingetUpdatesCalled = $false
-            Mock Test-WingetUpdates { $script:testWingetUpdatesCalled = $true; return $false }
+        It "Should skip detection when Force is used" {
+            # Mock dependencies to prevent actual execution
+            Mock Test-WingetUpdates { return $false }
+            Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
+            Mock Get-Command { return $null } -ParameterFilter { $Name -eq 'winget' }
+            Mock Import-Module { }
+            Mock Update-WinGetPackage { }
+            Mock Get-WinGetPackage { return @() }
 
-            # We can't actually run upgrades in tests, but we can verify the logic path
-            # by checking warning messages
-            $output = Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningAction SilentlyContinue 3>&1
+            # Capture host output
+            $output = @()
+            Mock Write-Host { $output += $Object }
 
-            # In Force mode, detection should be skipped
+            # Run with Force to skip detection
+            { Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue } | Should -Not -Throw
+
+            # Verify Force mode message appears
             $output -join '' | Should -Match 'Force mode|Skipping detection'
         }
     }
@@ -285,17 +292,85 @@ Describe "Help and Documentation" -Tag "Documentation" {
     }
 }
 
-Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" -Skip:$script:IsCIMode {
-    # These tests are only run in local environment, not in CI
-    # They require actual winget/module availability and can modify system state
+Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
+    Context "Mocked End-to-End Workflow (CI-safe)" {
+        It "Should complete full workflow with mocked dependencies" {
+            # Mock all external dependencies
+            Mock Get-Module {
+                return [PSCustomObject]@{ Name = 'Microsoft.WinGet.Client'; Version = '1.0.0' }
+            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
 
-    Context "End-to-End Workflow" {
+            Mock Import-Module { }
+
+            Mock Get-WinGetPackage {
+                # Simulate one package with update available
+                return @([PSCustomObject]@{
+                    Name = 'TestPackage'
+                    Id = 'Test.Package'
+                    IsUpdateAvailable = $true
+                    InstalledVersion = '1.0.0'
+                    AvailableVersion = '1.0.1'
+                })
+            }
+
+            Mock Update-WinGetPackage { }
+
+            # Capture output
+            $output = @()
+            Mock Write-Host { $output += $Object }
+
+            # Run detection
+            $hasUpdates = Test-WingetUpdates -UseWingetModule $true
+            $hasUpdates | Should -Be $true
+
+            # Run upgrade with no countdown
+            { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true } | Should -Not -Throw
+
+            # Verify upgrade was called
+            Should -Invoke Update-WinGetPackage -Times 1
+        }
+
+        It "Should handle no updates gracefully" {
+            # Mock no updates available
+            Mock Get-Module {
+                return [PSCustomObject]@{ Name = 'Microsoft.WinGet.Client'; Version = '1.0.0' }
+            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
+
+            Mock Import-Module { }
+
+            Mock Get-WinGetPackage {
+                # Simulate no packages with updates
+                return @()
+            }
+
+            Mock Update-WinGetPackage { }
+
+            # Run detection
+            $hasUpdates = Test-WingetUpdates -UseWingetModule $true
+            $hasUpdates | Should -Be $false
+
+            # Run upgrade - should exit early
+            { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true } | Should -Not -Throw
+
+            # Verify upgrade was NOT called (no updates)
+            Should -Invoke Update-WinGetPackage -Times 0
+        }
+    }
+
+    Context "Real End-to-End Workflow (Local only)" -Skip:$script:IsCIMode {
+        # These tests are only run in local environment, not in CI
+        # They require actual winget/module availability and can modify system state
+
         It "Should detect updates (if any)" -Skip:(-not $script:WingetAvailable -and -not $script:WingetModuleAvailable) {
             { Test-WingetUpdates } | Should -Not -Throw
         }
 
         It "Should show proper output format" -Skip:(-not $script:WingetAvailable -and -not $script:WingetModuleAvailable) {
-            $output = Test-WingetUpdates 4>&1 5>&1 6>&1
+            # Capture host output
+            $output = @()
+            Mock Write-Host { $output += $Object }
+
+            Test-WingetUpdates | Out-Null
             $output -join '' | Should -Match 'package|update|up to date'
         }
     }

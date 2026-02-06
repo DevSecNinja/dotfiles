@@ -127,7 +127,7 @@ function Test-WingetUpdates {
         }
 
         Write-Verbose "Checking for updates using winget.exe..."
-        $result = winget upgrade --source winget 2>&1 | Out-String
+        $result = winget upgrade --source winget --accept-source-agreements 2>&1 | Out-String
 
         # Parse winget output to check for updates
         # Winget shows "No installed package found matching input criteria" when no updates
@@ -221,10 +221,10 @@ function Invoke-WingetUpgrade {
         Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
 
         for ($i = $CountdownSeconds; $i -gt 0; $i--) {
-            Write-Host "   $i..." -NoNewline -ForegroundColor Yellow
+            Write-Host "   $i..." -ForegroundColor Yellow
             Start-Sleep -Seconds 1
         }
-        Write-Host " GO!" -ForegroundColor Green
+        Write-Host "   GO!" -ForegroundColor Green
     }
 
     # Execution phase

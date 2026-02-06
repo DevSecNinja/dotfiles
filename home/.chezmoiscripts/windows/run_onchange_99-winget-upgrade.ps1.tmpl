@@ -35,36 +35,20 @@ Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━
 Write-Host "🔄 Winget Package Upgrade (Chezmoi OnChange)" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-# Source PowerShell functions from chezmoi directory
-$functionsPath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\functions.ps1"
-if (Test-Path $functionsPath) {
-    try {
-        . $functionsPath
-    }
-    catch {
-        Write-Warning "Failed to load functions from $functionsPath : $_"
-        Write-Warning "Continuing without functions..."
-    }
-}
-else {
-    Write-Warning "Functions file not found at: $functionsPath"
-    Write-Warning "Some functionality may not be available."
-}
-
 # Check if Microsoft.WinGet.Client module is available
 $wingetModule = Get-Module -Name Microsoft.WinGet.Client -ListAvailable -ErrorAction SilentlyContinue
 
 if (-not $wingetModule) {
-    Write-Host "`n⚠️  Microsoft.WinGet.Client module not found" -ForegroundColor Yellow
-    Write-Host "   This module should be installed automatically via packages.yaml" -ForegroundColor Gray
-    Write-Host "   To install manually: Install-Module -Name Microsoft.WinGet.Client" -ForegroundColor Gray
+    Write-Warning "Microsoft.WinGet.Client module not found"
+    Write-Warning "This module should be installed automatically via packages.yaml"
+    Write-Warning "To install manually: Install-Module -Name Microsoft.WinGet.Client"
 
     # Check if winget.exe is available as fallback
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "`n❌ Neither Microsoft.WinGet.Client nor winget.exe is available" -ForegroundColor Red
-        Write-Host "   Skipping winget upgrade. Please install one of the following:" -ForegroundColor Red
-        Write-Host "   1. Microsoft.WinGet.Client module: Install-Module -Name Microsoft.WinGet.Client" -ForegroundColor Gray
-        Write-Host "   2. App Installer from Microsoft Store (includes winget.exe)" -ForegroundColor Gray
+        Write-Warning "Neither Microsoft.WinGet.Client nor winget.exe is available"
+        Write-Warning "Skipping winget upgrade. Please install one of the following:"
+        Write-Warning "  1. Microsoft.WinGet.Client module: Install-Module -Name Microsoft.WinGet.Client"
+        Write-Warning "  2. App Installer from Microsoft Store (includes winget.exe)"
         exit 0
     }
 
@@ -74,94 +58,21 @@ else {
     Write-Host "`n✅ Microsoft.WinGet.Client module found (v$($wingetModule.Version))" -ForegroundColor Green
 }
 
-# Check if functions are available (only if we successfully sourced them)
-if (Get-Command Test-WingetUpdates -ErrorAction SilentlyContinue) {
-    # Use the function from functions.ps1
-    try {
-        Invoke-WingetUpgrade -CountdownSeconds 3 -UseWingetModule $true
-    }
-    catch {
-        Write-Error "Failed to run Invoke-WingetUpgrade: $_"
-        exit 1
-    }
+# Check if functions are available (they should be loaded by profile.ps1)
+if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
+    Write-Warning "Invoke-WingetUpgrade function not found"
+    Write-Warning "Functions should be loaded automatically by profile.ps1"
+    Write-Warning "Skipping winget upgrade - please check your PowerShell profile configuration"
+    exit 0
 }
-else {
-    # Fallback: Manual implementation if functions not available
-    Write-Host "`n📋 Detection Phase: Checking for updates..." -ForegroundColor Yellow
 
-    $hasUpdates = $false
-
-    if ($wingetModule) {
-        try {
-            Import-Module Microsoft.WinGet.Client -ErrorAction Stop
-            $updates = Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable }
-
-            if ($updates -and $updates.Count -gt 0) {
-                Write-Host "✅ Found $($updates.Count) package update(s) available" -ForegroundColor Green
-                $hasUpdates = $true
-            }
-            else {
-                Write-Host "✅ All packages are up to date" -ForegroundColor Green
-            }
-        }
-        catch {
-            Write-Warning "Failed to check updates with module: $_"
-            Write-Warning "Trying winget.exe..."
-        }
-    }
-
-    if (-not $hasUpdates -and (Get-Command winget -ErrorAction SilentlyContinue)) {
-        $result = winget upgrade --source winget 2>&1 | Out-String
-
-        if ($result -notmatch "No applicable upgrade found" -and $result -notmatch "No installed package") {
-            $hasUpdates = $true
-        }
-    }
-
-    if (-not $hasUpdates) {
-        Write-Host "`n✅ No updates available. Skipping upgrade." -ForegroundColor Green
-        exit 0
-    }
-
-    # Countdown phase
-    Write-Host "`n⏱️  Execution Phase: Starting upgrade in 3 seconds..." -ForegroundColor Yellow
-    Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
-
-    for ($i = 3; $i -gt 0; $i--) {
-        Write-Host "   $i..." -NoNewline -ForegroundColor Yellow
-        Start-Sleep -Seconds 1
-    }
-    Write-Host " GO!" -ForegroundColor Green
-
-    # Execution phase
-    Write-Host "`n🚀 Starting package upgrades..." -ForegroundColor Cyan
-
-    if ($wingetModule) {
-        try {
-            Import-Module Microsoft.WinGet.Client -ErrorAction Stop
-            $packagesToUpdate = Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable }
-
-            foreach ($package in $packagesToUpdate) {
-                Write-Host "   Upgrading $($package.Name)..." -NoNewline
-                try {
-                    Update-WinGetPackage -Id $package.Id -Source winget -Mode Silent -Force -ErrorAction Stop | Out-Null
-                    Write-Host " ✅" -ForegroundColor Green
-                }
-                catch {
-                    Write-Host " ❌" -ForegroundColor Red
-                    Write-Warning "Failed to upgrade $($package.Name): $_"
-                }
-            }
-        }
-        catch {
-            Write-Warning "Failed to upgrade packages using Microsoft.WinGet.Client module: $_"
-            Write-Warning "Trying winget.exe..."
-            winget upgrade --all --source winget --silent --accept-package-agreements --accept-source-agreements
-        }
-    }
-    else {
-        winget upgrade --all --source winget --silent --accept-package-agreements --accept-source-agreements
-    }
+# Run the upgrade using the function from functions.ps1
+try {
+    Invoke-WingetUpgrade -CountdownSeconds 3 -UseWingetModule $true
+}
+catch {
+    Write-Warning "Failed to run Invoke-WingetUpgrade: $_"
+    Write-Warning "Continuing with chezmoi update despite winget upgrade failure"
 }
 
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
