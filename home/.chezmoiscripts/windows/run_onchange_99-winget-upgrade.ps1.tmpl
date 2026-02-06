@@ -154,7 +154,8 @@ else {
             }
         }
         catch {
-            Write-Warning "Module upgrade failed, trying winget.exe..."
+            Write-Warning "Failed to upgrade packages using Microsoft.WinGet.Client module: $_"
+            Write-Warning "Trying winget.exe..."
             winget upgrade --all --source winget --silent --accept-package-agreements --accept-source-agreements
         }
     }

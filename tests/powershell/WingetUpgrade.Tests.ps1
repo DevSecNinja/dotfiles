@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Pester tests for winget upgrade functionality.
@@ -15,6 +15,7 @@
 .NOTES
     These tests validate the winget upgrade automation added for chezmoi integration.
     Tests run in both interactive and CI modes.
+    Compatible with PowerShell 5.1+ (same as the functions being tested).
 #>
 
 BeforeAll {
@@ -100,8 +101,8 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
 
         It "Should skip detection when Force is used" -Skip:(-not $script:WingetAvailable -and -not $script:WingetModuleAvailable) {
             # Mock Test-WingetUpdates to track if it's called
-            $called = $false
-            Mock Test-WingetUpdates { $script:called = $true; return $false }
+            $testWingetUpdatesCalled = $false
+            Mock Test-WingetUpdates { $script:testWingetUpdatesCalled = $true; return $false }
 
             # We can't actually run upgrades in tests, but we can verify the logic path
             # by checking warning messages
@@ -225,6 +226,9 @@ Describe "Package Configuration" -Tag "Configuration" {
             $content = Get-Content $script:PackagesYaml -Raw
 
             # Find the powershell_modules section
+            # Note: Manual parsing is used here instead of a YAML parser to avoid
+            # introducing additional dependencies (like PowerShell-YAML module).
+            # The parsing is specific to the known structure of packages.yaml.
             $lines = Get-Content $script:PackagesYaml
             $inPowerShellModules = $false
             $inLight = $false
