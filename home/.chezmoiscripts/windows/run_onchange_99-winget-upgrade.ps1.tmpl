@@ -7,14 +7,14 @@
 .DESCRIPTION
     This script automatically checks for and upgrades winget packages during chezmoi update.
     It runs as the final script (99-) to allow cancellation if needed.
-    
+
     Features:
     - Detection phase: Only runs if updates are available
     - Execution phase: 3-second countdown before upgrading (can be cancelled)
     - Uses Microsoft.WinGet.Client PowerShell module when available
     - Falls back to winget.exe if module is not installed
     - Warns if neither is available
-    
+
 .NOTES
     - This is a run_onchange script, triggered when this file or its dependencies change
     - Requires Microsoft.WinGet.Client module (automatically installed via packages.yaml)
@@ -58,7 +58,7 @@ if (-not $wingetModule) {
     Write-Host "`n⚠️  Microsoft.WinGet.Client module not found" -ForegroundColor Yellow
     Write-Host "   This module should be installed automatically via packages.yaml" -ForegroundColor Gray
     Write-Host "   To install manually: Install-Module -Name Microsoft.WinGet.Client" -ForegroundColor Gray
-    
+
     # Check if winget.exe is available as fallback
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Host "`n❌ Neither Microsoft.WinGet.Client nor winget.exe is available" -ForegroundColor Red
@@ -67,7 +67,7 @@ if (-not $wingetModule) {
         Write-Host "   2. App Installer from Microsoft Store (includes winget.exe)" -ForegroundColor Gray
         exit 0
     }
-    
+
     Write-Host "   Using winget.exe as fallback..." -ForegroundColor Yellow
 }
 else {
@@ -88,14 +88,14 @@ if (Get-Command Test-WingetUpdates -ErrorAction SilentlyContinue) {
 else {
     # Fallback: Manual implementation if functions not available
     Write-Host "`n📋 Detection Phase: Checking for updates..." -ForegroundColor Yellow
-    
+
     $hasUpdates = $false
-    
+
     if ($wingetModule) {
         try {
             Import-Module Microsoft.WinGet.Client -ErrorAction Stop
             $updates = Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable }
-            
+
             if ($updates -and $updates.Count -gt 0) {
                 Write-Host "✅ Found $($updates.Count) package update(s) available" -ForegroundColor Green
                 $hasUpdates = $true
@@ -109,38 +109,38 @@ else {
             Write-Warning "Trying winget.exe..."
         }
     }
-    
+
     if (-not $hasUpdates -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         $result = winget upgrade --source winget 2>&1 | Out-String
-        
+
         if ($result -notmatch "No applicable upgrade found" -and $result -notmatch "No installed package") {
             $hasUpdates = $true
         }
     }
-    
+
     if (-not $hasUpdates) {
         Write-Host "`n✅ No updates available. Skipping upgrade." -ForegroundColor Green
         exit 0
     }
-    
+
     # Countdown phase
     Write-Host "`n⏱️  Execution Phase: Starting upgrade in 3 seconds..." -ForegroundColor Yellow
     Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
-    
+
     for ($i = 3; $i -gt 0; $i--) {
         Write-Host "   $i..." -NoNewline -ForegroundColor Yellow
         Start-Sleep -Seconds 1
     }
     Write-Host " GO!" -ForegroundColor Green
-    
+
     # Execution phase
     Write-Host "`n🚀 Starting package upgrades..." -ForegroundColor Cyan
-    
+
     if ($wingetModule) {
         try {
             Import-Module Microsoft.WinGet.Client -ErrorAction Stop
             $packagesToUpdate = Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable }
-            
+
             foreach ($package in $packagesToUpdate) {
                 Write-Host "   Upgrading $($package.Name)..." -NoNewline
                 try {
