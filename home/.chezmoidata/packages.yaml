@@ -110,7 +110,8 @@ packages:
 
     # PowerShell modules (installed via PowerShellGet)
     powershell_modules:
-      light: []
+      light:
+        - Microsoft.WinGet.Client
       full:
         - oh-my-posh
         - Pester

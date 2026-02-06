@@ -46,6 +46,10 @@ function motd { fastfetch @args }
 # SSH
 function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
 
+# Winget shortcuts
+Set-Alias -Name wup -Value Invoke-WingetUpgrade
+Set-Alias -Name winup -Value Invoke-WingetUpgrade
+
 # Help (keeping backward compatibility)
 
 # SIG # Begin signature block
