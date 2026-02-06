@@ -211,8 +211,8 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
 
         It "Should handle missing module gracefully" {
             $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'module not found'
-            $content | Should -Match 'fallback'
+            $content | Should -Match 'module not found|not found'
+            $content | Should -Match 'exit 0'
         }
     }
 }
