@@ -171,9 +171,10 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match '\{\{- if eq \.chezmoi\.os "windows" -\}\}'
         }
 
-        It "Should source functions.ps1" {
+        It "Should check for function availability instead of sourcing" {
             $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'dot_config\\powershell\\functions\.ps1'
+            $content | Should -Match 'Invoke-WingetUpgrade'
+            $content | Should -Match 'Get-Command.*Invoke-WingetUpgrade'
         }
 
         It "Should check for Microsoft.WinGet.Client module" {
@@ -181,16 +182,9 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match 'Microsoft\.WinGet\.Client'
         }
 
-        It "Should have countdown logic" {
+        It "Should call Invoke-WingetUpgrade function" {
             $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Start-Sleep -Seconds 1'
-            $content | Should -Match '3 seconds'
-        }
-
-        It "Should have detection and execution phases" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Detection Phase'
-            $content | Should -Match 'Execution Phase'
+            $content | Should -Match 'Invoke-WingetUpgrade.*-CountdownSeconds'
         }
 
         It "Should include dependency hashes for onchange trigger" {

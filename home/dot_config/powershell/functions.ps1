@@ -217,14 +217,23 @@ function Invoke-WingetUpgrade {
 
     # Countdown phase
     if ($CountdownSeconds -gt 0) {
-        Write-Host "`n⏱️  Execution Phase: Starting upgrade in $CountdownSeconds seconds..." -ForegroundColor Yellow
-        Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
+        # Skip countdown in CI or non-interactive environments
+        $isCI = [bool]$env:CI
+        $isNonInteractive = -not [Environment]::UserInteractive
 
-        for ($i = $CountdownSeconds; $i -gt 0; $i--) {
-            Write-Host "   $i..." -ForegroundColor Yellow
-            Start-Sleep -Seconds 1
+        if ($isCI -or $isNonInteractive) {
+            Write-Host "`n⏱️  Skipping countdown (CI/non-interactive environment)" -ForegroundColor Yellow
         }
-        Write-Host "   GO!" -ForegroundColor Green
+        else {
+            Write-Host "`n⏱️  Execution Phase: Starting upgrade in $CountdownSeconds seconds..." -ForegroundColor Yellow
+            Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
+
+            for ($i = $CountdownSeconds; $i -gt 0; $i--) {
+                Write-Host "   $i..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 1
+            }
+            Write-Host "   GO!" -ForegroundColor Green
+        }
     }
 
     # Execution phase
