@@ -171,10 +171,10 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match '\{\{- if eq \.chezmoi\.os "windows" -\}\}'
         }
 
-        It "Should check for function availability instead of sourcing" {
+        It "Should source functions.ps1 if functions not available" {
             $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Invoke-WingetUpgrade'
             $content | Should -Match 'Get-Command.*Invoke-WingetUpgrade'
+            $content | Should -Match 'dot_config\\powershell\\functions\.ps1'
         }
 
         It "Should check for Microsoft.WinGet.Client module" {

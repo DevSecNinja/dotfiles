@@ -59,11 +59,24 @@ else {
 }
 
 # Check if functions are available (they should be loaded by profile.ps1)
+# If not available, source them directly (needed when running via chezmoi)
 if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-    Write-Warning "Invoke-WingetUpgrade function not found"
-    Write-Warning "Functions should be loaded automatically by profile.ps1"
-    Write-Warning "Skipping winget upgrade - please check your PowerShell profile configuration"
-    exit 0
+    $functionsPath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\functions.ps1"
+    if (Test-Path $functionsPath) {
+        try {
+            . $functionsPath
+        }
+        catch {
+            Write-Warning "Failed to load functions from $functionsPath : $_"
+            Write-Warning "Skipping winget upgrade"
+            exit 0
+        }
+    }
+    else {
+        Write-Warning "Functions file not found at: $functionsPath"
+        Write-Warning "Skipping winget upgrade"
+        exit 0
+    }
 }
 
 # Run the upgrade using the function from functions.ps1
