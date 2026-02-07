@@ -1,0 +1,79 @@
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    Brief description of what this script does.
+
+.DESCRIPTION
+    Detailed description of the script's purpose and behavior.
+    Add more context about when and how to use this script.
+
+.PARAMETER ParameterName
+    Description of the parameter.
+
+.PARAMETER DryRun
+    Show what would be changed without making changes.
+
+.PARAMETER Verbose
+    Enable verbose output (built-in common parameter).
+
+.EXAMPLE
+    .\ScriptName.ps1
+    Run with default options.
+
+.EXAMPLE
+    .\ScriptName.ps1 -DryRun
+    Preview changes without executing.
+
+.EXAMPLE
+    .\ScriptName.ps1 -ParameterName "value" -Verbose
+    Run with verbose output and a parameter.
+
+.NOTES
+    - Add any important notes or warnings here
+    - Mention dependencies or requirements
+    - Scripts must be idempotent (safe to run multiple times)
+#>
+
+[CmdletBinding(SupportsShouldProcess)]
+param(
+    [Parameter(Mandatory = $false, HelpMessage = "Description of the parameter")]
+    [string]$ParameterName,
+
+    [Parameter(Mandatory = $false, HelpMessage = "Show what would be changed without making changes")]
+    [switch]$DryRun
+)
+
+# Set strict mode for error handling
+$ErrorActionPreference = "Stop"
+
+# --- Validation ---
+# Check for required commands
+# if (-not (Get-Command "required-command" -ErrorAction SilentlyContinue)) {
+#     Write-Error "Required command 'required-command' is not installed or not in PATH"
+#     exit 1
+# }
+
+# --- Dry Run ---
+if ($DryRun) {
+    Write-Host "🔍 [DRY RUN] Would perform the following actions:" -ForegroundColor Cyan
+    Write-Host "   - Action 1 would be performed"
+    Write-Host "   - Action 2 would be performed"
+    exit 0
+}
+
+# --- Main Logic ---
+Write-Verbose "🔍 Running ScriptName..."
+
+# Replace this section with your script's main logic
+
+# Example: Perform some action
+# try {
+#     # Action here
+#     Write-Host "✅ Successfully completed action" -ForegroundColor Green
+# }
+# catch {
+#     Write-Warning "❌ Failed to complete action: $_"
+#     exit 1
+# }
+
+Write-Host "✅ ScriptName completed successfully" -ForegroundColor Green
