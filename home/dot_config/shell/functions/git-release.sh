@@ -1,6 +1,54 @@
 #!/bin/bash
+# git-release - Create and push a semantic version tag
+#
+# Bumps the version based on the previous tag using semantic versioning.
+# Supports major, minor, patch bumps and prerelease suffixes.
+# Validates branch and remote state before creating the tag.
+#
+# Usage: git-release [OPTIONS] <major|minor|patch> [prerelease] [message]
+#        git-release <prerelease> [message]
+#   --help, -h       Show help message and exit
+#
+# Examples:
+#   git-release major                  # Bump major version (v1.0.0 -> v2.0.0)
+#   git-release minor                  # Bump minor version (v1.0.0 -> v1.1.0)
+#   git-release patch                  # Bump patch version (v1.0.0 -> v1.0.1)
+#   git-release minor beta             # Create prerelease (v1.1.0-beta)
+#   git-release patch "" "Fix bug"     # Bump patch with custom message
+#
+# Notes:
+#   - Must be on the 'main' branch
+#   - Main branch must be up-to-date with origin
+#   - Requires confirmation before creating the tag
 
 git-release() {
+	# Parse help flag first
+	if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+		echo "Usage: git-release <major|minor|patch> [prerelease] [message]"
+		echo "       git-release <prerelease> [message]"
+		echo "Create and push a semantic version tag"
+		echo ""
+		echo "Arguments:"
+		echo "  major|minor|patch  Version bump type"
+		echo "  prerelease         Optional prerelease suffix (e.g., beta, rc1)"
+		echo "  message            Optional tag message (default: 'Release vX.Y.Z')"
+		echo ""
+		echo "Options:"
+		echo "  -h, --help       Show this help message"
+		echo ""
+		echo "Examples:"
+		echo "  git-release major                  # v1.0.0 -> v2.0.0"
+		echo "  git-release minor beta             # v1.0.0 -> v1.1.0-beta"
+		echo "  git-release patch \"\" \"Fix bug\"     # v1.0.0 -> v1.0.1 with message"
+		return 0
+	fi
+
+	# Check if we're in a Git repository
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then
+		echo "❌ Error: Not in a Git repository"
+		return 1
+	fi
+
 	local PREV_TAG
 	PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
 	if [ -z "$PREV_TAG" ]; then
@@ -14,6 +62,7 @@ git-release() {
 	if [[ $# -eq 0 ]]; then
 		echo "Usage: git-release <major|minor|patch> [prerelease] [message]"
 		echo "       git-release <prerelease> [message]"
+		echo "Use --help for more information"
 		return 0
 	fi
 
@@ -21,7 +70,7 @@ git-release() {
 	local CURRENT_BRANCH
 	CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 	if [[ "$CURRENT_BRANCH" != "main" ]]; then
-		echo "Error: You must be on the 'main' branch to create a release (currently on '$CURRENT_BRANCH')"
+		echo "❌ Error: You must be on the 'main' branch to create a release (currently on '$CURRENT_BRANCH')"
 		return 1
 	fi
 
@@ -32,7 +81,7 @@ git-release() {
 	LOCAL_HASH=$(git rev-parse main)
 	REMOTE_HASH=$(git rev-parse origin/main)
 	if [[ "$LOCAL_HASH" != "$REMOTE_HASH" ]]; then
-		echo "Error: Your main branch is not up-to-date with origin/main"
+		echo "❌ Error: Your main branch is not up-to-date with origin/main"
 		echo "Please pull the latest changes before creating a release."
 		return 1
 	fi
@@ -50,7 +99,7 @@ git-release() {
 	IFS='.' read -r MAJOR MINOR PATCH <<<"$NUM_PART"
 
 	if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
-		echo "Error: Could not parse previous tag '$PREV_TAG'"
+		echo "❌ Error: Could not parse previous tag '$PREV_TAG'"
 		return 1
 	fi
 
@@ -95,7 +144,7 @@ git-release() {
 	MSG="${MSG:-Release $NEW_TAG}"
 
 	if git rev-parse "$NEW_TAG" >/dev/null 2>&1 || git ls-remote --tags origin "$NEW_TAG" | grep -q "$NEW_TAG"; then
-		echo "Error: Tag '$NEW_TAG' already exists!"
+		echo "❌ Error: Tag '$NEW_TAG' already exists!"
 		return 1
 	fi
 
@@ -108,5 +157,5 @@ git-release() {
 
 	git tag -a "$NEW_TAG" -m "$MSG"
 	git push origin "$NEW_TAG"
-	echo "Tag $NEW_TAG created and pushed!"
+	echo "✅ Tag $NEW_TAG created and pushed!"
 }
