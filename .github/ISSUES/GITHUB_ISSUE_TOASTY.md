@@ -67,7 +67,8 @@ toast "Task finished" -App copilot
 
 ## References
 - Repository: https://github.com/shanselman/toasty
-- macOS PR: https://github.com/shanselman/toasty/pull/28
+- macOS PR #28: https://github.com/shanselman/toasty/pull/28 (by @spboyer, status: OPEN)
+- WinGet PR #39: https://github.com/shanselman/toasty/pull/39 (by @Copilot, status: DRAFT)
 
 ---
 

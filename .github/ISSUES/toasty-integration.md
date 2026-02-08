@@ -92,7 +92,8 @@ Set-Alias -Name notify -Value Invoke-ToastyNotification
 
 ## References
 - **GitHub Repository**: https://github.com/shanselman/toasty
-- **macOS Support PR**: https://github.com/shanselman/toasty/pull/28
+- **macOS Support PR #28**: https://github.com/shanselman/toasty/pull/28 (by @spboyer, status: OPEN)
+- **WinGet Support PR #39**: https://github.com/shanselman/toasty/pull/39 (by @Copilot, status: DRAFT)
 - **WinGet Documentation**: https://learn.microsoft.com/en-us/windows/package-manager/
 
 ## Labels
