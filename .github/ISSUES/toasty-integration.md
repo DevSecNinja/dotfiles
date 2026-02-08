@@ -69,7 +69,7 @@ Set-Alias -Name notify -Value Invoke-ToastyNotification
 2. **AI agent integration**:
    ```powershell
    # Auto-detect agent and notify
-   toast "Task finished" --app copilot
+   toast "Task finished" -App copilot
    ```
 
 3. **Custom notifications**:

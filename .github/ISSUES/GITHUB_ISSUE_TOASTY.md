@@ -47,7 +47,7 @@ toast "Build completed!"
 toast "Deployment successful" "Production Deploy"
 
 # Agent-specific
-toast "Task finished" --app copilot
+toast "Task finished" -App copilot
 ```
 
 ### Installation
