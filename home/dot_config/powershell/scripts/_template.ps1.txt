@@ -34,6 +34,7 @@
     - Scripts must be idempotent (safe to run multiple times)
 #>
 
+#region Setup
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $false, HelpMessage = "Description of the parameter")]
@@ -45,35 +46,73 @@ param(
 
 # Set strict mode for error handling
 $ErrorActionPreference = "Stop"
+#endregion Setup
 
-# --- Validation ---
+#region Validation
 # Check for required commands
 # if (-not (Get-Command "required-command" -ErrorAction SilentlyContinue)) {
 #     Write-Error "Required command 'required-command' is not installed or not in PATH"
-#     exit 1
+#     Exit 1
 # }
 
-# --- Dry Run ---
+# Validate parameters
+# if ([string]::IsNullOrWhiteSpace($ParameterName)) {
+#     Write-Error "ParameterName cannot be empty"
+#     Exit 1
+# }
+#endregion Validation
+
+#region Functions
+# Helper functions go here
+# function Get-SomeData {
+#     [CmdletBinding()]
+#     param(
+#         [Parameter(Mandatory = $true)]
+#         [string]$InputValue
+#     )
+#
+#     # Function logic here
+#     return $result
+# }
+#endregion Functions
+
+#region Dry Run Check
 if ($DryRun) {
-    Write-Host "🔍 [DRY RUN] Would perform the following actions:" -ForegroundColor Cyan
+    Write-Host "[DRY RUN] Would perform the following actions:" -ForegroundColor Cyan
     Write-Host "   - Action 1 would be performed"
     Write-Host "   - Action 2 would be performed"
-    exit 0
+    Exit 0
 }
+#endregion Dry Run Check
 
-# --- Main Logic ---
-Write-Verbose "🔍 Running ScriptName..."
+#region Main Execution
+Write-Verbose "Running ScriptName..."
 
 # Replace this section with your script's main logic
 
-# Example: Perform some action
-# try {
-#     # Action here
-#     Write-Host "✅ Successfully completed action" -ForegroundColor Green
-# }
-# catch {
-#     Write-Warning "❌ Failed to complete action: $_"
-#     exit 1
+# Example: Perform some action with ShouldProcess support
+# $targetResource = "example-resource"
+# if ($PSCmdlet.ShouldProcess($targetResource, "Perform action")) {
+#     try {
+#         # Action here
+#         Write-Host "[OK] Successfully completed action" -ForegroundColor Green
+#     }
+#     catch {
+#         Write-Warning "Failed to complete action: $_"
+#         Exit 1
+#     }
 # }
 
-Write-Host "✅ ScriptName completed successfully" -ForegroundColor Green
+# Example: Simple operation
+# try {
+#     # Perform operation
+#     Write-Verbose "Performing operation..."
+#     # Operation code here
+# }
+# catch {
+#     Write-Error "Operation failed: $_"
+#     Exit 1
+# }
+
+Write-Host "[OK] ScriptName completed successfully" -ForegroundColor Green
+#endregion Main Execution
