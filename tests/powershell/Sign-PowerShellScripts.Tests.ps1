@@ -551,7 +551,7 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
         }
     }
 
-    It "Should sign scripts using certificate from PFX file" -Skip:(-not (Test-Path $script:TestCertPath)) {
+    It "Should sign scripts using certificate from PFX file" -Skip:(-not $script:TestCertPath -or -not (Test-Path $script:TestCertPath)) {
         # Create a new test script
         $newScript = New-TestScript -Name "FromPFX.ps1" -Path $script:E2ERoot
 

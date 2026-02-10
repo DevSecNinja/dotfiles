@@ -26,9 +26,9 @@
 
 $ErrorActionPreference = "Continue"  # Continue on errors to avoid blocking chezmoi
 
-Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "🔄 Winget Package Upgrade (Chezmoi OnChange)" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+Write-Host "`n================================================" -ForegroundColor Cyan
+Write-Host ">> Winget Package Upgrade (Chezmoi OnChange)" -ForegroundColor Cyan
+Write-Host "================================================" -ForegroundColor Cyan
 
 # Check if Microsoft.WinGet.Client module is available
 $wingetModule = Get-Module -Name Microsoft.WinGet.Client -ListAvailable -ErrorAction SilentlyContinue
@@ -50,31 +50,30 @@ if (-not $wingetModule) {
     Write-Host "   Using winget.exe as fallback..." -ForegroundColor Yellow
 }
 else {
-    Write-Host "`n✅ Microsoft.WinGet.Client module found (v$($wingetModule.Version))" -ForegroundColor Green
+    Write-Host "`n[OK] Microsoft.WinGet.Client module found (v$($wingetModule.Version))" -ForegroundColor Green
 }
 
-# Check if functions are available (they should be loaded by profile.ps1)
-# If not available, source them directly (needed when running via chezmoi)
+# Check if functions are available (they should be loaded by profile.ps1 via DotfilesHelpers module)
+# If not available, import the module directly (needed when running via chezmoi)
 if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-    $functionsPath = Join-Path $HOME ".config\powershell\functions.ps1"
-    if (Test-Path $functionsPath) {
+    $modulePath = Join-Path $HOME ".config\powershell\modules\DotfilesHelpers"
+    if (Test-Path $modulePath) {
         try {
-            . $functionsPath
+            Import-Module $modulePath -Force -DisableNameChecking
         }
         catch {
-            Write-Warning "Failed to load functions from $functionsPath : $_"
-            Write-Warning "Skipping winget upgrade"
-            exit 0
+            Write-Warning "Failed to load DotfilesHelpers module from $modulePath : $_"
         }
     }
-    else {
-        Write-Warning "Functions file not found at: $functionsPath"
+
+    if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
+        Write-Warning "DotfilesHelpers module not found at $modulePath"
         Write-Warning "Skipping winget upgrade"
         exit 0
     }
 }
 
-# Run the upgrade using the function from functions.ps1
+# Run the upgrade using the function from DotfilesHelpers module
 try {
     Invoke-WingetUpgrade -CountdownSeconds 3 -UseWingetModule $true
 }
@@ -83,8 +82,8 @@ catch {
     Write-Warning "Continuing with chezmoi update despite winget upgrade failure"
 }
 
-Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "✅ Winget upgrade check completed" -ForegroundColor Green
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+Write-Host "`n================================================" -ForegroundColor Cyan
+Write-Host "[OK] Winget upgrade check completed" -ForegroundColor Green
+Write-Host "================================================" -ForegroundColor Cyan
 
 exit 0

@@ -32,8 +32,13 @@ if ($ENV:TERM_PROGRAM -ne "vscode") {
     }
 }
 
-# Load functions and aliases
-. $PSScriptRoot\functions.ps1
+# Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
+$dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
+if (Test-Path $dotfilesModulePath) {
+    Import-Module $dotfilesModulePath -Force -DisableNameChecking
+}
+
+# Load aliases
 . $PSScriptRoot\aliases.ps1
 
 # Custom prompt (simple and clean)

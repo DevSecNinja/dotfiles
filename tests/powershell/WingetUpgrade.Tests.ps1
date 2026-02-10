@@ -8,7 +8,7 @@
     Validates:
     - Test-WingetUpdates function
     - Invoke-WingetUpgrade function
-    - run_onchange_99-winget-upgrade.ps1.tmpl script
+    - run_winget-upgrade.ps1 script
     - Module availability checks
     - Compatibility with PowerShell Core and Windows PowerShell
 
@@ -23,13 +23,15 @@ BeforeAll {
     $script:RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     Push-Location $script:RepoRoot
 
-    # Load functions from the source file
-    $functionsPath = Join-Path $script:RepoRoot "home\dot_config\powershell\functions.ps1"
-    if (Test-Path $functionsPath) {
-        . $functionsPath
+    # Load functions from the DotfilesHelpers module
+    $modulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers"
+    if (Test-Path $modulePath) {
+        # Remove all existing copies to avoid 'multiple modules loaded' errors during mocking
+        Get-Module DotfilesHelpers -All | Remove-Module -Force -ErrorAction SilentlyContinue
+        Import-Module $modulePath -Force -DisableNameChecking
     }
     else {
-        throw "Functions file not found at: $functionsPath"
+        throw "DotfilesHelpers module not found at: $modulePath"
     }
 
     # Check if we're in CI mode
@@ -101,22 +103,23 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
 
         It "Should skip detection when Force is used" {
             # Mock dependencies to prevent actual execution
-            Mock Test-WingetUpdates { return $false }
-            Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
-            Mock Get-Command { return $null } -ParameterFilter { $Name -eq 'winget' }
-            Mock Import-Module { }
-            Mock Update-WinGetPackage { }
-            Mock Get-WinGetPackage { return @() }
+            # Use -ModuleName to intercept calls inside the DotfilesHelpers module
+            Mock Test-WingetUpdates { return $false } -ModuleName DotfilesHelpers
+            Mock Get-Module { return $null } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' } -ModuleName DotfilesHelpers
+            Mock Get-Command { return $null } -ParameterFilter { $Name -eq 'winget' } -ModuleName DotfilesHelpers
+            Mock Import-Module { } -ModuleName DotfilesHelpers
+            Mock Update-WinGetPackage { } -ModuleName DotfilesHelpers
+            Mock Get-WinGetPackage { return @() } -ModuleName DotfilesHelpers
 
-            # Capture host output
-            $output = @()
-            Mock Write-Host { $output += $Object }
+            # Capture host output from inside the module
+            $script:forceOutput = @()
+            Mock Write-Host { $script:forceOutput += $Object } -ModuleName DotfilesHelpers
 
             # Run with Force to skip detection
             { Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue } | Should -Not -Throw
 
             # Verify Force mode message appears
-            $output -join '' | Should -Match 'Force mode|Skipping detection'
+            $script:forceOutput -join '' | Should -Match 'Force mode|Skipping detection'
         }
     }
 
@@ -148,33 +151,23 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
 }
 
 Describe "Winget Upgrade Script" -Tag "Integration" {
-    Context "run_onchange_99-winget-upgrade.ps1.tmpl" {
+    Context "run_winget-upgrade.ps1" {
         BeforeAll {
-            $script:ScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_onchange_99-winget-upgrade.ps1.tmpl"
+            $script:ScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_winget-upgrade.ps1"
         }
 
         It "Should exist" {
             Test-Path $script:ScriptPath | Should -Be $true
         }
 
-        It "Should have .tmpl extension for Chezmoi templating" {
-            $script:ScriptPath | Should -Match '\.ps1\.tmpl$'
+        It "Should be a plain .ps1 file (not a template)" {
+            $script:ScriptPath | Should -Match '\.ps1$'
         }
 
-        It "Should contain Chezmoi template directives" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match '\{\{.*\.chezmoi\.os.*\}\}'
-        }
-
-        It "Should only run on Windows" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match '\{\{- if eq \.chezmoi\.os "windows" -\}\}'
-        }
-
-        It "Should source functions.ps1 if functions not available" {
+        It "Should load DotfilesHelpers module" {
             $content = Get-Content $script:ScriptPath -Raw
             $content | Should -Match 'Get-Command.*Invoke-WingetUpgrade'
-            $content | Should -Match 'dot_config\\powershell\\functions\.ps1'
+            $content | Should -Match 'DotfilesHelpers'
         }
 
         It "Should check for Microsoft.WinGet.Client module" {
@@ -187,15 +180,9 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match 'Invoke-WingetUpgrade.*-CountdownSeconds'
         }
 
-        It "Should include dependency hashes for onchange trigger" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'packages\.yaml.*sha256sum'
-            $content | Should -Match 'functions\.ps1.*sha256sum'
-        }
-
-        It "Should use run_onchange prefix with 99 for last execution" {
+        It "Should use run_ prefix for chezmoi execution" {
             $scriptName = Split-Path $script:ScriptPath -Leaf
-            $scriptName | Should -Match '^run_onchange_99-'
+            $scriptName | Should -Match '^run_'
         }
 
         It "Should be compatible with PowerShell 5.1+" {
@@ -205,7 +192,7 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
 
         It "Should handle missing module gracefully" {
             $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'module not found|not found'
+            $content | Should -Match 'not found'
             $content | Should -Match 'exit 0'
         }
     }
@@ -289,12 +276,12 @@ Describe "Help and Documentation" -Tag "Documentation" {
 Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
     Context "Mocked End-to-End Workflow (CI-safe)" {
         It "Should complete full workflow with mocked dependencies" {
-            # Mock all external dependencies
+            # Mock all external dependencies inside the module scope
             Mock Get-Module {
                 return [PSCustomObject]@{ Name = 'Microsoft.WinGet.Client'; Version = '1.0.0' }
-            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
+            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' } -ModuleName DotfilesHelpers
 
-            Mock Import-Module { }
+            Mock Import-Module { } -ModuleName DotfilesHelpers
 
             Mock Get-WinGetPackage {
                 # Simulate one package with update available
@@ -305,13 +292,13 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
                     InstalledVersion = '1.0.0'
                     AvailableVersion = '1.0.1'
                 })
-            }
+            } -ModuleName DotfilesHelpers
 
-            Mock Update-WinGetPackage { }
+            Mock Update-WinGetPackage { } -ModuleName DotfilesHelpers
 
-            # Capture output
-            $output = @()
-            Mock Write-Host { $output += $Object }
+            # Capture output from inside the module
+            $script:e2eOutput = @()
+            Mock Write-Host { $script:e2eOutput += $Object } -ModuleName DotfilesHelpers
 
             # Run detection
             $hasUpdates = Test-WingetUpdates -UseWingetModule $true
@@ -321,23 +308,26 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
             { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true } | Should -Not -Throw
 
             # Verify upgrade was called
-            Should -Invoke Update-WinGetPackage -Times 1
+            Should -Invoke Update-WinGetPackage -Times 1 -ModuleName DotfilesHelpers
         }
 
         It "Should handle no updates gracefully" {
-            # Mock no updates available
+            # Mock no updates available inside the module scope
             Mock Get-Module {
                 return [PSCustomObject]@{ Name = 'Microsoft.WinGet.Client'; Version = '1.0.0' }
-            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' }
+            } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' } -ModuleName DotfilesHelpers
 
-            Mock Import-Module { }
+            Mock Import-Module { } -ModuleName DotfilesHelpers
 
             Mock Get-WinGetPackage {
                 # Simulate no packages with updates
                 return @()
-            }
+            } -ModuleName DotfilesHelpers
 
-            Mock Update-WinGetPackage { }
+            Mock Update-WinGetPackage { } -ModuleName DotfilesHelpers
+
+            # Suppress output from inside the module
+            Mock Write-Host { } -ModuleName DotfilesHelpers
 
             # Run detection
             $hasUpdates = Test-WingetUpdates -UseWingetModule $true
@@ -347,7 +337,7 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
             { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true } | Should -Not -Throw
 
             # Verify upgrade was NOT called (no updates)
-            Should -Invoke Update-WinGetPackage -Times 0
+            Should -Invoke Update-WinGetPackage -Times 0 -ModuleName DotfilesHelpers
         }
     }
 

@@ -6,7 +6,16 @@ This directory contains PowerShell profile configuration managed by chezmoi.
 
 - `profile.ps1` - Main PowerShell profile with settings and module imports
 - `aliases.ps1` - Command aliases and helper functions
-- `functions.ps1` - PowerShell utility functions for system management
+- `modules/DotfilesHelpers/` - PowerShell module containing all utility functions
+  - `DotfilesHelpers.psd1` - Module manifest with exported function declarations (enables lazy loading)
+  - `DotfilesHelpers.psm1` - Module loader that dot-sources public function files
+  - `Public/` - Individual function files grouped by category:
+    - `Navigation.ps1` - Directory navigation helpers
+    - `SystemUtilities.ps1` - System utility functions (which, touch, mkcd)
+    - `ChezmoiUtilities.ps1` - Chezmoi management functions
+    - `WingetUtilities.ps1` - Winget upgrade automation
+    - `ProfileManagement.ps1` - Profile editing and alias display
+    - `ModuleInstallation.ps1` - PowerShell module installation utilities
 - `completions/` - Command-line completions for various tools
 
 ## Installation
