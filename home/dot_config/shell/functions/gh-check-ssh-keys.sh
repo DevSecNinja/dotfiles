@@ -78,7 +78,8 @@ gh-check-ssh-keys() {
 		# Check if CHEZMOI_GITHUB_USERNAME environment variable is set
 		if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
 			# Check if we're in an interactive environment (stdin is a TTY)
-			if [ -t 0 ]; then
+			# AND not in CI/test environment (CI, BATS_VERSION, etc.)
+			if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${BATS_VERSION:-}" ]; then
 				# Ask for confirmation before using the detected username
 				echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
 				printf "Do you want to use this username? (y/N): "

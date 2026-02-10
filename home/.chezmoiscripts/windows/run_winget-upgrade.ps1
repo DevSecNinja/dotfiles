@@ -27,7 +27,7 @@
 $ErrorActionPreference = "Continue"  # Continue on errors to avoid blocking chezmoi
 
 Write-Host "`n================================================" -ForegroundColor Cyan
-Write-Host ">> Winget Package Upgrade (Chezmoi OnChange)" -ForegroundColor Cyan
+Write-Host ">> Winget Package Upgrade" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 
 # Check if Microsoft.WinGet.Client module is available
