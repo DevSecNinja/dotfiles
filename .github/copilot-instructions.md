@@ -261,6 +261,25 @@ pre-commit run --all-files
 home/.chezmoiscripts/linux/run_once_setup-precommit.sh
 ```
 
+### 6. No Emoji/Unicode in PowerShell Files
+
+**NEVER use emoji characters (🔍, ✅, ❌, 🚀, 📊, ⏱️, ━, etc.) in `.ps1` files.**
+
+PowerShell on Windows may load scripts without UTF-8 BOM encoding, causing multi-byte UTF-8 emoji sequences to corrupt string parsing. This breaks string terminators and causes cascading parse errors (e.g., `The string is missing the terminator`).
+
+**Use ASCII-safe alternatives instead**:
+
+| Don't use | Use instead |
+| --------- | ----------- |
+| ✅        | `[OK]`      |
+| ❌        | `[FAIL]`    |
+| ⚠️        | `[WARN]`    |
+| 🔍 🚀 📊 | `>>`        |
+| ━━━━━━    | `========`  |
+| ⏱️        | `[SKIP]`    |
+
+**Emoji is fine in**: `.fish`, `.sh`, `.md`, and other UTF-8 native files. Only `.ps1` files are affected.
+
 ## Common Issues & Solutions
 
 ### Issue: Validation scripts fail with "command not found"

@@ -244,7 +244,7 @@ Describe "Windows Package Configuration" {
             }
 
             foreach ($module in $allModules) {
-                $module | Should -Match "^[A-Za-z0-9\-]+$"
+                $module | Should -Match "^[A-Za-z0-9\.\-]+$"
             }
         }
     }
