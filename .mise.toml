@@ -4,7 +4,7 @@
 # Global tool versions used in this project
 [tools]
 # Python for pre-commit and validation scripts
-python = "3.14.2"
+python = "3.14.3"
 
 # Go Task for task runner
 task = "latest"
