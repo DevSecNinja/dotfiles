@@ -24,10 +24,6 @@
     https://www.powershellgallery.com/packages/Microsoft.WinGet.Client
 #>
 
-# Hash of dependencies to trigger re-run on changes
-# packages.yaml hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
-# functions.ps1 hash: {{ include "dot_config/powershell/functions.ps1" | sha256sum }}
-
 $ErrorActionPreference = "Continue"  # Continue on errors to avoid blocking chezmoi
 
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -60,7 +56,7 @@ else {
 # Check if functions are available (they should be loaded by profile.ps1)
 # If not available, source them directly (needed when running via chezmoi)
 if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-    $functionsPath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\functions.ps1"
+    $functionsPath = Join-Path $HOME ".config\powershell\functions.ps1"
     if (Test-Path $functionsPath) {
         try {
             . $functionsPath
