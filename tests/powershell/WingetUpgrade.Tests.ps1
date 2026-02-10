@@ -16,6 +16,12 @@
     These tests validate the winget upgrade automation added for chezmoi integration.
     Tests run in both interactive and CI modes.
     Compatible with PowerShell 5.1+ (same as the functions being tested).
+
+    CI COMPATIBILITY:
+    Stub functions are created for Get-WinGetPackage and Update-WinGetPackage in tests
+    where they need to be mocked. This allows tests to run in CI environments where the
+    Microsoft.WinGet.Client module is not installed. Pester requires commands to exist
+    before they can be mocked, so stubs enable mocking of external module commands.
 #>
 
 BeforeAll {
@@ -102,6 +108,14 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
         }
 
         It "Should skip detection when Force is used" {
+            # Create stub functions if they don't exist (for CI environments)
+            if (-not (Get-Command Get-WinGetPackage -ErrorAction SilentlyContinue)) {
+                function global:Get-WinGetPackage { }
+            }
+            if (-not (Get-Command Update-WinGetPackage -ErrorAction SilentlyContinue)) {
+                function global:Update-WinGetPackage { }
+            }
+
             # Mock dependencies to prevent actual execution
             # Use -ModuleName to intercept calls inside the DotfilesHelpers module
             Mock Test-WingetUpdates { return $false } -ModuleName DotfilesHelpers
@@ -275,6 +289,20 @@ Describe "Help and Documentation" -Tag "Documentation" {
 
 Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
     Context "Mocked End-to-End Workflow (CI-safe)" {
+        BeforeAll {
+            # Create stub functions if they don't exist (for CI environments without Microsoft.WinGet.Client)
+            if (-not (Get-Command Get-WinGetPackage -ErrorAction SilentlyContinue)) {
+                function global:Get-WinGetPackage {
+                    param([string]$Source)
+                }
+            }
+            if (-not (Get-Command Update-WinGetPackage -ErrorAction SilentlyContinue)) {
+                function global:Update-WinGetPackage {
+                    param([string]$Id, [string]$Source, [string]$Mode, [switch]$Force)
+                }
+            }
+        }
+
         It "Should complete full workflow with mocked dependencies" {
             # Mock all external dependencies inside the module scope
             Mock Get-Module {
