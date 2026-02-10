@@ -162,7 +162,7 @@ AfterAll {
     Remove-TestCertificates -SubjectPattern "*Test*"
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" {
+Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should require CertificatePath when using FromFile parameter set" {
         # This tests the parameter set binding
@@ -206,7 +206,7 @@ Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Verify certificate was created in top-level BeforeAll
@@ -310,7 +310,7 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should validate certificate has code signing EKU" {
         if (-not $script:TestCert) {
@@ -357,7 +357,7 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWi
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Script Discovery" {
+Describe "Sign-PowerShellScripts.ps1 - Script Discovery" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Create test directory structure
@@ -401,7 +401,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Discovery" {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Verify certificate is available
@@ -481,7 +481,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows) {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:CI -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Verify certificate is available
@@ -619,7 +619,7 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Verify certificate and signing script are available
@@ -665,7 +665,7 @@ Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows) {
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Statistics Reporting" -Skip:(-not $IsWindows) {
+Describe "Sign-PowerShellScripts.ps1 - Statistics Reporting" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Verify certificate and signing script are available

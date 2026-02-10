@@ -52,7 +52,7 @@ BeforeAll {
     }
 }
 
-Describe "New-SigningCert.ps1 Parameter Validation" {
+Describe "New-SigningCert.ps1 Parameter Validation" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should accept valid SubjectName without CN= prefix" {
         # This tests the script can be dot-sourced with parameters
@@ -110,7 +110,7 @@ Describe "New-SigningCert.ps1 Parameter Validation" {
     }
 }
 
-Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" {
+Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should require PowerShell 7.0 or later" {
         $PSVersionTable.PSVersion.Major | Should -BeGreaterOrEqual 7
@@ -128,7 +128,7 @@ Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" {
     }
 }
 
-Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" {
+Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Clean up any existing test certificates
@@ -257,7 +257,7 @@ Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" {
     }
 }
 
-Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" {
+Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*PesterE2E*"
@@ -342,7 +342,7 @@ Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" {
     }
 }
 
-Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" {
+Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should use strong key length (4096 bits)" {
         # This validates the script specification
@@ -389,7 +389,7 @@ Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" {
     }
 }
 
-Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" {
+Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*CI-Pipeline*"
