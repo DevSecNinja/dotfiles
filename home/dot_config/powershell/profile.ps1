@@ -32,8 +32,13 @@ if ($ENV:TERM_PROGRAM -ne "vscode") {
     }
 }
 
-# Load functions and aliases
-. $PSScriptRoot\functions.ps1
+# Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
+$dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
+if (Test-Path $dotfilesModulePath) {
+    Import-Module $dotfilesModulePath -Force -DisableNameChecking
+}
+
+# Load aliases
 . $PSScriptRoot\aliases.ps1
 
 # Custom prompt (simple and clean)
@@ -62,13 +67,18 @@ if (Test-Path $completionsPath) {
     }
 }
 
-if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
-    horizonfetch
+# Show horizonfetch only in interactive sessions (not when scripts import modules)
+if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
+    if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
+        horizonfetch
+    }
 }
 
-# Welcome message
-Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
-Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+# Welcome message (only in interactive sessions)
+if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
+    Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
+    Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

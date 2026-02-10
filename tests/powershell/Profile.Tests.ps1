@@ -18,8 +18,9 @@ BeforeAll {
 
     # Define paths
     $script:ProfilePath = Join-Path $script:RepoRoot "home\dot_config\powershell\profile.ps1"
-    $script:FunctionsPath = Join-Path $script:RepoRoot "home\dot_config\powershell\functions.ps1"
     $script:AliasesPath = Join-Path $script:RepoRoot "home\dot_config\powershell\aliases.ps1"
+    $script:ModulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers"
+    $script:ModulePublicPath = Join-Path $script:ModulePath "Public"
 }
 
 AfterAll {
@@ -31,8 +32,16 @@ Describe "PowerShell Profile Files" {
         $script:ProfilePath | Should -Exist
     }
 
-    It "functions.ps1 file should exist" {
-        $script:FunctionsPath | Should -Exist
+    It "DotfilesHelpers module directory should exist" {
+        $script:ModulePath | Should -Exist
+    }
+
+    It "DotfilesHelpers module manifest should exist" {
+        Join-Path $script:ModulePath "DotfilesHelpers.psd1" | Should -Exist
+    }
+
+    It "DotfilesHelpers module loader should exist" {
+        Join-Path $script:ModulePath "DotfilesHelpers.psm1" | Should -Exist
     }
 
     It "aliases.ps1 file should exist" {
@@ -105,8 +114,9 @@ Describe "Profile Configuration" {
     }
 
 
-    It "Profile should load functions.ps1" {
-        $script:ProfileContent | Should -Match "\. \`$PSScriptRoot\\functions\.ps1"
+    It "Profile should import DotfilesHelpers module" {
+        $script:ProfileContent | Should -Match "DotfilesHelpers"
+        $script:ProfileContent | Should -Match "Import-Module"
     }
 
     It "Profile should load aliases.ps1" {
@@ -147,34 +157,59 @@ Describe "Profile Configuration" {
     }
 }
 
-Describe "PowerShell Functions" {
+Describe "DotfilesHelpers Module" {
     BeforeAll {
-        $script:FunctionsContent = Get-Content $script:FunctionsPath -Raw
+        # Read all module public function files
+        $script:ModuleContent = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
+            ForEach-Object { Get-Content $_.FullName -Raw } | Out-String
+    }
+
+    It "Module manifest should be importable" {
+        { Test-ModuleManifest -Path (Join-Path $script:ModulePath "DotfilesHelpers.psd1") } | Should -Not -Throw
+    }
+
+    It "Module should export expected functions" {
+        $manifest = Test-ModuleManifest -Path (Join-Path $script:ModulePath "DotfilesHelpers.psd1")
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Set-LocationUp'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Reset-ChezmoiScripts'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Test-WingetUpdates'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Invoke-WingetUpgrade'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Show-Aliases'
     }
 
     It "Should define Chezmoi utility functions" {
-        $script:FunctionsContent | Should -Match "function Reset-ChezmoiScripts"
-        $script:FunctionsContent | Should -Match "function Reset-ChezmoiEntries"
-        $script:FunctionsContent | Should -Match "function Invoke-ChezmoiSigning"
+        $script:ModuleContent | Should -Match "function Reset-ChezmoiScripts"
+        $script:ModuleContent | Should -Match "function Reset-ChezmoiEntries"
+        $script:ModuleContent | Should -Match "function Invoke-ChezmoiSigning"
     }
 
     It "Should define navigation helpers" {
-        $script:FunctionsContent | Should -Match "function Set-LocationUp"
-        $script:FunctionsContent | Should -Match "function Set-LocationUpUp"
+        $script:ModuleContent | Should -Match "function Set-LocationUp"
+        $script:ModuleContent | Should -Match "function Set-LocationUpUp"
     }
 
     It "Should define system utilities" {
-        $script:FunctionsContent | Should -Match "function which"
-        $script:FunctionsContent | Should -Match "function touch"
-        $script:FunctionsContent | Should -Match "function mkcd"
+        $script:ModuleContent | Should -Match "function which"
+        $script:ModuleContent | Should -Match "function touch"
+        $script:ModuleContent | Should -Match "function mkcd"
     }
 
     It "Reset-ChezmoiScripts should delete scriptState bucket" {
-        $script:FunctionsContent | Should -Match "delete-bucket --bucket=scriptState"
+        $script:ModuleContent | Should -Match "delete-bucket --bucket=scriptState"
     }
 
     It "Reset-ChezmoiEntries should delete entryState bucket" {
-        $script:FunctionsContent | Should -Match "delete-bucket --bucket=entryState"
+        $script:ModuleContent | Should -Match "delete-bucket --bucket=entryState"
+    }
+
+    It "Public directory should contain expected function files" {
+        $publicFiles = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" | Select-Object -ExpandProperty Name
+        $publicFiles | Should -Contain 'Navigation.ps1'
+        $publicFiles | Should -Contain 'SystemUtilities.ps1'
+        $publicFiles | Should -Contain 'ChezmoiUtilities.ps1'
+        $publicFiles | Should -Contain 'WingetUtilities.ps1'
+        $publicFiles | Should -Contain 'ProfileManagement.ps1'
+        $publicFiles | Should -Contain 'ModuleInstallation.ps1'
     }
 }
 
@@ -195,8 +230,10 @@ Describe "PowerShell Aliases" {
         $script:AliasesContent | Should -Match "Set-Alias.*aliases.*Show-Aliases"
     }
 
-    It "Show-Aliases function should exist in functions.ps1" {
-        $script:FunctionsContent | Should -Match "function Show-Aliases"
+    It "Show-Aliases function should exist in DotfilesHelpers module" {
+        $moduleContent = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
+            ForEach-Object { Get-Content $_.FullName -Raw } | Out-String
+        $moduleContent | Should -Match "function Show-Aliases"
     }
 }
 
@@ -210,13 +247,17 @@ Describe "Profile Syntax Validation" {
         } | Should -Not -Throw
     }
 
-    It "functions.ps1 should have valid PowerShell syntax" {
-        {
-            $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script:FunctionsPath -Raw),
-                [ref]$null
-            )
-        } | Should -Not -Throw
+    It "All DotfilesHelpers module files should have valid PowerShell syntax" {
+        $moduleFiles = Get-ChildItem -Path $script:ModulePath -Filter "*.ps1" -Recurse
+        $moduleFiles += Get-ChildItem -Path $script:ModulePath -Filter "*.psm1"
+        foreach ($file in $moduleFiles) {
+            {
+                $null = [System.Management.Automation.PSParser]::Tokenize(
+                    (Get-Content $file.FullName -Raw),
+                    [ref]$null
+                )
+            } | Should -Not -Throw -Because "$($file.Name) should have valid syntax"
+        }
     }
 
     It "aliases.ps1 should have valid PowerShell syntax" {

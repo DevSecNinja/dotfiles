@@ -73,7 +73,8 @@ dotfiles/
 │   │   ├── powershell/          # PowerShell configuration (Windows)
 │   │   │   ├── profile.ps1      # Main PowerShell profile
 │   │   │   ├── aliases.ps1      # Command aliases
-│   │   │   ├── functions.ps1    # Custom functions
+│   │   │   ├── modules/         # PowerShell modules
+│   │   │   │   └── DotfilesHelpers/  # Custom functions module
 │   │   │   └── scripts/         # PowerShell utility scripts
 │   │   │       ├── New-SigningCert.ps1.tmpl      # Create code signing certificate
 │   │   │       ├── Import-SigningCert.ps1        # Import certificate
