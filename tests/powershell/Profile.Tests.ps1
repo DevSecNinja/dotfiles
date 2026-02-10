@@ -18,8 +18,9 @@ BeforeAll {
 
     # Define paths
     $script:ProfilePath = Join-Path $script:RepoRoot "home\dot_config\powershell\profile.ps1"
-    $script:FunctionsPath = Join-Path $script:RepoRoot "home\dot_config\powershell\functions.ps1"
     $script:AliasesPath = Join-Path $script:RepoRoot "home\dot_config\powershell\aliases.ps1"
+    $script:ModulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers"
+    $script:ModulePublicPath = Join-Path $script:ModulePath "Public"
 }
 
 AfterAll {
@@ -31,8 +32,16 @@ Describe "PowerShell Profile Files" {
         $script:ProfilePath | Should -Exist
     }
 
-    It "functions.ps1 file should exist" {
-        $script:FunctionsPath | Should -Exist
+    It "DotfilesHelpers module directory should exist" {
+        $script:ModulePath | Should -Exist
+    }
+
+    It "DotfilesHelpers module manifest should exist" {
+        Join-Path $script:ModulePath "DotfilesHelpers.psd1" | Should -Exist
+    }
+
+    It "DotfilesHelpers module loader should exist" {
+        Join-Path $script:ModulePath "DotfilesHelpers.psm1" | Should -Exist
     }
 
     It "aliases.ps1 file should exist" {
@@ -105,8 +114,9 @@ Describe "Profile Configuration" {
     }
 
 
-    It "Profile should load functions.ps1" {
-        $script:ProfileContent | Should -Match "\. \`$PSScriptRoot\\functions\.ps1"
+    It "Profile should import DotfilesHelpers module" {
+        $script:ProfileContent | Should -Match "DotfilesHelpers"
+        $script:ProfileContent | Should -Match "Import-Module"
     }
 
     It "Profile should load aliases.ps1" {
@@ -147,34 +157,59 @@ Describe "Profile Configuration" {
     }
 }
 
-Describe "PowerShell Functions" {
+Describe "DotfilesHelpers Module" {
     BeforeAll {
-        $script:FunctionsContent = Get-Content $script:FunctionsPath -Raw
+        # Read all module public function files
+        $script:ModuleContent = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
+            ForEach-Object { Get-Content $_.FullName -Raw } | Out-String
+    }
+
+    It "Module manifest should be importable" {
+        { Test-ModuleManifest -Path (Join-Path $script:ModulePath "DotfilesHelpers.psd1") } | Should -Not -Throw
+    }
+
+    It "Module should export expected functions" {
+        $manifest = Test-ModuleManifest -Path (Join-Path $script:ModulePath "DotfilesHelpers.psd1")
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Set-LocationUp'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Reset-ChezmoiScripts'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Test-WingetUpdates'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Invoke-WingetUpgrade'
+        $manifest.ExportedFunctions.Keys | Should -Contain 'Show-Aliases'
     }
 
     It "Should define Chezmoi utility functions" {
-        $script:FunctionsContent | Should -Match "function Reset-ChezmoiScripts"
-        $script:FunctionsContent | Should -Match "function Reset-ChezmoiEntries"
-        $script:FunctionsContent | Should -Match "function Invoke-ChezmoiSigning"
+        $script:ModuleContent | Should -Match "function Reset-ChezmoiScripts"
+        $script:ModuleContent | Should -Match "function Reset-ChezmoiEntries"
+        $script:ModuleContent | Should -Match "function Invoke-ChezmoiSigning"
     }
 
     It "Should define navigation helpers" {
-        $script:FunctionsContent | Should -Match "function Set-LocationUp"
-        $script:FunctionsContent | Should -Match "function Set-LocationUpUp"
+        $script:ModuleContent | Should -Match "function Set-LocationUp"
+        $script:ModuleContent | Should -Match "function Set-LocationUpUp"
     }
 
     It "Should define system utilities" {
-        $script:FunctionsContent | Should -Match "function which"
-        $script:FunctionsContent | Should -Match "function touch"
-        $script:FunctionsContent | Should -Match "function mkcd"
+        $script:ModuleContent | Should -Match "function which"
+        $script:ModuleContent | Should -Match "function touch"
+        $script:ModuleContent | Should -Match "function mkcd"
     }
 
     It "Reset-ChezmoiScripts should delete scriptState bucket" {
-        $script:FunctionsContent | Should -Match "delete-bucket --bucket=scriptState"
+        $script:ModuleContent | Should -Match "delete-bucket --bucket=scriptState"
     }
 
     It "Reset-ChezmoiEntries should delete entryState bucket" {
-        $script:FunctionsContent | Should -Match "delete-bucket --bucket=entryState"
+        $script:ModuleContent | Should -Match "delete-bucket --bucket=entryState"
+    }
+
+    It "Public directory should contain expected function files" {
+        $publicFiles = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" | Select-Object -ExpandProperty Name
+        $publicFiles | Should -Contain 'Navigation.ps1'
+        $publicFiles | Should -Contain 'SystemUtilities.ps1'
+        $publicFiles | Should -Contain 'ChezmoiUtilities.ps1'
+        $publicFiles | Should -Contain 'WingetUtilities.ps1'
+        $publicFiles | Should -Contain 'ProfileManagement.ps1'
+        $publicFiles | Should -Contain 'ModuleInstallation.ps1'
     }
 }
 
@@ -195,8 +230,10 @@ Describe "PowerShell Aliases" {
         $script:AliasesContent | Should -Match "Set-Alias.*aliases.*Show-Aliases"
     }
 
-    It "Show-Aliases function should exist in functions.ps1" {
-        $script:FunctionsContent | Should -Match "function Show-Aliases"
+    It "Show-Aliases function should exist in DotfilesHelpers module" {
+        $moduleContent = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
+            ForEach-Object { Get-Content $_.FullName -Raw } | Out-String
+        $moduleContent | Should -Match "function Show-Aliases"
     }
 }
 
@@ -210,13 +247,17 @@ Describe "Profile Syntax Validation" {
         } | Should -Not -Throw
     }
 
-    It "functions.ps1 should have valid PowerShell syntax" {
-        {
-            $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script:FunctionsPath -Raw),
-                [ref]$null
-            )
-        } | Should -Not -Throw
+    It "All DotfilesHelpers module files should have valid PowerShell syntax" {
+        $moduleFiles = Get-ChildItem -Path $script:ModulePath -Filter "*.ps1" -Recurse
+        $moduleFiles += Get-ChildItem -Path $script:ModulePath -Filter "*.psm1"
+        foreach ($file in $moduleFiles) {
+            {
+                $null = [System.Management.Automation.PSParser]::Tokenize(
+                    (Get-Content $file.FullName -Raw),
+                    [ref]$null
+                )
+            } | Should -Not -Throw -Because "$($file.Name) should have valid syntax"
+        }
     }
 
     It "aliases.ps1 should have valid PowerShell syntax" {
@@ -232,8 +273,8 @@ Describe "Profile Syntax Validation" {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAQIKpE+affNGYc
-# VVSZSSbHAjUYM52re75Rv1MIvGcC+aCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAq4cpItO6MteCE
+# IWeLwSCcMIw0jAFc5LlR6yUtuZ51RKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -367,33 +408,33 @@ Describe "Profile Syntax Validation" {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCCSUC6zBXjICe566GA1wWMSqTQao0dyHT7lNKKok7+wVzANBgkqhkiG
-# 9w0BAQEFAASCAgAjWYeeGQq/uzfyjPmNoyFmSdjoz6hd1w+NlQL6H8ugCQvyCe91
-# UwGn8xeLQ9/Gh65oT2NPeUf3AS2K2DoRUIk583MFMgll4rFgYwOD/BhIagBO1ZPT
-# 2fN/Fk2+4MVahBT7fVk6I6Oe0soRRp2Vzq7XPoE8VJ7tKu50j0NLP+FLcpeTdZZC
-# /CVCgQ5uHCJeEgsTeuw8tfYiIoZkSA3zu2jDTVUtwtZ4SoJs5vwTjbjHJwkwH1lw
-# QmGAXdRWFgODs7re58SI5Dycwm/+zLL4FW2njesBackVIU1gHobBT0Hk28Wyz0gQ
-# n3vZxzZs6WG4I8sUfg7EFU/VIzlAmyRHmtrPBUxXgzIVXp7wxHqzaH57WitaddqN
-# GEVDpAoo1qeUullFeXSefMA4NJsWkL+3NilQLdDz5FE2IO9HIqaEtL2ubF4ypAD4
-# Ms7OzY+piwV0BdFiNODXCuPdzz7DOXRMLRzeVj+un3B30tYYIx6hOzsevmhlcXEb
-# 0BZtaGh/sRDxOIPEyXhqJHM4Uy+sCXQ1mvcbLpeVyuf6PrBJzqQORHe5vfqw/XX1
-# sySk5BWU4fIT+Q651YLPiWW9qsQ5WbfMB6z3ptaGQF0W+n2KpCCmjHPmBDFowh6h
-# e+2KaHwG44Co7FTIslslonPvUiSx2RJCmE58nTN0/YvBAa5LYIuQeAGyDqGCAyYw
+# DQEJBDEiBCAsZAVQS0kOL9JJlU5AjwKAmw5aPtZwMfY1hkC3mUoIFzANBgkqhkiG
+# 9w0BAQEFAASCAgAEedp1ae9FJDITPPXWgfmA5kr8lLmRMlMUh+Y8vmNVOvF1gWBT
+# IDlCvZdkdgZFlL5pv3DS9f+AlrSxVWErUorN6tnutlDZe9LCHE1GeiOuk4CfSpFb
+# nZJ3VtEJGF6zFw4h/cd3vBis8iehr1SHILyAHEEECMWXfP8imz9V9k8xOG1FXID5
+# OXUUp2yupVLv5YV+dubsU3mVPFaZfHolKzVsc0joNcLs8AhSo7TdXoQk6q30yQnr
+# iBkoE1rEr+1hMRONSNBLE+1Rk/onF4Q7i3XBpJ0TVj3RmVESJdBfOn6IoRo9IE/m
+# zD/080hlgoXddzbVS8XBGdjonHp9N6WiSvteKxdSx4FeUkanyz3J74poz2ZYhcKV
+# Qk39agLiqhM5tWkL74Y/HPF3MjXI2SXMC5pkEWqI8JRRlbzkwgjL3WJM9tNGC+Gu
+# CI6lp+TOzmD2JNZI0tsOUPuQ+oY+T7DD4mP6qSTpisOH20Ckqwkn7RuuI8KXn+NF
+# 3c0TW5MLJpDHzx6F45z2/GMzFNuE973+uhL3zxs2LbA2FHIBk6GBTod7qW0/vVa5
+# z5fz8fSXeKPeK0/7SUrzaqN9puS49bQ80Ghj5ZaEqOii/Isn0il+z8Bb8YcIFRep
+# VGPE0EyA7JKslkhPMQ34/BpXrBnFhqGlprGFChy90WTqBK1SIyPpNmtmaaGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMjIyMjA1MDVaMC8GCSqGSIb3DQEJBDEi
-# BCDEEIReJTBQVl+Uq4dUr7zXFl9anmqA+vhosrpOwxfS4DANBgkqhkiG9w0BAQEF
-# AASCAgB0GMvIUnwcbCPKpkQfokrU4yIKDMk+ggDb8fFOx6MlaQL+qLS42kLoRl6f
-# Ygt1b25YGuA1R9T+2Gw7uOj1ngYL3Zs8Y962iuE82XLYbilLy/1YCA9OJo8mBqnl
-# zuWqdDr3+nqEvjf1sKhNIGprAyQGO+fhvDI1pb1MzlDYdVuUZX8W0a50l2oo1dkn
-# HJkGXITqyajSPRzkDNNkrri0VZexKJrw/ZNpiA/2tUJhzDfyK/zC5zM7Hry3TODf
-# ZoMx7zluuqGUO9D88MgTYWaa80HZyctL+DBOpUohV22hpl/4RvkRyvn5Q+gPoJ62
-# N+ngFztJ3WQg2IIbl9xNMpLPiLsBk5wNbR/HQI6WU4iL38UN+TgYsv71J7x2c7Hz
-# NAzEg8G44X/5/cEptqgYG+vo6FnkfoH0Yd8hx6h0yu6w1baA9bNOmuQJd5Xg3Dvy
-# HvOqRfXjoGA/qWNqD81nJ3KzlH/glvQ2+O33qCGA5n2Ydui4gyEfolayTKYf5vrw
-# yc943kERd9xozDheHsiOxCpsHOiJJm2AHvFhE3wZJSppTeDGa3OXNpB1TBQvdpNh
-# UwsKOAgmkwjHVyeVdSjpONJ1b56doNKtaF7VkooHyQLU+QWwEN249BJEifkVR8lu
-# BTCjNvl36tjbIjTPSRu190fYE6/r7UWdXC7EdLxmHGt/nUmCVQ==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
+# BCA/GIs8azVb/2eyP3HN0EturPnM7JctLgVLcNgI8QDSGzANBgkqhkiG9w0BAQEF
+# AASCAgAQZWW0AgIdbEevJyd+DX1a3r0GLnOuXh6TShonBMvqbDWHnldh4cgzbOit
+# OQ8IMOG4g/8xBvTLOmyMwDuDuwmPSP2dxrAn1uGCmhNcKKhXUq8ghnhxlwrwO2L1
+# CN3kd6DWx45WFjdbm6nXKtubfj1DWaEwP+a9CDrWhqb9ykE8H+wJgcZDU97KfY3C
+# 95yhj31RAp+WM/xvCBmx5yA1WEq3B7GEKUl864edsZKivilrAOoClXFFyCkgBBS4
+# hKyVzQdznuxG9oY4KQr7j5bFfy1qTT1wLByRPj+HQyfez7OuHV1Msd1ACpiHAJ9M
+# bDJd/vFxVKNe9zxsxvZ/OMBs5BKktDNtDLw/cGlb2w9FhSotcL16eGtriYbJmUaJ
+# DXCRcbmZzMP8jKJAwHSP4hee5N3SUUZ+BE7QxFzeGe/Y1xfOqlFfyESlf0GC3VSk
+# vVjanNru6+pSqphPANwT2AWyfqC6ArhYTWOl6dDYq3RDs2Wx88pOxOtxgTi4D6lr
+# B1BL6bz59SZm0irh6b/rRC90XIG4zIx23+K7CFdb1tLicHJC24AkocoFJZJGgHyX
+# TNZldoueVXABlR1Hy0/4Akmpp9MwYT5QqhHWeKjdT+3FO9qJBysvKK6fUxUtLwaq
+# TtQF6+G5jV6/tWWYAgnrEoWkjkyTtHjkvxZh4eIROzn5QLIiSw==
 # SIG # End signature block

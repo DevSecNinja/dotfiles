@@ -1,62 +1,49 @@
-# PowerShell Aliases
-# Loaded by profile.ps1
+# Chezmoi utilities
 
-# Navigation
-Set-Alias -Name .. -Value Set-LocationUp
-Set-Alias -Name ... -Value Set-LocationUpUp
+function Reset-ChezmoiScripts {
+    # Clears Chezmoi script execution state to force re-running of run_once_* and run_onchange_* scripts
+    chezmoi state delete-bucket --bucket=scriptState
+    Write-Host "Chezmoi script state cleared. run_once_* scripts will re-execute on next 'chezmoi apply'." -ForegroundColor Green
+}
 
-# List files (Unix-like)
-function ll { Get-ChildItem -Force @args }
-function la { Get-ChildItem -Force @args }
+function Reset-ChezmoiEntries {
+    # Clears Chezmoi entry state to force reprocessing of all managed files
+    chezmoi state delete-bucket --bucket=entryState
+    Write-Host "Chezmoi entry state cleared. All files will be reprocessed on next 'chezmoi apply'." -ForegroundColor Yellow
+    Write-Host "Warning: This may cause unexpected changes. Use 'chezmoi apply --dry-run' first." -ForegroundColor Yellow
+}
 
-# Git shortcuts
-function g { git @args }
-function gs { git status @args }
-function ga { git add @args }
-function gc { git commit @args }
-function gps { git push @args }
-function gpl { git pull @args }
-function gl { git log --oneline --graph @args }
-function gd { git diff @args }
-function gco { git checkout @args }
-function gb { git branch @args }
+function Invoke-ChezmoiSigning {
+    param(
+        [string]$CertificateThumbprint = "421f66cf0a29ef657c83316a88d5d2ff918eeb7b"
+    )
 
-# Docker shortcuts
-function d { docker @args }
-function dc { docker compose @args }
-function dps { docker ps @args }
-function dpsa { docker ps -a @args }
-function di { docker images @args }
-function dex { docker exec -it @args }
+    # Signs PowerShell scripts in the Chezmoi source directory and repository root
+    $chezmoiSourceDir = chezmoi source-path
+    if ($LASTEXITCODE -ne 0 -or -not $chezmoiSourceDir) {
+        Write-Host "Error: Failed to get Chezmoi source directory" -ForegroundColor Red
+        return
+    }
 
-# Profile management
-Set-Alias -Name ep -Value Edit-Profile
-Set-Alias -Name reload -Value Import-Profile
+    # Get repository root (parent of Chezmoi source dir, which is typically 'home/')
+    $repoRoot = Split-Path -Parent $chezmoiSourceDir
 
-# Shell introspection
-Set-Alias -Name aliases -Value Show-Aliases
-function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
-function paths { $env:PATH -split [IO.Path]::PathSeparator }
+    $signingScript = Join-Path -Path $chezmoiSourceDir -ChildPath "dot_config\powershell\scripts\Sign-PowerShellScripts.ps1"
 
-# System info
-function ff { fastfetch @args }
-function sysinfo { fastfetch @args }
-function motd { fastfetch @args }
+    if (-not (Test-Path $signingScript)) {
+        Write-Host "Error: Sign-PowerShellScripts.ps1 not found at $signingScript" -ForegroundColor Red
+        return
+    }
 
-# SSH
-function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
-
-# Winget shortcuts
-Set-Alias -Name wup -Value Invoke-WingetUpgrade
-Set-Alias -Name winup -Value Invoke-WingetUpgrade
-
-# Help (keeping backward compatibility)
+    # Sign all PowerShell scripts in the repository (includes tests/, .github/, etc.)
+    & $signingScript -CertificateThumbprint $CertificateThumbprint -Path $repoRoot
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCcJcWrgQftJqN7
-# UO29dY56PlWywmZu2CAesUrHC48coKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBJndsM4sfyB86O
+# TZlupAh/D0VnAfGC+R7MEf7DMDf/MaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -190,33 +177,33 @@ Set-Alias -Name winup -Value Invoke-WingetUpgrade
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCD9I+k4IQsu0qEMEiN6tN8aFKpOJS9nPZ8I6CH1y3MhATANBgkqhkiG
-# 9w0BAQEFAASCAgCMZObp7DUcK79HTQIFPfZhuozLNkgY77wGJyHrL/S3RJaFKbrH
-# 7W3RB7pIsUks0hN+VFViCJX9JlFGao8pzWNB/FfhlXYXIXNojX5/Bf1DB9SD/9Ht
-# 9pHp1ltUAbLQofUWCuHHVkjO28+fbACNC+240iGKpKDTRzWJC6W/6VxGhvoHyjUa
-# 8FMDEFHsZleMY/KZ//+AsDswAVm0Ncxs2k/uG4WLWUrjxeYK+3Bvz/nOX4ekxKfg
-# 31qYRo3ruVimOlaF3Clrd8w+17vBGasOsSZYLpRU1vCBL1ObkQj9Brt12vtkl6F1
-# kBMO3LamgeK6JOAFEmIdUoRY8uXClqmgGC0tYBxoTQaCYr4RJk083FGAGK2oP/wp
-# MEys54ZnW+yDX5XnkR0aNZIMfe7oMw2NsG0yORv7pjrE8fyWHIHXSbZZocBOfxtC
-# gCZx6U67iTRjv8nzeUqpT7/WsBajE6obKfDE/qUSM+v7v58Xcyx6dbWmkYoONuEy
-# Tlrx+php8jQdX0QxqdkaseB1IyR3fHUQ8Gvf+bcs2aBaWYfu0X4l7JKu7hB21OMU
-# WEdPd+xJchkpnxtsigNLcT/MkAE1k7Ic2Ershv6WCBHAuiyt9sn10+hAmVeY7Za4
-# B70aii0qUhRqaz7sgN9COdTjuWdKWWRlrr5sqzIDXt1nnqgN/VYLsU1OTaGCAyYw
+# DQEJBDEiBCBvx4aZhUOkdpZ7sTqYg7bx+hXjqNovosTMbl8cma8GsjANBgkqhkiG
+# 9w0BAQEFAASCAgBLCNL8L+5aI3vpU7Z0HssWkd0tjzE0YNLf8Vv/iIDDZlux1uQG
+# kELn/x6++JSLo6z1l0LxbqvfHKODMIAs6PcDo4k1cy5PskDFYu4WAO0KZknPVxcY
+# D8QxZy+BPrf9dKwtLopewYt/JIj4oZ9Hcc/NE8f81npOGhzy1qFPqjEQ7mW4sGsG
+# Bvg/zkF5pDtDT3nadgZVfKrqTa3YPe7UZxqJB4GgYjlvtaEkDaRO42sRiWNRtckn
+# Y8t6Si6oc2T6lWpv9/MmSM0PwzUMRL9l3Eu7iiHtVHWBAD7s+uxaM3CIMFHly6KO
+# TjNl0hzEU2iL3eOlaVvRwjPFMBbLA8c3itx/8w3LiTKHW6NSTLT6AZjvc99YWVj3
+# o3zYy7lBSa84PQEtVxyNAEDmeiL3ix+xELRd0vpQb2aHMuVp7j73qho+Spyyoyr6
+# 1eiRtlsIDrPEMfMpEtMEejBZrwn9sPbCUBXJQfqoEKM2K4gpNAZxXq/9GNrJqyfw
+# Psn9TuiMUlx0OWM5qw5ykp2fU7FmrTLtGHvaYGUQpOjPy2Qez9D73kC89bnOV2Wf
+# Yhr3/NOw3G2T71To0Al2hkreQtltIHPztaf7hD7vKNX5iRtbJrqL0YYwBy8PJ7Ay
+# lHR/sRyoUk71WcZJ7B1ue5CyrAwK+mCRzznwa2KN2J2VotY+u/XWTACx/KGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCC99ABPP0TsAfXLB4+a65aSWw+FTL43lRLT1WDTATO9SDANBgkqhkiG9w0BAQEF
-# AASCAgCcY+/3F+HnD53PTjpRTBYhwWVfARVmYyS49eJF4vFTB24JT/4lGC4QgjwP
-# t0Ucr1jon3OQG1zAvJRR/p50eJ/S1LTjMRXeUzY8BKETbGG22tgc7bFWLHnHcE4t
-# JdPqkZkQzJTMFpv/bTYXKoYcRU8b2EdEtnWpngBTHucot8djHhdkvcQU3OGCvV4O
-# kKdQsYKGAIz6sQPkXDNbU1Q7MWcIp+P8Av6SYM3IUw/OTFZl3dcSwd40UCGVRIBp
-# bOR7FyzIu6V1dwgg4+0P9mOjtCsUwo5OM4CHey+LoAttH48LPh6grnMYGVhQWNUe
-# yiGodNYjYjvuLErul6ddLgoFeFtAdnjqJqrz6VW1eo/ojnE016fSgSy47Lo5nX9F
-# HSc3WWNYXFE36BI1z7SNTP4zZw2RkMcZl2pTUuZVURQyyl89nJTmPckk2wDlPZYc
-# 6+jUEpOYd3weHWR6xIH0nrG5CHOOBlm9qFR8w4VjHlag8u7mPRZ7OiesgqpLL6fp
-# RYcNgopn5gUK6f02fDxEtYPPWOUkjqxNCuvV5RHiBGrAu9IePiizBQytqYvd4sYX
-# tzW8uFtPko/E8TqBaYbKQkmqSkd8OITGw7XU5ylQbQm7eyRp9Ow0wggqODsWtuBc
-# u8aGF7MG7kewVyBdXqgOBkGVLBonsD+Y77Nd9Pyc6DxxeNTxWw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
+# BCAr/W+OIr4nO+ulJN1huw8vAPGMV1j/pgYv4u5vJRkdijANBgkqhkiG9w0BAQEF
+# AASCAgCedAiH/GWb8Gm9eEhZ5qOjPR0KCCukNoarbfF7GCQ6UHOOeAnce5WB+AS4
+# l657G9ld6/q8GfQRkIdkzNnbxj2w3BhGklWo2zMAP5dEdCYPPdJAo4mX255ntPl1
+# AY1ftU3jq19pkW7dWnhbolKcxVmAcDO7XdSjy9eDSrEU8oO2WzIDIKEQfe0BsCZK
+# 8+cxHlx4u0cOyXN86YWLtTUCtmWkEcEVmrU+yaby8MeH69RRnSoZNxWA6JWg1wSV
+# vIQdUIADos1U1zRDlfLeropnYY7bjV3CS7HNXw1DLQkcj4sdMZcn/CYJHXCbyU4B
+# k13s94+sy929rHUgnrCos9AFuwscHz8cODc3voEueCn5iK4Z0biZjAamXVY0bB4U
+# yDftloA3C/uN8bC2fKk+uf5MGEdoh7cFe7EyA+U+BZ5+CEDKY9R+qp2Wp/ILNMTK
+# 1yEEI3UF/s5+JbAukC08/nhuMKEMm5Cer9EVdRlUbOwbN5IeQoeLUBpNP4DNqoY7
+# fI1eW55PYJ6DKKzXQIQO4Qk478YOKwu1vGS6KnfqjDE2SSOJ1PUomTVBd4hf5+03
+# eBTsSU0W5MpJ2BrZGp+QZbTdf45+NCfPnHTfU/+npYvBU1o6HovhGVe/xUq3Gt5x
+# dAt3yhI8p897o9aRxnLuNxieQHTqiVZSke80U9Ih2CWHm8xW7g==
 # SIG # End signature block

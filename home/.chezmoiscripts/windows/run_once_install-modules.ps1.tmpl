@@ -1,11 +1,13 @@
 {{- if eq .chezmoi.os "windows" -}}
-# Source PowerShell functions from chezmoi source directory
-$functionsPath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\functions.ps1"
-if (-not (Test-Path $functionsPath)) {
-    Write-Error "Functions file not found at: $functionsPath"
+# Source PowerShell functions from DotfilesHelpers module in chezmoi source directory
+$modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
+if (Test-Path $modulePath) {
+    Import-Module $modulePath -Force -DisableNameChecking
+}
+else {
+    Write-Error "DotfilesHelpers module not found at: $modulePath"
     exit 1
 }
-. $functionsPath
 
 Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
 Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted #-PassThru

@@ -32,8 +32,13 @@ if ($ENV:TERM_PROGRAM -ne "vscode") {
     }
 }
 
-# Load functions and aliases
-. $PSScriptRoot\functions.ps1
+# Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
+$dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
+if (Test-Path $dotfilesModulePath) {
+    Import-Module $dotfilesModulePath -Force -DisableNameChecking
+}
+
+# Load aliases
 . $PSScriptRoot\aliases.ps1
 
 # Custom prompt (simple and clean)
@@ -62,19 +67,24 @@ if (Test-Path $completionsPath) {
     }
 }
 
-if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
-    horizonfetch
+# Show horizonfetch only in interactive sessions (not when scripts import modules)
+if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
+    if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
+        horizonfetch
+    }
 }
 
-# Welcome message
-Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
-Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+# Welcome message (only in interactive sessions)
+if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
+    Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
+    Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBMFpCaRg9oUZSJ
-# JnnF+y7Kw5nLNaKVYuRf/p9TDudEOaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCClzy3Rvkr/zqeT
+# O81uNjStgD6OMTnt7giy9f7dBRL3CaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -208,33 +218,33 @@ Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yello
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCC3NM921cIzh5AW6orSNVKJp6kUFto8iO+MKcRJL6yrFzANBgkqhkiG
-# 9w0BAQEFAASCAgB1T7Ig16Lba7ziDKdSqMQlRH/fG+mGkwVIpJ36OPhD023sO2RS
-# tU49v+P6TmI8SkC+jQwVqpD9Lcpv5nZk528WmXag6x4pLe9Nb0WPx5vQvFyZVU6Z
-# GRjFvDEzSniMOSFkVtU6+g11i+rPRmtXQsxY9ljgVYA6dFNf+v1TgvG0h9yEUKjM
-# rgrm/TtYmwMmsrOdYzLC3KZddJl37lhr3tqKOqCQkgsgEbEmud24ZiBMGxahuzGF
-# kyv97xYEoz3jWqmFVJNK05wRTRcoEwsUn4mM9eSFeoku8Uanzita2cHIKa+teP6i
-# wF1PDMygWxDzNcTEs2bzEbZ9oGjRg9g4RInz+9rFgbznv6BX3pEweq48/lcdvOyQ
-# lUiSSmgxzqXjVvzV5TloeOBnPrjiuCjKqdVXeLfFnc4ZDu+r4AXhwHoUHwJHuxtE
-# sbBQMz1HbA+PR8KGJabt0+iJJ6PzyOZiB0c45D26DRO1QJ5tWWcRWjTjHeqf/gYO
-# IhvHMsvv9xcij2WJtjCvXffaBHubVGhKLqlwZWS3ID3olGNUsi14JXMKyj9ZXK0z
-# jMMMIIRXSli/+mcA5jGUXGvNaWLxV/qTYf94xtgbPojebV+80CZUBD0wQMWkYJo5
-# uh/a48i13xbu3sPgdSio+OKYiYmI/45RBeFchedL446jPl/T7BgswZvrVqGCAyYw
+# DQEJBDEiBCAVTuSJLBXFnrKCQsbNlS+L+S5GZjI4rjWWUXJsH92vKjANBgkqhkiG
+# 9w0BAQEFAASCAgCUsPPHGgAa/IOMH8RNDqwUyE2p0Y5OG/XkvydFRvhy35GqAKJg
+# VZTwvzd5lwYnKxquiWn1CM6pY2oU4ZoJeXHJmX92TE433M/xM1vk0fdztHpa4ZJ2
+# 0oIFYtoP6vvhjc6b7XTR6S4O1189JZsA+3Wd8d3MDkWIoSA7oYf22Tnks1WPpRSB
+# 19yXCER3Mc5CBYnvivWGcgRBz9UqqthR2Xhw0gABr968v4gucRo/mnxS34sB4IvX
+# V0bjxrsrTgfZxT/P1qoyRONQbrIOBG1bvUx0GPtJfvG7CJcSt6sM4+WRx2K7VO8N
+# S+/yKIAC8mfgVg1WN1ehhTngBGnDTaFIDalx8MS9iQHIbwnitIsFTs5QGy9tXlXD
+# sV5WnuvnBEyDb1mwGEgU6IAZr1jjaPQ6w2uctDGnpAZDC0if1K8EQPYr6PcAIbfs
+# +UHwRachtR0bgBj4/9n2ZBgRs500JmljfAn9a8L/yjnk4q5MYGVcDqJY7dUmuw1t
+# 3LImZR5VOr7OjcqqMHjICo3Bk+MsZPwgRgvLedATgIsy3ft/r80xHpaUuCv7JaRV
+# LV6EtnuBrKRcKIYcM/nrRhZ9+c2oIx/NQZ27mu/Pxh9p7AKTWnCDgAbsB5Jiov28
+# NsMX0qgKSS5SFGg1CSta0Bt5rSNWlbol3yLfjIff5/Mzh6GR6NYtNxnUh6GCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMjkxNDUyNTRaMC8GCSqGSIb3DQEJBDEi
-# BCDbXnYMkAAQDeeCpi9o8P1uy6qXaXc6lnsu2PtRKXsieTANBgkqhkiG9w0BAQEF
-# AASCAgC84XBGXEIEaDgX/3Mo5EVvU6EuaLepos03VxDgK4Vi9pWpaRXUsIa2u9AL
-# Ey2NjyHegZeAWy2q9vLpxbEhjwCN1E3nsXCk+8CcZE1MFWJCHu38MvgDwZXNM64u
-# bAIDxNlBT+E/0BNX8Uh3+4EtTasb9mnIsHl3+ECbmDM3K+Coqj4Fu+8AJ88MRneR
-# dD9eM88GR0ozzwiuwierR+lCaVy2LkN7uEehei1XJk3z95XV33g8nhHKwGu5XG22
-# PDlUUZ1q8Ed8dKHi24GIoQmhg39JtxaJpoCZBxS8y8EeekzCsYJxgBUb43pqqAu/
-# hQZU4YlybgZ6VM5TaBC6MzBwil+pgstJZGDcPh/lvTNey9Bz7RXhWWAVAueg+Z50
-# rcpKjzsF0GKPLQOnpDN6UxPDpbrILnDyeNhmtwjBVQ7WA1C/IctbPlFtsWOViLug
-# HAy2+3203cNccYEFq10HvRWY0IuprDZ73IVS6yv19o3kyZ4iBIlRYgY6hl5IilQC
-# bUyZaRDPblO0ThX6qFIjltr18ybm247UoNvvDlJ6VYp3K0nZeRw0ByB576SHai3x
-# xeUe4CHdzGcruySHs58y9PHAQMhbLJ210y/gQjIV20aBMYRQsvj/Bar66Ov8GX0v
-# zOUYnc5EWVLO0WyfjGfcF/qwvawmOefsnGNd66nZopn5v5QnRA==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
+# BCA7faUhEEBjCemV6hojxFtVcq8K7h1e+oQfyWiK2PDGkjANBgkqhkiG9w0BAQEF
+# AASCAgA+gVGcHJboUsTiD5SJRRjvJIhMb4kNki4ZkDO2IYhqQqHWF5dMdjuC3YOC
+# xyVAe9PivoSalghY5IsF/yyL2P5BbokitXqQMlEb15EoW79Ru6hq6SzILAuVa9+A
+# wJje4IeRSqKm0xaFIKjKuWpHNSZxxuEx84bdXt19wwwB1A4yP6MiPWZ5KUAlrj3x
+# q+C5ELfy2f82PSLSXIYYUO5kAwcDnTPT41Fn+9w8tghB8Df4FieaHocIniBpIdW7
+# qtByegF3yRNHOzeZ06WcuB0Uv427URKH8Ue7GhwdWr52XtJBNb2nBwaHqjX4uxaz
+# VrLo+kc04Wlsuv7hrM6X5BHqpMRQhl35Zk2/3a/rovskvEweBr1hJ6JzY+SVYws5
+# HKj3JtaxE974YsV4FayHQ2fFn029FRXr0P7j9YyByd+pfrUe2tWav5UGbaB4Lzu2
+# KvJbxpfQ5c2vWvalCTY+1uUoworE7hDICnUaF03uIsa8gKBK8gb5tV50ZvIwC1TM
+# cM0+zUzQmfj/pSOlQYZM2nFc8TzJ6rXI9N1KW0745j7f2YntTe084gCac7B/kW+K
+# kATyhv6pM2r16JOA/lCvkwh+5xrjIrUo7NnsX1rFPtKMsUwEXpZid/Lu5K4LlpWp
+# DXSqng0FnL/m1fm/BOmMne8vbTvBq4sSKzqS7UFYatZ7nIgtqg==
 # SIG # End signature block

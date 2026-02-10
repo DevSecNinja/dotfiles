@@ -1,62 +1,62 @@
-# PowerShell Aliases
-# Loaded by profile.ps1
-
-# Navigation
-Set-Alias -Name .. -Value Set-LocationUp
-Set-Alias -Name ... -Value Set-LocationUpUp
-
-# List files (Unix-like)
-function ll { Get-ChildItem -Force @args }
-function la { Get-ChildItem -Force @args }
-
-# Git shortcuts
-function g { git @args }
-function gs { git status @args }
-function ga { git add @args }
-function gc { git commit @args }
-function gps { git push @args }
-function gpl { git pull @args }
-function gl { git log --oneline --graph @args }
-function gd { git diff @args }
-function gco { git checkout @args }
-function gb { git branch @args }
-
-# Docker shortcuts
-function d { docker @args }
-function dc { docker compose @args }
-function dps { docker ps @args }
-function dpsa { docker ps -a @args }
-function di { docker images @args }
-function dex { docker exec -it @args }
-
 # Profile management
-Set-Alias -Name ep -Value Edit-Profile
-Set-Alias -Name reload -Value Import-Profile
 
-# Shell introspection
-Set-Alias -Name aliases -Value Show-Aliases
-function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
-function paths { $env:PATH -split [IO.Path]::PathSeparator }
+function Edit-Profile {
+    code $PROFILE
+}
 
-# System info
-function ff { fastfetch @args }
-function sysinfo { fastfetch @args }
-function motd { fastfetch @args }
+function Import-Profile {
+    . $PROFILE
+    Write-Host "Profile reloaded!" -ForegroundColor Green
+}
 
-# SSH
-function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
+# Show all aliases and functions
+function Show-Aliases {
+    Write-Host "`n=== Navigation ===" -ForegroundColor Cyan
+    Write-Host "..      - Go up one directory"
+    Write-Host "...     - Go up two directories"
 
-# Winget shortcuts
-Set-Alias -Name wup -Value Invoke-WingetUpgrade
-Set-Alias -Name winup -Value Invoke-WingetUpgrade
+    Write-Host "`n=== File Operations ===" -ForegroundColor Cyan
+    Write-Host "ll/la   - List files (including hidden)"
+    Write-Host "touch   - Create or update file timestamp"
+    Write-Host "mkcd    - Create directory and cd into it"
+    Write-Host "which   - Find command location"
 
-# Help (keeping backward compatibility)
+    Write-Host "`n=== Git ===" -ForegroundColor Cyan
+    Write-Host "gs      - git status"
+    Write-Host "ga      - git add"
+    Write-Host "gc      - git commit"
+    Write-Host "gp      - git push"
+    Write-Host "gl      - git pull"
+    Write-Host "gd      - git diff"
+    Write-Host "gco     - git checkout"
+    Write-Host "gb      - git branch"
+    Write-Host "glog    - git log (formatted)"
+
+    Write-Host "`n=== Docker ===" -ForegroundColor Cyan
+    Write-Host "dps     - docker ps"
+    Write-Host "dpsa    - docker ps -a"
+    Write-Host "di      - docker images"
+    Write-Host "dex     - docker exec -it"
+
+    Write-Host "`n=== Chezmoi ===" -ForegroundColor Cyan
+    Write-Host "Reset-ChezmoiScripts  - Clear script state to re-run scripts"
+    Write-Host "Reset-ChezmoiEntries  - Clear entry state to reprocess files"
+
+    Write-Host "`n=== Winget ===" -ForegroundColor Cyan
+    Write-Host "wup/winup           - Invoke winget package upgrades"
+    Write-Host "Test-WingetUpdates  - Check for available updates"
+
+    Write-Host "`n=== Profile ===" -ForegroundColor Cyan
+    Write-Host "ep      - Edit profile"
+    Write-Host "reload  - Import profile (reload)"
+    Write-Host ""
+}
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCcJcWrgQftJqN7
-# UO29dY56PlWywmZu2CAesUrHC48coKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDMofZavUZYF8lh
+# DqIvMvC+X6k3PRecflaIbsVN3ujhEaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -190,33 +190,33 @@ Set-Alias -Name winup -Value Invoke-WingetUpgrade
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCD9I+k4IQsu0qEMEiN6tN8aFKpOJS9nPZ8I6CH1y3MhATANBgkqhkiG
-# 9w0BAQEFAASCAgCMZObp7DUcK79HTQIFPfZhuozLNkgY77wGJyHrL/S3RJaFKbrH
-# 7W3RB7pIsUks0hN+VFViCJX9JlFGao8pzWNB/FfhlXYXIXNojX5/Bf1DB9SD/9Ht
-# 9pHp1ltUAbLQofUWCuHHVkjO28+fbACNC+240iGKpKDTRzWJC6W/6VxGhvoHyjUa
-# 8FMDEFHsZleMY/KZ//+AsDswAVm0Ncxs2k/uG4WLWUrjxeYK+3Bvz/nOX4ekxKfg
-# 31qYRo3ruVimOlaF3Clrd8w+17vBGasOsSZYLpRU1vCBL1ObkQj9Brt12vtkl6F1
-# kBMO3LamgeK6JOAFEmIdUoRY8uXClqmgGC0tYBxoTQaCYr4RJk083FGAGK2oP/wp
-# MEys54ZnW+yDX5XnkR0aNZIMfe7oMw2NsG0yORv7pjrE8fyWHIHXSbZZocBOfxtC
-# gCZx6U67iTRjv8nzeUqpT7/WsBajE6obKfDE/qUSM+v7v58Xcyx6dbWmkYoONuEy
-# Tlrx+php8jQdX0QxqdkaseB1IyR3fHUQ8Gvf+bcs2aBaWYfu0X4l7JKu7hB21OMU
-# WEdPd+xJchkpnxtsigNLcT/MkAE1k7Ic2Ershv6WCBHAuiyt9sn10+hAmVeY7Za4
-# B70aii0qUhRqaz7sgN9COdTjuWdKWWRlrr5sqzIDXt1nnqgN/VYLsU1OTaGCAyYw
+# DQEJBDEiBCDifT+0b3HvUyMClRw8BmPjtxVuKyIJJVQIzrjEgUxUETANBgkqhkiG
+# 9w0BAQEFAASCAgBTLn2QHlsNcflLBXmiE0fw8+CASg1DKQYuavC1GNBNQMcMOwcd
+# U3wR6RWBxjTvtmIUTbEBHwLkpI1MtTHVvZruTdnkgwgZiy8fQPv/cFQucmHSggOz
+# GlVjyfj4MfsS85vqPKssdKmcDBGo59A5j3KqQVJnztIWIRWCeE/TuK2UIwq5R26D
+# cZ+3H8xab7eUzTqt92hrrNnucd0NfNb8iYTjPZxrKan9SxF8WHOuM/UkLf3DcClb
+# jQX1I+8hJN90VD+ecYAnYleIhvKub0edKCdJZW30r16d6Oak+dpWAAktC6CJHcYl
+# ur51kRbTYpagpFDm2UjLW9CCnC0fZuAHNU9WqMzZVo5QA8KhDU3mpHxibgCgFPKl
+# rZ064YrIqzYjxyADqSs8hp+BRqJvx6TboQrJ3iXMKaiS7C888MHo1m9KVIqY2NNi
+# wDfTEWc9DqJz3AYNxjuAw13ONJroqWd7YpFfvmgq/9QqVeoDg6OXBcQeGO8N1gwJ
+# kRFdG2V9UZdPLoI7CJf3zAcpCYXTsz+38UIcQFo4yptIamjM11z2uvwIplkIhrRi
+# 4pctk5jYf6DkbNCneCK7dgDY8jhXJQmziiEbR0JkWZpgyTQU7NFnFNMtJvIvu9W4
+# LKmG3QklPdnOWdTaEXS3C5b/uszjCAV4d+cbZOrWdnz1klubL+IEp8PezKGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCC99ABPP0TsAfXLB4+a65aSWw+FTL43lRLT1WDTATO9SDANBgkqhkiG9w0BAQEF
-# AASCAgCcY+/3F+HnD53PTjpRTBYhwWVfARVmYyS49eJF4vFTB24JT/4lGC4QgjwP
-# t0Ucr1jon3OQG1zAvJRR/p50eJ/S1LTjMRXeUzY8BKETbGG22tgc7bFWLHnHcE4t
-# JdPqkZkQzJTMFpv/bTYXKoYcRU8b2EdEtnWpngBTHucot8djHhdkvcQU3OGCvV4O
-# kKdQsYKGAIz6sQPkXDNbU1Q7MWcIp+P8Av6SYM3IUw/OTFZl3dcSwd40UCGVRIBp
-# bOR7FyzIu6V1dwgg4+0P9mOjtCsUwo5OM4CHey+LoAttH48LPh6grnMYGVhQWNUe
-# yiGodNYjYjvuLErul6ddLgoFeFtAdnjqJqrz6VW1eo/ojnE016fSgSy47Lo5nX9F
-# HSc3WWNYXFE36BI1z7SNTP4zZw2RkMcZl2pTUuZVURQyyl89nJTmPckk2wDlPZYc
-# 6+jUEpOYd3weHWR6xIH0nrG5CHOOBlm9qFR8w4VjHlag8u7mPRZ7OiesgqpLL6fp
-# RYcNgopn5gUK6f02fDxEtYPPWOUkjqxNCuvV5RHiBGrAu9IePiizBQytqYvd4sYX
-# tzW8uFtPko/E8TqBaYbKQkmqSkd8OITGw7XU5ylQbQm7eyRp9Ow0wggqODsWtuBc
-# u8aGF7MG7kewVyBdXqgOBkGVLBonsD+Y77Nd9Pyc6DxxeNTxWw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
+# BCDru/5kSGvH8u1BQ+fmAFtXOcVXEJPHYrK2mHjY4W9i7zANBgkqhkiG9w0BAQEF
+# AASCAgALAb1SaTJbeaHJgxrT7KFUlBzCQrSvCgO0GVv/SHDqrLv3kEPaSf6DuZta
+# L2bHM/1k+bXynyMHgfrJHLsYXGhWV6JAM4ixvK2BDL/eVzHKvxCcwkQ0kouhG8bi
+# J2Pga+npLqeae9owZGmaqw2BZGkPw47G0IQMYcoupb4a93OPfjd+N02+V+A2xBse
+# ZaJh8khgn2C30V8H6jTtsSdDhUJUCQOyazGUYEH73xp07ghlQ1aC6nMQlwkk9ZCv
+# Jh7LSdhWUAwbRkXqf5E1Zet+DOUDHzLesqTpozJy+3LCj3ALCEIfvWS7/RYMqmY8
+# FyKhr7GH2E7mjsPiGZMUO+EM69ooNu31r/2jEjp793EJ3hyAForZOu7pnJvQwIAu
+# sNMNw8hFKqCvO7w7XRiX6TW/X+Llv7yyfNaSS+tUddqunKwyAhqmRlRnbRPwgf+u
+# xyfIVzoPbieFq+suOHFWywEVMjIMXt4PbKYG0ylpiN2XxIsTRhH7yy8lGQIVIwg6
+# vUyZuODVmtHgaNRkrNLCU3YQcJN9G0hhUKHkcey588IUjZk4hlt4ROJ+pgQR1oe+
+# ftbaUs2TxY/EBHDW/8BR7Jq90uMbAWpEElGHCROu0uoUFX2opZGUt1tO0/CLUsZI
+# rFlykw4oM7ZCpcL4OtUkSHPGqVdgC2MwY5S+lulhZ0nOzbqPyA==
 # SIG # End signature block

@@ -1,62 +1,13 @@
-# PowerShell Aliases
-# Loaded by profile.ps1
+# Navigation helpers
 
-# Navigation
-Set-Alias -Name .. -Value Set-LocationUp
-Set-Alias -Name ... -Value Set-LocationUpUp
-
-# List files (Unix-like)
-function ll { Get-ChildItem -Force @args }
-function la { Get-ChildItem -Force @args }
-
-# Git shortcuts
-function g { git @args }
-function gs { git status @args }
-function ga { git add @args }
-function gc { git commit @args }
-function gps { git push @args }
-function gpl { git pull @args }
-function gl { git log --oneline --graph @args }
-function gd { git diff @args }
-function gco { git checkout @args }
-function gb { git branch @args }
-
-# Docker shortcuts
-function d { docker @args }
-function dc { docker compose @args }
-function dps { docker ps @args }
-function dpsa { docker ps -a @args }
-function di { docker images @args }
-function dex { docker exec -it @args }
-
-# Profile management
-Set-Alias -Name ep -Value Edit-Profile
-Set-Alias -Name reload -Value Import-Profile
-
-# Shell introspection
-Set-Alias -Name aliases -Value Show-Aliases
-function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
-function paths { $env:PATH -split [IO.Path]::PathSeparator }
-
-# System info
-function ff { fastfetch @args }
-function sysinfo { fastfetch @args }
-function motd { fastfetch @args }
-
-# SSH
-function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
-
-# Winget shortcuts
-Set-Alias -Name wup -Value Invoke-WingetUpgrade
-Set-Alias -Name winup -Value Invoke-WingetUpgrade
-
-# Help (keeping backward compatibility)
+function Set-LocationUp { Set-Location .. }
+function Set-LocationUpUp { Set-Location ..\.. }
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCcJcWrgQftJqN7
-# UO29dY56PlWywmZu2CAesUrHC48coKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDFrNe6INDbRiXr
+# g2SDnI76ZwvWTKxeP5f3RXA9IssmsqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -190,33 +141,33 @@ Set-Alias -Name winup -Value Invoke-WingetUpgrade
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCD9I+k4IQsu0qEMEiN6tN8aFKpOJS9nPZ8I6CH1y3MhATANBgkqhkiG
-# 9w0BAQEFAASCAgCMZObp7DUcK79HTQIFPfZhuozLNkgY77wGJyHrL/S3RJaFKbrH
-# 7W3RB7pIsUks0hN+VFViCJX9JlFGao8pzWNB/FfhlXYXIXNojX5/Bf1DB9SD/9Ht
-# 9pHp1ltUAbLQofUWCuHHVkjO28+fbACNC+240iGKpKDTRzWJC6W/6VxGhvoHyjUa
-# 8FMDEFHsZleMY/KZ//+AsDswAVm0Ncxs2k/uG4WLWUrjxeYK+3Bvz/nOX4ekxKfg
-# 31qYRo3ruVimOlaF3Clrd8w+17vBGasOsSZYLpRU1vCBL1ObkQj9Brt12vtkl6F1
-# kBMO3LamgeK6JOAFEmIdUoRY8uXClqmgGC0tYBxoTQaCYr4RJk083FGAGK2oP/wp
-# MEys54ZnW+yDX5XnkR0aNZIMfe7oMw2NsG0yORv7pjrE8fyWHIHXSbZZocBOfxtC
-# gCZx6U67iTRjv8nzeUqpT7/WsBajE6obKfDE/qUSM+v7v58Xcyx6dbWmkYoONuEy
-# Tlrx+php8jQdX0QxqdkaseB1IyR3fHUQ8Gvf+bcs2aBaWYfu0X4l7JKu7hB21OMU
-# WEdPd+xJchkpnxtsigNLcT/MkAE1k7Ic2Ershv6WCBHAuiyt9sn10+hAmVeY7Za4
-# B70aii0qUhRqaz7sgN9COdTjuWdKWWRlrr5sqzIDXt1nnqgN/VYLsU1OTaGCAyYw
+# DQEJBDEiBCA3AJxPzdZ3XodBiYtw90UfmJ4Dgef4Y7xcqqvdNm1XVTANBgkqhkiG
+# 9w0BAQEFAASCAgBMvYJR4VyXPrR+yXYPvdaW9vX+8KXGlpzpLxOcqQcewyt0OdmR
+# a+4oxnoBdtlHGycL3dx79yKOACqs6yvK2O9AxStLXtYJ1ScG9u2AhcHioUJ3vhXl
+# LiFLIIjB/xsMDaing4WLYV0bjRXocmuYaSwMR574oApgbcN9NLKoFwc693IZj0AR
+# q6+1T0qAz9qhLnImw7pQMcQ+lbjs4/FCt2HLMhuHHIHTPxr4SM1849Ev9DySmr2p
+# Y1rMDTJd/J4ZTPX35pS+gdpsLUZP2vyEdGVeHo8AsYskgulLQUfodcm1bK8K1l2x
+# O6i4ZiCU+2jYXxdGkhJNyDEVAtlRrHuqUZS9bYFtOE4n7JeJfGInGNCNVdb4jBzn
+# nmPH/Dm6t5FbMFY2+f1zmLqc/Cg+eiOanPOysTJX3rm1/r2+czZQK/1RZOV4QtGo
+# JFWsBOITP0eablPIPqiZ1kUXE5imfURwET3K3MFyWCAv26sjRWewO4/dshYs6jVW
+# 2wXu9DKvOmsAYfEf9JtFUrlRAG3TziOKLuhw67dmmujDeDmuEnXJHmCzfFOyHSU7
+# vT1GO1KdWzlOvLs55MRQ1M5+2crtk+krorC9UtwTtx31d43xc9FLOLcz6Ji9j+Hy
+# slnbdRjcfL2FD2nRyxEb0QrBDW72DrPpZP6CzSgCTtBCceAhic7ny+JqpaGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCC99ABPP0TsAfXLB4+a65aSWw+FTL43lRLT1WDTATO9SDANBgkqhkiG9w0BAQEF
-# AASCAgCcY+/3F+HnD53PTjpRTBYhwWVfARVmYyS49eJF4vFTB24JT/4lGC4QgjwP
-# t0Ucr1jon3OQG1zAvJRR/p50eJ/S1LTjMRXeUzY8BKETbGG22tgc7bFWLHnHcE4t
-# JdPqkZkQzJTMFpv/bTYXKoYcRU8b2EdEtnWpngBTHucot8djHhdkvcQU3OGCvV4O
-# kKdQsYKGAIz6sQPkXDNbU1Q7MWcIp+P8Av6SYM3IUw/OTFZl3dcSwd40UCGVRIBp
-# bOR7FyzIu6V1dwgg4+0P9mOjtCsUwo5OM4CHey+LoAttH48LPh6grnMYGVhQWNUe
-# yiGodNYjYjvuLErul6ddLgoFeFtAdnjqJqrz6VW1eo/ojnE016fSgSy47Lo5nX9F
-# HSc3WWNYXFE36BI1z7SNTP4zZw2RkMcZl2pTUuZVURQyyl89nJTmPckk2wDlPZYc
-# 6+jUEpOYd3weHWR6xIH0nrG5CHOOBlm9qFR8w4VjHlag8u7mPRZ7OiesgqpLL6fp
-# RYcNgopn5gUK6f02fDxEtYPPWOUkjqxNCuvV5RHiBGrAu9IePiizBQytqYvd4sYX
-# tzW8uFtPko/E8TqBaYbKQkmqSkd8OITGw7XU5ylQbQm7eyRp9Ow0wggqODsWtuBc
-# u8aGF7MG7kewVyBdXqgOBkGVLBonsD+Y77Nd9Pyc6DxxeNTxWw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
+# BCCg3VcYxtwvK/lce3TON44VGWwPJYpVg6aW0/CTr/oQBTANBgkqhkiG9w0BAQEF
+# AASCAgDObIXq/1zzyAK+yfj/HRqNrQFM+6wzZWWL5J+c2WiUP+WZIUeozxOxyxkI
+# B2LKjoOvnholayT8mn0dgJMaVL7GWrItZZzlehxs2dG5w9B9RHXPpUDQqfaEUwJO
+# m6JwV4vJMtAnytXBfdVhi0dvTr7AWdDHlsJKcOqTBMUJYEw5zsIaemVwS1WUieSw
+# 58ZPlssrdAthANJANBJ9kxrDFN2Y9bZOtmTTW6kEEVnFojiB7Jz3sez8bUmzW7UY
+# ED3EBsHaqD2FLRqI9iZcydeg01+e92+bNejhMflYzhh+E6o0Et0OH5WmXK59DTm7
+# MF0O11XUaF9YIf3cGQqq7p+0fr6bSkHCkVbrJO5eB1rNDqQFVEc10hFf6L58IvhK
+# 0PSwwfWt71RzSS4R8nhyH9+hLW+wu2W7pl888+hg1KoQx8m4a2+nePuXOomETpO5
+# oZUZ6WEUi+ZRwBGi6jEUHCItVHxTzY79Lc106AgHFXnJCr/3d9LuUBx/ajKf9UOm
+# d4b0YevS4wODUY0nG1qml6CkoxoiQgwBZqLk9Kobr/5CVg2P4nQTAwKcMttmPRnr
+# qHczSLoIeelKnrJaYO3sgGsk+mwhjoAWCKn3brHAzq4HkSS60FcTlm5V9RYc1dGa
+# 7ZcXle/BJDOhkhn3lcT42uJHcWnfkJlDIR+Mpt/gf+IKfpaBkA==
 # SIG # End signature block

@@ -1,62 +1,98 @@
-# PowerShell Aliases
-# Loaded by profile.ps1
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    Runs winget package upgrades when chezmoi detects changes.
 
-# Navigation
-Set-Alias -Name .. -Value Set-LocationUp
-Set-Alias -Name ... -Value Set-LocationUpUp
+.DESCRIPTION
+    This script automatically checks for and upgrades winget packages during chezmoi update.
+    It runs as the final script (99-) to allow cancellation if needed.
 
-# List files (Unix-like)
-function ll { Get-ChildItem -Force @args }
-function la { Get-ChildItem -Force @args }
+    Features:
+    - Detection phase: Only runs if updates are available
+    - Execution phase: 3-second countdown before upgrading (can be cancelled)
+    - Uses Microsoft.WinGet.Client PowerShell module when available
+    - Falls back to winget.exe if module is not installed
+    - Warns if neither is available
 
-# Git shortcuts
-function g { git @args }
-function gs { git status @args }
-function ga { git add @args }
-function gc { git commit @args }
-function gps { git push @args }
-function gpl { git pull @args }
-function gl { git log --oneline --graph @args }
-function gd { git diff @args }
-function gco { git checkout @args }
-function gb { git branch @args }
+.NOTES
+    - This is a run_onchange script, triggered when this file or its dependencies change
+    - Requires Microsoft.WinGet.Client module (automatically installed via packages.yaml)
+    - Run order: 99- ensures this is the last script to execute
+    - Compatible with both PowerShell Core (7+) and Windows PowerShell (5.1+)
 
-# Docker shortcuts
-function d { docker @args }
-function dc { docker compose @args }
-function dps { docker ps @args }
-function dpsa { docker ps -a @args }
-function di { docker images @args }
-function dex { docker exec -it @args }
+.LINK
+    https://www.powershellgallery.com/packages/Microsoft.WinGet.Client
+#>
 
-# Profile management
-Set-Alias -Name ep -Value Edit-Profile
-Set-Alias -Name reload -Value Import-Profile
+$ErrorActionPreference = "Continue"  # Continue on errors to avoid blocking chezmoi
 
-# Shell introspection
-Set-Alias -Name aliases -Value Show-Aliases
-function functions { Get-Command -CommandType Function | Where-Object { $_.Source -eq '' } | Select-Object -ExpandProperty Name }
-function paths { $env:PATH -split [IO.Path]::PathSeparator }
+Write-Host "`n================================================" -ForegroundColor Cyan
+Write-Host ">> Winget Package Upgrade (Chezmoi OnChange)" -ForegroundColor Cyan
+Write-Host "================================================" -ForegroundColor Cyan
 
-# System info
-function ff { fastfetch @args }
-function sysinfo { fastfetch @args }
-function motd { fastfetch @args }
+# Check if Microsoft.WinGet.Client module is available
+$wingetModule = Get-Module -Name Microsoft.WinGet.Client -ListAvailable -ErrorAction SilentlyContinue
 
-# SSH
-function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
+if (-not $wingetModule) {
+    Write-Warning "Microsoft.WinGet.Client module not found"
+    Write-Warning "This module should be installed automatically via packages.yaml"
+    Write-Warning "To install manually: Install-Module -Name Microsoft.WinGet.Client"
 
-# Winget shortcuts
-Set-Alias -Name wup -Value Invoke-WingetUpgrade
-Set-Alias -Name winup -Value Invoke-WingetUpgrade
+    # Check if winget.exe is available as fallback
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Write-Warning "Neither Microsoft.WinGet.Client nor winget.exe is available"
+        Write-Warning "Skipping winget upgrade. Please install one of the following:"
+        Write-Warning "  1. Microsoft.WinGet.Client module: Install-Module -Name Microsoft.WinGet.Client"
+        Write-Warning "  2. App Installer from Microsoft Store (includes winget.exe)"
+        exit 0
+    }
 
-# Help (keeping backward compatibility)
+    Write-Host "   Using winget.exe as fallback..." -ForegroundColor Yellow
+}
+else {
+    Write-Host "`n[OK] Microsoft.WinGet.Client module found (v$($wingetModule.Version))" -ForegroundColor Green
+}
+
+# Check if functions are available (they should be loaded by profile.ps1 via DotfilesHelpers module)
+# If not available, import the module directly (needed when running via chezmoi)
+if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
+    $modulePath = Join-Path $HOME ".config\powershell\modules\DotfilesHelpers"
+    if (Test-Path $modulePath) {
+        try {
+            Import-Module $modulePath -Force -DisableNameChecking
+        }
+        catch {
+            Write-Warning "Failed to load DotfilesHelpers module from $modulePath : $_"
+        }
+    }
+
+    if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
+        Write-Warning "DotfilesHelpers module not found at $modulePath"
+        Write-Warning "Skipping winget upgrade"
+        exit 0
+    }
+}
+
+# Run the upgrade using the function from DotfilesHelpers module
+try {
+    Invoke-WingetUpgrade -CountdownSeconds 3 -UseWingetModule $true
+}
+catch {
+    Write-Warning "Failed to run Invoke-WingetUpgrade: $_"
+    Write-Warning "Continuing with chezmoi update despite winget upgrade failure"
+}
+
+Write-Host "`n================================================" -ForegroundColor Cyan
+Write-Host "[OK] Winget upgrade check completed" -ForegroundColor Green
+Write-Host "================================================" -ForegroundColor Cyan
+
+exit 0
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCcJcWrgQftJqN7
-# UO29dY56PlWywmZu2CAesUrHC48coKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCYr1p3ollY0hNx
+# I7ymWkf6whjF+/O4XKtdqpZa+kkD1aCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -190,33 +226,33 @@ Set-Alias -Name winup -Value Invoke-WingetUpgrade
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCD9I+k4IQsu0qEMEiN6tN8aFKpOJS9nPZ8I6CH1y3MhATANBgkqhkiG
-# 9w0BAQEFAASCAgCMZObp7DUcK79HTQIFPfZhuozLNkgY77wGJyHrL/S3RJaFKbrH
-# 7W3RB7pIsUks0hN+VFViCJX9JlFGao8pzWNB/FfhlXYXIXNojX5/Bf1DB9SD/9Ht
-# 9pHp1ltUAbLQofUWCuHHVkjO28+fbACNC+240iGKpKDTRzWJC6W/6VxGhvoHyjUa
-# 8FMDEFHsZleMY/KZ//+AsDswAVm0Ncxs2k/uG4WLWUrjxeYK+3Bvz/nOX4ekxKfg
-# 31qYRo3ruVimOlaF3Clrd8w+17vBGasOsSZYLpRU1vCBL1ObkQj9Brt12vtkl6F1
-# kBMO3LamgeK6JOAFEmIdUoRY8uXClqmgGC0tYBxoTQaCYr4RJk083FGAGK2oP/wp
-# MEys54ZnW+yDX5XnkR0aNZIMfe7oMw2NsG0yORv7pjrE8fyWHIHXSbZZocBOfxtC
-# gCZx6U67iTRjv8nzeUqpT7/WsBajE6obKfDE/qUSM+v7v58Xcyx6dbWmkYoONuEy
-# Tlrx+php8jQdX0QxqdkaseB1IyR3fHUQ8Gvf+bcs2aBaWYfu0X4l7JKu7hB21OMU
-# WEdPd+xJchkpnxtsigNLcT/MkAE1k7Ic2Ershv6WCBHAuiyt9sn10+hAmVeY7Za4
-# B70aii0qUhRqaz7sgN9COdTjuWdKWWRlrr5sqzIDXt1nnqgN/VYLsU1OTaGCAyYw
+# DQEJBDEiBCAt45rr2r5aD5mdAkQPiQeBURzVCtTejoIgZrGQdPhLkzANBgkqhkiG
+# 9w0BAQEFAASCAgBzs635SxnEYYPJ+OcSU5oJAfbziDrD9iQT0TnhTbT9R2fXIy7T
+# mvwjbDJBnuDGjTXjFgNEX3fxLVh9Xqb9mnguCa4jwqvGfoR1EOBjxuOud7MxTQ07
+# 5DN5wdp38AW9Cc06NhJHEuHrMZSfmztKyyeAvi2GfP2fUVH0t+2XPWUJR3CKIKlX
+# bhWsn0LPeN4NIKEcGS3nzXobyhTyvXrIK82Y8eIMVNMSCmK10yMB55g2BuS4qpMz
+# ukOWw9mWC4EcN3DN+fsDnTNXcFJPaT2GNKN6p0G7yhg2PLaBSzN6xlTgqA4kxL45
+# JsUZryd0ugEQYhhke4MroPhAFHA2MOSDFlItwmz9hwyVAcgjuG71fueQIll6DeVU
+# FyqDEcohjT8AvKT3BRtBKYDGGFGe2ReADcaldgAh0KW3myjR+Aoklaf1hjZ3I/iZ
+# TDsg00FqKcAkGK7TzAQDH5RCv1+W8YAlmdJZ+5TFShvuDBlqyd7qt+iMl+Yu7BaB
+# P/NtTF262H2uUJC/z8cYa1XryuHq4ksXAfp+2MvvUPP3cQKmGaWfS4Hjccmnp+Wh
+# UWJK1tJtrhUov+1KE+73oCeNmB7XMiAlj7egEmDt+dIirXzwyfWCDEH2KwXU763x
+# i91WUkG+VklY9vgG+HMwDPXs7iBtmI4n173g9XBcC6AB8I5vVp8rUASC16GCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCC99ABPP0TsAfXLB4+a65aSWw+FTL43lRLT1WDTATO9SDANBgkqhkiG9w0BAQEF
-# AASCAgCcY+/3F+HnD53PTjpRTBYhwWVfARVmYyS49eJF4vFTB24JT/4lGC4QgjwP
-# t0Ucr1jon3OQG1zAvJRR/p50eJ/S1LTjMRXeUzY8BKETbGG22tgc7bFWLHnHcE4t
-# JdPqkZkQzJTMFpv/bTYXKoYcRU8b2EdEtnWpngBTHucot8djHhdkvcQU3OGCvV4O
-# kKdQsYKGAIz6sQPkXDNbU1Q7MWcIp+P8Av6SYM3IUw/OTFZl3dcSwd40UCGVRIBp
-# bOR7FyzIu6V1dwgg4+0P9mOjtCsUwo5OM4CHey+LoAttH48LPh6grnMYGVhQWNUe
-# yiGodNYjYjvuLErul6ddLgoFeFtAdnjqJqrz6VW1eo/ojnE016fSgSy47Lo5nX9F
-# HSc3WWNYXFE36BI1z7SNTP4zZw2RkMcZl2pTUuZVURQyyl89nJTmPckk2wDlPZYc
-# 6+jUEpOYd3weHWR6xIH0nrG5CHOOBlm9qFR8w4VjHlag8u7mPRZ7OiesgqpLL6fp
-# RYcNgopn5gUK6f02fDxEtYPPWOUkjqxNCuvV5RHiBGrAu9IePiizBQytqYvd4sYX
-# tzW8uFtPko/E8TqBaYbKQkmqSkd8OITGw7XU5ylQbQm7eyRp9Ow0wggqODsWtuBc
-# u8aGF7MG7kewVyBdXqgOBkGVLBonsD+Y77Nd9Pyc6DxxeNTxWw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
+# BCBTUMx/aHNDzGrr1AhfWZKIKzIAmgJOInplEkV4BUGqyTANBgkqhkiG9w0BAQEF
+# AASCAgBS7Vl5fv/5od3VIWza+WgNYCuj3iT/wmjSJ5DNo6OGvEZsnUDaltAIxJ+Z
+# JpdYi5Sj9Pt+kqXJSFwdGIFk6kTrE+B/nIAp4kNAsSrLldSdh/EZ7/NEsLXNsUu4
+# 3jx2yxeUMOtCYIk8gr0mzLljklcgRlpNPKhp67b4tP6sDuSHIMtCa0KjXkMK2BuN
+# xL1F9531pzgctWFQTHFHrxfMNvhOxQs1vBUcwg83xe7Z/q9L7CPh9fTZW3lDjMaG
+# sfXoxy83Yz9XRQeLcvUePHjPHFJLyFs6/Nycq4TUUimeaknTgfrIOYg7ONLXZyVF
+# RMr3OQjJKPegs4OEq99q0eC9uKbj0EjCkashEELJLT8/xt/F5zpQ0MBcw06NvmEg
+# eGOpWty7xgopw/4cspOW5C8FtuyS8QVmDWfTJiXk8NQOZudF+E5QXAHr3puCUG3Y
+# EAZ9o9rzzAmr7cBFLDcmK/yFIqnoj+2Y2Xmkvd+R6rYbafcHbjt1JPCgk2VWQq4S
+# raaGrYVfXYH8fNSqZKbnGUwiNznr9MUlAgKjOZhPvAFkIezLmgDtJzbZnLWfOUEJ
+# VU0+IuIYiSf5VKGkaWzd2TuEU3coZHAEwbUHiVGsob3TbFrzDE0wccxz6zZpmFGt
+# jm44nmTmaYY0JeGUe6fB/mHFbxIvkJc9vL9j9f58W8TtYp74JA==
 # SIG # End signature block

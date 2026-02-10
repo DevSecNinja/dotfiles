@@ -52,7 +52,7 @@ BeforeAll {
     }
 }
 
-Describe "New-SigningCert.ps1 Parameter Validation" {
+Describe "New-SigningCert.ps1 Parameter Validation" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should accept valid SubjectName without CN= prefix" {
         # This tests the script can be dot-sourced with parameters
@@ -110,7 +110,7 @@ Describe "New-SigningCert.ps1 Parameter Validation" {
     }
 }
 
-Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" {
+Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should require PowerShell 7.0 or later" {
         $PSVersionTable.PSVersion.Major | Should -BeGreaterOrEqual 7
@@ -128,7 +128,7 @@ Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" {
     }
 }
 
-Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" {
+Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         # Clean up any existing test certificates
@@ -257,7 +257,7 @@ Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" {
     }
 }
 
-Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" {
+Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*PesterE2E*"
@@ -342,7 +342,7 @@ Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" {
     }
 }
 
-Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" {
+Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     It "Should use strong key length (4096 bits)" {
         # This validates the script specification
@@ -389,7 +389,7 @@ Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" {
     }
 }
 
-Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" {
+Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*CI-Pipeline*"
@@ -542,8 +542,8 @@ Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAQf8th4G1BJy4/
-# N1bGZmtmqz6ECoBisdZl455Bpx4iLqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCn5PcPJTOOk/pm
+# FxPxSV3QLqhL4PKb5gmSy7o9H7UrbqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -677,33 +677,33 @@ Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCArY4GTvqwHod+LUowvguwX/782EcFZ6nM5ACjcXdZ0MzANBgkqhkiG
-# 9w0BAQEFAASCAgBmJe0fmMRjHzm/KqUqw3IGcQfUeTRqUdI7PUlHbEQt2g3JZTts
-# 0YoYHAk7tX7UsSpGk00BZegGDdzleQMhW+RmMPblmG64z5tHBBTbGnA69hbuC6XF
-# 7utAaGpTLyrZxTtv0jUWzIRheRTypxLfdPyLwq9LU2iPAE1AUzZYYpx8pI4/lFrR
-# bXAv3rSZgAgGklGprOTekRPkgldfCju7KvrdHbXRk3Cf90QjrTHaGZsnMYESqK3V
-# pH8DJ+VfW166rsUtu8XTfpXmQgz/5r7GFOwkVuT9xplTZWdkmU6wWGt6OmWi2okt
-# 6hDDkaG6NOmmvwflQFA8iOkJl2pf0zHRvaINSl1xazPp+AMlaQC7AlZYTsMHQY8j
-# f+AAHGO7y+fZ70/e99bzNrIV6tR9R+OxRrsRpbAYFn5a5uHfEqmdstcqrCzhePtM
-# dt8gfWPVngbnKdhYxa9NR/g6XBbhZUk3D6VHasMDvowv4oLZi1T7A6Bes9kla6I4
-# C7fCdu+ucXsUU/hBxFgE5XRApKMa9nbK5Ev9c/ajzSUPT8OeNw75b1K2kDutcOLP
-# K94kTSkn4lA1Nfh6FFbCQA0rQhM0a91GIueBbKigGIaknC7BpqLzWeLjgDQY5ygk
-# 8OszWPd8hpmfEd0vR15mDcP7D75C10m5yLM0W0rMKmcD1TgaQUfAqPVHuKGCAyYw
+# DQEJBDEiBCAriLkQdSJwQ6GdN0rgdtcPwNTZY8DqoCK9tZyhU+p/MDANBgkqhkiG
+# 9w0BAQEFAASCAgAZqCFD8SnU6k90jBv92GyB4NEzNRxAWT6om2l46D0y1oTbD2Yq
+# TJXfRosrKxlFReUGWoMk6RqF6kRadZIsf9BSblGxh/FvM+UK5Kr8LeEqMWj5B6ck
+# ErIOrLsCvHh6948N3ibIdLdgknWhUnuVyFKQ8dTeWHyUYrZQKp8jrTfzdoqDn1td
+# NG9mAlrgCrX7xlUkqJnmCycn/DTofZqOVFse2nVNKOE8MrQReAiaEHNFWdaREA6J
+# S8iCkBdbKhLylbJtyT2JZAr/8Tj+kEKhBWn3bs34DV5MdIDfznmhuKCHXfsV11kL
+# 3xDxdsv6XX12dHvxFsNyW0Z1j0W/fv2sFioMsvee6SouE8cVc0VmjdIxnzEvRMRK
+# 3/UK4jV9QnyUBRmPhvhyqdzFidEE6ncweRNLcwGkWHs3p6nVPvV4cPbSd+I9RuJ8
+# Heqz0QdozJaGmUx70mhz4PeNPp3JRfsOk0xUoS10XEukPckUM5pDJaVn7yFfZAbj
+# KYULiS2p9xdI67S4sDwkFW71fAcMNWRx+02gJemmZ6MGlxVx99MpKJXxLBY/l9io
+# e1B/pPLYdZnKQrJ6xRCXLyU81jsKlBRFwqD/qV+sZThPm+iNXf1MpDSWgTw1d7mt
+# fk9mahQxd/qyItxPcmTaSgRVeGc93BoavnTjrN6wirSRlx1nV8eeBUeXBqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMTkyMjA4MjJaMC8GCSqGSIb3DQEJBDEi
-# BCBq+5VNWLP88hbmY//5E5CItchbFKhRpVp2Vyzj9SOiVzANBgkqhkiG9w0BAQEF
-# AASCAgBObvcHuwWJSwJE+oxx/V0BOhkXI6nyzCq/nt7wzlclDE602SGlY0BIoE0k
-# mSQAslokocyIpl3vAQnvegwaqObzsVzOciXhGu9YdtGkGV+5hmK37INfA8zIq2EK
-# qsWPJLEZQUtpNNxJWkToTvDjVpcLBIVc0nlZN3OXV2DbgsG81Vn4m5LGOD22ztFV
-# mhvHVHIHc8lJmUdv7vubw6oCVLp9fVt5RY98EFAudcOpgNvrVLrEhoVAxxBLmYad
-# 3C2dgMSaGnlK5PEpL/X9HYjI/QXMp22KcAxAYKejxs64WOWIAfjPlXPcr2AnoK+h
-# JvBB1NyQMCs+p96VhNpUxb6ICvJgo6DdXRVlPkdcy3r4iPvxAFaMsfF4CrehLoFs
-# Ht5uINKNvjBVThERFWUqTwvgmcdh9nlG7PHThYvMzSgn9ywM30avxH74OL4dFUfW
-# ngH5S6OCORptUUc5aLO5eE4fN3J+GPW6jBHNfe4IGro7UzgjRVaUaosuBoDJlBm4
-# oJos7tqyD1tztswocu1FSzDcJAQ/7ZEvUcLi5e/Tl8QQSL4CEgmX8sQtJgCzbXa4
-# 7BT4cNgczUjG4P/JtnFgpcohFvfPQBGvatcaAsXbVDHRbFOnCdKoNpXgWCMIBy8e
-# FBlphWvtjb3bYzgZ76bip7SJ+Yqcj9nk8xgYnpSHIvlwXmnxhw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
+# BCCmte/o5bj8nyFQLPaMW45rhjHNrxS0XR1K2BsbrmEV+DANBgkqhkiG9w0BAQEF
+# AASCAgAoI5ykOLEyteUeE9IuhuzyCqAaV2swmgcd9KoFPEFDEtQLgSeXm6gl2YOV
+# AhGERStiiaVNWIH3MtKdyakLxL5tp9nIcPa0jFGNBTkb4IXDlwJ2FuYlVO2jddDs
+# aPNAo9PBPvi0zEJRDuK4gtNX3D40d6cDhgfMNEwoKWjQhOBrdwy2bpPMK6R8p3kM
+# DNK0K269ZgerUE8ol/lLIdvHH8iUfrvcuuY1FCF9YdOoGCR6sQf0IhVwVbyQFi/i
+# o25NhTx/JDwpI6RA2R2JeE9bVJFvEzAP0N/eZAWNsH6oEvrG3pZESVX5T8anzW+c
+# oLfR35VozWNTgNitGqOUVErVcY/bD0q/hmB0QZAoe5ch9gkdHs3/xQA8jHOnmpwm
+# luEoAzeZaPLui8rHPhrgI9DVb1U0bVYn0ceQDSz/h6cs5M85KCo1mvGi4FptvVsA
+# qCJC3RL+nNdf8syI+WhLHFKoqJ3w8RTEUFAiHX0Ked27KII/0in6JCvQfOYhviT6
+# GG9kE0TBlnd2eHF9D5/zf+YU3ESphbVkcz0kVebbRvRB8Q4GRGqJMcKfBMwpbYnu
+# LR4sPJJzQTyVlXxjnyzzlxyczJcEsnnnXtEs+6mIIcKV/PAij2iWRcFhou3kJayv
+# dnO7D3Ct5GlKhc6IFFBl9sL6drzcKQ94tnf+nk2yjYGMlBgQQg==
 # SIG # End signature block

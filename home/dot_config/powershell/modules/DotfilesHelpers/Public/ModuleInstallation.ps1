@@ -1,119 +1,5 @@
-# PowerShell Functions
-# Loaded by profile.ps1
-
-# Navigation helpers
-function Set-LocationUp { Set-Location .. }
-function Set-LocationUpUp { Set-Location ..\.. }
-
-# System utilities
-function which($name) {
-    Get-Command $name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-}
-
-function touch($file) {
-    if (Test-Path $file) {
-        (Get-Item $file).LastWriteTime = Get-Date
-    }
-    else {
-        New-Item -ItemType File -Path $file | Out-Null
-    }
-}
-
-function mkcd($path) {
-    New-Item -ItemType Directory -Path $path -Force | Out-Null
-    Set-Location $path
-}
-
-# Chezmoi utilities
-function Reset-ChezmoiScripts {
-    # Clears Chezmoi script execution state to force re-running of run_once_* and run_onchange_* scripts
-    chezmoi state delete-bucket --bucket=scriptState
-    Write-Host "Chezmoi script state cleared. run_once_* scripts will re-execute on next 'chezmoi apply'." -ForegroundColor Green
-}
-
-function Reset-ChezmoiEntries {
-    # Clears Chezmoi entry state to force reprocessing of all managed files
-    chezmoi state delete-bucket --bucket=entryState
-    Write-Host "Chezmoi entry state cleared. All files will be reprocessed on next 'chezmoi apply'." -ForegroundColor Yellow
-    Write-Host "Warning: This may cause unexpected changes. Use 'chezmoi apply --dry-run' first." -ForegroundColor Yellow
-}
-
-function Invoke-ChezmoiSigning {
-    param(
-        [string]$CertificateThumbprint = "421f66cf0a29ef657c83316a88d5d2ff918eeb7b"
-    )
-
-    # Signs PowerShell scripts in the Chezmoi source directory and repository root
-    $chezmoiSourceDir = chezmoi source-path
-    if ($LASTEXITCODE -ne 0 -or -not $chezmoiSourceDir) {
-        Write-Host "Error: Failed to get Chezmoi source directory" -ForegroundColor Red
-        return
-    }
-
-    # Get repository root (parent of Chezmoi source dir, which is typically 'home/')
-    $repoRoot = Split-Path -Parent $chezmoiSourceDir
-
-    $signingScript = Join-Path -Path $chezmoiSourceDir -ChildPath "dot_config\powershell\scripts\Sign-PowerShellScripts.ps1"
-
-    if (-not (Test-Path $signingScript)) {
-        Write-Host "Error: Sign-PowerShellScripts.ps1 not found at $signingScript" -ForegroundColor Red
-        return
-    }
-
-    # Sign all PowerShell scripts in the repository (includes tests/, .github/, etc.)
-    & $signingScript -CertificateThumbprint $CertificateThumbprint -Path $repoRoot
-}
-
-# Profile management
-function Edit-Profile {
-    code $PROFILE
-}
-
-function Import-Profile {
-    . $PROFILE
-    Write-Host "Profile reloaded!" -ForegroundColor Green
-}
-
-# Show all aliases and functions
-function Show-Aliases {
-    Write-Host "`n=== Navigation ===" -ForegroundColor Cyan
-    Write-Host "..      - Go up one directory"
-    Write-Host "...     - Go up two directories"
-
-    Write-Host "`n=== File Operations ===" -ForegroundColor Cyan
-    Write-Host "ll/la   - List files (including hidden)"
-    Write-Host "touch   - Create or update file timestamp"
-    Write-Host "mkcd    - Create directory and cd into it"
-    Write-Host "which   - Find command location"
-
-    Write-Host "`n=== Git ===" -ForegroundColor Cyan
-    Write-Host "gs      - git status"
-    Write-Host "ga      - git add"
-    Write-Host "gc      - git commit"
-    Write-Host "gp      - git push"
-    Write-Host "gl      - git pull"
-    Write-Host "gd      - git diff"
-    Write-Host "gco     - git checkout"
-    Write-Host "gb      - git branch"
-    Write-Host "glog    - git log (formatted)"
-
-    Write-Host "`n=== Docker ===" -ForegroundColor Cyan
-    Write-Host "dps     - docker ps"
-    Write-Host "dpsa    - docker ps -a"
-    Write-Host "di      - docker images"
-    Write-Host "dex     - docker exec -it"
-
-    Write-Host "`n=== Chezmoi ===" -ForegroundColor Cyan
-    Write-Host "Reset-ChezmoiScripts  - Clear script state to re-run scripts"
-    Write-Host "Reset-ChezmoiEntries  - Clear entry state to reprocess files"
-
-    Write-Host "`n=== Profile ===" -ForegroundColor Cyan
-    Write-Host "ep      - Edit profile"
-    Write-Host "reload  - Import profile (reload)"
-    Write-Host ""
-}
-
 # Module installation utilities
+
 function Install-PowerShellModule {
     <#
     .SYNOPSIS
@@ -404,8 +290,8 @@ function Add-ToPSModulePath {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCbPjF2rapIMZVi
-# 1xPSCNLXNMVAlfjTkn7AbPriPg/dAaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAryyE9wWACiBuV
+# o4zqxMwUpJYJRa1Lv2zmQ/ZNQGmXNqCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -539,33 +425,33 @@ function Add-ToPSModulePath {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCDC3aQ21ZqXcUBUyV892uVc5TkDFFlPpC+dfgMpPd4N+jANBgkqhkiG
-# 9w0BAQEFAASCAgCb0WHHaK/dJI3Rl23kzUt4CsC85Ey+wVg9aVmW7PdFgT1qzqwt
-# nR4COhxe9Y5R0GLYPBhfqmM91gH6C9SvxlkfaP2aR/4kXBQVF3bZUW0XAVYsN6i5
-# Y935fFAw84MVZUb3apsvEAVFH0aGYNt8rg+Panr2sDVAdXnz2GQAtBsmWb0E9pzS
-# 4u0eIJwy6ogGftb8bSl0hHA8ISOyldz7x0CAvI+XlqCN4TerqvsJ1pECvAQlSHEg
-# HI4mDBY8g8tbwXjY/+Dwxx1EXHtLQANHOY/wCBGw/GQkE1Ic/7klBpCaoPOZYYKb
-# sfZ36fCUcMyzAFUPiPpwVF9sTAhBXfNYleV6wJ24JnDUh2PO/uyLKwUm0EK4fOFw
-# oOj0IlqG2wHK+9udnhX0zO34ZUYPRHlbZlf07T/z0Tf3hWN7d01LaBZoprgW8bqe
-# ruHzXE8rZi0i0fmgnfNopaVVjSDQ5zSX5woQLMsOlR49FRkQorW8qfn2gyOXdRIv
-# FxpX7LOo88kuzmld+HrV8lPcmG4AnEhS+NJVcT0CtPF5ATtsuoh62mS+7fA93SsF
-# flH+Ym0mJ0EmImWDUT7JFlAKAo0TMNZAOZHEPX8j+5FGwDfPGY0ybA6CKv97swqy
-# cTt4hfqbFlT6+Z3coGA4IvV21rWRQTg2xqvH1dM2yyFfix4NUGwv+u3crqGCAyYw
+# DQEJBDEiBCDFo7tix1iJXy4IZdBskyeouoMP28msAwWyAB9oJXfriDANBgkqhkiG
+# 9w0BAQEFAASCAgBjlIIMW7LS2bZ+N2hUkHsn0J12/5+1Vy77AVqTCTUFWN3RGUTe
+# eYztQOn8rCC84vfqGrbztRThOhlmmojCtQ2yL64bFsFWHtV/16onvknm+w4xNJ2Z
+# j2PTo2HQhw4wu9qFSyEHr5phfhOLtyot5Sxpe/wzqv3R2G6Eb1RdmUkN92yOQhNJ
+# zzTQCjlNa9Vi97aAHmtOJPMRUdA5wdb9d8pfFNAn1mw7JqW7CDjfvT4L0GDACg/q
+# ck7tmU3IBn/EFdN4yhhVd0+wFgOMBc6nBu3HYjcQ2BPyqCeucOEbDDDrAXGJyLu3
+# 2yL2xcgaz775Wh1fOT2PHCzwXZQg2/yBL+yOYxcIqtc6v20MoAYfky3pbXr5Q1qg
+# s6fdiZ/R0No7CzqLv4XE8qNVef51uBKd3I3uE8xhyV9WDZUOSuvhOxaD4JFlIZih
+# eBcz7ZG+OzeDwRWYVhHD5rw80/HiJo18Bs5PoQJqhZof2usE7tGLKNiB7XPRArZ6
+# 9fKLxf7oOUvUi8DMPiLZBsyTujYksEWp4AUGGghrra3VnCZrkBi62tBXOenq5Oaz
+# EUUPQD7qW/cMjpfhV0GS96dKGy/Tin47+8k9Ah/j8xA+0NQCKjvTBJoksnRycJf0
+# CG2SBNJ186f3xcxnwHWng+VA8YVbWL0We1WlSDwlc/zPFvPaIvDRvtKj46GCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAxMjcyMjQ1NDRaMC8GCSqGSIb3DQEJBDEi
-# BCAEFwDnl3z96PDCbWewi2jK9J43DS1nFAoQaJvnHhD5/DANBgkqhkiG9w0BAQEF
-# AASCAgCWxJEvq3NjfDWV6PeLo49C44+7FLZRHn/XfYwmO6gGXdS+uwvMK7X9PpNp
-# VMy6QekMIrq3DYYP0sfKx0RIkojcpjyUih0GnfGvgf6BhzeqISwMSEpewqlUMUq3
-# 58CDncW1Q2ntxFCD6zVCeG3TWpQmISShCerjfSmR4nY7EvqLYOGg3NUHAOzX4G2Y
-# FchJKsMyjeTcFSM6vxxUIgUmKmOyijGG/P+gIKkokezf4jeH1huy8uRWU+xCDn1f
-# 5Bq6DkNmBAndnmqa+6mzcK5pRVqrxZSfLJgwz1cPoSJhdlwVY26DGa4xe8LhlVT5
-# C6c4jYyRv+xXVVB/QtRqP5UEy1nhrAZutDmD9bspbSXP6WoAvpOv//ifw/tDt93W
-# 72BHUiuQqqx+B9UJ1y7EmicCEOQ+P2bDorX5AGsO8yNCfLHk2YjUZKeTluQwa2ya
-# /hoc7tOSFCeQ2o0pNTn8K396IpZCOZp/0o2lBV/RsFyVr2yjDVsSox7Iv5xSR2Aa
-# Y2ybKuCVwmBFwTcyB/ugWhpExqrPgujw8Pc09oHdlrnWEcNyDM68uBHAc1BpxzsZ
-# W7ZokJkdYmFUocgrAx0uuVi33832bL/TK2NPhl+yeXO6OO08+VBL+G64nkxe+1SE
-# FuCRke001PlecEH8t1NREhp5llulyUs8IE3D/dJSy78yl/GiuA==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
+# BCAqzSjBJd3Fnw3+AIMr9kA+M420N4d8kMKBetvBu6L6xDANBgkqhkiG9w0BAQEF
+# AASCAgCLGIHOAjGKXsfnByTl4SilLh/0RE9FC4uuPzacP0WcR4yDpEYHVp2jq+wZ
+# f0O4GI4npLRKVeOwUyl65qCmq2Lhr9PoICxqHoVL1iNUyTSXwhM26dd2wesf9dDj
+# WxdLv/h3tuhuw3+R0pX+WPHAcpX5b1xv26bW5azjVFdeUVWFhCpk3X3t1AjodMI8
+# Pl7QMDK8ENMaVIid2tWxe/+bnvtEch1G0GmuEmOuxKL3gjkhp9CbRXkPV7lJwjsz
+# TRmWkVKC+bjFz6wBsRZ+kEzyRJjYID+0OX8wl+cTZTJjWiNJv01pENkeCdvDbXkY
+# V4jRA66TvBgYgefT9LOeoo7XJafOyUe7Sb4QiiAITTIZcFw9yTr5dbeuEPeI9kIJ
+# F1o+ckBpeweN3jnk1VZvZ2A9MgzMgukjMnefUTL+cWNJrRdmJjczdOoKD72Z35Rn
+# S/B7Pw7GS7UcXpE2Oj9eLlE410H9IpmpCFWKWKedsesPNNw0UsD575zewXyopUyf
+# 3p9/BJ+tuZ65skqKsWZxJR6T6RWrazqfwdn+VZ8x3DC6THkR4RQhIfd3F+fw1qk6
+# L8A5TKgZUtjzaOjF19gGcgQQYduiZ5HwoX0kOPMqckntVuPFgFSxyRgnpbB5ihAi
+# 5GR70SQxa1ZpIn8v0kd2aX6MUqFN0cLIt+aJYNDpD5XNjW8CrQ==
 # SIG # End signature block
