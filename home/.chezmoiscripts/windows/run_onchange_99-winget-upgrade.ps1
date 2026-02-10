@@ -1,4 +1,3 @@
-{{- if eq .chezmoi.os "windows" -}}
 #Requires -Version 5.1
 <#
 .SYNOPSIS
@@ -93,4 +92,3 @@ Write-Host "✅ Winget upgrade check completed" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
 exit 0
-{{- end }}
