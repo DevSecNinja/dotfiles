@@ -54,7 +54,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 
 **Location**: `tests/bash/`
 
-**Framework**: [Bats 1.11+](https://github.com/bats-core/bats-core)
+**Framework**: [Bats 1.13+](https://github.com/bats-core/bats-core)
 
 **Coverage**:
 - Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, etc.)

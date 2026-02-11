@@ -1,6 +1,21 @@
 #!/bin/bash
+# git-remove-commit - Remove a specific commit from the current branch
+#
+# Removes a commit by resetting (if HEAD) or rebasing (if in history).
+# Shows commit details and prompts for confirmation before making changes.
+#
+# Usage: git-remove-commit [OPTIONS] <commit-hash>
+#   --help, -h       Show help message and exit
+#
+# Examples:
+#   git-remove-commit abc1234       # Remove commit abc1234
+#
+# Notes:
+#   - This script is still in testing phase - use with caution
+#   - Removes HEAD commit with 'git reset --hard HEAD~1'
+#   - Removes older commits with interactive rebase
+#   - Will prompt before force pushing to remote
 
-# Remove a specific commit from the current branch
 git-remove-commit() {
 	echo "This script is still in testing phase! Use with caution."
 	echo ""
@@ -41,7 +56,7 @@ git-remove-commit() {
 		echo "⚠️  Warning: You have uncommitted changes"
 		git status --short
 		echo ""
-		read -r -q "REPLY?Continue anyway? (y/n) "
+		read -r -p "Continue anyway? (y/n) " REPLY
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 			echo "❌ Aborted"
@@ -63,7 +78,7 @@ git-remove-commit() {
 	echo ""
 
 	# Final confirmation
-	read -r -q "REPLY?⚠️  Remove this commit? (y/n) "
+	read -r -p "⚠️  Remove this commit? (y/n) " REPLY
 	echo ""
 	if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 		echo "❌ Aborted"
@@ -87,7 +102,7 @@ git-remove-commit() {
 	# Ask about force pushing
 	if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
 		echo ""
-		read -r -q "REPLY?Force push to remote? (y/n) "
+		read -r -p "Force push to remote? (y/n) " REPLY
 		echo ""
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
 			local remote
