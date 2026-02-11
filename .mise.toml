@@ -13,7 +13,7 @@ task = "latest"
 chezmoi = "latest"
 
 # Bats for bash testing
-bats = "latest"
+bats = "1.13.0"
 
 # Additional tools for development (commented out by default)
 # Uncomment based on your needs

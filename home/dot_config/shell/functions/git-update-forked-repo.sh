@@ -1,8 +1,44 @@
 #!/bin/bash
+# git-update-forked-repo - Sync a forked repository with its upstream remote
+#
+# Fetches and merges the latest changes from an upstream remote into
+# the current branch of a forked repository. Prompts for confirmation
+# before merge and push operations.
+#
+# Usage: git-update-forked-repo [OPTIONS] <upstream_remote_name>
+#   --help, -h       Show help message and exit
+#
+# Examples:
+#   git-update-forked-repo upstream        # Sync with 'upstream' remote
+#   git-update-forked-repo original-repo   # Sync with custom remote name
+#
+# Notes:
+#   - Must be run from within a Git repository
+#   - The upstream remote must already be configured
+#   - Use 'git remote add <name> <url>' to add an upstream remote first
 
 git-update-forked-repo() {
-	if [ "$#" -ne 1 ]; then
+	# Parse help flag
+	if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
 		echo "Usage: git-update-forked-repo <upstream_remote_name>"
+		echo "Sync a forked repository with its upstream remote"
+		echo ""
+		echo "Arguments:"
+		echo "  upstream_remote_name  Name of the upstream remote (e.g., 'upstream')"
+		echo ""
+		echo "Options:"
+		echo "  -h, --help       Show this help message"
+		echo ""
+		echo "Examples:"
+		echo "  git-update-forked-repo upstream        # Sync with 'upstream' remote"
+		echo "  git-update-forked-repo original-repo   # Sync with custom remote name"
+		return 0
+	fi
+
+	if [ "$#" -ne 1 ]; then
+		echo "❌ Error: Expected exactly one argument"
+		echo "Usage: git-update-forked-repo <upstream_remote_name>"
+		echo "Use --help for more information"
 		return 1
 	fi
 
@@ -10,7 +46,7 @@ git-update-forked-repo() {
 	inside_git_repo="$(git rev-parse --is-inside-work-tree 2>/dev/null)"
 
 	if [ ! "$inside_git_repo" ]; then
-		echo "Not in a Git repo. Function can only be ran from a Git repository."
+		echo "❌ Error: Not in a Git repository"
 		return 1
 	fi
 
@@ -20,7 +56,7 @@ git-update-forked-repo() {
 
 	# Check if the upstream remote exists
 	if ! git remote get-url "$upstream_remote_name" >/dev/null 2>&1; then
-		echo "Error: Upstream remote '${upstream_remote_name}' not found."
+		echo "❌ Error: Upstream remote '${upstream_remote_name}' not found."
 		echo "Please add the upstream remote using 'git remote add <upstream_remote_name> <upstream_url>'."
 		return 1
 	fi
