@@ -75,11 +75,17 @@ gh-check-ssh-keys() {
 
 	# Validation checks
 	if [ -z "$username" ]; then
+		# Never prompt in test/CI environments
+		if [ -n "${BATS_VERSION:-}" ] || [ -n "${CI:-}" ]; then
+			echo "❌ GitHub username is required"
+			echo "Use --help for usage information"
+			return 1
+		fi
+
 		# Check if CHEZMOI_GITHUB_USERNAME environment variable is set
 		if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
 			# Check if we're in an interactive environment (stdin is a TTY)
-			# AND not in CI/test environment (CI, BATS_VERSION, etc.)
-			if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${BATS_VERSION:-}" ]; then
+			if [ -t 0 ] && [ -t 1 ]; then
 				# Ask for confirmation before using the detected username
 				echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
 				printf "Do you want to use this username? (y/N): "
