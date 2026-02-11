@@ -22,39 +22,6 @@ setup() {
 	ORIGINAL_HOME="$HOME"
 	export ORIGINAL_HOME
 	export HOME="$TEST_DIR"
-
-	# Create test SSH keys for mocking
-	TEST_KEY_1="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDTestKey1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa user@github"
-	TEST_KEY_2="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey2bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb user@github"
-	export TEST_KEY_1 TEST_KEY_2
-
-	# Mock curl to prevent real network calls
-	curl() {
-		local url="$2"
-		local username
-		username=$(echo "$url" | sed 's|https://api.github.com/users/\([^/]*\)/keys|\1|')
-
-		case "$username" in
-		"torvalds")
-			# Mock response with test keys
-			echo '[{"id":1,"key":"'"$TEST_KEY_1"'"}]'
-			return 0
-			;;
-		"test-user" | "test_user")
-			# Mock user not found
-			return 22
-			;;
-		"this-user-definitely-does-not-exist-"*)
-			# Mock user not found
-			return 22
-			;;
-		*)
-			# Default: return error
-			return 1
-			;;
-		esac
-	}
-	export -f curl
 }
 
 # Teardown function runs after each test
@@ -66,9 +33,6 @@ teardown() {
 	if [ -n "$TEST_DIR" ] && [ -d "$TEST_DIR" ]; then
 		rm -rf "$TEST_DIR"
 	fi
-
-	# Unset mock curl
-	unset -f curl 2>/dev/null || true
 }
 
 @test "gh-check-ssh-keys: help option displays usage" {
