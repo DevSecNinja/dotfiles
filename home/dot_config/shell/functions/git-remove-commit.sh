@@ -56,7 +56,7 @@ git-remove-commit() {
 		echo "⚠️  Warning: You have uncommitted changes"
 		git status --short
 		echo ""
-		read -r -q "REPLY?Continue anyway? (y/n) "
+		read -r -p "Continue anyway? (y/n) " REPLY
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 			echo "❌ Aborted"
@@ -78,7 +78,7 @@ git-remove-commit() {
 	echo ""
 
 	# Final confirmation
-	read -r -q "REPLY?⚠️  Remove this commit? (y/n) "
+	read -r -p "⚠️  Remove this commit? (y/n) " REPLY
 	echo ""
 	if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 		echo "❌ Aborted"
@@ -102,7 +102,7 @@ git-remove-commit() {
 	# Ask about force pushing
 	if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
 		echo ""
-		read -r -q "REPLY?Force push to remote? (y/n) "
+		read -r -p "Force push to remote? (y/n) " REPLY
 		echo ""
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
 			local remote
