@@ -25,9 +25,6 @@ teardown() {
 	if [ -n "$TEST_DIR" ] && [ -d "$TEST_DIR" ]; then
 		rm -rf "$TEST_DIR"
 	fi
-
-	# Unset mock curl
-	unset -f curl 2>/dev/null || true
 }
 
 @test "gh-add-ssh-keys: help option displays usage" {
