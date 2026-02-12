@@ -6,6 +6,9 @@ setup() {
 	# Load the function
 	load "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/gh-check-ssh-keys.sh"
 
+	# Unset CHEZMOI_GITHUB_USERNAME to prevent interactive prompts
+	unset CHEZMOI_GITHUB_USERNAME
+
 	# Create a temporary test directory
 	TEST_DIR="$(mktemp -d)"
 	export TEST_DIR
