@@ -45,6 +45,9 @@ while [[ $# -gt 0 ]]; do
 		echo "                    (default: test-results.tap, or test-results.xml in CI mode)"
 		echo "  --test FILE       Run specific test file (can be used multiple times)"
 		echo "  -h, --help        Show this help message"
+		echo ""
+		echo "Test Output:"
+		echo "  Tests now include timing information and output from failing tests"
 		exit 0
 		;;
 	*)
@@ -148,22 +151,25 @@ echo -e "${BLUE}🧪 Running ${#TEST_FILES[@]} test file(s)...${NC}"
 echo ""
 
 # Run tests
+# Build the common Bats flags for timing and output reporting
+BATS_FLAGS=(--timing --print-output-on-failure)
+
 if [ "$CI_MODE" = true ]; then
 	# In CI mode, save output to file
 	if [ "$OUTPUT_FORMAT" = "junit" ]; then
 		# Use JUnit formatter for CI
 		# Using --formatter junit with stdout redirection creates a single unified report
 		# instead of multiple files (one per test file) that --report-formatter would create
-		bats --formatter junit "${TEST_FILES[@]}" >"$OUTPUT_FILE"
+		bats --formatter junit "${BATS_FLAGS[@]}" "${TEST_FILES[@]}" >"$OUTPUT_FILE"
 		EXIT_CODE=$?
 	else
-		# Use TAP format
-		bats --tap "${TEST_FILES[@]}" >"$OUTPUT_FILE"
+		# Use TAP format with timing and output on failure
+		bats --tap "${BATS_FLAGS[@]}" "${TEST_FILES[@]}" >"$OUTPUT_FILE"
 		EXIT_CODE=$?
 	fi
 else
-	# In interactive mode, show output directly (no file needed)
-	bats "${TEST_FILES[@]}"
+	# In interactive mode, show output directly with timing and output on failure
+	bats "${BATS_FLAGS[@]}" "${TEST_FILES[@]}"
 	EXIT_CODE=$?
 fi
 
