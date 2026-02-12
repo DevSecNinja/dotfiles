@@ -47,3 +47,8 @@ silent-background() {
 	fi
 	disown &>/dev/null # Close STD{OUT,ERR} to prevent whine if job has already completed
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	silent-background "$@"
+fi

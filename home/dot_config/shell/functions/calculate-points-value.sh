@@ -63,3 +63,8 @@ calculate-points-value() {
 		echo "It's ${percent_better}% better value than $name1"
 	fi
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	calculate-points-value "$@"
+fi

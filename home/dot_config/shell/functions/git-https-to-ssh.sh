@@ -128,3 +128,8 @@ git-https-to-ssh() {
 		fi
 	fi
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	git-https-to-ssh "$@"
+fi

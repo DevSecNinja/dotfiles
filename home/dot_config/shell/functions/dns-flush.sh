@@ -72,3 +72,8 @@ dns-flush() {
 		return 1
 	fi
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	dns-flush "$@"
+fi
