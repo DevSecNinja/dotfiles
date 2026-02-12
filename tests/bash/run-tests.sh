@@ -155,17 +155,26 @@ echo ""
 BATS_FLAGS=(--timing --print-output-on-failure)
 
 if [ "$CI_MODE" = true ]; then
-	# In CI mode, save output to file
+	# In CI mode, show real-time progress on stdout and save reports
+	# This allows visibility of test progress to identify hanging tests
 	if [ "$OUTPUT_FORMAT" = "junit" ]; then
-		# Use JUnit formatter for CI
-		# Using --formatter junit with stdout redirection creates a single unified report
-		# instead of multiple files (one per test file) that --report-formatter would create
-		bats --formatter junit "${BATS_FLAGS[@]}" "${TEST_FILES[@]}" >"$OUTPUT_FILE"
+		# Show TAP output on console for real-time progress
+		# Save JUnit XML report to file for CI artifact upload
+		# Create output directory for report if it doesn't exist
+		OUTPUT_DIR="$(dirname "$OUTPUT_FILE")"
+		mkdir -p "$OUTPUT_DIR"
+
+		bats --formatter tap --report-formatter junit --output "$OUTPUT_DIR" "${BATS_FLAGS[@]}" "${TEST_FILES[@]}"
 		EXIT_CODE=$?
+
+		# Bats creates report.xml in the output directory, rename it to match OUTPUT_FILE
+		if [ -f "$OUTPUT_DIR/report.xml" ]; then
+			mv "$OUTPUT_DIR/report.xml" "$OUTPUT_FILE"
+		fi
 	else
 		# Use TAP format with timing and output on failure
-		bats --tap "${BATS_FLAGS[@]}" "${TEST_FILES[@]}" >"$OUTPUT_FILE"
-		EXIT_CODE=$?
+		bats --tap "${BATS_FLAGS[@]}" "${TEST_FILES[@]}" | tee "$OUTPUT_FILE"
+		EXIT_CODE=${PIPESTATUS[0]}
 	fi
 else
 	# In interactive mode, show output directly with timing and output on failure
@@ -175,7 +184,7 @@ fi
 
 # Display results based on exit code
 echo ""
-if [ $EXIT_CODE -eq 0 ]; then
+if [ "$EXIT_CODE" -eq 0 ]; then
 	echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
 	echo -e "${GREEN}║   ✅ All Tests Passed!                ║${NC}"
 	echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
@@ -219,4 +228,4 @@ if [ "$CI_MODE" = true ]; then
 	fi
 fi
 
-exit $EXIT_CODE
+exit "$EXIT_CODE"
