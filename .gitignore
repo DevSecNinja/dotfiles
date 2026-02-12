@@ -33,6 +33,7 @@ Thumbs.db
 # Test results
 **/test-results.xml
 **/test-results.tap
+**/report.xml
 test-results.tap
 
 # Task
