@@ -201,6 +201,16 @@ if [ "$CI_MODE" = true ]; then
 	if [ -f "$OUTPUT_FILE" ]; then
 		if [ "$OUTPUT_FORMAT" = "junit" ]; then
 			echo "  JUnit XML report generated: $OUTPUT_FILE"
+
+			# Install xmllint in CI mode if not available
+			if ! command -v xmllint >/dev/null 2>&1; then
+				echo "  📦 Installing xmllint for XML parsing..."
+				if command -v apt-get >/dev/null 2>&1; then
+					sudo apt-get update -qq >/dev/null 2>&1
+					sudo apt-get install -y -qq libxml2-utils >/dev/null 2>&1
+				fi
+			fi
+
 			# Display a simple summary from JUnit XML
 			if command -v xmllint >/dev/null 2>&1; then
 				# Validate XML first
@@ -208,12 +218,19 @@ if [ "$CI_MODE" = true ]; then
 					TOTAL=$(xmllint --xpath "count(//testcase)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
 					FAILURES=$(xmllint --xpath "count(//testcase/failure)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
 					ERRORS=$(xmllint --xpath "count(//testcase/error)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
-					echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS"
+					SKIPPED=$(xmllint --xpath "count(//testcase/skipped)" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+					echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS, Skipped: $SKIPPED"
 				else
 					echo "  ⚠️  Warning: XML report is malformed or empty. Check test execution for errors."
 				fi
 			else
-				echo "  ℹ️  xmllint not available for detailed summary"
+				# Fallback: parse XML with grep/sed if xmllint is still not available
+				echo "  Parsing XML report..."
+				TOTAL=$(grep -c "<testcase " "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				FAILURES=$(grep -c "<failure" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				ERRORS=$(grep -c "<error" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				SKIPPED=$(grep -c "<skipped" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+				echo "  Total: $TOTAL, Failures: $FAILURES, Errors: $ERRORS, Skipped: $SKIPPED"
 			fi
 		else
 			# TAP format summary
