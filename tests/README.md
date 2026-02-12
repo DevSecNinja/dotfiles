@@ -65,6 +65,30 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - File system operations
 - Error handling and edge cases
 
+**Test Files** (utility functions):
+- `brewup.bats` - Tests Homebrew update/upgrade wrapper
+- `file-set-execution-bit.bats` - Tests shell script executable bit management
+- `find-broken-symlinks.bats` - Tests broken symlink detection and cleanup
+- `get-external-ip.bats` - Tests external IP detection function ✨
+- `get-internal-ip.bats` - Tests internal IP detection function ✨
+- `gh-add-ssh-keys.bats` - Tests GitHub SSH key management
+- `gh-check-ssh-keys.bats` - Tests GitHub SSH key verification
+- `gh-env-var.bats` - Tests GitHub environment variable utilities
+- `gh-ssh-keys-integration.bats` - Integration tests for GitHub SSH workflows
+- `git-https-to-ssh.bats` - Tests Git remote URL conversion
+
+**Test Files** (validation & integration):
+- `validate-chezmoi.bats` - Validates Chezmoi configuration syntax
+- `validate-shell-scripts.bats` - Validates all shell script syntax
+- `validate-fish-config.bats` - Validates Fish configuration files
+- `test-chezmoi-apply.bats` - Tests Chezmoi apply in dry-run mode
+- `test-clean-shell-startup.bats` - Tests shell startup performance
+- `test-entra-id-parsing.bats` - Tests Entra ID user parsing
+- `test-fish-config.bats` - Tests Fish shell configuration loading
+- `test-git-config-windows.bats` - Tests Git configuration on Windows
+- `test-shell-startup-logic.bats` - Tests shell initialization logic
+- `verify-dotfiles.bats` - Verifies applied dotfiles exist
+
 **Run locally**:
 ```bash
 # Using the test runner script (recommended)
