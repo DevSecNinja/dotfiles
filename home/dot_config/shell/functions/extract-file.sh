@@ -145,3 +145,8 @@ extract-file() {
 
 	return $exit_code
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	extract-file "$@"
+fi

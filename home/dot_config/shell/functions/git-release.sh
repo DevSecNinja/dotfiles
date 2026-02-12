@@ -159,3 +159,8 @@ git-release() {
 	git push origin "$NEW_TAG"
 	echo "✅ Tag $NEW_TAG created and pushed!"
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	git-release "$@"
+fi

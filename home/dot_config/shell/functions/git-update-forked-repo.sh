@@ -88,3 +88,8 @@ git-update-forked-repo() {
 	# Force push branch
 	git push origin "${current_branch}"
 }
+
+# Auto-execute if script is run directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	git-update-forked-repo "$@"
+fi
