@@ -35,6 +35,7 @@ log_error() {
 }
 
 # Only run on macOS
+# shellcheck disable=SC2050
 if [[ "{{ .chezmoi.os }}" != "darwin" ]]; then
 	log_info "Skipping Fish shell setup (not on macOS)"
 	exit 0
