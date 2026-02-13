@@ -1,0 +1,122 @@
+#!/bin/bash
+# Upgrades mise-managed tools when chezmoi runs
+#
+# This script automatically checks for and upgrades mise-managed tools during chezmoi update.
+# Works on macOS, Linux, and WSL.
+#
+# Features:
+# - Detection phase: Only runs if updates are available
+# - Execution phase: 3-second countdown before upgrading (can be cancelled with Ctrl+C)
+# - Updates mise itself and all managed tools
+# - Skips countdown in CI/non-interactive environments
+# - Skips on servers (hostname starts with SV*)
+#
+# Note: This is a regular run script that executes on every chezmoi update/apply
+
+{{- if and (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) (not .isServer) }}
+
+set +e  # Continue on errors to avoid blocking chezmoi
+
+echo ""
+echo "================================================"
+echo ">> Mise Tool Upgrade"
+echo "================================================"
+
+# Check if mise is installed
+if ! command -v mise >/dev/null 2>&1; then
+    echo "[SKIP] mise not found on this system"
+    exit 0
+fi
+
+echo ""
+echo "[OK] mise found: $(mise --version 2>/dev/null | head -n1)"
+
+# Detection Phase: Check for updates
+echo ""
+echo "Detection Phase: Checking for updates..."
+
+# Check if mise itself has updates
+echo "   Checking mise version..."
+mise_self_update_check=$(mise self-update --check 2>/dev/null || echo "")
+
+# Check for outdated tools
+echo "   Checking for outdated tools..."
+outdated=$(mise outdated 2>/dev/null)
+outdated_count=$(echo "$outdated" | grep -E "^\S+" | wc -l | tr -d ' ')
+
+# Determine if we have any updates
+has_updates=false
+
+if [ -n "$mise_self_update_check" ] && echo "$mise_self_update_check" | grep -q "mise .* -> .*"; then
+    has_updates=true
+    echo "[OK] mise update available: $mise_self_update_check"
+fi
+
+if [ -n "$outdated" ] && [ "$outdated_count" -gt 0 ]; then
+    has_updates=true
+    echo "[OK] Found $outdated_count tool update(s) available:"
+    echo "$outdated" | grep -E "^\S+" | sed 's/^/       - /'
+fi
+
+if [ "$has_updates" = false ]; then
+    echo "[OK] mise and all tools are up to date"
+    exit 0
+fi
+
+# Countdown Phase (skip in CI/non-interactive)
+countdown_seconds=3
+
+if [ -n "$CI" ] || [ ! -t 0 ]; then
+    echo ""
+    echo "[SKIP] Skipping countdown (CI/non-interactive environment)"
+else
+    echo ""
+    echo "Execution Phase: Starting upgrade in $countdown_seconds seconds..."
+    echo "   Press Ctrl+C to cancel"
+
+    for i in $(seq $countdown_seconds -1 1); do
+        echo "   $i..."
+        sleep 1
+    done
+    echo "   GO!"
+fi
+
+# Execution Phase: Perform upgrades
+echo ""
+echo ">> Starting upgrades..."
+
+# Update mise itself first
+if [ -n "$mise_self_update_check" ] && echo "$mise_self_update_check" | grep -q "mise .* -> .*"; then
+    echo ""
+    echo ">> Updating mise..."
+    if mise self-update -y 2>/dev/null; then
+        echo "[OK] mise updated successfully"
+    else
+        echo "[WARN] Failed to update mise (exit code: $?)"
+    fi
+fi
+
+# Upgrade all tools
+if [ "$outdated_count" -gt 0 ]; then
+    echo ""
+    echo ">> Upgrading tools..."
+    if mise upgrade 2>&1; then
+        echo ""
+        echo "[OK] Tool upgrades completed"
+    else
+        exit_code=$?
+        echo ""
+        echo "[WARN] Tool upgrades completed with errors (exit code: $exit_code)"
+    fi
+fi
+
+echo ""
+echo "================================================"
+echo "[OK] mise upgrade completed"
+echo "================================================"
+exit 0
+
+{{- else }}
+# Not macOS or Linux - skip silently
+exit 0
+{{- end }}

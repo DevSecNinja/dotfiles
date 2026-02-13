@@ -1,0 +1,103 @@
+#!/bin/bash
+# Upgrades Homebrew packages when chezmoi runs
+#
+# This script automatically checks for and upgrades Homebrew packages during chezmoi update.
+# Works on both macOS and Linux (Homebrew on Linux).
+#
+# Features:
+# - Detection phase: Only runs if updates are available
+# - Execution phase: 3-second countdown before upgrading (can be cancelled with Ctrl+C)
+# - Updates Homebrew itself before checking for package updates
+# - Skips countdown in CI/non-interactive environments
+#
+# Note: This is a regular run script that executes on every chezmoi update/apply
+
+{{- if and (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) (not .isServer) }}
+
+set +e  # Continue on errors to avoid blocking chezmoi
+
+echo ""
+echo "================================================"
+echo ">> Homebrew Package Upgrade"
+echo "================================================"
+
+# Check if Homebrew is installed
+if ! command -v brew >/dev/null 2>&1; then
+    echo "[SKIP] Homebrew not found on this system"
+    exit 0
+fi
+
+echo ""
+echo "[OK] Homebrew found: $(brew --version | head -n1)"
+
+# Detection Phase: Check for updates
+echo ""
+echo "Detection Phase: Checking for updates..."
+
+# Update Homebrew itself first (quietly)
+echo "   Updating Homebrew..."
+if ! brew update >/dev/null 2>&1; then
+    echo "[WARN] Failed to update Homebrew"
+    echo "       Continuing anyway..."
+fi
+
+# Check if any packages have updates available
+outdated=$(brew outdated --quiet 2>/dev/null)
+outdated_count=$(echo "$outdated" | grep -c .)
+
+if [ -z "$outdated" ] || [ "$outdated_count" -eq 0 ]; then
+    echo "[OK] All packages are up to date"
+    exit 0
+fi
+
+echo "[OK] Found $outdated_count package update(s) available:"
+echo "$outdated" | sed 's/^/       - /'
+
+# Countdown Phase (skip in CI/non-interactive)
+countdown_seconds=3
+
+if [ -n "$CI" ] || [ ! -t 0 ]; then
+    echo ""
+    echo "[SKIP] Skipping countdown (CI/non-interactive environment)"
+else
+    echo ""
+    echo "Execution Phase: Starting upgrade in $countdown_seconds seconds..."
+    echo "   Press Ctrl+C to cancel"
+
+    for i in $(seq $countdown_seconds -1 1); do
+        echo "   $i..."
+        sleep 1
+    done
+    echo "   GO!"
+fi
+
+# Execution Phase: Perform upgrade
+echo ""
+echo ">> Starting package upgrades..."
+echo ""
+
+if brew upgrade; then
+    echo ""
+
+    # Optional: cleanup old versions
+    echo ">> Cleaning up old versions..."
+    brew cleanup
+
+    echo ""
+    echo "================================================"
+    echo "[OK] Homebrew upgrade completed successfully"
+    echo "================================================"
+    exit 0
+else
+    exit_code=$?
+    echo ""
+    echo "================================================"
+    echo "[WARN] Homebrew upgrade completed with errors (exit code: $exit_code)"
+    echo "================================================"
+    exit 0  # Don't fail chezmoi
+fi
+
+{{- else }}
+# Not macOS or Linux - skip silently
+exit 0
+{{- end }}

@@ -125,9 +125,15 @@
 {{-   end -}}
 {{- end -}}
 
+{{- /* Determine if running on a server based on hostname */ -}}
+{{- $isServer := false -}}
+{{- $hostname := .chezmoi.hostname -}}
+{{- if $hostname | hasPrefix "SV" -}}
+{{-   $isServer = true -}}
+{{- end -}}
+
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
-{{- $hostname := .chezmoi.hostname -}}
 {{- if $hostname | hasPrefix "SVL" -}}
 {{-   if $hostname | hasPrefix "SVLDEV" -}}
 {{-     $installType = "full" -}}
@@ -164,22 +170,23 @@
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
 data:
+  ci: {{ $ci }}
+  codespaces: {{ $codespaces }}
+  devcontainer: {{ $devcontainer }}
+  email: {{ $email | quote }}
+  entraIDTenantId: {{ $entraIDTenantId | quote }}
+  entraIDTenantName: {{ $entraIDTenantName | quote }}
   firstname: {{ $firstname | quote }}
+  githubUsername: {{ $githubUsername | quote }}
+  installType: {{ $installType | quote }}
+  interactive: {{ $interactive }}
+  isADDomainJoined: {{ $isADDomainJoined }}
+  isEntraIDJoined: {{ $isEntraIDJoined }}
+  isEntraRegistered: {{ $isEntraRegistered }}
+  isIntuneJoined: {{ $isIntuneJoined }}
+  isServer: {{ $isServer }}
+  isWork: {{ $isWork }}
   lastname: {{ $lastname | quote }}
   name: {{ $name | quote }}
   username: {{ $username | quote }}
-  codespaces: {{ $codespaces }}
-  devcontainer: {{ $devcontainer }}
   wsl: {{ $wsl }}
-  ci: {{ $ci }}
-  interactive: {{ $interactive }}
-  email: {{ $email | quote }}
-  githubUsername: {{ $githubUsername | quote }}
-  installType: {{ $installType | quote }}
-  isEntraIDJoined: {{ $isEntraIDJoined }}
-  isIntuneJoined: {{ $isIntuneJoined }}
-  isEntraRegistered: {{ $isEntraRegistered }}
-  isADDomainJoined: {{ $isADDomainJoined }}
-  entraIDTenantName: {{ $entraIDTenantName | quote }}
-  entraIDTenantId: {{ $entraIDTenantId | quote }}
-  isWork: {{ $isWork }}
