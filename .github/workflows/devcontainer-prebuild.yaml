@@ -2,7 +2,7 @@ name: Prebuild Devcontainer
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - '.devcontainer/**'
       - 'home/install.sh'
@@ -52,6 +52,6 @@ jobs:
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
           cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
           platform: linux/amd64,linux/arm64
-          # Only push on main and develop branches, PRs are built for validation only
+          # Only push on main branch, PRs are built for validation only
           push: filter
-          refFilterForPush: refs/heads/main:latest,refs/heads/develop:develop
+          refFilterForPush: refs/heads/main:latest
