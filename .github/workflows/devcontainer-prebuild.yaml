@@ -54,4 +54,4 @@ jobs:
           platform: linux/amd64,linux/arm64
           # Only push on main branch, PRs are built for validation only
           push: filter
-          refFilterForPush: refs/heads/main:latest
+          refFilterForPush: refs/heads/main
