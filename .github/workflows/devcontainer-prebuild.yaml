@@ -1,21 +1,21 @@
 name: Prebuild Devcontainer
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.devcontainer/**'
-      - 'home/install.sh'
-      - '.github/workflows/devcontainer-prebuild.yaml'
-  pull_request:
-    branches: [main]
-    paths:
-      - '.devcontainer/**'
-      - 'home/install.sh'
-      - '.github/workflows/devcontainer-prebuild.yaml'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - '.devcontainer/**'
+  #     - 'home/install.sh'
+  #     - '.github/workflows/devcontainer-prebuild.yaml'
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - '.devcontainer/**'
+  #     - 'home/install.sh'
+  #     - '.github/workflows/devcontainer-prebuild.yaml'
   schedule:
-    # Weekly rebuild on Mondays at 3 AM UTC to pick up base image updates
-    - cron: '0 3 * * 1'
+    # Monthly rebuild on Day 1 of the month at 3 AM UTC to pick up base image updates
+    - cron: '0 3 1 * *'
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
   prebuild:
     name: Build and Push Devcontainer Image
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
