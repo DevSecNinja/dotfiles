@@ -2,7 +2,8 @@
   "name": "dotfiles",
   // Prebuilt image with dotfiles tools (fish, vim, brew, mise, etc.) pre-installed
   // Built by .github/workflows/devcontainer-prebuild.yaml from Dockerfile
-  // postCreateCommand re-applies chezmoi from workspace source for fast incremental updates
+  // chezmoi config is removed after prebuild so postCreateCommand re-initializes
+  // fresh, correctly detecting the runtime environment (CI, Codespaces, etc.)
   "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {
