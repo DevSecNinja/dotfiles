@@ -1,0 +1,24 @@
+{
+  "name": "dotfiles-prebuild",
+  // Build config used ONLY by the devcontainer-prebuild workflow to create the prebuilt image.
+  // The main devcontainer.json references the resulting image by name.
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git-lfs:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "modules": "Pester==5.7.1"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+  "remoteUser": "vscode"
+}

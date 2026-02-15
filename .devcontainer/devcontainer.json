@@ -1,8 +1,9 @@
 {
   "name": "dotfiles",
-  // Base image - prebuilt versions are available at ghcr.io/devsecninja/dotfiles-devcontainer:latest
-  // Codespaces prebuilds can be configured in repository settings for faster startup
-  "image": "mcr.microsoft.com/devcontainers/base:debian-12",
+  // Prebuilt image with dotfiles tools (fish, vim, brew, mise, etc.) pre-installed
+  // Built by .github/workflows/devcontainer-prebuild.yaml from Dockerfile
+  // postCreateCommand re-applies chezmoi from workspace source for fast incremental updates
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "version": "latest"
