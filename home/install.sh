@@ -41,17 +41,20 @@ script_dir="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" && pwd -P)"
 # Check if running in non-interactive environment
 # - stdin is not a TTY
 # - CI environment variables are set
+# - Running inside a devcontainer or Codespace
 is_non_interactive=false
-if [ ! -t 0 ] || [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ] || [ "${TF_BUILD:-}" = "true" ]; then
+if [ ! -t 0 ] || [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ] || [ "${TF_BUILD:-}" = "true" ] || [ "${REMOTE_CONTAINERS:-}" = "true" ] || [ "${CODESPACES:-}" = "true" ]; then
 	is_non_interactive=true
 fi
 
 # Build chezmoi arguments
 set -- init --apply
 
-# Add --no-tty flag for non-interactive environments
+# Add --no-tty and --force flags for non-interactive environments
+# --no-tty: prevent TTY input prompts
+# --force: overwrite modified managed files without prompting
 if [ "$is_non_interactive" = true ]; then
-	set -- "$@" --no-tty
+	set -- "$@" --no-tty --force
 fi
 
 set -- "$@" --source="${script_dir}"
