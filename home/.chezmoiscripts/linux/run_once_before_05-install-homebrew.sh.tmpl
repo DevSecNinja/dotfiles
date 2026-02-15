@@ -18,19 +18,19 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log_info() {
-    echo -e "${WHITE}ℹ️  $*${NC}"
+	echo -e "${WHITE}ℹ️  $*${NC}"
 }
 
 log_success() {
-    echo -e "${GREEN}✅ $*${NC}"
+	echo -e "${GREEN}✅ $*${NC}"
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠️  $*${NC}"
+	echo -e "${YELLOW}⚠️  $*${NC}"
 }
 
 log_error() {
-    echo -e "${RED}❌ $*${NC}"
+	echo -e "${RED}❌ $*${NC}"
 }
 
 {{- if ne .installType "full" }}
@@ -41,18 +41,18 @@ exit 0
 # Detect OS
 OS="{{ .chezmoi.os }}"
 if [[ "$OS" != "linux" && "$OS" != "darwin" ]]; then
-    log_info "Skipping Homebrew installation (unsupported OS: $OS)"
-    exit 0
+	log_info "Skipping Homebrew installation (unsupported OS: $OS)"
+	exit 0
 fi
 
 log_info "Checking for Homebrew installation..."
 
 # Check if Homebrew is already installed
 if command -v brew >/dev/null 2>&1; then
-    BREW_VERSION=$(brew --version | head -n1)
-    log_success "Homebrew is already installed: $BREW_VERSION"
-    log_info "Location: $(which brew)"
-    exit 0
+	BREW_VERSION=$(brew --version | head -n1)
+	log_success "Homebrew is already installed: $BREW_VERSION"
+	log_info "Location: $(which brew)"
+	exit 0
 fi
 
 log_warning "Homebrew not found. Installing Homebrew..."
@@ -62,31 +62,31 @@ log_info "Checking for required dependencies..."
 MISSING_DEPS=()
 
 for cmd in curl git; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-        MISSING_DEPS+=("$cmd")
-    fi
+	if ! command -v "$cmd" >/dev/null 2>&1; then
+		MISSING_DEPS+=("$cmd")
+	fi
 done
 
 if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
-    log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
-    log_info "Please install them first:"
-    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
-    log_info "  sudo apt-get install -y ${MISSING_DEPS[*]}"
-    {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
-    log_info "  sudo dnf install -y ${MISSING_DEPS[*]}"
-    {{- end }}
-    exit 1
+	log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
+	log_info "Please install them first:"
+	{{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+	log_info "  sudo apt-get install -y ${MISSING_DEPS[*]}"
+	{{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+	log_info "  sudo dnf install -y ${MISSING_DEPS[*]}"
+	{{- end }}
+	exit 1
 fi
 
 # Check for sudo permissions (only relevant on Linux)
 {{- if eq .chezmoi.os "linux" }}
 log_info "Checking for sudo permissions..."
 if ! sudo -n true 2>/dev/null; then
-    log_warning "Sudo access not available without password prompt"
-    log_warning "Homebrew installation requires sudo permissions to create /home/linuxbrew/.linuxbrew"
-    log_info "On Linux, Homebrew is optional. Continuing without Homebrew..."
-    log_info "You can install Homebrew manually later if needed: https://brew.sh"
-    exit 0
+	log_warning "Sudo access not available without password prompt"
+	log_warning "Homebrew installation requires sudo permissions to create /home/linuxbrew/.linuxbrew"
+	log_info "On Linux, Homebrew is optional. Continuing without Homebrew..."
+	log_info "You can install Homebrew manually later if needed: https://brew.sh"
+	exit 0
 fi
 log_success "Sudo permissions available"
 {{- end }}
@@ -106,86 +106,86 @@ NONINTERACTIVE=1
 
 # Attempt Homebrew installation - optional on Linux, required on macOS
 if NONINTERACTIVE=$NONINTERACTIVE /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
-    log_success "Homebrew installed successfully!"
+	log_success "Homebrew installed successfully!"
 
-    # Try to find Homebrew in standard locations (macOS and Linux)
-    BREW_PATH=""
-    if [[ -x "/opt/homebrew/bin/brew" ]]; then
-        # macOS Apple Silicon
-        BREW_PATH="/opt/homebrew/bin/brew"
-        log_info "Homebrew installed at: /opt/homebrew"
-    elif [[ -x "/usr/local/bin/brew" ]]; then
-        # macOS Intel
-        BREW_PATH="/usr/local/bin/brew"
-        log_info "Homebrew installed at: /usr/local"
-    elif [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
-        # Linux system-wide
-        BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
-        log_info "Homebrew installed at: /home/linuxbrew/.linuxbrew"
-    elif [[ -x "$HOME/.linuxbrew/bin/brew" ]]; then
-        # Linux user-local
-        BREW_PATH="$HOME/.linuxbrew/bin/brew"
-        log_info "Homebrew installed at: $HOME/.linuxbrew"
-    fi
+	# Try to find Homebrew in standard locations (macOS and Linux)
+	BREW_PATH=""
+	if [[ -x "/opt/homebrew/bin/brew" ]]; then
+		# macOS Apple Silicon
+		BREW_PATH="/opt/homebrew/bin/brew"
+		log_info "Homebrew installed at: /opt/homebrew"
+	elif [[ -x "/usr/local/bin/brew" ]]; then
+		# macOS Intel
+		BREW_PATH="/usr/local/bin/brew"
+		log_info "Homebrew installed at: /usr/local"
+	elif [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
+		# Linux system-wide
+		BREW_PATH="/home/linuxbrew/.linuxbrew/bin/brew"
+		log_info "Homebrew installed at: /home/linuxbrew/.linuxbrew"
+	elif [[ -x "$HOME/.linuxbrew/bin/brew" ]]; then
+		# Linux user-local
+		BREW_PATH="$HOME/.linuxbrew/bin/brew"
+		log_info "Homebrew installed at: $HOME/.linuxbrew"
+	fi
 
-    # Add Homebrew to PATH for this session if found
-    if [[ -n "$BREW_PATH" ]]; then
-        eval "$($BREW_PATH shellenv)"
-    fi
+	# Add Homebrew to PATH for this session if found
+	if [[ -n "$BREW_PATH" ]]; then
+		eval "$($BREW_PATH shellenv)"
+	fi
 
-    # Verify installation
-    if command -v brew >/dev/null 2>&1; then
-        BREW_VERSION=$(brew --version | head -n1)
-        log_success "Verified Homebrew installation: $BREW_VERSION"
+	# Verify installation
+	if command -v brew >/dev/null 2>&1; then
+		BREW_VERSION=$(brew --version | head -n1)
+		log_success "Verified Homebrew installation: $BREW_VERSION"
 
-        # Install recommended dependencies on Debian/Ubuntu
-        {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
-        log_info "Installing recommended Homebrew dependencies for Debian/Ubuntu..."
-        sudo apt-get install -y build-essential procps curl file git 2>/dev/null || log_warning "Some dependencies may not have installed"
-        {{- end }}
+		# Install recommended dependencies on Debian/Ubuntu
+		{{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+		log_info "Installing recommended Homebrew dependencies for Debian/Ubuntu..."
+		sudo apt-get install -y build-essential procps curl file git 2>/dev/null || log_warning "Some dependencies may not have installed"
+		{{- end }}
 
-        # Fix permissions for zsh completions to prevent compaudit warnings
-        # https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
-        log_info "Securing Homebrew completion files for zsh..."
-        if sudo chmod -R go-w "$(brew --prefix)/share" 2>/dev/null; then
-            log_success "Homebrew completion permissions secured"
-        else
-            log_warning "Could not secure completion permissions (non-critical)"
-        fi
-    else
-        log_warning "Homebrew installation completed but brew command not found in PATH"
-        log_info "You may need to restart your shell or run:"
-        {{- if eq .chezmoi.os "darwin" }}
-        log_info "  eval \"\$(/opt/homebrew/bin/brew shellenv)\"    # macOS Apple Silicon"
-        log_info "  eval \"\$(/usr/local/bin/brew shellenv)\"       # macOS Intel"
-        {{- else }}
-        log_info "  eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
-        log_info "  eval \"\$($HOME/.linuxbrew/bin/brew shellenv)\""
-        {{- end }}
-        log_info "You may also need to secure completion permissions manually:"
-        log_info "  sudo chmod -R go-w \"\$(brew --prefix)/share\""
-        {{- if eq .chezmoi.os "darwin" }}
-        log_error "Homebrew is required on macOS but installation verification failed"
-        exit 1
-        {{- else }}
-        log_info "Continuing without Homebrew on Linux..."
-        exit 0
-        {{- end }}
-    fi
+		# Fix permissions for zsh completions to prevent compaudit warnings
+		# https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
+		log_info "Securing Homebrew completion files for zsh..."
+		if sudo chmod -R go-w "$(brew --prefix)/share" 2>/dev/null; then
+			log_success "Homebrew completion permissions secured"
+		else
+			log_warning "Could not secure completion permissions (non-critical)"
+		fi
+	else
+		log_warning "Homebrew installation completed but brew command not found in PATH"
+		log_info "You may need to restart your shell or run:"
+		{{- if eq .chezmoi.os "darwin" }}
+		log_info "  eval \"\$(/opt/homebrew/bin/brew shellenv)\"    # macOS Apple Silicon"
+		log_info "  eval \"\$(/usr/local/bin/brew shellenv)\"       # macOS Intel"
+		{{- else }}
+		log_info "  eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
+		log_info "  eval \"\$($HOME/.linuxbrew/bin/brew shellenv)\""
+		{{- end }}
+		log_info "You may also need to secure completion permissions manually:"
+		log_info "  sudo chmod -R go-w \"\$(brew --prefix)/share\""
+		{{- if eq .chezmoi.os "darwin" }}
+		log_error "Homebrew is required on macOS but installation verification failed"
+		exit 1
+		{{- else }}
+		log_info "Continuing without Homebrew on Linux..."
+		exit 0
+		{{- end }}
+	fi
 else
-    log_warning "Failed to install Homebrew"
-    {{- if eq .chezmoi.os "darwin" }}
-    log_error "Homebrew is required on macOS for package installation"
-    log_info "Please install Homebrew manually and try again:"
-    log_info "  Visit https://brew.sh for installation instructions"
-    exit 1
-    {{- else }}
-    log_info "This is often due to insufficient permissions on shared/WSL systems."
-    log_info "Homebrew is optional on Linux - continuing with dotfiles installation."
-    log_info "If you need Homebrew, you can install it manually later:"
-    log_info "  Visit https://brew.sh for installation instructions"
-    exit 0
-    {{- end }}
+	log_warning "Failed to install Homebrew"
+	{{- if eq .chezmoi.os "darwin" }}
+	log_error "Homebrew is required on macOS for package installation"
+	log_info "Please install Homebrew manually and try again:"
+	log_info "  Visit https://brew.sh for installation instructions"
+	exit 1
+	{{- else }}
+	log_info "This is often due to insufficient permissions on shared/WSL systems."
+	log_info "Homebrew is optional on Linux - continuing with dotfiles installation."
+	log_info "If you need Homebrew, you can install it manually later:"
+	log_info "  Visit https://brew.sh for installation instructions"
+	exit 0
+	{{- end }}
 fi
 
 log_success "Homebrew setup completed successfully!"
