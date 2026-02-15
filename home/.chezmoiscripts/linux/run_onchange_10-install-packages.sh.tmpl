@@ -23,8 +23,7 @@ else
     exit 0
 fi
 
-{{- if eq .chezmoi.os "linux" }}
-    {{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
 
 echo "📦 Updating package lists..."
 $SUDO_CMD apt-get update
@@ -63,7 +62,7 @@ else
 fi
 {{- end }}
 {{- end }}
-    {{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+{{- else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "fedora" "rhel" "centos") }}
 
 echo "📦 Installing packages with DNF..."
 # Install light mode packages (always)

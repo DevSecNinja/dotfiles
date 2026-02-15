@@ -70,9 +70,9 @@ done
 if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
 	log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
 	log_info "Please install them first:"
-	{{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+	{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
 	log_info "  sudo apt-get install -y ${MISSING_DEPS[*]}"
-	{{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+	{{- else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "fedora" "rhel" "centos") }}
 	log_info "  sudo dnf install -y ${MISSING_DEPS[*]}"
 	{{- end }}
 	exit 1
@@ -139,7 +139,7 @@ if NONINTERACTIVE=$NONINTERACTIVE /bin/bash -c "$(curl -fsSL https://raw.githubu
 		log_success "Verified Homebrew installation: $BREW_VERSION"
 
 		# Install recommended dependencies on Debian/Ubuntu
-		{{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+		{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
 		log_info "Installing recommended Homebrew dependencies for Debian/Ubuntu..."
 		sudo apt-get install -y build-essential procps curl file git 2>/dev/null || log_warning "Some dependencies may not have installed"
 		{{- end }}
