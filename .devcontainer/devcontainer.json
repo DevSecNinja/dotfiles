@@ -4,7 +4,8 @@
   // Codespaces prebuilds can be configured in repository settings for faster startup
   "image": "mcr.microsoft.com/devcontainers/base:debian-12",
   "features": {
-    "ghcr.io/devcontainers/features/git-lfs:1": {},
+    // Causes GPG signature failure with multi-platform builds
+    // "ghcr.io/devcontainers/features/git-lfs:1": {},
     "ghcr.io/devcontainers/features/powershell:1": {
       "modules": "Pester==5.7.1"
     },
