@@ -22,11 +22,24 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE_BASENAME: dotfiles-devcontainer
+
 jobs:
   prebuild:
-    name: Build and Push Devcontainer Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
@@ -49,9 +62,10 @@ jobs:
       - name: Pre-build dev container image
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
-          cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/dotfiles-devcontainer
-          platform: linux/amd64,linux/arm64
+          imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
+          imageTag: ${{ matrix.arch }}
+          cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}:${{ matrix.arch }}
+          platform: ${{ matrix.platform }}
           # Only push on main branch, PRs are built for validation only
           push: filter
           refFilterForPush: refs/heads/main
@@ -59,3 +73,33 @@ jobs:
             push
             workflow_dispatch
             schedule
+
+  merge:
+    name: Create Multi-Platform Manifest
+    runs-on: ubuntu-24.04
+    needs: prebuild
+    # Only merge when images were actually pushed
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    timeout-minutes: 10
+
+    steps:
+      - name: Set lowercase repository owner
+        id: lowercase
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-platform manifest
+        run: |
+          IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
+          docker manifest create "${IMAGE}:latest" \
+            "${IMAGE}:amd64" \
+            "${IMAGE}:arm64"
+          docker manifest annotate "${IMAGE}:latest" "${IMAGE}:amd64" --os linux --arch amd64
+          docker manifest annotate "${IMAGE}:latest" "${IMAGE}:arm64" --os linux --arch arm64
+          docker manifest push "${IMAGE}:latest"
