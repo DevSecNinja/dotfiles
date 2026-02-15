@@ -86,7 +86,9 @@ if check_command "pwsh" "PowerShell"; then
 fi
 
 # Check Python (from ghcr.io/devcontainers/features/python)
-check_command "python" "Python" || check_command "python3" "Python"
+check_command "python3" "Python"
+# NOTE: Debian doesn't symlink python to python3 by default, so we only check python3
+# check_command "python" "Python"
 
 # Check GitHub CLI (from ghcr.io/devcontainers/features/github-cli)
 check_command "gh" "GitHub CLI"
