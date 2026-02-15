@@ -55,4 +55,7 @@ jobs:
           # Only push on main branch, PRs are built for validation only
           push: filter
           refFilterForPush: refs/heads/main
-          eventFilterForPush: push,workflow_dispatch,schedule
+          eventFilterForPush: |
+            push
+            workflow_dispatch
+            schedule
