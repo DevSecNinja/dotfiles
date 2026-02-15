@@ -5,9 +5,10 @@ name: Sync Develop Branch
 # This ensures develop stays in sync with main without manual intervention.
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
