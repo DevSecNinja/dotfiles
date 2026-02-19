@@ -23,15 +23,15 @@ else
     exit 0
 fi
 
-{{- if eq .chezmoi.os "linux" }}
-{{- if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+# {{ if eq .chezmoi.os "linux" }}
+# {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
 
 echo "📦 Updating package lists..."
 $SUDO_CMD apt-get update
 
 echo "📦 Installing packages with APT..."
 # Install light mode packages (always)
-{{- range .packages.linux.apt.light }}
+# {{ range .packages.linux.apt.light }}
 echo "Installing {{ . }}..."
 if $SUDO_CMD apt-get install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
@@ -44,11 +44,11 @@ else
     fi
     echo "   Continuing with remaining packages..."
 fi
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode packages (additional)
-{{- range .packages.linux.apt.full }}
+# {{ range .packages.linux.apt.full }}
 echo "Installing {{ . }}..."
 if $SUDO_CMD apt-get install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
@@ -61,13 +61,13 @@ else
     fi
     echo "   Continuing with remaining packages..."
 fi
-{{- end }}
-{{- end }}
-{{- else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+# {{ end }}
+# {{ end }}
+# {{ else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
 
 echo "📦 Installing packages with DNF..."
 # Install light mode packages (always)
-{{- range .packages.linux.dnf.light }}
+# {{ range .packages.linux.dnf.light }}
 echo "Installing {{ . }}..."
 if $SUDO_CMD dnf install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
@@ -75,11 +75,11 @@ else
     echo "⚠️  Warning: Failed to install {{ . }}"
     echo "   Continuing with remaining packages..."
 fi
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode packages (additional)
-{{- range .packages.linux.dnf.full }}
+# {{ range .packages.linux.dnf.full }}
 echo "Installing {{ . }}..."
 if $SUDO_CMD dnf install -y {{ . | quote }}; then
     echo "✅ Successfully installed {{ . }}"
@@ -87,12 +87,12 @@ else
     echo "⚠️  Warning: Failed to install {{ . }}"
     echo "   Continuing with remaining packages..."
 fi
-{{- end }}
-{{- end }}
-    {{- end }}
+# {{ end }}
+# {{ end }}
+    # {{ end }}
 
 # Check if Homebrew packages are defined for Linux
-{{- if or .packages.linux.brew.light .packages.linux.brew.full }}
+# {{ if or .packages.linux.brew.light .packages.linux.brew.full }}
 echo ""
 # Try to initialize Homebrew from standard locations if not already in PATH
 if ! command -v brew >/dev/null 2>&1; then
@@ -108,30 +108,30 @@ fi
 
 if command -v brew >/dev/null 2>&1; then
     echo "📦 Installing packages with Homebrew..."
-    {{- range .packages.linux.brew.light }}
+    # {{ range .packages.linux.brew.light }}
     echo "Installing {{ . }}..."
     brew install {{ . | quote }}
-    {{- end }}
-    {{- if eq .installType "full" }}
-    {{- range .packages.linux.brew.full }}
+    # {{ end }}
+    # {{ if eq .installType "full" }}
+    # {{ range .packages.linux.brew.full }}
     echo "Installing {{ . }}..."
     brew install {{ . | quote }}
-    {{- end }}
-    {{- end }}
+    # {{ end }}
+    # {{ end }}
 else
     echo "⚠️  Homebrew not available. Skipping Homebrew packages:"
-    {{- range .packages.linux.brew.light }}
+    # {{ range .packages.linux.brew.light }}
     echo "  - {{ . }} (not installed)"
-    {{- end }}
-    {{- if eq .installType "full" }}
-    {{- range .packages.linux.brew.full }}
+    # {{ end }}
+    # {{ if eq .installType "full" }}
+    # {{ range .packages.linux.brew.full }}
     echo "  - {{ . }} (not installed)"
-    {{- end }}
-    {{- end }}
+    # {{ end }}
+    # {{ end }}
     echo "ℹ️  You can install Homebrew later from https://brew.sh"
 fi
-{{- end }}
-{{- else if eq .chezmoi.os "darwin" }}
+# {{ end }}
+# {{ else if eq .chezmoi.os "darwin" }}
 if ! command -v brew >/dev/null 2>&1; then
     echo "❌ Homebrew not found. Please run the Homebrew installation script first."
     echo "   The script should have run automatically if you're in full mode."
@@ -140,31 +140,31 @@ fi
 
 echo "📦 Installing packages with Homebrew..."
 # Install light mode packages (always)
-{{- range .packages.darwin.brew.light }}
+# {{ range .packages.darwin.brew.light }}
 echo "Installing {{ . }}..."
 brew install {{ . | quote }}
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode packages (additional)
-{{- range .packages.darwin.brew.full }}
+# {{ range .packages.darwin.brew.full }}
 echo "Installing {{ . }}..."
 brew install {{ . | quote }}
-{{- end }}
-{{- end }}
-{{- end }}
+# {{ end }}
+# {{ end }}
+# {{ end }}
 
 echo "✅ Development tools installation complete ({{ .installType }} mode)!"
 
 # Install VS Code extensions if code command is available
 # Skip in codespaces and dev containers as extensions are managed differently
-{{- if and (not .codespaces) (not .devcontainer) }}
+# {{ if and (not .codespaces) (not .devcontainer) }}
 if command -v code >/dev/null 2>&1; then
     echo ""
     echo "📦 Installing VS Code extensions..."
 
     # Install common extensions
-{{- range .extensions.common }}
+# {{ range .extensions.common }}
     echo -n "Checking {{ . }}... "
     if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
         echo "[OK]"
@@ -176,11 +176,11 @@ if command -v code >/dev/null 2>&1; then
             echo "  [FAILED] Could not install {{ . }}"
         fi
     fi
-{{- end }}
+# {{ end }}
 
-{{- if eq .chezmoi.os "linux" }}
+# {{ if eq .chezmoi.os "linux" }}
     # Install Linux-specific extensions
-{{- range .extensions.linux }}
+# {{ range .extensions.linux }}
     echo -n "Checking {{ . }}... "
     if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
         echo "[OK]"
@@ -192,10 +192,10 @@ if command -v code >/dev/null 2>&1; then
             echo "  [FAILED] Could not install {{ . }}"
         fi
     fi
-{{- end }}
-{{- else if eq .chezmoi.os "darwin" }}
+# {{ end }}
+# {{ else if eq .chezmoi.os "darwin" }}
     # Install macOS-specific extensions
-{{- range .extensions.darwin }}
+# {{ range .extensions.darwin }}
     echo -n "Checking {{ . }}... "
     if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
         echo "[OK]"
@@ -207,18 +207,18 @@ if command -v code >/dev/null 2>&1; then
             echo "  [FAILED] Could not install {{ . }}"
         fi
     fi
-{{- end }}
-{{- end }}
+# {{ end }}
+# {{ end }}
 
     echo "[OK] VS Code extensions installation complete!"
 else
     echo ""
     echo "[SKIP] VS Code not found, skipping extension installation"
 fi
-{{- else }}
+# {{ else }}
 echo ""
 echo "[SKIP] VS Code extensions skipped (codespace/devcontainer environment)"
-{{- end }}
+# {{ end }}
 
 echo ""
 echo "[COMPLETE] All installations finished!"

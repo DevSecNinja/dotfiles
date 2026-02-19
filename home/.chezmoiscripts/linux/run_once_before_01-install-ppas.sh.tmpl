@@ -7,8 +7,8 @@
 # Don't exit on error - we want to continue even if some PPAs fail
 set +e
 
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
-{{- if or .packages.linux.apt.ppas.light .packages.linux.apt.ppas.full }}
+# {{ if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
+# {{ if or .packages.linux.apt.ppas.light .packages.linux.apt.ppas.full }}
 
 echo "📦 Installing PPAs ({{ .installType }} mode)..."
 
@@ -43,7 +43,7 @@ if ! command -v add-apt-repository >/dev/null 2>&1; then
 fi
 
 # Install light mode PPAs (always)
-{{- range .packages.linux.apt.ppas.light }}
+# {{ range .packages.linux.apt.ppas.light }}
 echo "Adding PPA: {{ . }}"
 if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
     echo "✅ Successfully added PPA: {{ . }}"
@@ -51,11 +51,11 @@ else
     echo "⚠️  Warning: Failed to add PPA: {{ . }}"
     echo "   Continuing with remaining PPAs..."
 fi
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode PPAs (additional)
-{{- range .packages.linux.apt.ppas.full }}
+# {{ range .packages.linux.apt.ppas.full }}
 echo "Adding PPA: {{ . }}"
 if $SUDO_CMD add-apt-repository -y {{ . | quote }}; then
     echo "✅ Successfully added PPA: {{ . }}"
@@ -63,8 +63,8 @@ else
     echo "⚠️  Warning: Failed to add PPA: {{ . }}"
     echo "   Continuing with remaining PPAs..."
 fi
-{{- end }}
-{{- end }}
+# {{ end }}
+# {{ end }}
 
 echo "📦 Updating package lists after adding PPAs..."
 if [ -n "$DEBIAN_FRONTEND_VALUE" ]; then
@@ -74,9 +74,9 @@ else
 fi
 
 echo "✅ PPA installation complete ({{ .installType }} mode)!"
-{{- else }}
+# {{ else }}
 echo "ℹ️  No PPAs defined, skipping PPA installation"
-{{- end }}
-{{- else }}
+# {{ end }}
+# {{ else }}
 echo "ℹ️  PPA installation only supported on Ubuntu/Debian, skipping"
-{{- end }}
+# {{ end }}

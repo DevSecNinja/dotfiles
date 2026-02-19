@@ -1,20 +1,20 @@
 # Chezmoi configuration variables
 # This file is auto-generated from chezmoi template
 
-{{- if .githubUsername }}
+# {{ if .githubUsername }}
 # Set GitHub username from chezmoi config for use in scripts
 set -gx CHEZMOI_GITHUB_USERNAME "{{ .githubUsername }}"
-{{- end }}
+# {{ end }}
 
 # Windows Enterprise Environment Detection (works on Windows and WSL)
 set -gx CHEZMOI_IS_ENTRA_ID_JOINED "{{ .isEntraIDJoined }}"
 set -gx CHEZMOI_IS_INTUNE_JOINED "{{ .isIntuneJoined }}"
 set -gx CHEZMOI_IS_ENTRA_REGISTERED "{{ .isEntraRegistered }}"
 set -gx CHEZMOI_IS_AD_DOMAIN_JOINED "{{ .isADDomainJoined }}"
-{{- if .entraIDTenantName }}
+# {{ if .entraIDTenantName }}
 set -gx CHEZMOI_ENTRA_ID_TENANT_NAME "{{ .entraIDTenantName }}"
-{{- end }}
-{{- if .entraIDTenantId }}
+# {{ end }}
+# {{ if .entraIDTenantId }}
 set -gx CHEZMOI_ENTRA_ID_TENANT_ID "{{ .entraIDTenantId }}"
-{{- end }}
+# {{ end }}
 set -gx CHEZMOI_IS_WORK "{{ .isWork }}"

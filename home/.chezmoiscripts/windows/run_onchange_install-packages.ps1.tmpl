@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.os "windows" -}}
+# {{ if eq .chezmoi.os "windows" }}
 # PowerShell script to install packages defined in .chezmoidata/packages.yaml
 # Light mode: installs essential packages only
 # Full mode: installs light + additional development packages
@@ -19,7 +19,7 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 Write-Host "`nInstalling WinGet packages..." -ForegroundColor Cyan
 
 # Install light mode packages (always)
-{{- range .packages.windows.winget.light }}
+# {{ range .packages.windows.winget.light }}
 Write-Host "Checking {{ . }}..." -NoNewline
 $result = winget list --id {{ . | quote }} --exact 2>&1
 if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
@@ -33,11 +33,11 @@ if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
         Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
     }
 }
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode packages (additional)
-{{- range .packages.windows.winget.full }}
+# {{ range .packages.windows.winget.full }}
 Write-Host "Checking {{ . }}..." -NoNewline
 $result = winget list --id {{ . | quote }} --exact 2>&1
 if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
@@ -51,8 +51,8 @@ if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
         Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
     }
 }
-{{- end }}
-{{- end }}
+# {{ end }}
+# {{ end }}
 
 Write-Host "`nDevelopment tools installation complete ({{ .installType }} mode)!" -ForegroundColor Green
 
@@ -61,7 +61,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
     Write-Host "`nInstalling VS Code extensions..." -ForegroundColor Cyan
 
     # Install common extensions
-{{- range .extensions.common }}
+# {{ range .extensions.common }}
     Write-Host "Checking {{ . }}..." -NoNewline
     $installed = code --list-extensions 2>&1 | Select-String -Pattern "^{{ . }}$" -Quiet
     if ($installed) {
@@ -75,10 +75,10 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
             Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
         }
     }
-{{- end }}
+# {{ end }}
 
     # Install Windows-specific extensions
-{{- range .extensions.windows }}
+# {{ range .extensions.windows }}
     Write-Host "Checking {{ . }}..." -NoNewline
     $installed = code --list-extensions 2>&1 | Select-String -Pattern "^{{ . }}$" -Quiet
     if ($installed) {
@@ -92,7 +92,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
             Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
         }
     }
-{{- end }}
+# {{ end }}
 
     Write-Host "[OK] VS Code extensions installation complete!" -ForegroundColor Green
 } else {
@@ -100,4 +100,4 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
 }
 
 Write-Host "`n[COMPLETE] All installations finished!" -ForegroundColor Green
-{{- end }}
+# {{ end }}

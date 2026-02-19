@@ -18,27 +18,27 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
     fi
 fi
 
-{{- if eq .installType "light" }}
-{{-   if not (or .devcontainer .codespaces) }}
+# {{ if eq .installType "light" }}
+# {{   if not (or .devcontainer .codespaces) }}
 echo "ℹ️  Skipping pre-commit installation (light server mode)"
 exit 0
-{{-   end }}
-{{- end }}
+# {{   end }}
+# {{ end }}
 
 if command -v pre-commit >/dev/null 2>&1; then
     echo "✅ pre-commit already installed"
     exit 0
 fi
 
-{{- if or .devcontainer .codespaces }}
+# {{ if or .devcontainer .codespaces }}
 echo "🐳 Detected devcontainer/codespace environment - installing pre-commit..."
-{{- else if eq .installType "full" }}
+# {{ else if eq .installType "full" }}
 echo "📦 Installing pre-commit on dev server..."
-{{- end }}
+# {{ end }}
 
 echo "📦 Installing pre-commit..."
 
-{{- if eq .chezmoi.os "linux" }}
+# {{ if eq .chezmoi.os "linux" }}
 # Linux - install pre-commit in a venv
 VENV_DIR="$HOME/.local/venvs/pre-commit"
 
@@ -59,7 +59,7 @@ fi
 mkdir -p "$HOME/.local/bin"
 ln -sf "$VENV_DIR/bin/pre-commit" "$HOME/.local/bin/pre-commit"
 export PATH="$HOME/.local/bin:$PATH"
-{{- else if eq .chezmoi.os "darwin" }}
+# {{ else if eq .chezmoi.os "darwin" }}
 # macOS - prefer pipx or brew
 if command -v pipx >/dev/null 2>&1; then
     pipx install pre-commit
@@ -72,7 +72,7 @@ else
         pip3 install --user pre-commit
     fi
 fi
-{{- end }}
+# {{ end }}
 
 # Ensure .local/bin is in PATH
 export PATH="$HOME/.local/bin:$PATH"
@@ -80,7 +80,7 @@ export PATH="$HOME/.local/bin:$PATH"
 echo "✅ pre-commit installed successfully!"
 
 # Auto-enable hooks in devcontainer/codespace/dev server environments
-{{- if or .devcontainer .codespaces (eq .installType "full") }}
+# {{ if or .devcontainer .codespaces (eq .installType "full") }}
 if [ -d "{{ .chezmoi.sourceDir }}/.git" ] || git rev-parse --git-dir >/dev/null 2>&1; then
     echo "🔗 Enabling pre-commit hooks..."
     cd "{{ .chezmoi.sourceDir }}" && pre-commit install
@@ -88,6 +88,6 @@ if [ -d "{{ .chezmoi.sourceDir }}/.git" ] || git rev-parse --git-dir >/dev/null 
 else
     echo "💡 To enable hooks later, run: pre-commit install"
 fi
-{{- else }}
+# {{ else }}
 echo "💡 To enable hooks, run: pre-commit install"
-{{- end }}
+# {{ end }}

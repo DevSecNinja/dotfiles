@@ -13,7 +13,7 @@
 #
 # Note: This is a regular run script that executes on every chezmoi update/apply
 
-{{- if and (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) (not .isServer) }}
+# {{ if and (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) (not .isServer) }}
 
 set +e  # Continue on errors to avoid blocking chezmoi
 
@@ -116,7 +116,7 @@ echo "[OK] mise upgrade completed"
 echo "================================================"
 exit 0
 
-{{- else }}
+# {{ else }}
 # Not macOS or Linux - skip silently
 exit 0
-{{- end }}
+# {{ end }}

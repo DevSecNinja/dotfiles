@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.os "windows" -}}
+# {{ if eq .chezmoi.os "windows" }}
 # Source PowerShell functions from DotfilesHelpers module in chezmoi source directory
 $modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
 if (Test-Path $modulePath) {
@@ -23,22 +23,22 @@ pwsh -NoProfile -NonInteractive -Command "Install-PSResource -Name NerdFonts -Sc
 Write-Host "`nInstalling PowerShell Modules..." -ForegroundColor Cyan
 
 # Install light mode modules (always)
-{{- range .packages.windows.powershell_modules.light }}
+# {{ range .packages.windows.powershell_modules.light }}
 Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
-{{- end }}
+# {{ end }}
 
-{{- if eq .installType "full" }}
+# {{ if eq .installType "full" }}
 # Install full mode modules (additional)
-{{- range .packages.windows.powershell_modules.full }}
+# {{ range .packages.windows.powershell_modules.full }}
 Install-PowerShellModule -ModuleName {{ . | quote }} | Out-Null
-{{- end }}
+# {{ end }}
 
 # Install Git-based PowerShell modules (full mode only)
 Write-Host "`nInstalling Git-based PowerShell Modules..." -ForegroundColor Cyan
-{{- range .packages.windows.powershell_git_modules.full }}
+# {{ range .packages.windows.powershell_git_modules.full }}
 Install-GitPowerShellModule -Name {{ .name | quote }} -Url {{ .url | quote }} -Destination {{ .destination | quote }} | Out-Null
-{{- end }}
-{{- end }}
+# {{ end }}
+# {{ end }}
 
 Write-Host "`n[COMPLETE] All PowerShell modules installation finished!" -ForegroundColor Green
-{{- end }}
+# {{ end }}

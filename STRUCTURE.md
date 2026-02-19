@@ -148,22 +148,39 @@ Access Chezmoi data in `.tmpl` files:
 
 ### Conditional Configuration
 
+Template directives on standalone lines are prefixed with the language's comment
+character (`#` for shell/fish, `#` for PowerShell) so syntax checkers don't flag
+them as errors. Remove the whitespace-trimming dash (`-`) when commenting:
+
 ```bash
-{{- if eq .chezmoi.os "darwin" }}
+# {{ if eq .chezmoi.os "darwin" }}
 # macOS-specific config
-{{- else if eq .chezmoi.os "linux" }}
+# {{ else if eq .chezmoi.os "linux" }}
 # Linux-specific config
-{{- else if eq .chezmoi.os "windows" }}
+# {{ else if eq .chezmoi.os "windows" }}
 # Windows-specific config
-{{- end }}
+# {{ end }}
 
 # Installation mode
-{{- if eq .installType "light" }}
+# {{ if eq .installType "light" }}
 # Light server installation
-{{- else }}
+# {{ else }}
 # Full installation
-{{- end }}
+# {{ end }}
 ```
+
+For git config (`.tmpl` without a shebang language), the same `#` comment works:
+
+```ini
+# {{ if .wsl }}
+	sshCommand = ssh.exe
+# {{ else if eq .chezmoi.os "windows" }}
+	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
+# {{ end }}
+```
+
+> **Note**: Pure Chezmoi templates like `.chezmoi.yaml.tmpl` that are never
+> parsed by a shell interpreter can still use `{{-` / `-}}` directly.
 
 ## 🔍 Quick Commands
 

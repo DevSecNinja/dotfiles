@@ -6,11 +6,11 @@
 	editor = vim
 	autocrlf = input
 	excludesfile = ~/.config/git/ignore
-{{- if .wsl }}
+# {{ if .wsl }}
 	sshCommand = ssh.exe
-{{- else if eq .chezmoi.os "windows" }}
+# {{ else if eq .chezmoi.os "windows" }}
 	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
-{{- end }}
+# {{ end }}
 
 [init]
 	defaultBranch = main
@@ -36,16 +36,16 @@
 	amend = commit --amend --no-edit
 	config-list = config --list --show-origin
 
-{{- if and (eq .chezmoi.os "darwin") (not .codespaces) }}
+# {{ if and (eq .chezmoi.os "darwin") (not .codespaces) }}
 [credential]
 	helper = osxkeychain
-{{- else if eq .chezmoi.os "windows" }}
+# {{ else if eq .chezmoi.os "windows" }}
 [credential]
 	helper = manager
-{{- else if and (eq .chezmoi.os "linux") (not .codespaces) }}
+# {{ else if and (eq .chezmoi.os "linux") (not .codespaces) }}
 [credential]
 	helper = cache
-{{- end }}
+# {{ end }}
 
 [diff]
 	colorMoved = zebra
