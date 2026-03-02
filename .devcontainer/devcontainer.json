@@ -9,7 +9,7 @@
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "version": "latest"
     },
-    "ghcr.io/devcontainers/features/powershell:1": {
+    "ghcr.io/devcontainers/features/powershell:2": {
       "modules": "Pester==5.7.1"
     },
     "ghcr.io/devcontainers/features/github-cli:1": {
