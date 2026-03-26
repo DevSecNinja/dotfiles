@@ -21,4 +21,4 @@ node_modules/
 *.log
 
 # SOPS Decrypted Secrets
-.decrypted~*.sops.yml
+.decrypted~*
