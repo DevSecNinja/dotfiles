@@ -3,9 +3,7 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard",
-    ":semanticCommits",
-    ":automergeDigest",
-    ":automergeBranch"
+    ":semanticCommits"
   ],
   "timezone": "UTC",
   "schedule": [
@@ -24,7 +22,7 @@
         "patch",
         "digest"
       ],
-      "automerge": true
+      "automerge": false
     },
     {
       "description": "Group Python dependencies",
@@ -39,7 +37,7 @@
         "pre-commit"
       ],
       "groupName": "pre-commit hooks",
-      "automerge": true
+      "automerge": false
     }
   ],
   "pre-commit": {
