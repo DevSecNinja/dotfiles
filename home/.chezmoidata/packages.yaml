@@ -42,7 +42,6 @@ packages:
     # Homebrew formulas
     brew:
       light:
-        - azure-cli
         - fastfetch
         - fish
         - git
@@ -50,6 +49,7 @@ packages:
         - vim
         - wget
       full:
+        - azure-cli
         - go-task
         - mise
         - python@3
