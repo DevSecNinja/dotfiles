@@ -5,8 +5,16 @@
 set -eu
 
 if ! chezmoi="$(command -v chezmoi)"; then
-	echo "chezmoi not found, attempting to install..." >&2
+	# Check if chezmoi is already installed at the expected fallback path but not in PATH
+	# (e.g. in a prebuilt devcontainer image where ~/.local/bin is not yet in PATH)
+	if [ -x "${HOME}/.local/bin/chezmoi" ]; then
+		chezmoi="${HOME}/.local/bin/chezmoi"
+	else
+		echo "chezmoi not found, attempting to install..." >&2
+	fi
+fi
 
+if ! [ -x "${chezmoi:-}" ]; then
 	# Try brew first
 	if command -v brew >/dev/null; then
 		echo "Installing chezmoi with brew..." >&2

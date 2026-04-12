@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Bootstrap script for VS Code devcontainer dotfiles support.
+# VS Code looks for script/bootstrap as one of the standard bootstrap
+# locations when initializing a dotfiles repository. This script delegates
+# to the actual install script in the repository root.
+
+# -e: exit on error
+# -u: exit on unset variables
+set -eu
+
+# POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188
+script_dir="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+
+# Run the actual install script from the repository root
+exec "${script_dir}/../install.sh"
