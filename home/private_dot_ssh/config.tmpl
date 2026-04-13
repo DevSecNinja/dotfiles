@@ -1,0 +1,19 @@
+# Adds any 1Password configured hosts (optional, enable via Developer -> Generate SSH config file with bookmarked hosts)
+Include ~/.ssh/1Password/config
+
+{{ if .privateDomain }}
+# Development Server
+Host svldev.{{ .privateDomain }}
+    HostName svldev.{{ .privateDomain }}
+    User {{ .username }}
+
+# External Azure Server
+Host svlazext.{{ .privateDomain }}
+    HostName svlazext.{{ .privateDomain }}
+    User {{ .username }}
+
+# External Azure Public Server
+Host svlazextpub.{{ .privateDomain }}
+    HostName svlazext.{{ .privateDomain }}
+    User {{ .username }}
+{{ end -}}
