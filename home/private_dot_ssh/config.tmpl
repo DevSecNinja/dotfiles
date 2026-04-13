@@ -7,6 +7,11 @@ Host svldev.{{ .privateDomain }}
     HostName svldev.{{ .privateDomain }}
     User {{ .username }}
 
+# NAS Server
+Host svlnas.{{ .privateDomain }}
+    HostName svlnas.{{ .privateDomain }}
+    User {{ .username }}
+
 # External Azure Server
 Host svlazext.{{ .privateDomain }}
     HostName svlazext.{{ .privateDomain }}
