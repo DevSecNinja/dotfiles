@@ -45,6 +45,14 @@
 {{-   $email = promptString "email" $email -}}
 {{- end -}}
 
+{{- /* Private domain name used for SSH configs, internal services, etc. */ -}}
+{{- $privateDomain := "" -}}
+{{- if hasKey . "privateDomain" -}}
+{{-   $privateDomain = .privateDomain -}}
+{{- else if $interactive -}}
+{{-   $privateDomain = promptString "private domain" $privateDomain -}}
+{{- end -}}
+
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
 {{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
@@ -188,5 +196,6 @@ data:
   isWork: {{ $isWork }}
   lastname: {{ $lastname | quote }}
   name: {{ $name | quote }}
+  privateDomain: {{ $privateDomain | quote }}
   username: {{ $username | quote }}
   wsl: {{ $wsl }}
