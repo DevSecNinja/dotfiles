@@ -4,7 +4,7 @@
 # Build context must be the repo root (set via "context": ".." in devcontainer.json)
 # so that the home/ directory is available for COPY.
 
-FROM mcr.microsoft.com/devcontainers/base:debian-12
+FROM mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
 
 # Copy dotfiles source into the image for chezmoi to install tools during build
 COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
