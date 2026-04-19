@@ -56,18 +56,38 @@ else {
 # Check if functions are available (they should be loaded by profile.ps1 via DotfilesHelpers module)
 # If not available, import the module directly (needed when running via chezmoi)
 if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-    $modulePath = Join-Path $HOME ".config\powershell\modules\DotfilesHelpers"
-    if (Test-Path $modulePath) {
-        try {
-            Import-Module $modulePath -Force -DisableNameChecking
-        }
-        catch {
-            Write-Warning "Failed to load DotfilesHelpers module from $modulePath : $_"
+    # Try chezmoi source directory first (during chezmoi apply)
+    $chezmoiSourceDir = $null
+    try {
+        $chezmoiSourceDir = chezmoi source-path 2>$null
+    }
+    catch {
+        # Ignore errors if chezmoi is not available
+    }
+
+    $modulePaths = @()
+    if ($chezmoiSourceDir -and (Test-Path $chezmoiSourceDir)) {
+        $modulePaths += Join-Path $chezmoiSourceDir "dot_config\powershell\modules\DotfilesHelpers"
+    }
+    # Fall back to home directory (after chezmoi has applied files)
+    $modulePaths += Join-Path $HOME ".config\powershell\modules\DotfilesHelpers"
+
+    $moduleLoaded = $false
+    foreach ($modulePath in $modulePaths) {
+        if (Test-Path $modulePath) {
+            try {
+                Import-Module $modulePath -Force -DisableNameChecking
+                $moduleLoaded = $true
+                break
+            }
+            catch {
+                Write-Verbose "Failed to load DotfilesHelpers module from $modulePath : $_"
+            }
         }
     }
 
-    if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-        Write-Warning "DotfilesHelpers module not found at $modulePath"
+    if (-not $moduleLoaded -or -not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
+        Write-Warning "DotfilesHelpers module not found in any of the expected locations"
         Write-Warning "Skipping winget upgrade"
         exit 0
     }
