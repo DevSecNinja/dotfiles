@@ -56,7 +56,8 @@ else {
 # Check if functions are available (they should be loaded by profile.ps1 via DotfilesHelpers module)
 # If not available, import the module directly (needed when running via chezmoi)
 if (-not (Get-Command Invoke-WingetUpgrade -ErrorAction SilentlyContinue)) {
-    $modulePath = Join-Path $HOME ".config\powershell\modules\DotfilesHelpers"
+    # Use $env:USERPROFILE for better cross-PowerShell compatibility
+    $modulePath = Join-Path $env:USERPROFILE ".config\powershell\modules\DotfilesHelpers"
     if (Test-Path $modulePath) {
         try {
             Import-Module $modulePath -Force -DisableNameChecking
