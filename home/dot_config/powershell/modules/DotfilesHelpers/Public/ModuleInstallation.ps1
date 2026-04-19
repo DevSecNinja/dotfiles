@@ -17,7 +17,7 @@ function Install-PowerShellModule {
     )
 
     Write-Host "Installing module '$ModuleName'..." -NoNewline
-    $result = pwsh -NoProfile -NonInteractive -Command "`$module = Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction SilentlyContinue -PassThru 2>&1; if (`$module) { `$module | Select-Object Name, Version | Format-Table -HideTableHeaders | Out-String } else { Write-Error 'Module installation failed' }" 2>&1
+    $result = pwsh -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command "`$module = Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction SilentlyContinue -PassThru 2>&1; if (`$module) { `$module | Select-Object Name, Version | Format-Table -HideTableHeaders | Out-String } else { Write-Error 'Module installation failed' }" 2>&1
 
     if ($LASTEXITCODE -eq 0) {
         if ($result) {
