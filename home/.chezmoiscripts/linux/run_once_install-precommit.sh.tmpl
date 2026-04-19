@@ -6,6 +6,10 @@
 
 set -e
 
+# Set MISE_YES=1 to auto-accept trust prompts during installation
+# This prevents mise from hanging in non-interactive environments (Codespaces, CI)
+export MISE_YES=1
+
 # Check if we're in a git repository - if not, try to use chezmoi source directory
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
     # Try to use the chezmoi source directory if it's a git repository

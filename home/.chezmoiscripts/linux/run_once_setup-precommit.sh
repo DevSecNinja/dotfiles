@@ -5,6 +5,10 @@
 
 set -e
 
+# Set MISE_YES=1 to auto-accept trust prompts during installation
+# This prevents mise from hanging in non-interactive environments (Codespaces, CI)
+export MISE_YES=1
+
 echo "🔧 Setting up pre-commit..."
 
 # Get the Chezmoi source directory (where the dotfiles repo is)
