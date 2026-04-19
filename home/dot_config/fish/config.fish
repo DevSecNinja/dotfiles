@@ -4,13 +4,6 @@
 # Set greeting
 set -g fish_greeting ""
 
-# Set MISE_YES=1 in non-interactive environments to auto-accept trust prompts
-# This must be set early, before conf.d/mise.fish is loaded
-# Prevents mise from hanging when it encounters .mise.toml files in Codespaces/CI
-if set -q CI; or set -q CODESPACES; or set -q GITHUB_ACTIONS; or not isatty stdin
-    set -gx MISE_YES 1
-end
-
 # Set working directory to projects folder if not already there
 # Skip this if running in VS Code to preserve the opened folder location
 if test "$TERM_PROGRAM" != "vscode"

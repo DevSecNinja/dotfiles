@@ -5,12 +5,6 @@
 
 # Initialize mise if available
 if command -v mise >/dev/null 2>&1; then
-	# Set MISE_YES=1 in non-interactive environments to auto-accept trust prompts
-	# This prevents mise from hanging when it encounters .mise.toml files in Codespaces/CI
-	if [[ -n "${CI:-}" ]] || [[ -n "${CODESPACES:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]] || [[ ! -t 0 ]]; then
-		export MISE_YES=1
-	fi
-
 	# Activate mise (shell integration)
 	# Safely evaluate, suppressing any error messages
 	eval "$(mise activate zsh 2>/dev/null)" 2>/dev/null || true
