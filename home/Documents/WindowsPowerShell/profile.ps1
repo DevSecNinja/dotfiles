@@ -6,9 +6,8 @@ $configPath = "$env:USERPROFILE\.config\powershell\profile.ps1"
 
 if (Test-Path $configPath) {
     . $configPath
-} else {
-    Write-Warning "PowerShell configuration not found at $configPath"
 }
+# Silently skip if config doesn't exist (e.g., during initial chezmoi setup)
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
