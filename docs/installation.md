@@ -41,23 +41,6 @@ sh -c "$(curl -fsLS https://get.chezmoi.io)" -- init --apply DevSecNinja
 
 The dotfiles automatically detect WSL and apply appropriate configurations.
 
-## Coder Workspaces
-
-This repository supports [Coder](https://coder.com/) workspaces out of the
-box. The `install.sh` and `install.ps1` scripts in the repository root are
-automatically discovered and executed by Coder when setting up a new
-workspace with dotfiles enabled.
-
-1. Navigate to your Coder workspace settings.
-2. Enable dotfiles support.
-3. Set the dotfiles repository URL to
-   `https://github.com/DevSecNinja/dotfiles`.
-4. Coder will run `install.sh` (Linux/macOS) or `install.ps1` (Windows)
-   during workspace setup.
-
-For more information, see the
-[Coder Dotfiles documentation](https://coder.com/docs/user-guides/workspace-dotfiles).
-
 ## Development Container
 
 This repository includes a complete [DevContainer](https://containers.dev/)
