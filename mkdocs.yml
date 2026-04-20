@@ -1,0 +1,68 @@
+---
+site_name: Dotfiles
+site_url: https://dotfiles.ravensberg.org/
+site_description: Modern dotfiles repository managed with Chezmoi, featuring Fish shell, PowerShell, and automated setup scripts for Linux, macOS, Windows, and WSL
+site_author: DevSecNinja
+repo_url: https://github.com/DevSecNinja/dotfiles
+repo_name: DevSecNinja/dotfiles
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  icon:
+    logo: material/fish
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+    - content.tabs.link
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  # yamlfmt: off
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          # yaml-language-server-disable
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  # yamlfmt: on
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Guides:
+      - Installation: installation.md
+      - Customization: customization.md
+      - Contributing: contributing.md
+  - Reference:
+      - Structure: structure.md
+      - Chezmoi Variables: chezmoi-variables.md
+      - Development Tools: development-tools.md
