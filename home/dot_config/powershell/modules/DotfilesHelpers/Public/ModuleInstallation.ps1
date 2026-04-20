@@ -29,6 +29,34 @@ function Install-PowerShellModule {
                     Version = $parsed[1]
                 }
                 Write-Host " [OK] Installed $($moduleInfo.Name) $($moduleInfo.Version)" -ForegroundColor Green
+
+                # The pwsh call above installs the module into the PowerShell 7
+                # user modules directory (~\Documents\PowerShell\Modules). When
+                # chezmoi runs .ps1 scripts under Windows PowerShell 5.1, those
+                # scripts look in ~\Documents\WindowsPowerShell\Modules and
+                # cannot see PS7-only modules. If we are currently running in
+                # Windows PowerShell 5.1 and the module is not already
+                # available here, install it for the current host too so later
+                # chezmoi scripts (e.g. run_winget-upgrade.ps1) can load it.
+                if ($PSVersionTable.PSVersion.Major -lt 7) {
+                    # Get-Module -ListAvailable checks the current host's module
+                    # paths (PSModulePath), so under Windows PowerShell 5.1 this
+                    # only reflects the 5.1 user/system paths — not PowerShell 7's
+                    # ~\Documents\PowerShell\Modules where the pwsh subprocess
+                    # above installed the module. That's exactly what we want
+                    # here: only re-install if 5.1 cannot see it.
+                    $alreadyAvailable = Get-Module -Name $ModuleName -ListAvailable -ErrorAction SilentlyContinue
+                    if (-not $alreadyAvailable) {
+                        try {
+                            Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+                            Write-Host "  [OK] Also installed $ModuleName for Windows PowerShell 5.1" -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Warning "  Could not install $ModuleName for Windows PowerShell 5.1: $_"
+                        }
+                    }
+                }
+
                 return $moduleInfo
             }
         }
