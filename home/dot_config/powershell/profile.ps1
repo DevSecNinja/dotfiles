@@ -68,9 +68,42 @@ if (Test-Path $completionsPath) {
 }
 
 # Show horizonfetch only in interactive sessions (not when scripts import modules)
+# Guarded with a timeout because horizonfetch occasionally hangs on some
+# hardware probes (e.g. GPU query on Snapdragon X), which would otherwise
+# freeze the entire profile load and ignore Ctrl+C. See issue: pwsh session
+# hangs on profile load.
 if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
-    if (Get-Command horizonfetch -ErrorAction SilentlyContinue) {
-        horizonfetch
+    $horizonfetchCmd = Get-Command horizonfetch -ErrorAction SilentlyContinue
+    if ($horizonfetchCmd) {
+        # Allow users to tune the timeout (milliseconds) via an env var.
+        $horizonfetchTimeoutMs = 5000
+        $parsedTimeout = 0
+        if ($env:HORIZONFETCH_TIMEOUT_MS -and
+            [int]::TryParse($env:HORIZONFETCH_TIMEOUT_MS, [ref]$parsedTimeout) -and
+            $parsedTimeout -gt 0) {
+            $horizonfetchTimeoutMs = $parsedTimeout
+        }
+
+        if ($horizonfetchCmd.CommandType -in @([System.Management.Automation.CommandTypes]::Application,
+                                               [System.Management.Automation.CommandTypes]::ExternalScript)) {
+            # External executable/script: launch it attached to the current
+            # console so colors/unicode render normally, and kill it if it
+            # doesn't finish within the timeout.
+            try {
+                $horizonfetchProc = Start-Process -FilePath $horizonfetchCmd.Source `
+                    -NoNewWindow -PassThru -ErrorAction Stop
+                if (-not $horizonfetchProc.WaitForExit($horizonfetchTimeoutMs)) {
+                    try { $horizonfetchProc.Kill() } catch { }
+                    Write-Host "`n(horizonfetch timed out after $([math]::Round($horizonfetchTimeoutMs / 1000, 1))s; skipping)" -ForegroundColor DarkYellow
+                }
+            } catch {
+                Write-Host "(horizonfetch failed to start: $($_.Exception.Message))" -ForegroundColor DarkYellow
+            }
+        } else {
+            # Function/alias/cmdlet: no reliable way to cancel cooperatively,
+            # so just invoke it directly.
+            horizonfetch
+        }
     }
 }
 
@@ -83,8 +116,8 @@ if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCClzy3Rvkr/zqeT
-# O81uNjStgD6OMTnt7giy9f7dBRL3CaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDt5oLGjp9lg5lA
+# A8ksbgUJkSqSpEJ53XAGgXmfdXTtOKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -218,33 +251,33 @@ if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCAVTuSJLBXFnrKCQsbNlS+L+S5GZjI4rjWWUXJsH92vKjANBgkqhkiG
-# 9w0BAQEFAASCAgCUsPPHGgAa/IOMH8RNDqwUyE2p0Y5OG/XkvydFRvhy35GqAKJg
-# VZTwvzd5lwYnKxquiWn1CM6pY2oU4ZoJeXHJmX92TE433M/xM1vk0fdztHpa4ZJ2
-# 0oIFYtoP6vvhjc6b7XTR6S4O1189JZsA+3Wd8d3MDkWIoSA7oYf22Tnks1WPpRSB
-# 19yXCER3Mc5CBYnvivWGcgRBz9UqqthR2Xhw0gABr968v4gucRo/mnxS34sB4IvX
-# V0bjxrsrTgfZxT/P1qoyRONQbrIOBG1bvUx0GPtJfvG7CJcSt6sM4+WRx2K7VO8N
-# S+/yKIAC8mfgVg1WN1ehhTngBGnDTaFIDalx8MS9iQHIbwnitIsFTs5QGy9tXlXD
-# sV5WnuvnBEyDb1mwGEgU6IAZr1jjaPQ6w2uctDGnpAZDC0if1K8EQPYr6PcAIbfs
-# +UHwRachtR0bgBj4/9n2ZBgRs500JmljfAn9a8L/yjnk4q5MYGVcDqJY7dUmuw1t
-# 3LImZR5VOr7OjcqqMHjICo3Bk+MsZPwgRgvLedATgIsy3ft/r80xHpaUuCv7JaRV
-# LV6EtnuBrKRcKIYcM/nrRhZ9+c2oIx/NQZ27mu/Pxh9p7AKTWnCDgAbsB5Jiov28
-# NsMX0qgKSS5SFGg1CSta0Bt5rSNWlbol3yLfjIff5/Mzh6GR6NYtNxnUh6GCAyYw
+# DQEJBDEiBCAy4XsnQt2MrFcjQvocHAy8Qpm9NrEGjqbpjgoYFl3LyTANBgkqhkiG
+# 9w0BAQEFAASCAgBd3XhDycoWPbI6niLClTzNSBdrdNQm8VrEZaIU1Nw8LVkcULlF
+# qvtSsB0x2e1kLHWw/7f/5iFKHaAzybPeEppvaqsy9ppfcvVt/iJyhqzd6HhTbTX9
+# 9sJJgOQJxAxfbE2UheJYtusQK208JoY/dfT0AQU6tsuAerGds2FWQh7/SC7vAnxL
+# K4rPUPVZwYsDZPrKeYVu81RfvbGLmGQmFt7PgbgRcPu732/pmQhuNZTph013vuWT
+# u0gXWfXNXqGGinWCWgzrVSHsd2VQa+uRu71hllx3YfmqgUjL7QUDhSGy2e95YGKo
+# sUs4XpnkbxSGKYvmOU7l+wjXxkMV0p0Gfi/e7/9XYb6D52fAHYwToThwNxE9i0hc
+# 29NEbVACBpkSMY+II0sEIg7eQrdNcgRS8GetLImTvAzHRg+4JUKrCNidu2dihy+4
+# gbQaL/hgu+rzWCoSw+PKVk/WxHEcCT/Xy/3YLgrAyc7WtdnpPbMTEsNvovwrgb6X
+# gbZU3YUsbRg57QciYCdrFy2cnyz+Zp2Aqel2U2WhtQ7iXVOaKmhYfsesI2wEJn2Z
+# BmIhkKTxI7ulrCnlmItUHiz7zcbXg2bQ24tQFoUW7vVGXVp4Z9wVvVfQJ26juHYt
+# dmoOmFAJUadLSUm8v8YV6bqqcB1CUV9mvfzmLNOZ3tEfjIp3+j7HsOB1oKGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCA7faUhEEBjCemV6hojxFtVcq8K7h1e+oQfyWiK2PDGkjANBgkqhkiG9w0BAQEF
-# AASCAgA+gVGcHJboUsTiD5SJRRjvJIhMb4kNki4ZkDO2IYhqQqHWF5dMdjuC3YOC
-# xyVAe9PivoSalghY5IsF/yyL2P5BbokitXqQMlEb15EoW79Ru6hq6SzILAuVa9+A
-# wJje4IeRSqKm0xaFIKjKuWpHNSZxxuEx84bdXt19wwwB1A4yP6MiPWZ5KUAlrj3x
-# q+C5ELfy2f82PSLSXIYYUO5kAwcDnTPT41Fn+9w8tghB8Df4FieaHocIniBpIdW7
-# qtByegF3yRNHOzeZ06WcuB0Uv427URKH8Ue7GhwdWr52XtJBNb2nBwaHqjX4uxaz
-# VrLo+kc04Wlsuv7hrM6X5BHqpMRQhl35Zk2/3a/rovskvEweBr1hJ6JzY+SVYws5
-# HKj3JtaxE974YsV4FayHQ2fFn029FRXr0P7j9YyByd+pfrUe2tWav5UGbaB4Lzu2
-# KvJbxpfQ5c2vWvalCTY+1uUoworE7hDICnUaF03uIsa8gKBK8gb5tV50ZvIwC1TM
-# cM0+zUzQmfj/pSOlQYZM2nFc8TzJ6rXI9N1KW0745j7f2YntTe084gCac7B/kW+K
-# kATyhv6pM2r16JOA/lCvkwh+5xrjIrUo7NnsX1rFPtKMsUwEXpZid/Lu5K4LlpWp
-# DXSqng0FnL/m1fm/BOmMne8vbTvBq4sSKzqS7UFYatZ7nIgtqg==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjA0MjAxMDMyMTVaMC8GCSqGSIb3DQEJBDEi
+# BCA1IxpqxX2fMwxwEqVH4tLl+wdNWnHjAENvHJn2vGzlzjANBgkqhkiG9w0BAQEF
+# AASCAgA84D7O1InjQm6sVSLGC2RA36RSVDucTSaH1pAqecLL4ZX7bwzYKQUSXXVr
+# LlXBuWkGIXBnTFQY8KtQiTQVonF9pKLKTNOOszw97+kOGPF5b5nP2n5G+Zuo9oNe
+# 0j3L7Z7kS0H6zuPNAkoQvwoZbQuHsE7/LSm5viOY1czGliKUr5T/FYRX9peO9u7W
+# byhkq4CPhsIaXCA6RasfkwWLb/GReFrLIYzKFhpFEPAZQ5A8f6/0ds5Ypj9FEM8N
+# P5lp+lQTH97B8ZB/eOZOwsMFWwffDzmI6bLZpX0Cc2x6lWyZASpUo44yWnZYubKt
+# EOSjU0MEi67FXzyy78lLSQe9MmNO/a97gvkmkxZKldDY6vMLL2nGruA6OaJhlr4J
+# qwMNgrXWerdpW/axGGhq52UWzO0IjsJYnKqu5KGBHhL0enzuQX85oTL0ExKYPn7o
+# ESn1L1cCQF59yj7cfR4DV+G/A1bS59fBTJLVk+AB3PrfOoFPo8focb88uISiHQ09
+# LIoD3lu+GRj6XzOE1ugiCKqf5Yy04bFCdUDX4ndqtPabx9AK6Waz3y6wklK0pboI
+# IUvwMd1/9xkoJhltnts80R/2NsfjPvSwyoY1jYDsKfKiW/Gq/5iRTIILhETrzX1W
+# XyNwwflvi554lpWXK1h2d9jSHaiBTmqYBCn3KNTb61BccS4OAQ==
 # SIG # End signature block

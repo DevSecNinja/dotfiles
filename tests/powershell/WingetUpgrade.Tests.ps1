@@ -210,6 +210,66 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match 'exit 0'
         }
     }
+
+    Context "Install-PowerShellModule cross-host coverage" {
+        # When chezmoi runs .ps1 scripts under Windows PowerShell 5.1, modules
+        # installed via 'pwsh' (PowerShell 7) are not visible. Install-PowerShellModule
+        # must also install the module for Windows PowerShell 5.1 so that
+        # run_winget-upgrade.ps1 can load Microsoft.WinGet.Client. See issue
+        # "Fresh install on workstation with errors".
+        BeforeAll {
+            $script:InstallModulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers\Public\ModuleInstallation.ps1"
+        }
+
+        It "Install-PowerShellModule source file should exist" {
+            Test-Path $script:InstallModulePath | Should -Be $true
+        }
+
+        It "Should also install the module for Windows PowerShell 5.1 when running under it" {
+            $content = Get-Content $script:InstallModulePath -Raw
+            $content | Should -Match '\$PSVersionTable\.PSVersion\.Major\s*-lt\s*7'
+            $content | Should -Match 'Install-Module\s+-Name\s+\$ModuleName'
+        }
+    }
+}
+
+Describe "Chezmoi Interpreters Configuration" -Tag "Configuration" {
+    # Chezmoi must run .ps1 scripts with -NoProfile so the profile loader
+    # (Documents\PowerShell\profile.ps1) does not emit warnings between every
+    # chezmoi script on a fresh install.
+    BeforeAll {
+        $script:ChezmoiYamlTmpl = Join-Path $script:RepoRoot "home\.chezmoi.yaml.tmpl"
+    }
+
+    It ".chezmoi.yaml.tmpl should define a ps1 interpreter" {
+        Test-Path $script:ChezmoiYamlTmpl | Should -Be $true
+        $content = Get-Content $script:ChezmoiYamlTmpl -Raw
+        $content | Should -Match 'interpreters:'
+        $content | Should -Match '(?ms)interpreters:.*?ps1:'
+    }
+
+    It "ps1 interpreter should pass -NoProfile" {
+        $content = Get-Content $script:ChezmoiYamlTmpl -Raw
+        $content | Should -Match '(?ms)ps1:.*?-NoProfile'
+    }
+}
+
+Describe "Invoke-ChezmoiSigning repo root detection" -Tag "Configuration" {
+    # The helper must detect the repository root via 'git rev-parse --show-toplevel'
+    # so that it works regardless of where the dotfiles are cloned (e.g.
+    # ~/projects/dotfiles vs. ~/.local/share/chezmoi).
+    BeforeAll {
+        $script:ChezmoiUtilitiesPath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers\Public\ChezmoiUtilities.ps1"
+    }
+
+    It "ChezmoiUtilities.ps1 should exist" {
+        Test-Path $script:ChezmoiUtilitiesPath | Should -Be $true
+    }
+
+    It "Invoke-ChezmoiSigning should use 'git rev-parse --show-toplevel' to detect repo root" {
+        $content = Get-Content $script:ChezmoiUtilitiesPath -Raw
+        $content | Should -Match 'git rev-parse --show-toplevel'
+    }
 }
 
 Describe "Package Configuration" -Tag "Configuration" {
@@ -391,8 +451,8 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCAbVB8oM7Pd/jK
-# LXVWdLvRXTgTt+8SGp/s8JnaRcHj+KCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDeQ8z6ENzYuyoz
+# f4LiSPmYH1FX6/X3KUZeYICkCcgyPKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -526,33 +586,33 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCAvNXyQUtu+FNTTuAhYbRlzmuJXDsTIB7ttmQ3sXjAUdTANBgkqhkiG
-# 9w0BAQEFAASCAgBefJ00Rcqdkrx/VS5HVXTZl/sATtVzoNJ95wMym0xmGxyYV7of
-# 0rFZc3W+dJH2nAxvAglFnth3La9TD5Qz4/nCON6T5ioGYeU2liS2e4ZQdBWJzKCq
-# TIdM0EEt1Xt2pFDOA2vq8KtuakCuXobCgN38JKjHojXJG9jR/vZ/Utq+mYdUdsfR
-# WnRx+QmcFJ4XdlS3ncrrWGzOcFOgZdGLMQAi/T1L53NnXiAzoeut+QF1k+TCtxz4
-# UZBMj12TBmfAk5dldTqwWnD77Y8Avl1nyUl7d9YJDPJ4i+QJu8tgbQN2/6ffyOM+
-# oe4mJNzfOxDZ8bd0944bTidZvIWDw0CQ+IihC+YT35vTlzHf7zO7ZB6CJhM5ZDFW
-# OKBDMEZMkXYHzQYGn5BVKzZD1GH1Pne+HVvo/KJz+y1srvRRRLndM2cjZFlO6XBH
-# Zbzi+ENLR18c/xFa35ko9cluRY2O9vIBtobQv57Z2vCUdFou2IXCyb9bmjiRxzxk
-# tMjLnE4JsOKkiGk6gjFOW0Lms/lxZEmjTQVqw/LmiWmlnJGCKl7cksB+dTKOExO0
-# YqZcHk6SsslfK0HfDDc4NxhxJz5r5q8jvZNiAUyDmOz1mvhXSy4eQux88THLgbP6
-# IMSfi8tqCf0oMDuBr3NX8EBMQUfr8wUGaPORMyAArJ5OvD+YHDpQA0doy6GCAyYw
+# DQEJBDEiBCBcVJ+CGjAnvtSClu4PkDpJNp5HxorQYdP6PW/LDElZhzANBgkqhkiG
+# 9w0BAQEFAASCAgCmWKH0yVEf8OxLHBSi4yhVsDsUJScjMjkKJv11k5TMyD9oNOmK
+# TYt9pNKNkqL6PNA4Q5s+iJWd6rx3pKPRTvhds5+EHYhjng/p5m7lSr1X6Jlyem44
+# Sf/g4PkVn0oWN6BAdA5/8Qgk7/PHjC/L+/5sjIrqdY4RGA62L7My21mwp3s/pWSq
+# FisArd58DGQIAxZugi9NOwLIrLq8PAuQT+TTLjNRZUBtdDfGrF825tu7krubEfb0
+# UiuaMmFyrtIkaBC0YQXhiKVxRye9sG7NM4+TfQJ1P7XpZxqysLtMYQihaS4Rg9Ot
+# LnrPNodPz3A3vS7rdZHjOI+HHMHMchJvJCcX4TCmw3ItUGgreva7IqYsiGgfc7uM
+# QjX/uHYYQOTZ76lin/ZAm7yX8WXmHoBqlX+iI4Vng83pzb+M65Y0GctdU7/ro7Hq
+# 7UCQXWs9ZcB2H+3FkBr3Ekkz5jB3CKRAi2YTVRGoKLVNxdccfp8oqoB2y2KlpqEN
+# zmK2DKcqRxGC56epnvD7KvfkjsoAAseQ7MHr1EXvlxi5Pz6+zda00kpqnCJZ6qOV
+# IH3/x9ial641DsbJv+5fc5sYn7xpKxEPptT+ZP8qNm8b21Ew08h6NHKqsmwxSwpu
+# c+ssGmKEJ24VakX588ClYuUMmnfYTga/4MXhWoeLKJQ0olCcigO2thI5uaGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCAE4/181pW5SznXxXhhGMl9IHNEt6K1l5fPUJOnBXjoLzANBgkqhkiG9w0BAQEF
-# AASCAgDNZdpJDqwRwOZD8+qD6MS/KL82OfFr62wHomJ4Yd3b8kvh7DJqT69RnIzp
-# 5l5IbtTnnLVSpwDKOa2SHNpWkSq0Xhv0Bew5EEjxihsl7und/bbY8cenRIH+x6kz
-# h2lt3MMpBZizeTq0k2EcJKIBCBMg4MmkiBk561VS7mQ9G5Jr1lvak71VgIrGQ7Jj
-# KLT9mDakt3FL+C1IbHAsV6xYhOHMpDK41K4a5f79UxlcpoLAqLkyHfmIP4Y9AuNL
-# HT9aN3QZGWEVY68k5tW3koHnsQEZdwMeMD2Cuy+HaFPr9zjB0sGDySrn6H/BnHgk
-# sAKlVs0XUD0YnnHU1oM/w1yT+QpU5HFsHKWcGJroBT3Sp3isv1Ai7TfMz/WwHzZr
-# Nzj6/ZtGuxMGYwycEEIruDRiiMbcpM712+JML3GAUATYhxBsBEkF0zmu+OueslC5
-# QT9yuGgL3+ZN8ktZUopkNeRscnS9S1dDdaU+Nv0jf+kZ4Emg1uzXY8ggP6k20iEv
-# wrCL+SRWaUthY6Vw6yq22841uj9QGSOv2ZtWu+3D48ia+J2C9yI2lJZldivarSwU
-# W46JTANgK5ezi/ZmDEJPPubLbpFdr3375CgPxvB/gDkHY/r6o/KHlPnsLsRKEq01
-# vARBdth+Epnw93jwdaPb3cX18O3UKu6/fWzQMZQ/+cJbpguLpA==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjA0MjAxMDM1MzhaMC8GCSqGSIb3DQEJBDEi
+# BCBOub6aFwhp3rd4/vLRRhiW60g0fISaoADRW+R8cNSASDANBgkqhkiG9w0BAQEF
+# AASCAgAsbVmv1FfUf43ViIA6f0CpgGCwjU2QtHQGNtuOcO+gnQP8eGsHKpx/YoE8
+# k6uMQRQ2yNOuYaQC8GXDd6l836/sKXDRIh9cQkhFdTou+4rpa88qHNMdde4yjWBD
+# ApSJKwppRPvsFb++0yd23DP3ZV6PMiDSsRkUoUXnWDIGyG2B+3lGJDXV86SEwWBm
+# p3AFd8/RovivN1tsTylcCUNL5D/+ZFEdrkM7JKDZ2yD+G4W7ewTKdyLhEZ7A2Ld0
+# 9jGvOOa1Ah/nTCOld2LSFnRE6Fl6pYAdxOGzNbgrYRB4M3luUakL66/LMKxOUMuT
+# a3lmZTYjc3am4KU884bd5RbyqOe95RSzhAHinYJbXERMRzyoU7NvOxbHPHjwJ3pE
+# 4CxydhF8vo02Bjri7jEEuMaoZwUMnJgijGXKRsvFmGv6uXu4V9jZnFx60rudT+ni
+# ZyAjW4Us/hGvj6WiQ/+uHdaWfs0NU9DXtFLXR3cO3Ghyg0qBmnNBCfaPDmOPk2oN
+# ofAYa48XG7etSUNP2DtuRe/8ak2PVXRbXX54YkSV/HDJi9G5ERgvGJDMpGRB13qg
+# 71ARy/22ETGXIxdEPKrvsKIIF/dI/LAViSwfH0t2EHzQz5EF/UVO4d1dLEF/a2hb
+# sFfEWRN/lhD9i9svlzH/PBSkG4E1VsEaE9meoKv7MEJxxmdJNA==
 # SIG # End signature block

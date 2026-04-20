@@ -25,8 +25,29 @@ function Invoke-ChezmoiSigning {
         return
     }
 
-    # Get repository root (parent of Chezmoi source dir, which is typically 'home/')
-    $repoRoot = Split-Path -Parent $chezmoiSourceDir
+    # Detect repository root robustly:
+    # Prefer 'git rev-parse --show-toplevel' so the repo is found wherever it lives
+    # (e.g. ~/.local/share/chezmoi, ~/projects/dotfiles, etc.), regardless of the
+    # chezmoi source layout. Fall back to the parent of the source dir (which
+    # matches the default 'home/' subdirectory layout used by this repo).
+    $repoRoot = $null
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Push-Location $chezmoiSourceDir
+        try {
+            $gitTopLevel = git rev-parse --show-toplevel 2>$null
+            if ($LASTEXITCODE -eq 0 -and $gitTopLevel) {
+                # git returns forward slashes on Windows; normalise to native separators
+                $repoRoot = (Resolve-Path -LiteralPath $gitTopLevel.Trim()).Path
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    if (-not $repoRoot) {
+        $repoRoot = Split-Path -Parent $chezmoiSourceDir
+    }
 
     $signingScript = Join-Path -Path $chezmoiSourceDir -ChildPath "dot_config\powershell\scripts\Sign-PowerShellScripts.ps1"
 
@@ -42,8 +63,8 @@ function Invoke-ChezmoiSigning {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBJndsM4sfyB86O
-# TZlupAh/D0VnAfGC+R7MEf7DMDf/MaCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCABoqru+bW2Bf8c
+# rn1nKu/Ym+xLsXrAgdMQbE95oVdlNKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -177,33 +198,33 @@ function Invoke-ChezmoiSigning {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCBvx4aZhUOkdpZ7sTqYg7bx+hXjqNovosTMbl8cma8GsjANBgkqhkiG
-# 9w0BAQEFAASCAgBLCNL8L+5aI3vpU7Z0HssWkd0tjzE0YNLf8Vv/iIDDZlux1uQG
-# kELn/x6++JSLo6z1l0LxbqvfHKODMIAs6PcDo4k1cy5PskDFYu4WAO0KZknPVxcY
-# D8QxZy+BPrf9dKwtLopewYt/JIj4oZ9Hcc/NE8f81npOGhzy1qFPqjEQ7mW4sGsG
-# Bvg/zkF5pDtDT3nadgZVfKrqTa3YPe7UZxqJB4GgYjlvtaEkDaRO42sRiWNRtckn
-# Y8t6Si6oc2T6lWpv9/MmSM0PwzUMRL9l3Eu7iiHtVHWBAD7s+uxaM3CIMFHly6KO
-# TjNl0hzEU2iL3eOlaVvRwjPFMBbLA8c3itx/8w3LiTKHW6NSTLT6AZjvc99YWVj3
-# o3zYy7lBSa84PQEtVxyNAEDmeiL3ix+xELRd0vpQb2aHMuVp7j73qho+Spyyoyr6
-# 1eiRtlsIDrPEMfMpEtMEejBZrwn9sPbCUBXJQfqoEKM2K4gpNAZxXq/9GNrJqyfw
-# Psn9TuiMUlx0OWM5qw5ykp2fU7FmrTLtGHvaYGUQpOjPy2Qez9D73kC89bnOV2Wf
-# Yhr3/NOw3G2T71To0Al2hkreQtltIHPztaf7hD7vKNX5iRtbJrqL0YYwBy8PJ7Ay
-# lHR/sRyoUk71WcZJ7B1ue5CyrAwK+mCRzznwa2KN2J2VotY+u/XWTACx/KGCAyYw
+# DQEJBDEiBCB7knC7yBv94WAZnTJxw+OxVSwQ4Xye9WMzocBRPUoZXTANBgkqhkiG
+# 9w0BAQEFAASCAgBf2WDuJAWrReBaS4t7KBdjkrnO8rdoF8WMBPidjO6rBBxVRF/j
+# Z2xT2kUQEPys9W3mLIAtX2Wf07oUg72OF3zBramKBdllbOZ4ygxtAI1LgyBmetQl
+# 1TiMrFThwdiLrNvgyWiStdmSTIVY13f3F6jDSFUoZUKKqZZo82GRiFgn8R4+ZXZj
+# rP/XPeXuZaENvX26r5e4LjyG1khV7v06Vg4lEpY1RdZTj5q/X/f8LfN8Dm1OPlLZ
+# Vj33Qt3w1UAs5QITkpWUEbAnWEJfLZ1Q+Jl1EqGuk/hf4wtWBxX695ZmjqqrKfy6
+# 1dJfGTYsjNI6fNVoX/sl0g7Aal0+5QOamvk1fDGOq1Iz4Ssn4PA1Ua6pg/RTUEL8
+# A9sItoZh/wSfPxG8SZUQSQ6LWDcXofvrOhWP28Mpi/e1YwUVY2FmdiVmIJuR+E7Y
+# LULZMMXfU+Xkw3Ko+T4u7uWWUk0OuNvOBZnruAcJqbz0IJL0qOjw/ss9YQ952WY7
+# vCTY6X+dv2COKZvbhnXk614ZanaZE8DHMQPi0XT8hgMj6f0IZLixUaZuZ8khfKGo
+# wmnNFEeZBZTE+kqDr3sK3LUxzXWBbVhlYGZKw+gEKLe5wI05bZO93FyFhzht/0UQ
+# txWbp6B9LZpfAcoWr+9RM1f5L6emSXsI1f6A+tOjUiGTJR1v/wCtpXHSCqGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDdaMC8GCSqGSIb3DQEJBDEi
-# BCAr/W+OIr4nO+ulJN1huw8vAPGMV1j/pgYv4u5vJRkdijANBgkqhkiG9w0BAQEF
-# AASCAgCedAiH/GWb8Gm9eEhZ5qOjPR0KCCukNoarbfF7GCQ6UHOOeAnce5WB+AS4
-# l657G9ld6/q8GfQRkIdkzNnbxj2w3BhGklWo2zMAP5dEdCYPPdJAo4mX255ntPl1
-# AY1ftU3jq19pkW7dWnhbolKcxVmAcDO7XdSjy9eDSrEU8oO2WzIDIKEQfe0BsCZK
-# 8+cxHlx4u0cOyXN86YWLtTUCtmWkEcEVmrU+yaby8MeH69RRnSoZNxWA6JWg1wSV
-# vIQdUIADos1U1zRDlfLeropnYY7bjV3CS7HNXw1DLQkcj4sdMZcn/CYJHXCbyU4B
-# k13s94+sy929rHUgnrCos9AFuwscHz8cODc3voEueCn5iK4Z0biZjAamXVY0bB4U
-# yDftloA3C/uN8bC2fKk+uf5MGEdoh7cFe7EyA+U+BZ5+CEDKY9R+qp2Wp/ILNMTK
-# 1yEEI3UF/s5+JbAukC08/nhuMKEMm5Cer9EVdRlUbOwbN5IeQoeLUBpNP4DNqoY7
-# fI1eW55PYJ6DKKzXQIQO4Qk478YOKwu1vGS6KnfqjDE2SSOJ1PUomTVBd4hf5+03
-# eBTsSU0W5MpJ2BrZGp+QZbTdf45+NCfPnHTfU/+npYvBU1o6HovhGVe/xUq3Gt5x
-# dAt3yhI8p897o9aRxnLuNxieQHTqiVZSke80U9Ih2CWHm8xW7g==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjA0MjAxMDM1MzdaMC8GCSqGSIb3DQEJBDEi
+# BCC8jb4NahjQKNjkCpBk3Zm7/0w+/Z5z80KUDkK2MAbJ6TANBgkqhkiG9w0BAQEF
+# AASCAgDCCYUCe4gqcmkZA8iSZLkOik2i76dAqs2rLrxZRzNF0kXY9G/xDBGnyjQk
+# qyC6L0lkqATUAaB6R/4Y44eTlqly/LNMJYJFyPWt8s8c7hUoB8nfgMLylHC6ELbk
+# QQI9sPJ3lNaExvVL0ffL1D++AfkS8O0y1upWtsAn1nZQk8D5ih1fenxA5e65Ny0W
+# kLgkZiSH9RByd0gq11EGz+lsxDUgsuWe6aZlSmnSKGMI1tAnO5H2Z+bKXCJ5bfLZ
+# xzur2kKR3xmvgMUuyco8ghSZMmGqFdk7/hCPE3McVXQahd/g6S7zmcSvmFy+/GJs
+# 5PumdAMnELgWRZwU3cNNRi323hkUGTqB5Ltbs/E39XcJMZ9Jb9hPgyl1QzR7dC33
+# pzqfrzZmwyyZBbUU9qQ69TU0ha1w0FJ+VQoAzJiVeeS8vc4cUjVNZlmC/LHyXj6B
+# kKWn4CvBdWN8bvCq1OUaw9SYABAnZVa/RiWRc7rVSAmM9iWgv+4O0avzF/BaSxLz
+# hx53Sbshl1/ZS2b69+mocFCwJ3Kr44aaMuZcQkpEw5gncWmlUMxNCKS4B0iB5xyc
+# lGNO+EJuvnL6D1j3HSuRc/2NAcj6umiZVqmD4nn1jhSoAJcp79xEqi5Beqpyhcyz
+# 1MJU822/iKKXvwmtE0/BSM/AY/0H8N1czT4D+wK0cNO+tTp1pg==
 # SIG # End signature block

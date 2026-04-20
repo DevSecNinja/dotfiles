@@ -237,6 +237,33 @@ Describe "PowerShell Aliases" {
     }
 }
 
+Describe "Profile horizonfetch timeout guard" {
+    BeforeAll {
+        $script:ProfileContent = Get-Content $script:ProfilePath -Raw
+    }
+
+    It "Profile should invoke horizonfetch with a timeout guard" {
+        # Ensure the raw bare invocation has been replaced by a guarded one.
+        # A bare `horizonfetch` call that is not preceded by a CommandType check
+        # would allow a hang to block the profile.
+        $script:ProfileContent | Should -Match 'Start-Process'
+        $script:ProfileContent | Should -Match 'WaitForExit'
+    }
+
+    It "Profile should kill horizonfetch when the timeout elapses" {
+        $script:ProfileContent | Should -Match '\$horizonfetchProc\.Kill\(\)'
+    }
+
+    It "Profile should support overriding the horizonfetch timeout via env var" {
+        $script:ProfileContent | Should -Match 'HORIZONFETCH_TIMEOUT_MS'
+    }
+
+    It "Profile should only start horizonfetch for Application or ExternalScript commands" {
+        $script:ProfileContent | Should -Match 'CommandTypes\]::Application'
+        $script:ProfileContent | Should -Match 'CommandTypes\]::ExternalScript'
+    }
+}
+
 Describe "Profile Syntax Validation" {
     It "profile.ps1 should have valid PowerShell syntax" {
         {
@@ -273,8 +300,8 @@ Describe "Profile Syntax Validation" {
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAq4cpItO6MteCE
-# IWeLwSCcMIw0jAFc5LlR6yUtuZ51RKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD+hBm6CLAhqkbk
+# B4/y8SxA/4oQoDI/+OhBeP9zyj/zlKCCGFQwggUWMIIC/qADAgECAhAQtuD2CsJx
 # p05/1ElTgWD0MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEplYW4tUGF1bCB2
 # YW4gUmF2ZW5zYmVyZzAeFw0yNjAxMTQxMjU3MjBaFw0zMTAxMTQxMzA2NDdaMCMx
 # ITAfBgNVBAMMGEplYW4tUGF1bCB2YW4gUmF2ZW5zYmVyZzCCAiIwDQYJKoZIhvcN
@@ -408,33 +435,33 @@ Describe "Profile Syntax Validation" {
 # bCB2YW4gUmF2ZW5zYmVyZwIQELbg9grCcadOf9RJU4Fg9DANBglghkgBZQMEAgEF
 # AKCBhDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgor
 # BgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
-# DQEJBDEiBCAsZAVQS0kOL9JJlU5AjwKAmw5aPtZwMfY1hkC3mUoIFzANBgkqhkiG
-# 9w0BAQEFAASCAgAEedp1ae9FJDITPPXWgfmA5kr8lLmRMlMUh+Y8vmNVOvF1gWBT
-# IDlCvZdkdgZFlL5pv3DS9f+AlrSxVWErUorN6tnutlDZe9LCHE1GeiOuk4CfSpFb
-# nZJ3VtEJGF6zFw4h/cd3vBis8iehr1SHILyAHEEECMWXfP8imz9V9k8xOG1FXID5
-# OXUUp2yupVLv5YV+dubsU3mVPFaZfHolKzVsc0joNcLs8AhSo7TdXoQk6q30yQnr
-# iBkoE1rEr+1hMRONSNBLE+1Rk/onF4Q7i3XBpJ0TVj3RmVESJdBfOn6IoRo9IE/m
-# zD/080hlgoXddzbVS8XBGdjonHp9N6WiSvteKxdSx4FeUkanyz3J74poz2ZYhcKV
-# Qk39agLiqhM5tWkL74Y/HPF3MjXI2SXMC5pkEWqI8JRRlbzkwgjL3WJM9tNGC+Gu
-# CI6lp+TOzmD2JNZI0tsOUPuQ+oY+T7DD4mP6qSTpisOH20Ckqwkn7RuuI8KXn+NF
-# 3c0TW5MLJpDHzx6F45z2/GMzFNuE973+uhL3zxs2LbA2FHIBk6GBTod7qW0/vVa5
-# z5fz8fSXeKPeK0/7SUrzaqN9puS49bQ80Ghj5ZaEqOii/Isn0il+z8Bb8YcIFRep
-# VGPE0EyA7JKslkhPMQ34/BpXrBnFhqGlprGFChy90WTqBK1SIyPpNmtmaaGCAyYw
+# DQEJBDEiBCCWLMOBJwl73euFT7YoUVyUS+joxHlckvB5bckm0zqWjTANBgkqhkiG
+# 9w0BAQEFAASCAgAKHvs7sYRZqTrERIr+Dh5cRIiohWZUvW+S3DGIBzMyaFl0SRm+
+# LHxsQRP3Z/8CwJbbNumeXBF6l7042b7LqcXxEnv5aBAwydlLmQupQrKI2TcMci8P
+# q7oq0M8UtUFD/krHyEyBjXbZRaFwLKme+EIukoXHBNRNLBwwECO1NQK+ujwQuKD0
+# G7CSBoEnWtgWwkcTO1maVBwGMRreW9LwUmtxF6WebTOvHzb/LaLK3oymsqWB6iCF
+# aiQjcOkw3FWEUdvUYlcNKf/Gr1LBbhFAQeyZEglpGCupxyHFYLH030sQCst7WIKN
+# Vq79EoZ11nBQsQR8lIvZBiM6oTzpSLu1TI66RgN+Rr3QvULzZ2MPXQv6SV/OAAkB
+# gq2ZhJjCt5kOFHAB5pif9/0vKY2NI+Em4wAGuh3eHFx747dQXulFqXHtriqn9pjC
+# dyR+qmN1dWyNxAOUQLmhMXff+kz6KMCDZ2XyB+3xio7KvkVIWIMpZRf67L0jaDu9
+# JxZsKg7mY5TTQZJfMvRtM7BhXF8KrCVS5pKqKV3W2QwAzym3GiZn5DAsjcOMCH4N
+# WkWedB8vc4MinXTUgawOCGsraA93531zSyah/9i9skJmWaRTa6VztcyK06Bh8483
+# 1aVBpGRi2D6rGkHTpePWACxF6RWBEk8ZnF3HKhCtdN+GQTuombspHI7T7qGCAyYw
 # ggMiBgkqhkiG9w0BCQYxggMTMIIDDwIBATB9MGkxCzAJBgNVBAYTAlVTMRcwFQYD
 # VQQKEw5EaWdpQ2VydCwgSW5jLjFBMD8GA1UEAxM4RGlnaUNlcnQgVHJ1c3RlZCBH
 # NCBUaW1lU3RhbXBpbmcgUlNBNDA5NiBTSEEyNTYgMjAyNSBDQTECEAqA7xhLjfEF
 # gtHEdqeVdGgwDQYJYIZIAWUDBAIBBQCgaTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcN
-# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjAyMTAxNjM4NDhaMC8GCSqGSIb3DQEJBDEi
-# BCA/GIs8azVb/2eyP3HN0EturPnM7JctLgVLcNgI8QDSGzANBgkqhkiG9w0BAQEF
-# AASCAgAQZWW0AgIdbEevJyd+DX1a3r0GLnOuXh6TShonBMvqbDWHnldh4cgzbOit
-# OQ8IMOG4g/8xBvTLOmyMwDuDuwmPSP2dxrAn1uGCmhNcKKhXUq8ghnhxlwrwO2L1
-# CN3kd6DWx45WFjdbm6nXKtubfj1DWaEwP+a9CDrWhqb9ykE8H+wJgcZDU97KfY3C
-# 95yhj31RAp+WM/xvCBmx5yA1WEq3B7GEKUl864edsZKivilrAOoClXFFyCkgBBS4
-# hKyVzQdznuxG9oY4KQr7j5bFfy1qTT1wLByRPj+HQyfez7OuHV1Msd1ACpiHAJ9M
-# bDJd/vFxVKNe9zxsxvZ/OMBs5BKktDNtDLw/cGlb2w9FhSotcL16eGtriYbJmUaJ
-# DXCRcbmZzMP8jKJAwHSP4hee5N3SUUZ+BE7QxFzeGe/Y1xfOqlFfyESlf0GC3VSk
-# vVjanNru6+pSqphPANwT2AWyfqC6ArhYTWOl6dDYq3RDs2Wx88pOxOtxgTi4D6lr
-# B1BL6bz59SZm0irh6b/rRC90XIG4zIx23+K7CFdb1tLicHJC24AkocoFJZJGgHyX
-# TNZldoueVXABlR1Hy0/4Akmpp9MwYT5QqhHWeKjdT+3FO9qJBysvKK6fUxUtLwaq
-# TtQF6+G5jV6/tWWYAgnrEoWkjkyTtHjkvxZh4eIROzn5QLIiSw==
+# AQcBMBwGCSqGSIb3DQEJBTEPFw0yNjA0MjAxMDMyMTZaMC8GCSqGSIb3DQEJBDEi
+# BCDbVBRLeXjeV6O0M3c6EWYmA6TUDDjhc6tPKC6uzkeesjANBgkqhkiG9w0BAQEF
+# AASCAgCnxLVawmJlNxrGu+ygTre83kLLGtQ7UISDixndDVTkbn8JVMvdsUauFFJZ
+# 2UK6Fe646qZdXn9wL+tAGxxHmtukRHw3ttaenDafJC3k5AYyoMFa+XW+dOU+S/Zm
+# zFcx+umYTI+zAE88O0dnx0BV8t8pYROkNIM9kKqn6Rb44AB+no283dcm0fLAgaqO
+# AkqexnNc2XXp9k6dDX+CigyD9Gmfd6TaEtXsgTHtL+VSjZeqoR+wE3CCPJYpwfiy
+# ndZfHLB8GYSgrywWYTzgQVVCvuV1fL49Sv1MAZWzSMz2OS2Cb8FLrcjQqn8XmmiV
+# j3/gnnE1N3FtdW5SUPl9ITTLJiAwR/r3UejjuJ54AC8tXyu3mio0nG4cF16eM6f4
+# kI5xLmLEsF63h0FlNKx7p7hVpH+DKYNbSa4Df7iwfoPl26rBrs+kZfTIMWCOmDdx
+# AaYs73B03iHtu9U4qvBI3pVWMoyJrJhj+HfbXW63MzKZ+/b2ykVP1UzWabFh9G7b
+# 8rqX6aCZPhbP8OiRNMjC83OW9/3Hy7yk61qEPI230rKGqyBa1CEb0hcFDuzseVAK
+# SGkYTh8OFsqUBik2jp/mHisaOCWM3DxLJDZV0or7jZQ8TCDmQBTeOdd3UN/xHuCz
+# aOJaip8NtWflyWKkC5wRWVArhCU3HWH54FfZTl0yHHyfXg7TdQ==
 # SIG # End signature block
