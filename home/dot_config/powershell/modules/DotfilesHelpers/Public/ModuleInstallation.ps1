@@ -39,6 +39,12 @@ function Install-PowerShellModule {
                 # available here, install it for the current host too so later
                 # chezmoi scripts (e.g. run_winget-upgrade.ps1) can load it.
                 if ($PSVersionTable.PSVersion.Major -lt 7) {
+                    # Get-Module -ListAvailable checks the current host's module
+                    # paths (PSModulePath), so under Windows PowerShell 5.1 this
+                    # only reflects the 5.1 user/system paths — not PowerShell 7's
+                    # ~\Documents\PowerShell\Modules where the pwsh subprocess
+                    # above installed the module. That's exactly what we want
+                    # here: only re-install if 5.1 cannot see it.
                     $alreadyAvailable = Get-Module -Name $ModuleName -ListAvailable -ErrorAction SilentlyContinue
                     if (-not $alreadyAvailable) {
                         try {
