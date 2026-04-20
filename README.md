@@ -1,6 +1,10 @@
 # 🐠 Dotfiles
 
+[![Docs](https://img.shields.io/badge/docs-dotfiles.ravensberg.org-blue?logo=materialformkdocs)](https://dotfiles.ravensberg.org)
+
 Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featuring [Fish shell](https://fishshell.com/) configuration and automated setup scripts.
+
+📖 **Full documentation:** <https://dotfiles.ravensberg.org>
 
 ## ✨ Features
 
