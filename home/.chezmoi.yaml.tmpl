@@ -177,6 +177,16 @@
 
 sourceDir: {{ .chezmoi.sourceDir | quote }}
 
+# Run PowerShell scripts without loading the user profile. This prevents the
+# Documents\PowerShell\profile.ps1 and Documents\WindowsPowerShell\profile.ps1
+# loaders from emitting "PowerShell configuration not found" warnings between
+# every chezmoi script on a fresh install, and ensures scripts run in a clean
+# shell regardless of what a user has customised in their profile.
+interpreters:
+  ps1:
+    command: "powershell"
+    args: ["-NoLogo", "-NoProfile"]
+
 data:
   ci: {{ $ci }}
   codespaces: {{ $codespaces }}

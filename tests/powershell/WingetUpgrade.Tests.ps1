@@ -210,6 +210,66 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
             $content | Should -Match 'exit 0'
         }
     }
+
+    Context "Install-PowerShellModule cross-host coverage" {
+        # When chezmoi runs .ps1 scripts under Windows PowerShell 5.1, modules
+        # installed via 'pwsh' (PowerShell 7) are not visible. Install-PowerShellModule
+        # must also install the module for Windows PowerShell 5.1 so that
+        # run_winget-upgrade.ps1 can load Microsoft.WinGet.Client. See issue
+        # "Fresh install on workstation with errors".
+        BeforeAll {
+            $script:InstallModulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers\Public\ModuleInstallation.ps1"
+        }
+
+        It "Install-PowerShellModule source file should exist" {
+            Test-Path $script:InstallModulePath | Should -Be $true
+        }
+
+        It "Should also install the module for Windows PowerShell 5.1 when running under it" {
+            $content = Get-Content $script:InstallModulePath -Raw
+            $content | Should -Match '\$PSVersionTable\.PSVersion\.Major\s*-lt\s*7'
+            $content | Should -Match 'Install-Module\s+-Name\s+\$ModuleName'
+        }
+    }
+}
+
+Describe "Chezmoi Interpreters Configuration" -Tag "Configuration" {
+    # Chezmoi must run .ps1 scripts with -NoProfile so the profile loader
+    # (Documents\PowerShell\profile.ps1) does not emit warnings between every
+    # chezmoi script on a fresh install.
+    BeforeAll {
+        $script:ChezmoiYamlTmpl = Join-Path $script:RepoRoot "home\.chezmoi.yaml.tmpl"
+    }
+
+    It ".chezmoi.yaml.tmpl should define a ps1 interpreter" {
+        Test-Path $script:ChezmoiYamlTmpl | Should -Be $true
+        $content = Get-Content $script:ChezmoiYamlTmpl -Raw
+        $content | Should -Match 'interpreters:'
+        $content | Should -Match '(?ms)interpreters:.*?ps1:'
+    }
+
+    It "ps1 interpreter should pass -NoProfile" {
+        $content = Get-Content $script:ChezmoiYamlTmpl -Raw
+        $content | Should -Match '(?ms)ps1:.*?-NoProfile'
+    }
+}
+
+Describe "Invoke-ChezmoiSigning repo root detection" -Tag "Configuration" {
+    # The helper must detect the repository root via 'git rev-parse --show-toplevel'
+    # so that it works regardless of where the dotfiles are cloned (e.g.
+    # ~/projects/dotfiles vs. ~/.local/share/chezmoi).
+    BeforeAll {
+        $script:ChezmoiUtilitiesPath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers\Public\ChezmoiUtilities.ps1"
+    }
+
+    It "ChezmoiUtilities.ps1 should exist" {
+        Test-Path $script:ChezmoiUtilitiesPath | Should -Be $true
+    }
+
+    It "Invoke-ChezmoiSigning should use 'git rev-parse --show-toplevel' to detect repo root" {
+        $content = Get-Content $script:ChezmoiUtilitiesPath -Raw
+        $content | Should -Match 'git rev-parse --show-toplevel'
+    }
 }
 
 Describe "Package Configuration" -Tag "Configuration" {

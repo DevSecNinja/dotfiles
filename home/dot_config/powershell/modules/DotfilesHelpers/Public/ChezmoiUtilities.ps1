@@ -25,8 +25,29 @@ function Invoke-ChezmoiSigning {
         return
     }
 
-    # Get repository root (parent of Chezmoi source dir, which is typically 'home/')
-    $repoRoot = Split-Path -Parent $chezmoiSourceDir
+    # Detect repository root robustly:
+    # Prefer 'git rev-parse --show-toplevel' so the repo is found wherever it lives
+    # (e.g. ~/.local/share/chezmoi, ~/projects/dotfiles, etc.), regardless of the
+    # chezmoi source layout. Fall back to the parent of the source dir (which
+    # matches the default 'home/' subdirectory layout used by this repo).
+    $repoRoot = $null
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Push-Location $chezmoiSourceDir
+        try {
+            $gitTopLevel = git rev-parse --show-toplevel 2>$null
+            if ($LASTEXITCODE -eq 0 -and $gitTopLevel) {
+                # git returns forward slashes on Windows; normalise to native separators
+                $repoRoot = (Resolve-Path -LiteralPath $gitTopLevel.Trim()).Path
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    if (-not $repoRoot) {
+        $repoRoot = Split-Path -Parent $chezmoiSourceDir
+    }
 
     $signingScript = Join-Path -Path $chezmoiSourceDir -ChildPath "dot_config\powershell\scripts\Sign-PowerShellScripts.ps1"
 
