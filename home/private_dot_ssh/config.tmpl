@@ -5,6 +5,7 @@ Include ~/.ssh/1Password/config
 # Development Server
 Host svldev.{{ .privateDomain }}
     HostName svldev.{{ .privateDomain }}
+    ForwardAgent yes
 
 # NAS Server
 Host svlnas.{{ .privateDomain }}
