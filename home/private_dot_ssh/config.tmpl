@@ -5,12 +5,15 @@ Include ~/.ssh/1Password/config
 # Development Server
 Host svldev.{{ .privateDomain }}
     HostName svldev.{{ .privateDomain }}
+    # Required for pulling Git repos with SSH password manager feature
     ForwardAgent yes
 
 # NAS Server
 Host svlnas.{{ .privateDomain }}
     HostName svlnas.{{ .privateDomain }}
     User truenas_admin
+    # Required for pulling Git repos with SSH password manager feature
+    ForwardAgent yes
 
 # External Azure Server
 Host svlazext.{{ .privateDomain }}
