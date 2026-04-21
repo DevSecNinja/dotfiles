@@ -46,6 +46,15 @@ if [ -f "$HOME/.config/shell/aliases.sh" ]; then
 	source "$HOME/.config/shell/aliases.sh"
 fi
 
+# Load TrueNAS apps aliases if available
+if [ -f "/mnt/vm-pool/apps/scripts/aliases.sh" ]; then
+	# shellcheck source=/dev/null
+	source "/mnt/vm-pool/apps/scripts/aliases.sh"
+elif [ -f "/opt/apps/scripts/aliases.sh" ]; then
+	# shellcheck source=/dev/null
+	source "/opt/apps/scripts/aliases.sh"
+fi
+
 # Load all completions and evals from completions.d/
 if [ -d "$HOME/.config/shell/completions.d" ]; then
 	for comp_file in "$HOME/.config/shell/completions.d"/*.bash; do
