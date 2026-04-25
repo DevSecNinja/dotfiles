@@ -3,7 +3,9 @@
 # Location: $PROFILE (typically ~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1)
 # But managed by chezmoi in ~/.config/powershell/
 
-# TODO: Investigate why Windows PowerShell doesn't show emojis properly
+# Measure profile load time for performance diagnostics
+$script:_profileLoadStart = [System.Diagnostics.Stopwatch]::StartNew()
+
 # Set UTF-8 encoding (force code page 65001 for Windows PowerShell 5.1)
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     chcp 65001 | Out-Null
@@ -35,19 +37,22 @@ if ($ENV:TERM_PROGRAM -ne "vscode") {
 # Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
 $dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
 if (Test-Path $dotfilesModulePath) {
-    Import-Module $dotfilesModulePath -Force -DisableNameChecking
+    Import-Module $dotfilesModulePath -DisableNameChecking
 }
 
 # Load aliases
 . $PSScriptRoot\aliases.ps1
+
+# Cache git command availability once at startup (avoids a full PATH scan on every prompt render)
+$script:_gitCmd = Get-Command git -ErrorAction SilentlyContinue
 
 # Custom prompt (simple and clean)
 function prompt {
     $loc = Get-Location
     $gitBranch = ""
 
-    # Get git branch if in a git repo
-    if (Get-Command git -ErrorAction SilentlyContinue) {
+    # Get git branch if in a git repo (availability cached at profile startup)
+    if ($script:_gitCmd) {
         $gitBranch = & git rev-parse --abbrev-ref HEAD 2>$null
         if ($gitBranch) {
             $gitBranch = " ($gitBranch)"
@@ -109,8 +114,10 @@ if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
 
 # Welcome message (only in interactive sessions)
 if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
-    Write-Host "🐚 PowerShell Profile Loaded" -ForegroundColor Green
-    Write-Host "💡 Type 'aliases' to see available aliases" -ForegroundColor Yellow
+    $script:_profileLoadStart.Stop()
+    $loadTimeMs = $script:_profileLoadStart.ElapsedMilliseconds
+    Write-Host "[OK] PowerShell Profile Loaded ($loadTimeMs ms)" -ForegroundColor Green
+    Write-Host ">> Type 'aliases' to see available aliases" -ForegroundColor Yellow
 }
 
 # SIG # Begin signature block
