@@ -106,6 +106,76 @@ Describe "PowerShell Completions" {
             $content | Should -Match "System\.Management\.Automation\.CompletionResult"
         }
     }
+
+    Context "oh-my-posh Completion" {
+        BeforeAll {
+            $script:OmpCompletionPath = Join-Path $script:CompletionsPath "oh-my-posh.ps1"
+        }
+
+        It "oh-my-posh completion file should exist" {
+            $script:OmpCompletionPath | Should -Exist
+        }
+
+        It "oh-my-posh completion should check for oh-my-posh command" {
+            $content = Get-Content $script:OmpCompletionPath -Raw
+            $content | Should -Match "Get-Command oh-my-posh"
+        }
+
+        It "oh-my-posh completion should use a timeout guard" {
+            $content = Get-Content $script:OmpCompletionPath -Raw
+            $content | Should -Match "WaitForExit"
+        }
+
+        It "oh-my-posh completion should kill the process when timeout elapses" {
+            $content = Get-Content $script:OmpCompletionPath -Raw
+            $content | Should -Match "\.Kill\(\)"
+        }
+
+        It "oh-my-posh completion should support timeout override via env var" {
+            $content = Get-Content $script:OmpCompletionPath -Raw
+            $content | Should -Match "OMP_TIMEOUT_MS"
+        }
+
+        It "oh-my-posh completion should redirect output to temp file" {
+            $content = Get-Content $script:OmpCompletionPath -Raw
+            $content | Should -Match "GetTempFileName"
+        }
+    }
+
+    Context "Task Completion" {
+        BeforeAll {
+            $script:TaskCompletionPath = Join-Path $script:CompletionsPath "task.ps1"
+        }
+
+        It "task completion file should exist" {
+            $script:TaskCompletionPath | Should -Exist
+        }
+
+        It "task completion should check for task command" {
+            $content = Get-Content $script:TaskCompletionPath -Raw
+            $content | Should -Match "Get-Command task"
+        }
+
+        It "task completion should use a timeout guard" {
+            $content = Get-Content $script:TaskCompletionPath -Raw
+            $content | Should -Match "WaitForExit"
+        }
+
+        It "task completion should kill the process when timeout elapses" {
+            $content = Get-Content $script:TaskCompletionPath -Raw
+            $content | Should -Match "\.Kill\(\)"
+        }
+
+        It "task completion should support timeout override via env var" {
+            $content = Get-Content $script:TaskCompletionPath -Raw
+            $content | Should -Match "TASK_COMPLETION_TIMEOUT_MS"
+        }
+
+        It "task completion should redirect output to temp file" {
+            $content = Get-Content $script:TaskCompletionPath -Raw
+            $content | Should -Match "GetTempFileName"
+        }
+    }
 }
 
 Describe "Profile Configuration" {
@@ -154,6 +224,40 @@ Describe "Profile Configuration" {
     It "Profile should verify projects folder exists before changing" {
         # Verify the profile tests for directory existence
         $script:ProfileContent | Should -Match 'Test-Path.*projectsPath'
+    }
+
+    It "Profile should cache git command availability at startup" {
+        # git availability should be looked up once at profile load, not on every prompt render
+        $script:ProfileContent | Should -Match '_gitCmd\s*=\s*Get-Command git'
+    }
+
+    It "Profile should use cached git command in prompt function" {
+        # Prompt function should reference the cached command, not call Get-Command git directly
+        $script:ProfileContent | Should -Match 'script:_gitCmd'
+    }
+
+    It "Profile should not call Get-Command git inside the prompt function" {
+        # Ensure no per-render PATH scan inside the function body
+        $promptBlock = ($script:ProfileContent -split 'function prompt')[1] -split '}' | Select-Object -First 1
+        $promptBlock | Should -Not -Match 'Get-Command git'
+    }
+
+    It "Profile should import DotfilesHelpers module without -Force" {
+        # -Force causes an unnecessary module re-import on every startup
+        $script:ProfileContent | Should -Not -Match 'Import-Module.*-Force'
+    }
+
+    It "Profile should measure load time with a Stopwatch" {
+        $script:ProfileContent | Should -Match 'Stopwatch'
+    }
+
+    It "Profile should report load time in the welcome message" {
+        $script:ProfileContent | Should -Match 'loadTimeMs'
+    }
+
+    It "Profile welcome message should use ASCII instead of emoji" {
+        # Emoji in .ps1 files can break parsing on systems without UTF-8 BOM
+        $script:ProfileContent | Should -Not -Match '[^\x00-\x7F]'
     }
 }
 
