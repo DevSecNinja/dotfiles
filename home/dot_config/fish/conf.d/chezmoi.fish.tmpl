@@ -18,3 +18,6 @@ set -gx CHEZMOI_ENTRA_ID_TENANT_NAME "{{ .entraIDTenantName }}"
 set -gx CHEZMOI_ENTRA_ID_TENANT_ID "{{ .entraIDTenantId }}"
 # {{ end }}
 set -gx CHEZMOI_IS_WORK "{{ .isWork }}"
+
+# GitHub CLI - disable telemetry
+set -gx GH_NO_TELEMETRY 1

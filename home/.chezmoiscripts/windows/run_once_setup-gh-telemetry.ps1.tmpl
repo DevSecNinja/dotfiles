@@ -1,0 +1,19 @@
+# {{ if eq .chezmoi.os "windows" }}
+# Disable GitHub CLI telemetry
+# Sets telemetry to disabled in gh config if gh is installed.
+# See: https://cli.github.com/manual/gh_config_set
+
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Host "[SKIP] gh CLI not found, skipping telemetry configuration" -ForegroundColor Yellow
+    exit 0
+}
+
+Write-Host ">> Disabling GitHub CLI telemetry..." -ForegroundColor Cyan
+$result = gh config set telemetry disabled 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "[OK] GitHub CLI telemetry disabled" -ForegroundColor Green
+} else {
+    Write-Host "[WARN] Failed to disable GitHub CLI telemetry" -ForegroundColor Yellow
+    Write-Host $result
+}
+# {{ end }}
