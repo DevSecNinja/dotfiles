@@ -1,14 +1,15 @@
-##################################################
-# Title: What does this commit do?
-# - Start with an uppercase imperative verb.
+########################################################################
+# Title: <type>[optional scope]: <short description>
+# - Use a conventional commits type prefix (see reference below).
+# - Use lowercase for type and description.
 # - Do not end with a period.
-# - Limit to 50 characters (the width of the line below).
-##################################################
+# - Limit to 72 characters (the width of the line below).
+########################################################################
 
 
 ########################################################################
-# Body: Why is this change happening?
-# - Describe the purpose, goal, use case, or user story.
+# Body: Why is this change happening? (optional)
+# - Describe the motivation, context, or user story.
 # - Leave a blank line above to separate from the title.
 # - Wrap lines at 72 characters (the width of the line below).
 ########################################################################
@@ -19,31 +20,33 @@
 # - Must be the last part of the commit message.
 # - Leave a blank line above to separate from the body.
 # - Do not leave blank lines between trailers.
-# - URLs in trailers do not need to be wrapped.
+# - Add "BREAKING CHANGE: <description>" for breaking changes.
 #
 # Examples:
 #
 # Closes: #123
 # See: https://example.com/long-url-that-does-not-need-to-be-wrapped
 # Co-authored-by: Name <name@example.com>
+# BREAKING CHANGE: removed support for X
 #
 ########################################################################
 
 
 ########################################################################
-# Reference: Imperative verbs for the title
-# Add      = Create a capability (feature, test, dependency)
-# Drop     = Delete a capability (feature, test, dependency)
-# Fix      = Fix an issue (bug, typo, accident, misstatement)
-# Bump     = Increase the version of a dependency
-# Make     = Change the build process, tools, or infrastructure
-# Start    = Begin doing something (enable a toggle, feature flag)
-# Stop     = End doing something (disable a toggle, feature flag)
-# Optimize = Improve performance
-# Document = Change documentation
-# Refactor = Restructure code without changing behavior
-# Reformat = Adjust formatting (indentation, spacing)
-# Rephrase = Reword text (comments, docs)
+# Reference: Conventional Commits types
+# feat     = A new feature
+# fix      = A bug fix
+# docs     = Documentation-only changes
+# style    = Formatting, whitespace (no logic change)
+# refactor = Code restructure without feature or fix
+# perf     = Performance improvement
+# test     = Add or update tests
+# build    = Build system or dependency changes
+# ci       = CI configuration changes
+# chore    = Other changes (tooling, configs, etc.)
+# revert   = Revert a previous commit
 #
-# Full guide: https://chris.beams.io/git-commit
+# Scope example: feat(fish): add mcd function
+#
+# Full guide: https://www.conventionalcommits.org/en/v1.0.0/
 ########################################################################
