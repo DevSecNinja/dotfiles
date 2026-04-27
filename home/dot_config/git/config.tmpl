@@ -12,6 +12,16 @@
 	sshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
 # {{ end }}
 
+[commit]
+	template = ~/.gitmessage
+	cleanup = strip
+
+[difftool "vscode"]
+	cmd = code --wait --diff $LOCAL $REMOTE
+
+[mergetool "vscode"]
+	cmd = code --wait $MERGED
+
 [init]
 	defaultBranch = main
 
@@ -50,9 +60,15 @@
 
 [diff]
 	colorMoved = zebra
+	tool = vscode
 
 [merge]
 	conflictstyle = diff3
+	autoStash = true
+	tool = vscode
+
+[rebase]
+	autoStash = true
 
 [apply]
-        whitespace = nowarn
+	whitespace = nowarn

@@ -22,3 +22,6 @@ node_modules/
 
 # SOPS Decrypted Secrets
 .decrypted~*
+
+# direnv
+.envrc
