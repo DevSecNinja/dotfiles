@@ -5,6 +5,13 @@ setup() {
 	load "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/generate-passwords.sh"
 }
 
+# Wrapper that closes Bats fd 3 before calling generate-passwords.
+# The function's tr/fold pipeline reads from /dev/urandom (infinite);
+# if those processes inherit fd 3 they keep it open after head exits,
+# which blocks Bats indefinitely.
+# Ref: https://bats-core.readthedocs.io/en/stable/writing-tests.html#file-descriptor-3-read-this-if-bats-hangs
+_gp() { generate-passwords "$@" 3>&-; }
+
 @test "generate-passwords: help option displays usage" {
 	run generate-passwords --help
 	[ "$status" -eq 0 ]
@@ -44,35 +51,35 @@ setup() {
 }
 
 @test "generate-passwords: defaults produce 5 passwords of length 64" {
-	run generate-passwords
+	run _gp
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{64}$' | wc -l)
 	[ "$password_lines" -eq 5 ]
 }
 
 @test "generate-passwords: custom length produces correct length passwords" {
-	run generate-passwords 16
+	run _gp 16
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{16}$' | wc -l)
 	[ "$password_lines" -eq 5 ]
 }
 
 @test "generate-passwords: custom count produces correct number of passwords" {
-	run generate-passwords 12 --count 3
+	run _gp 12 --count 3
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{12}$' | wc -l)
 	[ "$password_lines" -eq 3 ]
 }
 
 @test "generate-passwords: short -c count flag works" {
-	run generate-passwords 10 -c 2
+	run _gp 10 -c 2
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{10}$' | wc -l)
 	[ "$password_lines" -eq 2 ]
 }
 
 @test "generate-passwords: header includes count and length" {
-	run generate-passwords 8 --count 2
+	run _gp 8 --count 2
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "2 password" ]]
 	[[ "$output" =~ "8 characters" ]]

@@ -8,6 +8,15 @@ setup() {
 	export FUNCTION_PATH
 }
 
+# Wrapper that closes Bats fd 3 before spawning fish.
+# The function's tr/fold pipeline reads from /dev/urandom (infinite);
+# if those processes inherit fd 3 they keep it open after head exits,
+# which blocks Bats indefinitely.
+# Ref: https://bats-core.readthedocs.io/en/stable/writing-tests.html#file-descriptor-3-read-this-if-bats-hangs
+_fish_gp() {
+	fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords $*" 3>&-
+}
+
 @test "generate_passwords: function file exists" {
 	[ -f "$FUNCTION_PATH" ]
 }
@@ -62,7 +71,7 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	run fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords"
+	run _fish_gp
 	[ "$status" -eq 0 ]
 	# 5 password lines after header line (count password lines of length 64 alnum)
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{64}$' | wc -l)
@@ -73,7 +82,7 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	run fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords 16"
+	run _fish_gp 16
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{16}$' | wc -l)
 	[ "$password_lines" -eq 5 ]
@@ -83,7 +92,7 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	run fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords 12 --count 3"
+	run _fish_gp 12 --count 3
 	[ "$status" -eq 0 ]
 	password_lines=$(echo "$output" | grep -E '^[A-Za-z0-9]{12}$' | wc -l)
 	[ "$password_lines" -eq 3 ]
@@ -93,7 +102,7 @@ setup() {
 	if ! command -v fish >/dev/null 2>&1; then
 		skip "Fish not installed"
 	fi
-	run fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords 8 --count 2"
+	run _fish_gp 8 --count 2
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "2 password" ]]
 	[[ "$output" =~ "8 characters" ]]
