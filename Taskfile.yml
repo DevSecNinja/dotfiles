@@ -57,6 +57,18 @@ tasks:
       - install:deps
       - install:mise
       - install:task
+      - install:bats-libs
+
+  install:bats-libs:
+    desc: Download BATS helper libraries (bats-support, bats-assert, bats-file)
+    cmds:
+      - bash {{.TEST_DIR}}/setup_libs.sh
+    sources:
+      - '{{.TEST_DIR}}/setup_libs.sh'
+    generates:
+      - '{{.TEST_DIR}}/libs/bats-support/load.bash'
+      - '{{.TEST_DIR}}/libs/bats-assert/load.bash'
+      - '{{.TEST_DIR}}/libs/bats-file/load.bash'
 
   # Validation tasks
   validate:all:

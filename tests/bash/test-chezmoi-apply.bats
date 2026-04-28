@@ -30,24 +30,31 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
-@test "test-chezmoi-apply: dry-run does not create files" {
+@test "test-chezmoi-apply: dry-run does not create managed files" {
 	if ! command -v chezmoi >/dev/null 2>&1; then
 		skip "Chezmoi not installed"
 	fi
 
-	# Create a temporary home directory for testing
-	local temp_home="$(mktemp -d)"
+	# Use a separate destination directory so we can verify that
+	# `chezmoi init --apply --dry-run` doesn't write any managed
+	# files to it. We also redirect HOME so chezmoi's own config
+	# and state files (which are always written by `init`, even
+	# during --dry-run) land in an isolated, throwaway location.
+	local temp_home temp_dest
+	temp_home="$(mktemp -d)"
+	temp_dest="$(mktemp -d)"
 
 	cd "$REPO_ROOT/home"
-	HOME="$temp_home" run chezmoi init --apply --dry-run --no-tty --source=.
+	HOME="$temp_home" run chezmoi init --apply --dry-run --no-tty --source=. --destination="$temp_dest"
 
-	# Verify no files were actually created in temp home
-	local file_count=$(find "$temp_home" -type f 2>/dev/null | wc -l)
+	# Verify no managed files were actually created in the destination.
+	local file_count
+	file_count=$(find "$temp_dest" -type f 2>/dev/null | wc -l)
 
 	# Cleanup
-	rm -rf "$temp_home"
+	rm -rf "$temp_home" "$temp_dest"
 
-	# In dry-run mode, no files should be created
+	# In dry-run mode, no files should be created in the destination
 	[ "$file_count" -eq 0 ]
 }
 
