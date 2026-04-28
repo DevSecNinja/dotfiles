@@ -13,12 +13,6 @@
     "github>DevSecNinja/.github//.renovate/packageRules.json5",
     "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
   ],
-  "pre-commit": {
-    enabled: true,
-  },
-  pip_requirements: {
-    managerFilePatterns: ["/(^|/)requirements\\.txt$/"],
-  },
   customManagers: [
     {
       // Track the minimum chezmoi version pinned in .chezmoiversion against
@@ -31,18 +25,6 @@
       depNameTemplate: "twpayne/chezmoi",
       datasourceTemplate: "github-releases",
       extractVersionTemplate: "^v(?<version>.+)$",
-    },
-  ],
-  packageRules: [
-    {
-      description: "Group Python dependencies",
-      matchManagers: ["pip_requirements"],
-      groupName: "Python dependencies",
-    },
-    {
-      description: "Group pre-commit hooks",
-      matchManagers: ["pre-commit"],
-      groupName: "pre-commit hooks",
     },
   ],
 }

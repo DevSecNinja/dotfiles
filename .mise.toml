@@ -3,7 +3,7 @@
 
 # Global tool versions used in this project
 [tools]
-# Python for pre-commit and validation scripts
+# Python for validation scripts and tooling
 python = "3.14.4"
 
 # Go Task for task runner
@@ -14,6 +14,13 @@ chezmoi = "latest"
 
 # Bats for bash testing
 bats = "1.13.0"
+
+# Lefthook for managing git hooks
+lefthook = "latest"
+
+# Shell linting and formatting (used by lefthook hooks)
+shellcheck = "latest"
+shfmt = "latest"
 
 # Additional tools for development (commented out by default)
 # Uncomment based on your needs
@@ -49,7 +56,7 @@ verbose = false
 # [tasks]
 # [tasks.validate]
 # description = "Run all validation checks"
-# run = "./tests/bash/run-tests.sh --ci && pre-commit run --all-files"
+# run = "./tests/bash/run-tests.sh --ci && lefthook run pre-commit --all-files"
 
 # [tasks.test]
 # description = "Run tests"
@@ -57,4 +64,4 @@ verbose = false
 
 # [tasks.install]
 # description = "Install dependencies"
-# run = "pip3 install -r requirements.txt"
+# run = "mise install"

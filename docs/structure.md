@@ -47,7 +47,7 @@ dotfiles/
 ├── install.sh                   # Unix installation wrapper
 ├── install.ps1                  # Windows installation wrapper
 ├── mkdocs.yml                   # MkDocs configuration
-└── requirements.txt             # Python dependencies
+└── .lefthook.toml               # Lefthook git hooks configuration
 ```
 
 ## Chezmoi Source Directory

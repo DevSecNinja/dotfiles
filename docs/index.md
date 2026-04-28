@@ -45,7 +45,7 @@ understand how everything fits together.
 - [Chezmoi Variables](chezmoi-variables.md) &mdash; Template variables and
   environment variables exposed to shells.
 - [Development Tools](development-tools.md) &mdash; Task, mise, and
-  pre-commit workflows.
+  lefthook workflows.
 - [Contributing](contributing.md) &mdash; Make changes and validate them.
 
 ## 📄 License

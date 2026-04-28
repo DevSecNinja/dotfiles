@@ -121,7 +121,7 @@ dotfiles/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── STRUCTURE.md
-└── requirements.txt
+└── .lefthook.toml
 ```
 
 ## 🚀 Quick Start
@@ -263,26 +263,25 @@ chezmoi data
 chezmoi verify
 ```
 
-### Pre-commit Hooks
+### Pre-commit Hooks (Lefthook)
 
-This repository uses [pre-commit](https://pre-commit.com/) for code quality checks:
+This repository uses [lefthook](https://github.com/evilmartians/lefthook) for code quality checks:
 
 ```bash
-# Install dependencies
-pip3 install -r requirements.txt
+# Install development tools (lefthook, shellcheck, shfmt, ...) via mise
+mise install
 
-# Setup pre-commit hooks (from repository root)
-home/.chezmoiscripts/linux/run_once_setup-precommit.sh
+# Setup lefthook git hooks (from repository root)
+home/.chezmoiscripts/linux/run_once_setup-lefthook.sh
 
 # Run manually on all files
-pre-commit run --all-files
+lefthook run pre-commit --all-files
 ```
 
 Hooks will automatically run on `git commit`. The checks include:
-- ✂️ Trailing whitespace removal
-- 📄 End-of-file fixes
-- 🔍 YAML validation
+- 🐚 Shell script linting (shellcheck)
 - 🎨 Shell script formatting (shfmt)
+- 🔧 Executable bit enforcement on shell scripts
 
 These scripts and hooks are also used in the GitHub Actions CI pipeline to ensure quality.
 
