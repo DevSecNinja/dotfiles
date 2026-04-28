@@ -5,15 +5,35 @@ setup() {
 	load "${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/generate-passwords.sh"
 }
 
-# Wrapper that closes Bats fd 3 before calling generate-passwords.
-# The function's tr/fold pipeline reads from /dev/urandom (infinite);
-# if those processes inherit fd 3 they keep it open after head exits,
-# which blocks Bats indefinitely.
+# Wrapper that runs generate-passwords in a subshell with Bats's internal
+# file descriptor 3 closed AND with stdout/stderr redirected to a file.
+#
+# The function under test spawns `tr -cd '[:alnum:]' </dev/urandom | fold | head`.
+# `tr`/`fold` inherit ALL the parent shell's file descriptors, including:
+#   - fd 3 (Bats's internal log channel — keeps Bats waiting forever)
+#   - fd 1/2 connected to Bats's `tee` capture pipe
+# Even though `head` exits after one line and SIGPIPE *should* kill the upstream
+# pipeline, on the GitHub Actions Linux runner `tr` and `fold` are sometimes
+# orphaned and keep all inherited fds open, hanging the test.
+#
+# Closing fd 3 + redirecting stdout/stderr to a temp file (then catting it
+# back) ensures none of those fds is held open by orphaned children.
 # Ref: https://bats-core.readthedocs.io/en/stable/writing-tests.html#file-descriptor-3-read-this-if-bats-hangs
-_gp() { generate-passwords "$@" 3>&-; }
+_gp() {
+	local out
+	out="$(mktemp)"
+	(
+		exec 3>&- 4>&- 5>&-
+		generate-passwords "$@"
+	) >"$out" 2>&1 </dev/null
+	local rc=$?
+	cat "$out"
+	rm -f "$out"
+	return "$rc"
+}
 
 @test "generate-passwords: help option displays usage" {
-	run generate-passwords --help
+	run _gp --help
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "Usage: generate-passwords" ]]
 	[[ "$output" =~ "LENGTH" ]]
@@ -21,31 +41,31 @@ _gp() { generate-passwords "$@" 3>&-; }
 }
 
 @test "generate-passwords: short help option works" {
-	run generate-passwords -h
+	run _gp -h
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "Usage: generate-passwords" ]]
 }
 
 @test "generate-passwords: invalid count returns error" {
-	run generate-passwords --count abc
+	run _gp --count abc
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Count must be a positive integer" ]]
 }
 
 @test "generate-passwords: missing count argument returns error" {
-	run generate-passwords --count
+	run _gp --count
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "--count requires" ]]
 }
 
 @test "generate-passwords: invalid length returns error" {
-	run generate-passwords abc
+	run _gp abc
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Password length must be a positive integer" ]]
 }
 
 @test "generate-passwords: unknown option returns error" {
-	run generate-passwords --invalid-option
+	run _gp --invalid-option
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Unknown option" ]]
 }
