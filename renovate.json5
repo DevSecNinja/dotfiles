@@ -13,4 +13,18 @@
     "github>DevSecNinja/.github//.renovate/packageRules.json5",
     "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
   ],
+  customManagers: [
+    {
+      // Track the minimum chezmoi version pinned in .chezmoiversion against
+      // upstream chezmoi releases. The file contains a single bare version
+      // (e.g. "2.69.1"); upstream tags are prefixed with "v", so strip it.
+      customType: "regex",
+      description: "Update minimum chezmoi version in .chezmoiversion",
+      managerFilePatterns: ["/(^|/)\\.chezmoiversion$/"],
+      matchStrings: ["^(?<currentValue>\\S+)\\s*$"],
+      depNameTemplate: "twpayne/chezmoi",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+  ],
 }
