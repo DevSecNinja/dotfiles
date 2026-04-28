@@ -2,6 +2,25 @@
 
 Comprehensive test suite for validating dotfiles configurations, scripts, and utilities across multiple platforms and languages.
 
+## Coverage at a glance
+
+| Category | Tested / Total | Coverage |
+|----------|---------------:|---------:|
+| Shell functions | 13 / 18 | 72% |
+| Fish functions | 6 / 13 (+1 partial) | 46% |
+| PowerShell module functions | 16 / 16 | **100%** |
+| PowerShell aliases | 21 / 21 | **100%** |
+| Chezmoi run scripts | 11 / 11 | **100%** |
+| **Overall tracked items** | **69 / 81** | **85%** |
+
+| Test framework | Test files | Test cases |
+|----------------|-----------:|-----------:|
+| Bats (Bash)    | 36         | 413        |
+| Pester (PS)    | 13         | 315        |
+| **Total**      | **49**     | **728**    |
+
+See [`COVERAGE.md`](COVERAGE.md) for a per-function breakdown.
+
 ## Directory Structure
 
 ```

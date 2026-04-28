@@ -31,10 +31,12 @@ teardown() {
 }
 
 @test "silent-background: runs command in background and returns immediately" {
-	# Run a sleep that writes to a marker file, ensure it's backgrounded
+	# Run a sleep that writes to a marker file, ensure it's backgrounded.
+	# Redirect the function call's stdout/stderr away from bats's pipes to
+	# avoid the backgrounded child inheriting bats's fds and (in some bats
+	# versions) holding them open until the child finishes.
 	marker="$TEST_DIR/marker"
-	# Use bash -c to run a command that writes after a short delay
-	silent-background bash -c "sleep 0.5; echo done > '$marker'"
+	silent-background bash -c "sleep 0.5; echo done > '$marker'" </dev/null >/dev/null 2>&1
 	# Should return immediately - marker should not yet exist
 	[ ! -f "$marker" ]
 	# Wait for completion
@@ -46,7 +48,7 @@ teardown() {
 	# stderr/stdout should be suppressed by the wrapper.
 	# We check that running a noisy command doesn't emit to current stdout/stderr.
 	output_file="$TEST_DIR/captured"
-	silent-background bash -c "echo loud-output; echo loud-error >&2" >"$output_file" 2>&1
+	silent-background bash -c "echo loud-output; echo loud-error >&2" </dev/null >"$output_file" 2>&1
 	# Wait for backgrounded command to finish
 	sleep 0.5
 	# Captured output may still be empty (command's output is suppressed)
