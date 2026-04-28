@@ -5,8 +5,12 @@ setup() {
 	mock_bin="$BATS_TEST_TMPDIR/bin"
 	mkdir -p "$mock_bin"
 	cat >"$mock_bin/tr" <<'EOF'
-#!/usr/bin/env bash
-printf 'A%.0s' {1..1024}
+#!/bin/sh
+i=0
+while [ "$i" -lt 1024 ]; do
+	printf A
+	i=$((i + 1))
+done
 printf '\n'
 EOF
 	chmod +x "$mock_bin/tr"
