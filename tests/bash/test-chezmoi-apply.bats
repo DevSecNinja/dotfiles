@@ -30,7 +30,7 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
-@test "test-chezmoi-apply: dry-run does not create files" {
+@test "test-chezmoi-apply: dry-run does not create managed files" {
 	if ! command -v chezmoi >/dev/null 2>&1; then
 		skip "Chezmoi not installed"
 	fi
@@ -41,13 +41,16 @@ setup() {
 	cd "$REPO_ROOT/home"
 	HOME="$temp_home" run chezmoi init --apply --dry-run --no-tty --source=.
 
-	# Verify no files were actually created in temp home
-	local file_count=$(find "$temp_home" -type f 2>/dev/null | wc -l)
+	# Verify no managed dotfiles were created in temp home.
+	# Exclude chezmoi's own config directory (.config/chezmoi/) which is
+	# always written by `chezmoi init`, even during --dry-run.
+	local file_count
+	file_count=$(find "$temp_home" -type f -not -path "*/.config/chezmoi/*" -not -path "*/.local/share/chezmoi/*" 2>/dev/null | wc -l)
 
 	# Cleanup
 	rm -rf "$temp_home"
 
-	# In dry-run mode, no files should be created
+	# In dry-run mode, no managed files should be created
 	[ "$file_count" -eq 0 ]
 }
 
