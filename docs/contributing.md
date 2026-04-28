@@ -29,12 +29,12 @@ the key workflows.
 
 ## Validate Before Committing
 
-Install Python dependencies, then run all validation:
+Install development tools via mise, then run all validation:
 
 ```bash
-pip3 install -r requirements.txt
+mise install
 ./tests/bash/run-tests.sh --ci
-pre-commit run --all-files
+lefthook run pre-commit --all-files
 ```
 
 All three commands should succeed before opening a pull request.

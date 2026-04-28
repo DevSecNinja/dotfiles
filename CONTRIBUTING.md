@@ -55,7 +55,7 @@ vim dot_config/fish/functions/mynewfunction.fish
 ### Testing Changes
 
 The CI pipeline runs automatically on push and will:
-- 🎯 Run pre-commit hooks (formatting, linting)
+- 🎯 Run lefthook hooks (formatting, linting)
 - ✅ Validate all shell script syntax
 - ✅ Check Fish configuration files
 - ✅ Run dry-run installation
@@ -65,14 +65,14 @@ The CI pipeline runs automatically on push and will:
 You can run similar checks locally:
 
 ```bash
-# Install Python dependencies
-pip3 install -r requirements.txt
+# Install development tools via mise
+mise install
 
-# Run pre-commit checks
-pre-commit run --all-files
+# Run lefthook checks
+lefthook run pre-commit --all-files
 
 # Or install hooks to run automatically on commit
-home/.chezmoiscripts/linux/run_once_setup-precommit.sh
+home/.chezmoiscripts/linux/run_once_setup-lefthook.sh
 
 # Check shell script syntax
 find . -name "*.sh" -type f -exec sh -n {} \;

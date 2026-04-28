@@ -21,13 +21,13 @@
 
 **Always run commands in this exact order**:
 
-### 1. Install Python Dependencies (Required First)
+### 1. Install Development Tools (Required First)
 
 ```bash
-pip3 install -r requirements.txt
+mise install
 ```
 
-**Status**: ✅ Validated working. Required before any validation.
+**Status**: ✅ Validated working. Required before any validation. Installs lefthook, shellcheck, shfmt, and other tools defined in `.mise.toml`.
 
 ### 2. Run All Validation Checks
 
@@ -46,22 +46,19 @@ pip3 install -r requirements.txt
 
 **Expected output**: "✅ All validation checks passed!" with 4/4 checks passing.
 
-### 3. Run Pre-commit Hooks
+### 3. Run Lefthook Hooks
 
 ```bash
-pre-commit run --all-files
+mise exec -- lefthook run pre-commit --all-files
 ```
 
 **Status**: ✅ Validated working.
 
 **What it checks**:
 
-- Trailing whitespace
-- End of file fixes
-- Mixed line endings
-- YAML syntax
+- Shell script linting (shellcheck)
 - Shell script formatting (shfmt)
-- Large file detection
+- Executable bit on shell scripts
 
 ### 4. Run Specific Validation Tests (if needed)
 
@@ -135,8 +132,7 @@ dot_tmux.conf                      # → ~/.tmux.conf
 run_once_*.sh.tmpl                 # One-time setup scripts (templated)
 .chezmoi.yaml.tmpl                 # Chezmoi config with prompts
 .chezmoiignore                     # OS-specific ignore patterns
-requirements.txt                   # Python deps (pre-commit)
-.pre-commit-config.yaml            # Pre-commit hooks config
+.lefthook.toml                     # Lefthook git hooks configuration
 renovate.json                      # Dependency updates config
 ```
 
@@ -183,7 +179,7 @@ AppData/Local/Packages/            # → Windows Terminal settings
 **Utility scripts**: Located in `home/.chezmoiscripts/linux/`
 
 ```bash
-run_once_setup-precommit.sh        # Install pre-commit hooks (runs once on apply)
+run_once_setup-lefthook.sh         # Install lefthook hooks (runs once on apply)
 ```
 
 ### Chezmoi Naming Conventions
@@ -247,18 +243,18 @@ Available in `*.tmpl` files:
 
 **When editing Fish configs**: Always validate with `fish -n <file>` before committing.
 
-### 5. Pre-commit Hook Requirements
+### 5. Lefthook Hook Requirements
 
 **Must run before every commit**:
 
 ```bash
-pre-commit run --all-files
+mise exec -- lefthook run pre-commit --all-files
 ```
 
 **Auto-install hooks** (runs once on Chezmoi apply):
 
 ```bash
-home/.chezmoiscripts/linux/run_once_setup-precommit.sh
+home/.chezmoiscripts/linux/run_once_setup-lefthook.sh
 ```
 
 ### 6. No Emoji/Unicode in PowerShell Files
@@ -317,13 +313,13 @@ fish -n dot_config/fish/config.fish
 chezmoi init --apply --no-tty --source=.
 ```
 
-### Issue: Pre-commit fails on fresh checkout
+### Issue: Lefthook fails on fresh checkout
 
-**Cause**: Python dependencies not installed
+**Cause**: Development tools not installed
 **Solution**: Always run first:
 
 ```bash
-pip3 install -r requirements.txt
+mise install
 ```
 
 ## Making Changes - Complete Workflow
@@ -331,8 +327,8 @@ pip3 install -r requirements.txt
 ### 1. Before Making Changes
 
 ```bash
-# Ensure dependencies installed
-pip3 install -r requirements.txt
+# Ensure development tools installed
+mise install
 
 # Ensure you're in the repo root
 cd /path/to/dotfiles
@@ -348,8 +344,8 @@ cd /path/to/dotfiles
 # Run all validation (REQUIRED)
 ./tests/bash/run-tests.sh --ci
 
-# Run pre-commit hooks (REQUIRED)
-pre-commit run --all-files
+# Run lefthook hooks (REQUIRED)
+mise exec -- lefthook run pre-commit --all-files
 
 # Test dry-run
 chezmoi apply --dry-run --source=.
@@ -367,14 +363,14 @@ chezmoi verify
 
 ### 5. Commit Changes
 
-Pre-commit hooks will run automatically on `git commit` if installed.
+Lefthook hooks will run automatically on `git commit` if installed.
 
 ## Key Dependencies & Versions
 
 - **Chezmoi**: 2.69.1+ (managed by Renovate)
 - **Fish Shell**: 3.6.0+ (for Fish configs)
-- **Python**: 3.x (for pre-commit)
-- **pre-commit**: 3.0.0+ (from requirements.txt)
+- **mise**: latest (manages developer tooling versions, see `.mise.toml`)
+- **lefthook**: latest (git hooks; installed via mise)
 - **Git**: Any modern version
 
 ## Files That Should NOT Be Modified Directly
@@ -387,7 +383,7 @@ Pre-commit hooks will run automatically on `git commit` if installed.
 **When working on this repository**:
 
 1. Run validation with `./tests/bash/run-tests.sh --ci` before committing
-2. Run `pre-commit run --all-files` before committing
+2. Run `mise exec -- lefthook run pre-commit --all-files` before committing
 3. Use `chezmoi apply --dry-run --source=.` to preview changes
 4. Never edit dotfiles in `~` directly; edit in the repo
 5. Use Chezmoi naming conventions for new files

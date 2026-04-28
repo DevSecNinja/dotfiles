@@ -21,16 +21,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        with:
-          python-version: '3.x'
+      - name: Install mise
+        uses: jdx/mise-action@v2
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run pre-commit checks
-        run: pre-commit run --all-files
+      - name: Run lefthook checks
+        run: mise exec -- lefthook run pre-commit --all-files
         continue-on-error: true
 
       - name: Run validation tests

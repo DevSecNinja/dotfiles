@@ -58,10 +58,10 @@ dotfiles/
 ├── 🚀 Setup Scripts (run on chezmoi apply)
 │   ├── .chezmoiscripts/
 │   │   ├── linux/
-│   │   │   ├── run_once_setup-precommit.sh              # Pre-commit setup (runs once)
+│   │   │   ├── run_once_setup-lefthook.sh             # Lefthook setup (runs once)
 │   │   │   ├── run_once_before_00-setup.sh.tmpl       # Initial directory creation
 │   │   │   ├── run_onchange_install-packages.sh.tmpl  # Development tools (runs on packages.yaml change)
-│   │   │   └── run_once_install-precommit.sh.tmpl     # Pre-commit hooks (auto)
+│   │   │   └── run_once_install-lefthook.sh.tmpl      # Lefthook install (auto)
 │   │   ├── darwin/
 │   │   │   └── run_once_before_10-setup-fish.sh.tmpl  # Fish setup (macOS)
 │   │   └── windows/
@@ -88,8 +88,7 @@ dotfiles/
 ├── ⚙️ Chezmoi Configuration
 │   ├── .chezmoi.yaml.tmpl           # Chezmoi config (prompts for name/email)
 │   ├── .chezmoiignore               # Files to not copy to home (supports templates)
-│   ├── .pre-commit-config.yaml      # Pre-commit hooks configuration
-│   ├── requirements.txt             # Python dependencies (pre-commit)
+│   ├── .lefthook.toml               # Lefthook git hooks configuration
 │   ├── install.sh                   # Installation script (Unix)
 │   └── install.ps1                  # Installation script (Windows)
 │

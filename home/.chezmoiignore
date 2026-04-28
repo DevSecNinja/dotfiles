@@ -1,8 +1,7 @@
 .github/
 LICENSE
 README.md
-.pre-commit-config.yaml
-requirements.txt
+.lefthook.toml
 tests/
 install.sh
 install.ps1

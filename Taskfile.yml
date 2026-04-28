@@ -19,16 +19,14 @@ tasks:
 
   # Installation tasks
   install:deps:
-    desc: Install Python dependencies (required for validation)
+    desc: Install development tools (lefthook, shellcheck, shfmt, ...) via mise
     cmds:
-      - '{{.PIP}} install -r requirements.txt'
+      - mise install
     sources:
-      - requirements.txt
-    generates:
-      - .venv/**/*
+      - .mise.toml
     preconditions:
-      - sh: command -v {{.PIP}}
-        msg: 'pip3 is not installed'
+      - sh: command -v mise
+        msg: 'mise is not installed (see https://mise.jdx.dev/)'
 
   install:mise:
     desc: Install mise if not present
@@ -99,11 +97,11 @@ tasks:
       - '{{.TEST_RUNNER}} --test validate-fish-config.bats'
 
   validate:precommit:
-    desc: Run pre-commit hooks on all files
+    desc: Run lefthook pre-commit hooks on all files
     deps:
       - install:deps
     cmds:
-      - pre-commit run --all-files
+      - mise exec -- lefthook run pre-commit --all-files
 
   # Testing tasks
   test:all:
@@ -170,12 +168,12 @@ tasks:
       - echo "✅ Development environment setup complete!"
 
   dev:precommit:
-    desc: Setup pre-commit hooks
+    desc: Install lefthook git hooks
     deps:
       - install:deps
     cmds:
-      - pre-commit install
-      - echo "✅ Pre-commit hooks installed"
+      - mise exec -- lefthook install
+      - echo "✅ Lefthook hooks installed"
 
   # CI tasks
   ci:validate:
@@ -223,7 +221,7 @@ tasks:
         echo "Pip: $({{.PIP}} --version)"
         echo "Mise: $(command -v mise && mise --version || echo 'not installed')"
         echo "Task: $(command -v task && task --version || echo 'not installed')"
-        echo "Pre-commit: $(command -v pre-commit && pre-commit --version || echo 'not installed')"
+        echo "Lefthook: $(command -v lefthook && lefthook version || echo 'not installed')"
 
   info:packages:
     desc: Show packages that would be installed
