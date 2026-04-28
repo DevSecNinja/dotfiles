@@ -6,33 +6,23 @@ setup() {
 	export REPO_ROOT
 	FUNCTION_PATH="$REPO_ROOT/home/dot_config/fish/functions/generate_passwords.fish"
 	export FUNCTION_PATH
+
+	mock_bin="$BATS_TEST_TMPDIR/bin"
+	mkdir -p "$mock_bin"
+	cat >"$mock_bin/tr" <<'EOF'
+#!/usr/bin/env bash
+printf 'A%.0s' {1..1024}
+printf '\n'
+EOF
+	chmod +x "$mock_bin/tr"
+	export PATH="$mock_bin:$PATH"
 }
 
-# Wrapper that runs `generate_passwords` inside fish with Bats's internal
-# file descriptor 3 closed AND with stdout/stderr redirected to a file.
-#
-# The fish function spawns `tr -cd '[:alnum:]' </dev/urandom | fold | head`.
-# `tr`/`fold` inherit ALL of the parent shell's file descriptors, including:
-#   - fd 3 (Bats's internal log channel — keeps Bats waiting forever)
-#   - fd 1/2 connected to Bats's `tee` capture pipe
-# Even though `head` exits after one line and SIGPIPE *should* kill the upstream
-# pipeline, on the GitHub Actions Linux runner `tr` and `fold` are sometimes
-# orphaned and keep all inherited fds open, hanging the test.
-#
-# Closing fd 3 + redirecting stdout/stderr to a temp file (then catting it
-# back) ensures none of those fds is held open by orphaned children.
-# Ref: https://bats-core.readthedocs.io/en/stable/writing-tests.html#file-descriptor-3-read-this-if-bats-hangs
+# The fish function normally reads from /dev/urandom via tr|fold|head. The
+# setup() PATH shim keeps tests deterministic and prevents Bats from waiting on
+# orphaned processes that can keep Bats-owned file descriptors open in CI.
 _fish_gp() {
-	local out
-	out="$(mktemp)"
-	(
-		exec 3>&- 4>&- 5>&-
-		fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords $*"
-	) >"$out" 2>&1 </dev/null
-	local rc=$?
-	cat "$out"
-	rm -f "$out"
-	return "$rc"
+	fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords $*"
 }
 
 @test "generate_passwords: function file exists" {

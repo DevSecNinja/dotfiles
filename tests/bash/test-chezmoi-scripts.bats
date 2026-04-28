@@ -95,47 +95,47 @@ strip_template() {
 	[ "$status" -eq 0 ]
 }
 
-@test "chezmoi-scripts: run_once_install-precommit.sh.tmpl exists" {
-	[ -f "$LINUX_SCRIPTS_DIR/run_once_install-precommit.sh.tmpl" ]
+@test "chezmoi-scripts: run_once_install-lefthook.sh.tmpl exists" {
+	[ -f "$LINUX_SCRIPTS_DIR/run_once_install-lefthook.sh.tmpl" ]
 }
 
-@test "chezmoi-scripts: install-precommit handles light vs full mode" {
-	grep -q '\.installType' "$LINUX_SCRIPTS_DIR/run_once_install-precommit.sh.tmpl"
+@test "chezmoi-scripts: install-lefthook handles light vs full mode" {
+	grep -q '\.installType' "$LINUX_SCRIPTS_DIR/run_once_install-lefthook.sh.tmpl"
 }
 
-@test "chezmoi-scripts: install-precommit checks if pre-commit already installed (idempotency)" {
-	grep -q "command -v pre-commit" "$LINUX_SCRIPTS_DIR/run_once_install-precommit.sh.tmpl"
+@test "chezmoi-scripts: install-lefthook checks if lefthook already installed (idempotency)" {
+	grep -q "command -v lefthook" "$LINUX_SCRIPTS_DIR/run_once_install-lefthook.sh.tmpl"
 }
 
-@test "chezmoi-scripts: install-precommit has valid bash syntax (after stripping templates)" {
-	local script="$LINUX_SCRIPTS_DIR/run_once_install-precommit.sh.tmpl"
+@test "chezmoi-scripts: install-lefthook has valid bash syntax (after stripping templates)" {
+	local script="$LINUX_SCRIPTS_DIR/run_once_install-lefthook.sh.tmpl"
 	local rendered="$TEST_DIR/rendered.sh"
 	strip_template "$script" >"$rendered"
 	run bash -n "$rendered"
 	[ "$status" -eq 0 ]
 }
 
-@test "chezmoi-scripts: run_once_setup-precommit.sh exists and has set -e" {
-	local script="$LINUX_SCRIPTS_DIR/run_once_setup-precommit.sh"
+@test "chezmoi-scripts: run_once_setup-lefthook.sh exists and has set -e" {
+	local script="$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 	[ -f "$script" ]
 	grep -q "set -e" "$script"
 }
 
-@test "chezmoi-scripts: setup-precommit has valid bash syntax" {
-	run bash -n "$LINUX_SCRIPTS_DIR/run_once_setup-precommit.sh"
+@test "chezmoi-scripts: setup-lefthook has valid bash syntax" {
+	run bash -n "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 	[ "$status" -eq 0 ]
 }
 
-@test "chezmoi-scripts: setup-precommit skips git hooks installation in CI" {
-	grep -q "GITHUB_ACTIONS\|CI" "$LINUX_SCRIPTS_DIR/run_once_setup-precommit.sh"
+@test "chezmoi-scripts: setup-lefthook skips git hooks installation in CI" {
+	grep -q "GITHUB_ACTIONS\|CI" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 }
 
-@test "chezmoi-scripts: setup-precommit verifies pre-commit-config.yaml exists" {
-	grep -q "\.pre-commit-config.yaml" "$LINUX_SCRIPTS_DIR/run_once_setup-precommit.sh"
+@test "chezmoi-scripts: setup-lefthook verifies lefthook config exists" {
+	grep -q "\.lefthook.toml\|lefthook.yml" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 }
 
-@test "chezmoi-scripts: setup-precommit is idempotent (checks already-installed)" {
-	grep -q "already installed\|command -v pre-commit" "$LINUX_SCRIPTS_DIR/run_once_setup-precommit.sh"
+@test "chezmoi-scripts: setup-lefthook is idempotent (checks already-installed)" {
+	grep -q "already installed\|command -v lefthook" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 }
 
 @test "chezmoi-scripts: run_onchange_10-install-packages.sh.tmpl exists" {
