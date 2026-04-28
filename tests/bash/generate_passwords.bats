@@ -29,6 +29,13 @@ _fish_gp() {
 	fish --no-config -c "source '$FUNCTION_PATH'; generate_passwords $*"
 }
 
+@test "generate_passwords: test tr shim emits deterministic alphanumeric data" {
+	run tr -cd '[:alnum:]' </dev/urandom
+	[ "$status" -eq 0 ]
+	[ "${#output}" -eq 1024 ]
+	[[ "$output" =~ ^A+$ ]]
+}
+
 @test "generate_passwords: function file exists" {
 	[ -f "$FUNCTION_PATH" ]
 }

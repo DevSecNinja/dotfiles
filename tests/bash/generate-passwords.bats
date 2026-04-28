@@ -23,6 +23,13 @@ EOF
 # PATH shim keeps tests deterministic and prevents Bats from waiting on
 # orphaned processes that can keep Bats-owned file descriptors open in CI.
 
+@test "generate-passwords: test tr shim emits deterministic alphanumeric data" {
+	run tr -cd '[:alnum:]' </dev/urandom
+	[ "$status" -eq 0 ]
+	[ "${#output}" -eq 1024 ]
+	[[ "$output" =~ ^A+$ ]]
+}
+
 @test "generate-passwords: help option displays usage" {
 	run generate-passwords --help
 	[ "$status" -eq 0 ]
