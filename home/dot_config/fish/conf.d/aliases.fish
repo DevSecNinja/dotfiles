@@ -22,8 +22,8 @@ alias gd 'git diff'
 alias gco 'git checkout'
 alias gb 'git branch'
 
-# Pre-commit shortcuts
-alias pc 'pre-commit run --all-files'
+# Lefthook shortcut (run all pre-commit hooks across the repo)
+alias pc 'lefthook run pre-commit --all-files'
 
 # Safety
 alias rm 'rm -i'

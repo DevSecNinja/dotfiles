@@ -1,0 +1,29 @@
+# Lefthook configuration - Git hooks manager
+# https://github.com/evilmartians/lefthook
+#
+# Replaces pre-commit (https://pre-commit.com/) for managing git hooks.
+# Tools are managed via mise (.mise.toml) so contributors only need
+# `mise install && lefthook install` to get a working hook environment.
+
+[pre-commit]
+parallel = true
+
+# Lint shell scripts (excluding zsh, bats and chezmoi templates)
+[pre-commit.commands.shellcheck]
+run = "mise exec -- shellcheck {staged_files}"
+glob = ["**/*.sh", "**/*.bash"]
+exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
+
+# Format shell scripts (excluding zsh, bats and chezmoi templates).
+# stage_fixed automatically re-stages files that shfmt rewrote so the
+# commit picks up the formatted content.
+[pre-commit.commands.shfmt]
+run = "mise exec -- shfmt --write {staged_files}"
+glob = ["**/*.sh", "**/*.bash"]
+exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
+stage_fixed = true
+
+# Ensure shell scripts have the executable bit set
+[pre-commit.commands.file-set-execution-bit]
+run = "./home/dot_config/shell/functions/file-set-execution-bit.sh"
+glob = ["**/*.sh", "**/*.bash"]
