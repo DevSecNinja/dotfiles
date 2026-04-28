@@ -469,7 +469,7 @@ jobs:
       - name: Run Pester Tests
         shell: pwsh
         run: |
-          .\tests\powershell\Invoke-PesterTests.ps1 -CI
+          .\tests\powershell\Invoke-PesterTests.ps1 -CI -CodeCoverage
 
       - name: Upload Test Results
         if: always()
@@ -477,6 +477,14 @@ jobs:
         with:
           name: pester-test-results
           path: test-results.xml
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pester-coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/windows@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
