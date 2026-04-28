@@ -51,6 +51,14 @@ jobs:
           install: true
           version: ${{ inputs.mise-version }}
 
+      - name: Install shells required by BATS tests
+        # Fish and Zsh are required so the BATS tests do not skip
+        # syntax/startup checks against shell configurations. Chezmoi
+        # is provided via mise (see .mise.toml).
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fish zsh
+
       - name: Install BATS helper libraries
         run: bash tests/bash/setup_libs.sh
 
