@@ -42,5 +42,10 @@ tests/bash/libs/
 # Task
 .task/**
 
+# Node.js (only used transiently for local validation)
+node_modules/
+package-lock.json
+package.json
+
 # MkDocs build output
 site/
