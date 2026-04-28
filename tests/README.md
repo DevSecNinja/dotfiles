@@ -111,6 +111,9 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 # In CI mode (installs dependencies automatically)
 ./tests/bash/run-tests.sh --ci
 
+# truenas-apps style: run bats directly via mise
+mise exec -- bats --formatter tap --report-formatter junit --output . tests/bash/
+
 # Or directly with Bats
 bats tests/bash/
 
@@ -120,6 +123,39 @@ bats --tap tests/bash/*.bats > results.tap
 # Run a specific test file
 bats tests/bash/find-broken-symlinks.bats
 ```
+
+**Helper libraries (bats-support / bats-assert / bats-file)**:
+
+Versioned BATS helper libraries are downloaded by `tests/bash/setup_libs.sh`
+into `tests/bash/libs/` (gitignored). The script is Renovate-managed and
+mirrors the approach used in
+[`DevSecNinja/truenas-apps`](https://github.com/DevSecNinja/truenas-apps).
+
+```bash
+# Download helper libs explicitly
+bash tests/bash/setup_libs.sh
+# Or via Taskfile
+task install:bats-libs
+```
+
+Test files can opt in to the richer assertion APIs via the shared helper:
+
+```bash
+load 'helpers/common'
+
+setup() {
+    common_setup
+}
+
+@test "example" {
+    run echo "hi"
+    assert_success
+    assert_output "hi"
+}
+```
+
+Existing plain-BATS tests keep working unchanged; `helpers/common.bash`
+auto-installs missing libraries on first run.
 
 **Test features**:
 - Comprehensive coverage of all function options (--dry-run, --yes, --verbose)
@@ -165,13 +201,16 @@ All tests run automatically in GitHub Actions on every push and pull request.
 The CI pipeline:
 - Uses dedicated test runner scripts for each language:
   - PowerShell: `tests/powershell/Invoke-PesterTests.ps1`
-  - Bash: `tests/bash/run-tests.sh` ✨
+  - Bash: reusable `.github/workflows/bats.yml` (mise-managed bats, mirrors
+    [`DevSecNinja/truenas-apps`](https://github.com/DevSecNinja/truenas-apps));
+    `tests/bash/run-tests.sh` is still available for local development ✨
   - Python: (future) `tests/python/run-tests.sh`
 - Automatically discovers all test files matching patterns:
   - PowerShell: `tests/powershell/**/*.Tests.ps1`
   - Bash: `tests/bash/**/*.bats` ✨
   - Python: `tests/python/**/test_*.py` (future)
 - Runs tests with appropriate runners/frameworks
+- Publishes JUnit XML reports (Bats via `mikepenz/action-junit-report`)
 - Uploads test results as artifacts
 - Fails the build if any tests fail
 
