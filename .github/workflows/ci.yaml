@@ -29,6 +29,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Install shells required by validation tests
+        # Fish and Zsh are required so the validation BATS tests do not
+        # skip syntax/startup checks against shell configurations.
+        # See: tests/bash/validate-fish-config.bats, tests/bash/test-clean-shell-startup.bats
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fish zsh
+
+      - name: Install Chezmoi
+        # Chezmoi is required so the validation BATS tests can verify
+        # the chezmoi configuration and dry-run apply rather than skipping.
+        # See: tests/bash/validate-chezmoi.bats, tests/bash/test-chezmoi-apply.bats
+        run: |
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run pre-commit checks
         run: pre-commit run --all-files
         continue-on-error: true
