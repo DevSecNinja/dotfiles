@@ -23,6 +23,14 @@
 .PARAMETER CI
     Switch to enable CI mode. Exits with non-zero code if tests fail.
 
+.PARAMETER CodeCoverage
+    Switch to enable code coverage collection. Instruments PowerShell source files
+    and generates a JaCoCo XML report. In CI mode, also writes a summary to the
+    GitHub Actions Step Summary.
+
+.PARAMETER CoverageOutputPath
+    The path where the code coverage report should be saved. Defaults to 'coverage.xml'.
+
 .EXAMPLE
     .\Invoke-PesterTests.ps1
     Runs all tests with default settings.
@@ -58,7 +66,13 @@ param(
     [string[]]$ExcludeTag,
 
     [Parameter(Mandatory = $false)]
-    [switch]$CI
+    [switch]$CI,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$CodeCoverage,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CoverageOutputPath = "coverage.xml"
 )
 
 # Ensure we're using PowerShell 7+
@@ -135,6 +149,30 @@ $config.TestResult.OutputPath = $OutputPath
 # Error handling
 $config.Should.ErrorAction = 'Stop'
 
+# Code coverage settings
+if ($CodeCoverage) {
+    $repoRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    $coveragePaths = @(
+        (Join-Path $repoRoot 'home/dot_config/powershell/modules/DotfilesHelpers/Public')
+        (Join-Path $repoRoot 'home/dot_config/powershell/aliases.ps1')
+    )
+    # Filter to paths that exist (aliases.ps1 is a single file)
+    $validPaths = $coveragePaths | Where-Object { Test-Path $_ }
+
+    if ($validPaths.Count -gt 0) {
+        Write-Host "📊 Code coverage enabled for:" -ForegroundColor Cyan
+        $validPaths | ForEach-Object { Write-Host "   - $_" -ForegroundColor Gray }
+        $config.CodeCoverage.Enabled = $true
+        $config.CodeCoverage.Path = $validPaths
+        $config.CodeCoverage.OutputFormat = 'JaCoCo'
+        $config.CodeCoverage.OutputPath = $CoverageOutputPath
+        $config.CodeCoverage.CoveragePercentTarget = 50
+    }
+    else {
+        Write-Warning "⚠️  No source files found for code coverage"
+    }
+}
+
 # Apply tag filters if specified
 if ($Tag) {
     Write-Host "🏷️  Running tests with tags: $($Tag -join ', ')" -ForegroundColor Yellow
@@ -175,6 +213,94 @@ Write-Host ""
 $duration = $result.Duration
 Write-Host "⏱️  Total execution time: $($duration.ToString('mm\:ss\.fff'))" -ForegroundColor Gray
 Write-Host ""
+
+# Display code coverage summary
+if ($CodeCoverage -and $result.CodeCoverage) {
+    $cc = $result.CodeCoverage
+    $covPct = [math]::Round($cc.CoveragePercent, 2)
+    $executed = $cc.CommandsExecutedCount
+    $analyzed = $cc.CommandsAnalyzedCount
+    $missed = $analyzed - $executed
+    $filesAnalyzed = $cc.FilesAnalyzedCount
+
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "📊 Code Coverage Summary" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    $coverageColor = if ($covPct -ge 75) { 'Green' } elseif ($covPct -ge 50) { 'Yellow' } else { 'Red' }
+    Write-Host "Coverage:  $covPct%" -ForegroundColor $coverageColor
+    Write-Host "Commands:  $executed / $analyzed executed ($missed missed)"
+    Write-Host "Files:     $filesAnalyzed analyzed"
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host ""
+
+    if (Test-Path $CoverageOutputPath) {
+        $coverageFile = Get-Item $CoverageOutputPath
+        Write-Host "📄 Coverage report saved to: $($coverageFile.FullName)" -ForegroundColor Gray
+        Write-Host "   Size: $([math]::Round($coverageFile.Length / 1KB, 2)) KB" -ForegroundColor Gray
+        Write-Host ""
+    }
+
+    # Write to GitHub Step Summary in CI mode
+    if ($CI -and $env:GITHUB_STEP_SUMMARY) {
+        $icon = if ($covPct -ge 75) { '🟢' } elseif ($covPct -ge 50) { '🟡' } else { '🔴' }
+        $summary = @"
+
+## $icon PowerShell Code Coverage: $covPct%
+
+| Metric | Value |
+|--------|-------|
+| **Coverage** | **$covPct%** |
+| Commands executed | $executed / $analyzed |
+| Commands missed | $missed |
+| Files analyzed | $filesAnalyzed |
+| Tests passed | $($result.PassedCount) / $($result.TotalCount) |
+
+"@
+        # Per-file breakdown from JaCoCo XML if available
+        if (Test-Path $CoverageOutputPath) {
+            try {
+                [xml]$jacocoXml = Get-Content $CoverageOutputPath
+                $packages = $jacocoXml.report.package
+                if ($null -ne $packages) {
+                    $summary += @"
+
+<details>
+<summary>Per-file coverage breakdown</summary>
+
+| File | Lines | Covered | Missed | Coverage |
+|------|------:|--------:|-------:|---------:|
+
+"@
+                    foreach ($pkg in @($packages)) {
+                        if ($null -eq $pkg.sourcefile) { continue }
+                        foreach ($srcFile in @($pkg.sourcefile)) {
+                            $fileName = $srcFile.name
+                            $lineCounters = $srcFile.counter | Where-Object { $_.type -eq 'LINE' }
+                            if ($lineCounters) {
+                                $covered = [int]$lineCounters.covered
+                                $missedLines = [int]$lineCounters.missed
+                                $total = $covered + $missedLines
+                                $filePct = if ($total -gt 0) { [math]::Round(($covered / $total) * 100, 1) } else { 0 }
+                                $summary += "| ``$fileName`` | $total | $covered | $missedLines | $filePct% |`n"
+                            }
+                        }
+                    }
+                    $summary += @"
+
+</details>
+
+"@
+                }
+            }
+            catch {
+                Write-Warning "Could not parse coverage XML ($CoverageOutputPath): $_"
+            }
+        }
+
+        $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+        Write-Host "📝 Coverage summary written to GitHub Step Summary" -ForegroundColor Gray
+    }
+}
 
 # Display result file location
 if (Test-Path $OutputPath) {

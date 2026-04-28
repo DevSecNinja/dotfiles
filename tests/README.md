@@ -2,6 +2,20 @@
 
 Comprehensive test suite for validating dotfiles configurations, scripts, and utilities across multiple platforms and languages.
 
+## Code Coverage
+
+**PowerShell**: Pester code coverage is generated automatically in CI with every
+PR. The coverage report (JaCoCo XML) is uploaded as the `pester-coverage-report`
+artifact, and a per-file summary appears in the workflow's **Step Summary**.
+Enable it locally with:
+
+```powershell
+.\tests\powershell\Invoke-PesterTests.ps1 -CodeCoverage
+```
+
+**Bash**: Bats does not have built-in code coverage. Test results (JUnit XML)
+are published to PR checks via `EnricoMi/publish-unit-test-result-action`.
+
 ## Directory Structure
 
 ```
