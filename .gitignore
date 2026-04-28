@@ -36,6 +36,9 @@ Thumbs.db
 **/report.xml
 test-results.tap
 
+# Downloaded BATS helper libraries (installed by tests/bash/setup_libs.sh)
+tests/bash/libs/
+
 # Task
 .task/**
 
