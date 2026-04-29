@@ -15,6 +15,121 @@ teardown() {
 	common_teardown
 }
 
+assert_timing_budget() {
+	local shell_name="$1"
+	local mode="$2"
+	local iterations="$3"
+	local max_overhead_ms="$4"
+
+	run "$shell_name" -c '
+script=$1
+iterations=$2
+mode=$3
+
+measure_echo_ms() {
+	start=$(date +%s%N)
+	i=0
+	while [ "$i" -lt "$iterations" ]; do
+		echo "bench message" >/dev/null
+		i=$((i + 1))
+	done
+	end=$(date +%s%N)
+	printf "%s\n" "$(((end - start) / 1000000))"
+}
+
+measure_sourced_log_ms() {
+	. "$script"
+	LOG_TIMESTAMP="2026-04-29T12:00:00Z"
+	LOG_TAG="perf"
+	LOG_JOURNAL="never"
+	LOG_COLOR="never"
+
+	start=$(date +%s%N)
+	i=0
+	while [ "$i" -lt "$iterations" ]; do
+		log_info "bench message" >/dev/null
+		i=$((i + 1))
+	done
+	end=$(date +%s%N)
+	printf "%s\n" "$(((end - start) / 1000000))"
+}
+
+measure_standalone_log_ms() {
+	start=$(date +%s%N)
+	i=0
+	while [ "$i" -lt "$iterations" ]; do
+		LOG_TIMESTAMP="2026-04-29T12:00:00Z" LOG_TAG="perf" LOG_JOURNAL="never" LOG_COLOR="never" "$script" INFO "bench message" >/dev/null
+		i=$((i + 1))
+	done
+	end=$(date +%s%N)
+	printf "%s\n" "$(((end - start) / 1000000))"
+}
+
+echo_ms=$(measure_echo_ms) || exit 1
+case "$mode" in
+sourced) log_ms=$(measure_sourced_log_ms) || exit 1 ;;
+standalone) log_ms=$(measure_standalone_log_ms) || exit 1 ;;
+*) exit 2 ;;
+esac
+
+printf "%s\n%s\n" "$echo_ms" "$log_ms"
+' "$shell_name" "$LOG_SCRIPT" "$iterations" "$mode"
+
+	assert_success
+	assert_line --index 0 --regexp '^[0-9]+$'
+	assert_line --index 1 --regexp '^[0-9]+$'
+
+	local echo_ms="${lines[0]}"
+	local log_ms="${lines[1]}"
+	local max_ms=$((echo_ms + (iterations * max_overhead_ms)))
+
+	if [ "$log_ms" -gt "$max_ms" ]; then
+		fail "log ${mode} via ${shell_name} took ${log_ms}ms for ${iterations} calls; echo baseline was ${echo_ms}ms; budget is ${max_ms}ms"
+	fi
+}
+
+assert_fish_timing_budget() {
+	local iterations="$1"
+	local max_overhead_ms="$2"
+
+	run fish -c '
+set script $argv[1]
+set iterations $argv[2]
+
+set start (date +%s%N)
+for i in (seq $iterations)
+	echo "bench message" >/dev/null
+end
+set end (date +%s%N)
+set echo_ms (math --scale=0 "($end - $start) / 1000000")
+
+function log --inherit-variable script
+	env LOG_TIMESTAMP="2026-04-29T12:00:00Z" LOG_TAG="perf" LOG_JOURNAL="never" LOG_COLOR="never" bash "$script" $argv >/dev/null
+end
+
+set start (date +%s%N)
+for i in (seq $iterations)
+	log INFO "bench message"
+end
+set end (date +%s%N)
+set log_ms (math --scale=0 "($end - $start) / 1000000")
+
+printf "%s\n%s\n" $echo_ms $log_ms
+' "$LOG_SCRIPT" "$iterations"
+
+	assert_success
+	assert_line --index 0 --regexp '^[0-9]+$'
+	assert_line --index 1 --regexp '^[0-9]+$'
+
+	local echo_ms="${lines[0]}"
+	local log_ms="${lines[1]}"
+	local max_ms=$((echo_ms + (iterations * max_overhead_ms)))
+
+	if [ "$log_ms" -gt "$max_ms" ]; then
+		fail "log wrapper via fish took ${log_ms}ms for ${iterations} calls; echo baseline was ${echo_ms}ms; budget is ${max_ms}ms"
+	fi
+}
+
 @test "log: helper has valid sh and bash syntax" {
 	run sh -n "$LOG_SCRIPT"
 	assert_success
@@ -113,4 +228,34 @@ EOF
 
 	assert_success
 	assert_output "2026-04-29T12:00:00Z NOTICE unit: from zsh"
+}
+
+@test "log: sourced calls stay within timing budget for sh and bash" {
+	local iterations="${LOG_PERF_SOURCED_ITERATIONS:-40}"
+	local max_overhead_ms="${LOG_PERF_SOURCED_MAX_OVERHEAD_MS:-25}"
+
+	assert_timing_budget sh sourced "$iterations" "$max_overhead_ms"
+	assert_timing_budget bash sourced "$iterations" "$max_overhead_ms"
+}
+
+@test "log: sourced calls stay within timing budget for zsh when available" {
+	if ! command -v zsh >/dev/null 2>&1; then
+		skip "zsh not installed"
+	fi
+
+	local iterations="${LOG_PERF_SOURCED_ITERATIONS:-40}"
+	local max_overhead_ms="${LOG_PERF_SOURCED_MAX_OVERHEAD_MS:-25}"
+
+	assert_timing_budget zsh sourced "$iterations" "$max_overhead_ms"
+}
+
+@test "log: Fish wrapper calls stay within timing budget when fish is available" {
+	if ! command -v fish >/dev/null 2>&1; then
+		skip "fish not installed"
+	fi
+
+	local iterations="${LOG_PERF_FISH_ITERATIONS:-10}"
+	local max_overhead_ms="${LOG_PERF_FISH_MAX_OVERHEAD_MS:-150}"
+
+	assert_fish_timing_budget "$iterations" "$max_overhead_ms"
 }

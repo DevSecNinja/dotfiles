@@ -37,7 +37,7 @@
 
 LOG_DEFAULT_LEVEL="${LOG_DEFAULT_LEVEL:-INFO}"
 
-log__upper_level() {
+_log_upper_level() {
 	case "$1" in
 	trace | TRACE) printf '%s\n' "TRACE" ;;
 	debug | DEBUG) printf '%s\n' "DEBUG" ;;
@@ -50,7 +50,7 @@ log__upper_level() {
 	esac
 }
 
-log__level_number() {
+_log_level_number() {
 	case "$1" in
 	TRACE) printf '%s\n' 10 ;;
 	DEBUG) printf '%s\n' 20 ;;
@@ -63,7 +63,7 @@ log__level_number() {
 	esac
 }
 
-log__priority() {
+_log_priority() {
 	case "$1" in
 	TRACE | DEBUG) printf '%s\n' "debug" ;;
 	INFO) printf '%s\n' "info" ;;
@@ -75,7 +75,7 @@ log__priority() {
 	esac
 }
 
-log__color() {
+_log_color() {
 	case "$1" in
 	TRACE) printf '\033[2m' ;;
 	DEBUG) printf '\033[36m' ;;
@@ -87,7 +87,7 @@ log__color() {
 	esac
 }
 
-log__use_color() {
+_log_use_color() {
 	test -z "${NO_COLOR:-}" || return 1
 
 	case "${LOG_COLOR:-auto}" in
@@ -106,7 +106,7 @@ log__use_color() {
 	esac
 }
 
-log__timestamp() {
+_log_timestamp() {
 	if test -n "${LOG_TIMESTAMP:-}"; then
 		printf '%s\n' "$LOG_TIMESTAMP"
 	elif command -v date >/dev/null 2>&1; then
@@ -117,32 +117,32 @@ log__timestamp() {
 }
 
 log_level_enabled() {
-	log__requested_level=$(log__upper_level "${1:-INFO}") || log__requested_level="INFO"
-	log__minimum_level=$(log__upper_level "${LOG_LEVEL:-${LOG_MIN_LEVEL:-$LOG_DEFAULT_LEVEL}}") || log__minimum_level="$LOG_DEFAULT_LEVEL"
+	_log_requested_level=$(_log_upper_level "${1:-INFO}") || _log_requested_level="INFO"
+	_log_minimum_level=$(_log_upper_level "${LOG_LEVEL:-${LOG_MIN_LEVEL:-$LOG_DEFAULT_LEVEL}}") || _log_minimum_level="$LOG_DEFAULT_LEVEL"
 
-	test "$(log__level_number "$log__requested_level")" -ge "$(log__level_number "$log__minimum_level")"
+	test "$(_log_level_number "$_log_requested_level")" -ge "$(_log_level_number "$_log_minimum_level")"
 }
 
 log_set_level() {
-	log__new_level=$(log__upper_level "${1:-}") || return 1
-	LOG_LEVEL="$log__new_level"
+	_log_new_level=$(_log_upper_level "${1:-}") || return 1
+	LOG_LEVEL="$_log_new_level"
 	export LOG_LEVEL
 }
 
-log__stdio_fd() {
+_log_stdio_fd() {
 	case "$1" in
 	WARN | ERROR | FATAL) printf '%s\n' 2 ;;
 	*) printf '%s\n' 1 ;;
 	esac
 }
 
-log__journal_available() {
+_log_journal_available() {
 	case "${LOG_JOURNAL:-auto}" in
 	never | false | 0) return 1 ;;
 	esac
 
-	log__logger_command="${LOG_LOGGER_COMMAND:-logger}"
-	command -v "$log__logger_command" >/dev/null 2>&1 || return 1
+	_log_logger_command="${LOG_LOGGER_COMMAND:-logger}"
+	command -v "$_log_logger_command" >/dev/null 2>&1 || return 1
 
 	case "${LOG_JOURNAL:-auto}" in
 	always | true | 1) return 0 ;;
@@ -156,86 +156,86 @@ log__journal_available() {
 		test -n "${INVOCATION_ID:-}"
 }
 
-log__write_journal() {
-	log__journal_available || return 0
+_log_write_journal() {
+	_log_journal_available || return 0
 
-	log__logger_command="${LOG_LOGGER_COMMAND:-logger}"
-	log__logger_tag="${LOG_TAG:-${0##*/}}"
-	log__logger_priority=$(log__priority "$1")
-	log__logger_message="$1 $2"
+	_log_logger_command="${LOG_LOGGER_COMMAND:-logger}"
+	_log_logger_tag="${LOG_TAG:-${0##*/}}"
+	_log_logger_priority=$(_log_priority "$1")
+	_log_logger_message="$1 $2"
 
-	"$log__logger_command" -t "$log__logger_tag" -p "user.$log__logger_priority" -- "$log__logger_message" >/dev/null 2>&1 ||
-		"$log__logger_command" -t "$log__logger_tag" -p "user.$log__logger_priority" "$log__logger_message" >/dev/null 2>&1 ||
+	"$_log_logger_command" -t "$_log_logger_tag" -p "user.$_log_logger_priority" -- "$_log_logger_message" >/dev/null 2>&1 ||
+		"$_log_logger_command" -t "$_log_logger_tag" -p "user.$_log_logger_priority" "$_log_logger_message" >/dev/null 2>&1 ||
 		:
 }
 
-log__file_enabled() {
+_log_file_enabled() {
 	test -n "${LOG_FILE:-}" || return 1
 	test -n "${LOG_FILE_MAX_BYTES:-}" || test -n "${LOG_FILE_TTL_DAYS:-}"
 }
 
-log__prepare_file() {
-	log__file_enabled || return 1
+_log_prepare_file() {
+	_log_file_enabled || return 1
 
-	log__file_dir=$(dirname "$LOG_FILE" 2>/dev/null) || return 1
-	test -d "$log__file_dir" || mkdir -p "$log__file_dir" 2>/dev/null || return 1
+	_log_file_dir=$(dirname "$LOG_FILE" 2>/dev/null) || return 1
+	test -d "$_log_file_dir" || mkdir -p "$_log_file_dir" 2>/dev/null || return 1
 
 	if test -n "${LOG_FILE_TTL_DAYS:-}" && test -f "$LOG_FILE" && command -v find >/dev/null 2>&1; then
 		find "$LOG_FILE" -type f -mtime +"$LOG_FILE_TTL_DAYS" -exec rm -f {} \; 2>/dev/null || :
 	fi
 
 	if test -n "${LOG_FILE_MAX_BYTES:-}" && test -f "$LOG_FILE" && command -v wc >/dev/null 2>&1; then
-		log__file_size=$(wc -c <"$LOG_FILE" 2>/dev/null | tr -d ' ')
-		case "$log__file_size:$LOG_FILE_MAX_BYTES" in
+		_log_file_size=$(wc -c <"$LOG_FILE" 2>/dev/null | tr -d ' ')
+		case "$_log_file_size:$LOG_FILE_MAX_BYTES" in
 		*[!0123456789:]* | :* | *:) return 0 ;;
 		esac
-		if test "$log__file_size" -ge "$LOG_FILE_MAX_BYTES" 2>/dev/null; then
+		if test "$_log_file_size" -ge "$LOG_FILE_MAX_BYTES" 2>/dev/null; then
 			mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || :
 		fi
 	fi
 }
 
-log__write_file() {
-	log__prepare_file || return 0
+_log_write_file() {
+	_log_prepare_file || return 0
 	printf '%s\n' "$1" >>"$LOG_FILE" 2>/dev/null || :
 }
 
-log__write_stdio() {
+_log_write_stdio() {
 	test "${LOG_TO_STDIO:-1}" = "0" && return 0
 
-	log__write_fd=$(log__stdio_fd "$1")
-	log__write_line="$2"
+	_log_write_fd=$(_log_stdio_fd "$1")
+	_log_write_line="$2"
 
-	if log__use_color "$log__write_fd"; then
-		log__write_reset=$(printf '\033[0m')
-		log__write_color=$(log__color "$1")
-		if test "$log__write_fd" = 2; then
-			printf '%s%s%s\n' "$log__write_color" "$log__write_line" "$log__write_reset" >&2
+	if _log_use_color "$_log_write_fd"; then
+		_log_write_reset=$(printf '\033[0m')
+		_log_write_color=$(_log_color "$1")
+		if test "$_log_write_fd" = 2; then
+			printf '%s%s%s\n' "$_log_write_color" "$_log_write_line" "$_log_write_reset" >&2
 		else
-			printf '%s%s%s\n' "$log__write_color" "$log__write_line" "$log__write_reset"
+			printf '%s%s%s\n' "$_log_write_color" "$_log_write_line" "$_log_write_reset"
 		fi
 	else
-		if test "$log__write_fd" = 2; then
-			printf '%s\n' "$log__write_line" >&2
+		if test "$_log_write_fd" = 2; then
+			printf '%s\n' "$_log_write_line" >&2
 		else
-			printf '%s\n' "$log__write_line"
+			printf '%s\n' "$_log_write_line"
 		fi
 	fi
 }
 
 log() {
-	log__input_level=$(log__upper_level "${1:-}") && shift || log__input_level="INFO"
-	log__message="$*"
+	_log_input_level=$(_log_upper_level "${1:-}") && shift || _log_input_level="INFO"
+	_log_message="$*"
 
-	test -n "$log__message" || log__message="-"
-	log_level_enabled "$log__input_level" || return 0
+	test -n "$_log_message" || _log_message="-"
+	log_level_enabled "$_log_input_level" || return 0
 
-	log__tag="${LOG_TAG:-${0##*/}}"
-	log__line="$(log__timestamp) $log__input_level $log__tag: $log__message"
+	_log_tag="${LOG_TAG:-${0##*/}}"
+	_log_line="$(_log_timestamp) $_log_input_level $_log_tag: $_log_message"
 
-	log__write_stdio "$log__input_level" "$log__line"
-	log__write_file "$log__line"
-	log__write_journal "$log__input_level" "$log__message"
+	_log_write_stdio "$_log_input_level" "$_log_line"
+	_log_write_file "$_log_line"
+	_log_write_journal "$_log_input_level" "$_log_message"
 }
 
 log_trace() {
@@ -266,7 +266,7 @@ log_fatal() {
 	log FATAL "$@"
 }
 
-log__is_sourced() {
+_log_is_sourced() {
 	if test -n "${ZSH_EVAL_CONTEXT:-}"; then
 		case "$ZSH_EVAL_CONTEXT" in
 		*:file:*) return 0 ;;
@@ -283,6 +283,6 @@ log__is_sourced() {
 	return 1
 }
 
-if ! log__is_sourced && test "${0##*/}" = "log.sh"; then
+if ! _log_is_sourced && test "${0##*/}" = "log.sh"; then
 	log "$@"
 fi
