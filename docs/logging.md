@@ -263,6 +263,26 @@ LOG_FORMAT=json LOG_TAG=ci ./script.sh | jq 'select(.level == "ERROR")'
 LOG_FILE=/var/log/myjob.log LOG_FILE_MAX_BYTES=$((10*1024*1024)) ./myjob.sh
 ```
 
+## Tab completion
+
+Shell completions for the `log` dispatcher are installed for **Fish**,
+**Bash**, and **Zsh**. Tab on the first argument lists all severities and
+kinds with descriptions:
+
+```text
+$ log <TAB>
+banner  debug   error   fatal   hint    info    notice  result  state   step    trace   warn
+```
+
+Completion files:
+
+- Fish: [`home/dot_config/fish/completions/log.fish`](https://github.com/DevSecNinja/dotfiles/blob/main/home/dot_config/fish/completions/log.fish)
+- Bash: [`home/dot_config/shell/completions.d/log.bash`](https://github.com/DevSecNinja/dotfiles/blob/main/home/dot_config/shell/completions.d/log.bash)
+- Zsh: [`home/dot_config/shell/completions.d/log.zsh`](https://github.com/DevSecNinja/dotfiles/blob/main/home/dot_config/shell/completions.d/log.zsh)
+
+The per-helper functions (`log_info`, `log_warn`, …) are completed by the
+shell's built-in function-name completion in Bash and Zsh.
+
 ## Troubleshooting
 
 **No tag is shown when I run `log_info`.**
