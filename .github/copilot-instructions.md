@@ -276,6 +276,44 @@ PowerShell on Windows may load scripts without UTF-8 BOM encoding, causing multi
 
 **Emoji is fine in**: `.fish`, `.sh`, `.md`, and other UTF-8 native files. Only `.ps1` files are affected.
 
+### 7. Shell Logging — use the `log.sh` helpers
+
+When writing or modifying shell scripts under `home/` that emit diagnostic
+output, prefer the helpers in [`home/dot_config/shell/functions/log.sh`](../home/dot_config/shell/functions/log.sh)
+over raw `echo` / `printf`. Full reference: [`docs/logging.md`](../docs/logging.md).
+
+**API at a glance**:
+
+- Severity helpers (filtering): `log_trace`, `log_debug`, `log_info`,
+  `log_notice`, `log_warn`, `log_error`, `log_fatal`.
+- Kind helpers (info-priority categories): `log_state` (cyan), `log_result`
+  (green), `log_hint` (magenta), `log_step` (dim).
+- Banners: `log_sep`, `log_rule "<title>"`, `log_banner "<title>" [KIND]`.
+- Structured: `log_kv key=value …`, `log_data <KIND> <message>` (reads
+  payload from stdin).
+- Output: text by default, JSON via `LOG_FORMAT=json`.
+
+**Rules of thumb**:
+
+1. Source via `. "$HOME/.config/shell/functions/log.sh"` and set
+   `LOG_TAG="<short-name>"` only if you need to override the auto-detected
+   script basename.
+2. Use kinds for visual structure (e.g. `log_state "Pulling images"` then
+   `log_result "Pulled 5 images"`); keep severity helpers for actual error
+   conditions.
+3. Never inject untrusted data into the message via string concatenation
+   when the data is multi-line or may contain ANSI codes — pipe it through
+   `log_data` instead. The library sanitizes ANSI/CR/LF/NUL automatically,
+   but `log_data` keeps each payload line independently grep-able.
+4. Use `log_kv` for flat key/value telemetry; values with spaces are
+   auto-quoted (logfmt-compatible).
+5. Banners default to `LOG_BANNER_STYLE=unicode` and auto-fall-back to ASCII
+   when not on a TTY or `LANG=C`. `LOG_FILE` output is always ASCII so log
+   files stay grep-friendly.
+6. When adding new behaviour, extend the bats files under
+   `tests/bash/log-*.bats` (one file per concern: format / kinds / banner /
+   injection / structured / shells).
+
 ## Common Issues & Solutions
 
 ### Issue: Validation scripts fail with "command not found"

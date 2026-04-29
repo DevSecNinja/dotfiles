@@ -66,3 +66,4 @@ nav:
       - Structure: structure.md
       - Chezmoi Variables: chezmoi-variables.md
       - Development Tools: development-tools.md
+      - Shell Logging: logging.md
