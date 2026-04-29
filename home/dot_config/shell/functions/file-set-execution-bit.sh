@@ -5,9 +5,10 @@
 # in the git repository and updates the git index accordingly.
 # Processes both staged and unstaged files.
 #
-# Usage: file-set-execution-bit [--dry-run|-n] [--all|-a]
+# Usage: file-set-execution-bit [--dry-run|-n] [--all|-a] [file...]
 #   --dry-run, -n    Show what would be changed without making changes
-#   --all, -a        Check all files in current directory (not just git files)
+#   --all, -a        Check all tracked shell scripts (or all files outside git)
+#   file...          Check only the provided files
 #
 # Originally based on Stack Overflow solution by ixe013
 # Retrieved 2026-01-16, License - CC BY-SA 4.0
@@ -16,6 +17,7 @@ file-set-execution-bit() {
 	local dry_run=false
 	local check_all=false
 	local changes_made=false
+	local explicit_files=()
 
 	# Parse arguments
 	while [[ $# -gt 0 ]]; do
@@ -28,26 +30,36 @@ file-set-execution-bit() {
 			check_all=true
 			shift
 			;;
+		--)
+			shift
+			explicit_files+=("$@")
+			break
+			;;
 		-h | --help)
-			echo "Usage: file-set-execution-bit [--dry-run|-n] [--all|-a]"
+			echo "Usage: file-set-execution-bit [--dry-run|-n] [--all|-a] [file...]"
 			echo "Ensure executable permissions on shell scripts"
 			echo ""
 			echo "Options:"
 			echo "  --dry-run, -n    Show what would be changed without making changes"
-			echo "  --all, -a        Check all files in current directory (not just git files)"
+			echo "  --all, -a        Check all tracked shell scripts (or all files outside git)"
+			echo "  file...          Check only the provided files"
 			echo "  -h, --help       Show this help message"
 			return 0
 			;;
-		*)
+		-*)
 			echo "❌ Unknown option: $1"
 			echo "Use --help for usage information"
 			return 1
+			;;
+		*)
+			explicit_files+=("$1")
+			shift
 			;;
 		esac
 	done
 
 	# Check if we're in a git repository (only needed for git mode)
-	if [ "$check_all" = false ] && ! git rev-parse --git-dir >/dev/null 2>&1; then
+	if [ "$check_all" = false ] && [ ${#explicit_files[@]} -eq 0 ] && ! git rev-parse --git-dir >/dev/null 2>&1; then
 		echo "❌ Not in a git repository"
 		return 1
 	fi
@@ -59,10 +71,18 @@ file-set-execution-bit() {
 
 	# Get list of files
 	local files
-	if [ "$check_all" = true ]; then
-		echo "📁 Checking all files in current directory..."
-		# Find all .sh and .bash files recursively
-		files=$(find . -type f \( -name "*.sh" -o -name "*.bash" \) -not -path "./.git/*" 2>/dev/null | sed 's|^\./||' | sort)
+	if [ ${#explicit_files[@]} -gt 0 ]; then
+		echo "📄 Checking provided files..."
+		files=$(printf '%s\n' "${explicit_files[@]}" | sort -u)
+	elif [ "$check_all" = true ]; then
+		if git rev-parse --git-dir >/dev/null 2>&1; then
+			echo "📁 Checking all git-tracked shell scripts..."
+			files=$(git ls-files "*.sh" "*.bash" 2>/dev/null | sort)
+		else
+			echo "📁 Checking all files in current directory..."
+			# Find all .sh and .bash files recursively
+			files=$(find . -type f \( -name "*.sh" -o -name "*.bash" \) -not -path "./.git/*" 2>/dev/null | sed 's|^\./||' | sort)
+		fi
 	else
 		echo "📝 Checking git-tracked files..."
 		files=$(
@@ -84,8 +104,8 @@ file-set-execution-bit() {
 		# Skip empty lines
 		[ -z "$filename" ] && continue
 
-		# For --all mode, we already filtered to shell scripts in find command
-		# For git mode, check if it's a shell script file
+		# --all mode builds a shell-only list up front.
+		# Explicit/default git modes may include other files, so filter here.
 		if [ "$check_all" = true ] || [[ "$filename" =~ \.(sh|bash)$ ]]; then
 			if [ -f "$filename" ]; then
 				if [ ! -x "$filename" ]; then

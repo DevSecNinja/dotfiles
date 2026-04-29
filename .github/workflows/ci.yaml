@@ -40,9 +40,24 @@ jobs:
           sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run lefthook checks
+      - name: Run lefthook checks (all files)
+        if: github.event_name != 'pull_request'
         run: mise exec -- lefthook run pre-commit --all-files
-        continue-on-error: true
+
+      - name: Run lefthook checks (pull request changes)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          changed_files="$(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}" HEAD)"
+          if [ -z "$changed_files" ]; then
+            echo "No PR files changed"
+            exit 0
+          fi
+          lefthook_args=(run pre-commit)
+          while IFS= read -r file; do
+            lefthook_args+=(--file "$file")
+          done <<< "$changed_files"
+          mise exec -- lefthook "${lefthook_args[@]}"
 
       - name: Run validation tests
         run: ./tests/bash/run-tests.sh --ci

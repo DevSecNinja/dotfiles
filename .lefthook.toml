@@ -25,5 +25,5 @@ stage_fixed = true
 
 # Ensure shell scripts have the executable bit set
 [pre-commit.commands.file-set-execution-bit]
-run = "./home/dot_config/shell/functions/file-set-execution-bit.sh"
+run = "./home/dot_config/shell/functions/file-set-execution-bit.sh {staged_files}"
 glob = ["**/*.sh", "**/*.bash"]
