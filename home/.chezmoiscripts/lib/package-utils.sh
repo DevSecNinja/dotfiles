@@ -56,6 +56,11 @@ detect_dotfiles_install_type() {
 }
 
 find_dotfiles_packages_file() {
+	# Search priority:
+	# 1. explicit environment overrides,
+	# 2. known dotfiles/Chezmoi source directories,
+	# 3. chezmoi source-path,
+	# 4. path relative to this helper.
 	if [ -n "${DOTFILES_PACKAGES_FILE:-}" ] && [ -f "$DOTFILES_PACKAGES_FILE" ]; then
 		echo "$DOTFILES_PACKAGES_FILE"
 		return 0
@@ -106,6 +111,7 @@ package_id_suffix_matches() {
 	local requested="$1"
 	local candidate="$2"
 
+	# Match package-manager IDs by suffix, such as "jdx.mise" for "mise".
 	[ "$candidate" != "${candidate##*.}" ] && [ "${candidate##*.}" = "$requested" ]
 }
 
