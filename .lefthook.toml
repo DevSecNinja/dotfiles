@@ -10,7 +10,7 @@ parallel = true
 
 # Lint shell scripts (excluding zsh, bats and chezmoi templates)
 [pre-commit.commands.shellcheck]
-run = "mise exec -- shellcheck {staged_files}"
+run = "mise exec -- shellcheck -x {staged_files}"
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 
