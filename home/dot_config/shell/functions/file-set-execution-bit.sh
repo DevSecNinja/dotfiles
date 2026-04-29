@@ -104,8 +104,8 @@ file-set-execution-bit() {
 		# Skip empty lines
 		[ -z "$filename" ] && continue
 
-		# For --all mode, we already filtered to shell scripts
-		# For explicit/default git mode, check if it's a shell script file
+		# --all mode builds a shell-only list up front.
+		# Explicit/default git modes may include other files, so filter here.
 		if [ "$check_all" = true ] || [[ "$filename" =~ \.(sh|bash)$ ]]; then
 			if [ -f "$filename" ]; then
 				if [ ! -x "$filename" ]; then
