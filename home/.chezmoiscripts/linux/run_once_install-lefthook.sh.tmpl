@@ -10,8 +10,8 @@ set -e
 # This prevents mise from hanging in non-interactive environments (Codespaces, CI)
 export MISE_YES=1
 
-# shellcheck source=../lib/package-utils.sh
-source "{{ .chezmoi.sourceDir }}/.chezmoiscripts/lib/package-utils.sh"
+# shellcheck source=../../.chezmoihelpers/package-utils.sh
+source "{{ .chezmoi.sourceDir }}/.chezmoihelpers/package-utils.sh"
 
 if ! mise_required_for_current_install "{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"; then
     echo "[SKIP] skipping lefthook setup: mise not required for this install type"

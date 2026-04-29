@@ -29,14 +29,14 @@ fi
 
 echo "[INFO] Dotfiles repository: $DOTFILES_ROOT"
 
-PACKAGE_UTILS="$DOTFILES_ROOT/home/.chezmoiscripts/lib/package-utils.sh"
+PACKAGE_UTILS="$DOTFILES_ROOT/home/.chezmoihelpers/package-utils.sh"
 if [ ! -f "$PACKAGE_UTILS" ]; then
 	echo "[WARN] Cannot find package utility helpers"
 	echo "Skipping lefthook setup"
 	exit 0
 fi
 
-# shellcheck source=../lib/package-utils.sh
+# shellcheck source=../../.chezmoihelpers/package-utils.sh
 source "$PACKAGE_UTILS"
 
 if ! mise_required_for_current_install "$DOTFILES_ROOT/home/.chezmoidata/packages.yaml"; then

@@ -4,7 +4,7 @@
 setup() {
 	REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
 	export REPO_ROOT
-	PACKAGE_UTILS="$REPO_ROOT/home/.chezmoiscripts/lib/package-utils.sh"
+	PACKAGE_UTILS="$REPO_ROOT/home/.chezmoihelpers/package-utils.sh"
 	PACKAGES_FILE="$REPO_ROOT/home/.chezmoidata/packages.yaml"
 	export PACKAGE_UTILS PACKAGES_FILE
 }

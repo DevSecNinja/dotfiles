@@ -87,8 +87,8 @@ find_dotfiles_packages_file() {
 
 	local helper_dir
 	helper_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-	if [ -f "$helper_dir/../../.chezmoidata/packages.yaml" ]; then
-		echo "$helper_dir/../../.chezmoidata/packages.yaml"
+	if [ -f "$helper_dir/../.chezmoidata/packages.yaml" ]; then
+		echo "$helper_dir/../.chezmoidata/packages.yaml"
 		return 0
 	fi
 
