@@ -138,7 +138,7 @@ else
 	while IFS= read -r -d '' file; do
 		TEST_FILES+=("$file")
 		echo "  📝 Found: $(basename "$file")"
-	done < <(find "$TESTS_DIR" -name "*.bats" -print0)
+	done < <(find "$TESTS_DIR" -path "$TESTS_DIR/libs" -prune -o -name "*.bats" -print0)
 fi
 
 if [ ${#TEST_FILES[@]} -eq 0 ]; then
