@@ -53,9 +53,9 @@ fi
 
 # Resolve a lefthook executable. Prefer mise-managed binaries so the
 # version stays in sync with .mise.toml.
-LEFTHOOK_CMD=""
+LEFTHOOK_BIN=""
 if command -v lefthook >/dev/null 2>&1; then
-	LEFTHOOK_CMD="lefthook"
+	LEFTHOOK_BIN="lefthook"
 	echo "[OK] lefthook already installed ($(lefthook version 2>/dev/null || echo 'unknown'))"
 elif command -v mise >/dev/null 2>&1; then
 	echo "[INFO] Installing mise-managed tools..."
@@ -63,12 +63,12 @@ elif command -v mise >/dev/null 2>&1; then
 		echo "[WARN] mise install completed with errors"
 	fi
 	if mise which lefthook >/dev/null 2>&1; then
-		LEFTHOOK_CMD="$(mise which lefthook)"
+		LEFTHOOK_BIN="$(mise which lefthook)"
 		echo "[OK] lefthook installed via mise"
 	fi
 fi
 
-if [ -z "$LEFTHOOK_CMD" ]; then
+if [ -z "$LEFTHOOK_BIN" ]; then
 	echo "[WARN] Could not install lefthook automatically."
 	echo "[INFO] Install mise (https://mise.jdx.dev/) and run: mise install"
 	exit 0
@@ -98,7 +98,7 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
 	exit 0
 fi
 
-"$LEFTHOOK_CMD" install
+"$LEFTHOOK_BIN" install
 
 echo ""
 echo "[OK] Lefthook setup complete!"

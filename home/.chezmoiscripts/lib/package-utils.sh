@@ -92,7 +92,7 @@ find_dotfiles_packages_file() {
 
 normalize_package_name() {
 	local package="$1"
-	package="${package%%[[:space:]]#*}"
+	package="$(printf '%s' "$package" | sed 's/[[:space:]]#.*$//')"
 	package="${package#- }"
 	package="${package# }"
 	package="${package% }"
@@ -108,8 +108,8 @@ package_name_matches() {
 	requested="$(normalize_package_name "$1")"
 	candidate="$(normalize_package_name "$2")"
 
-	# The suffix match handles package-manager IDs such as "jdx.mise".
-	[ "$candidate" = "$requested" ] || [ "${candidate##*.}" = "$requested" ]
+	# The suffix match handles known package-manager IDs such as "jdx.mise".
+	[ "$candidate" = "$requested" ] || { [ "$candidate" != "${candidate##*.}" ] && [ "${candidate##*.}" = "$requested" ]; }
 }
 
 packages_for_install_type() {
