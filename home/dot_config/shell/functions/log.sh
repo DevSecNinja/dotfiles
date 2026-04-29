@@ -225,7 +225,7 @@ log__write_stdio() {
 
 log() {
 	log__input_level=$(log__upper_level "${1:-}") && shift || log__input_level="INFO"
-	log__message=$*
+	log__message="$*"
 
 	test -n "$log__message" || log__message="-"
 	log_level_enabled "$log__input_level" || return 0

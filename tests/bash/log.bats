@@ -72,7 +72,7 @@ EOF
 	run sh -c '. "$1"; LOG_TIMESTAMP="2026-04-29T12:00:00Z" LOG_TAG="unit" LOG_JOURNAL="always" LOG_LOGGER_COMMAND="$2" LOG_CAPTURE_FILE="$3" log WARN "journal message"' sh "$LOG_SCRIPT" "$fake_logger" "$capture_file"
 
 	assert_success
-	assert_file_contains "$capture_file" "unit -p user[.]warning -- WARN journal message"
+	assert_file_contains "$capture_file" "unit -p user\\.warning -- WARN journal message"
 }
 
 @test "log: does not create LOG_FILE unless rotation or lifetime is configured" {
