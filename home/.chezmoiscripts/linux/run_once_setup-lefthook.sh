@@ -59,8 +59,9 @@ if command -v lefthook >/dev/null 2>&1; then
 	echo "[OK] lefthook already installed ($(lefthook version 2>/dev/null || echo 'unknown'))"
 elif command -v mise >/dev/null 2>&1; then
 	echo "[INFO] Installing mise-managed tools..."
-	# shellcheck disable=SC2015
-	(cd "$DOTFILES_ROOT" && mise install >/dev/null 2>&1 || true)
+	if ! (cd "$DOTFILES_ROOT" && mise install >/dev/null 2>&1); then
+		echo "[WARN] mise install completed with errors"
+	fi
 	if mise which lefthook >/dev/null 2>&1; then
 		LEFTHOOK_CMD="$(mise which lefthook)"
 		echo "[OK] lefthook installed via mise"

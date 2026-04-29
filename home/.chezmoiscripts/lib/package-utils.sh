@@ -92,7 +92,7 @@ find_dotfiles_packages_file() {
 
 normalize_package_name() {
 	local package="$1"
-	package="${package%%#*}"
+	package="${package%%[[:space:]]#*}"
 	package="${package#- }"
 	package="${package# }"
 	package="${package% }"
@@ -108,6 +108,7 @@ package_name_matches() {
 	requested="$(normalize_package_name "$1")"
 	candidate="$(normalize_package_name "$2")"
 
+	# The suffix match handles package-manager IDs such as "jdx.mise".
 	[ "$candidate" = "$requested" ] || [ "${candidate##*.}" = "$requested" ]
 }
 
@@ -122,7 +123,10 @@ packages_for_install_type() {
 			return RSTART ? RSTART - 1 : length(line)
 		}
 		function wanted_mode(mode) {
-			return mode == "light" || mode == install_type || (install_type == "full" && mode == "full")
+			if (install_type == "full") {
+				return mode == "light" || mode == "full"
+			}
+			return mode == install_type
 		}
 		{
 			line = $0
@@ -161,7 +165,7 @@ packages_for_install_type() {
 				sub(/^[[:space:]]*-[[:space:]]+/, "", item)
 				sub(/[[:space:]]+#.*/, "", item)
 				gsub(/^[[:space:]]+|[[:space:]]+$/, "", item)
-				gsub(/^["'\'']|["'\'']$/, "", item)
+				gsub(/^["\047]|["\047]$/, "", item)
 				print item
 			}
 		}

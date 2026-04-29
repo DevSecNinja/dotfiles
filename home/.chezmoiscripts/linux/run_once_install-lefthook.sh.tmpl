@@ -47,7 +47,11 @@ echo "[INFO] Installing lefthook..."
 # matches .mise.toml.
 if command -v mise >/dev/null 2>&1; then
     (cd "{{ .chezmoi.sourceDir }}" && mise install)
-    if ! command -v lefthook >/dev/null 2>&1 && ! mise which lefthook >/dev/null 2>&1; then
+    if command -v lefthook >/dev/null 2>&1; then
+        :
+    elif mise which lefthook >/dev/null 2>&1; then
+        :
+    else
         echo "[WARN] mise install completed, but lefthook is not available."
         echo "[INFO] Check .mise.toml and re-run: mise install"
         exit 0
