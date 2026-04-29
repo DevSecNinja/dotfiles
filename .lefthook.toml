@@ -10,7 +10,7 @@ parallel = true
 
 # Lint shell scripts (excluding zsh, bats and chezmoi templates)
 [pre-commit.commands.shellcheck]
-run = "mise exec -- shellcheck -x {staged_files}"
+run = "mise exec -- shellcheck -x {staged_files} && echo \"[OK] shellcheck checked matching shell scripts\""
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 
@@ -18,7 +18,7 @@ exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 # stage_fixed automatically re-stages files that shfmt rewrote so the
 # commit picks up the formatted content.
 [pre-commit.commands.shfmt]
-run = "mise exec -- shfmt --write {staged_files}"
+run = "mise exec -- shfmt --write {staged_files} && echo \"[OK] shfmt checked/formatted matching shell scripts\""
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 stage_fixed = true
