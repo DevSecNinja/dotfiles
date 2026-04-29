@@ -92,15 +92,21 @@ find_dotfiles_packages_file() {
 
 normalize_package_name() {
 	local package="$1"
-	package="$(printf '%s' "$package" | sed 's/[[:space:]]#.*$//')"
-	package="${package#- }"
-	package="${package# }"
-	package="${package% }"
-	package="${package%\"}"
-	package="${package#\"}"
-	package="${package%\'}"
-	package="${package#\'}"
-	printf '%s' "$package" | tr '[:upper:]' '[:lower:]'
+	printf '%s' "$package" |
+		sed -e 's/[[:space:]]#.*$//' \
+			-e 's/^[[:space:]]*-[[:space:]]*//' \
+			-e 's/^[[:space:]]*//' \
+			-e 's/[[:space:]]*$//' \
+			-e "s/^[\"']//" \
+			-e "s/[\"']$//" |
+		tr '[:upper:]' '[:lower:]'
+}
+
+package_id_suffix_matches() {
+	local requested="$1"
+	local candidate="$2"
+
+	[ "$candidate" != "${candidate##*.}" ] && [ "${candidate##*.}" = "$requested" ]
 }
 
 package_name_matches() {
@@ -108,8 +114,8 @@ package_name_matches() {
 	requested="$(normalize_package_name "$1")"
 	candidate="$(normalize_package_name "$2")"
 
-	# The suffix match handles known package-manager IDs such as "jdx.mise".
-	[ "$candidate" = "$requested" ] || { [ "$candidate" != "${candidate##*.}" ] && [ "${candidate##*.}" = "$requested" ]; }
+	# Some package managers use reverse-DNS IDs, for example "jdx.mise".
+	[ "$candidate" = "$requested" ] || package_id_suffix_matches "$requested" "$candidate"
 }
 
 packages_for_install_type() {

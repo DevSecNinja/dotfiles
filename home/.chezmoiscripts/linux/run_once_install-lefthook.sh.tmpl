@@ -50,7 +50,7 @@ if command -v mise >/dev/null 2>&1; then
     if ! command -v lefthook >/dev/null 2>&1 && ! mise which lefthook >/dev/null 2>&1; then
         echo "[WARN] mise install completed, but lefthook is not available."
         echo "[INFO] Check .mise.toml and re-run: mise install"
-        exit 0
+        exit 1
     fi
 else
     echo "[WARN] mise is not installed; cannot install lefthook automatically."
