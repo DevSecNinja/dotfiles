@@ -266,6 +266,23 @@ log_fatal() {
 	log FATAL "$@"
 }
 
-if test "${0##*/}" = "log.sh"; then
+log__is_sourced() {
+	if test -n "${ZSH_EVAL_CONTEXT:-}"; then
+		case "$ZSH_EVAL_CONTEXT" in
+		*:file:*) return 0 ;;
+		*:file) return 0 ;;
+		esac
+	fi
+
+	# shellcheck disable=SC3028 # BASH_SOURCE is intentionally used only inside Bash.
+	if test -n "${BASH_VERSION:-}" && test -n "${BASH_SOURCE:-}"; then
+		test "${BASH_SOURCE:-$0}" != "$0"
+		return
+	fi
+
+	return 1
+}
+
+if ! log__is_sourced && test "${0##*/}" = "log.sh"; then
 	log "$@"
 fi
