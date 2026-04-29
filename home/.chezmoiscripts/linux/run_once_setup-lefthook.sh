@@ -60,7 +60,7 @@ if command -v lefthook >/dev/null 2>&1; then
 elif command -v mise >/dev/null 2>&1; then
 	echo "[INFO] Installing mise-managed tools..."
 	if ! (cd "$DOTFILES_ROOT" && mise install >/dev/null 2>&1); then
-		echo "[WARN] mise install completed with errors"
+		echo "[WARN] mise install failed"
 	fi
 	if mise which lefthook >/dev/null 2>&1; then
 		LEFTHOOK_PATH="$(mise which lefthook)"

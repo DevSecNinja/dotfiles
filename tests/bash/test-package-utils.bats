@@ -34,6 +34,11 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
+@test "package-utils: package ID suffix matcher handles dotted IDs" {
+	run bash -c "source \"$PACKAGE_UTILS\" && package_name_matches mise jdx.mise"
+	[ "$status" -eq 0 ]
+}
+
 @test "package-utils: WSL uses Linux package definitions" {
 	run bash -c "source \"$PACKAGE_UTILS\" && package_required_for_install_type mise full wsl \"$PACKAGES_FILE\""
 	[ "$status" -eq 0 ]

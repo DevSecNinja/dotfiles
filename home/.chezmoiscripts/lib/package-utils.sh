@@ -131,7 +131,7 @@ packages_for_install_type() {
 
 	awk -v platform="$platform" -v install_type="$install_type" '
 		function indent(line) {
-			match(line, /[^ ]/)
+			match(line, /[^[:space:]]/)
 			return RSTART ? RSTART - 1 : length(line)
 		}
 		function wanted_mode(mode) {
@@ -144,7 +144,7 @@ packages_for_install_type() {
 			line = $0
 			line_indent = indent(line)
 
-			if (line ~ "^[[:space:]]{2}" platform ":[[:space:]]*$") {
+			if (line ~ "^[[:space:]]+" platform ":[[:space:]]*$") {
 				in_platform = 1
 				platform_indent = line_indent
 				next

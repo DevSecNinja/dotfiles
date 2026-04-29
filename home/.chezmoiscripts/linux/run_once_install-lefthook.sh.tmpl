@@ -49,7 +49,7 @@ if command -v mise >/dev/null 2>&1; then
     (cd "{{ .chezmoi.sourceDir }}" && mise install)
     if ! command -v lefthook >/dev/null 2>&1 && ! mise which lefthook >/dev/null 2>&1; then
         echo "[WARN] mise install completed, but lefthook is not available."
-        echo "[INFO] Check .mise.toml or PATH and re-run: mise install"
+        echo "[INFO] Check that lefthook is listed in .mise.toml, ensure mise shims are on PATH, and re-run: mise install"
         exit 1
     fi
 else
