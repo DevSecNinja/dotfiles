@@ -189,7 +189,7 @@ log__prepare_file() {
 		case "$log__file_size:$LOG_FILE_MAX_BYTES" in
 		*[!0123456789:]* | :* | *:) return 0 ;;
 		esac
-		if test "$log__file_size" -ge "$LOG_FILE_MAX_BYTES"; then
+		if test "$log__file_size" -ge "$LOG_FILE_MAX_BYTES" 2>/dev/null; then
 			mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || :
 		fi
 	fi
