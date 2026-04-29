@@ -47,7 +47,7 @@ jobs:
       - name: Run lefthook checks (pull request changes)
         if: github.event_name == 'pull_request'
         run: |
-          git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
+          git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           changed_files="$(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}" HEAD)"
           if [ -z "$changed_files" ]; then
             echo "No PR files changed"
