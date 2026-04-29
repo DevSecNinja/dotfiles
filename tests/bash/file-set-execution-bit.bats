@@ -124,6 +124,19 @@ teardown() {
 	[[ "$output" =~ "Already executable: script.sh" ]]
 }
 
+@test "file-set-execution-bit: processes explicit file arguments from lefthook" {
+	echo "#!/bin/bash" >script.sh
+	chmod -x script.sh
+	git add script.sh
+	git commit -q -m "Add non-executable script"
+
+	run file-set-execution-bit script.sh
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Checking provided files" ]]
+	[[ "$output" =~ "Making executable: script.sh" ]]
+	[ -x script.sh ]
+}
+
 @test "file-set-execution-bit: processes both staged and unstaged files" {
 	# Create staged file
 	echo "#!/bin/bash" >staged.sh
@@ -154,9 +167,8 @@ teardown() {
 }
 
 @test "file-set-execution-bit: --all mode works without git repo" {
-	cd "$ORIGINAL_DIR"
-	mkdir -p "$TEST_DIR/nogit"
-	cd "$TEST_DIR/nogit"
+	NO_GIT_DIR="$(mktemp -d)"
+	cd "$NO_GIT_DIR"
 
 	# Create shell scripts
 	echo "#!/bin/bash" >script1.sh
@@ -170,14 +182,19 @@ teardown() {
 
 	[ -x script1.sh ]
 	[ -x script2.sh ]
+
+	rm -rf "$NO_GIT_DIR"
+	cd "$TEST_DIR"
 }
 
 @test "file-set-execution-bit: short --all option works" {
 	echo "#!/bin/bash" >script.sh
+	git add script.sh
 
 	run file-set-execution-bit -a
 	[ "$status" -eq 0 ]
-	[[ "$output" =~ "Checking all files in current directory" ]]
+	[[ "$output" =~ "Checking all git-tracked shell scripts" ]]
+	[[ "$output" =~ "script.sh" ]]
 }
 
 @test "file-set-execution-bit: --all mode finds scripts recursively" {
@@ -188,6 +205,7 @@ teardown() {
 	echo "#!/bin/bash" >script1.sh
 	echo "#!/bin/bash" >subdir1/script2.sh
 	echo "#!/bin/bash" >subdir1/subdir2/script3.sh
+	git add .
 
 	run file-set-execution-bit --all
 	[ "$status" -eq 0 ]
@@ -198,6 +216,19 @@ teardown() {
 	[ -x script1.sh ]
 	[ -x subdir1/script2.sh ]
 	[ -x subdir1/subdir2/script3.sh ]
+}
+
+@test "file-set-execution-bit: --all mode checks clean tracked scripts in git repo" {
+	echo "#!/bin/bash" >script.sh
+	chmod -x script.sh
+	git add script.sh
+	git commit -q -m "Add non-executable script"
+
+	run file-set-execution-bit --all
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Checking all git-tracked shell scripts" ]]
+	[[ "$output" =~ "Making executable: script.sh" ]]
+	[ -x script.sh ]
 }
 
 @test "file-set-execution-bit: updates git index for tracked files" {
@@ -253,9 +284,8 @@ teardown() {
 }
 
 @test "file-set-execution-bit: combines dry-run and all flags" {
-	cd "$ORIGINAL_DIR"
-	mkdir -p "$TEST_DIR/nogit"
-	cd "$TEST_DIR/nogit"
+	NO_GIT_DIR="$(mktemp -d)"
+	cd "$NO_GIT_DIR"
 
 	echo "#!/bin/bash" >script.sh
 
@@ -266,6 +296,9 @@ teardown() {
 	[[ "$output" =~ "Would make executable: script.sh" ]]
 
 	[ ! -x script.sh ]
+
+	rm -rf "$NO_GIT_DIR"
+	cd "$TEST_DIR"
 }
 
 @test "file-set-execution-bit: handles untracked files in git mode" {
