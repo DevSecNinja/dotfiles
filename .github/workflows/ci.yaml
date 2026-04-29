@@ -53,7 +53,11 @@ jobs:
             echo "No PR files changed"
             exit 0
           fi
-          mise exec -- lefthook run pre-commit --files "$changed_files"
+          lefthook_args=(run pre-commit)
+          while IFS= read -r file; do
+            lefthook_args+=(--file "$file")
+          done <<< "$changed_files"
+          mise exec -- lefthook "${lefthook_args[@]}"
 
       - name: Run validation tests
         run: ./tests/bash/run-tests.sh --ci
