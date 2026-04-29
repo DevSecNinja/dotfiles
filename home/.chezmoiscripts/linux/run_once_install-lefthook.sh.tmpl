@@ -10,6 +10,14 @@ set -e
 # This prevents mise from hanging in non-interactive environments (Codespaces, CI)
 export MISE_YES=1
 
+# shellcheck source=../lib/package-utils.sh
+source "{{ .chezmoi.sourceDir }}/.chezmoiscripts/lib/package-utils.sh"
+
+if ! mise_required_for_current_install "{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"; then
+    echo "ℹ️  skipping lefthook setup: mise not required for this install type"
+    exit 0
+fi
+
 # Check if we're in a git repository - if not, try to use chezmoi source directory
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
     # Try to use the chezmoi source directory if it's a git repository
@@ -21,13 +29,6 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
         exit 0
     fi
 fi
-
-# {{ if eq .installType "light" }}
-# {{   if not (or .devcontainer .codespaces) }}
-echo "ℹ️  Skipping lefthook installation (light server mode)"
-exit 0
-# {{   end }}
-# {{ end }}
 
 if command -v lefthook >/dev/null 2>&1; then
     echo "✅ lefthook already installed"
@@ -43,13 +44,14 @@ echo "📦 Installing lefthook on dev server..."
 echo "📦 Installing lefthook..."
 
 # Prefer mise (already managed by this repo) so the lefthook version
-# matches .mise.toml. Fall back to brew on macOS as a convenience.
+# matches .mise.toml.
 if command -v mise >/dev/null 2>&1; then
-    (cd "{{ .chezmoi.sourceDir }}" && mise install lefthook)
-# {{ if eq .chezmoi.os "darwin" }}
-elif command -v brew >/dev/null 2>&1; then
-    brew install lefthook
-# {{ end }}
+    (cd "{{ .chezmoi.sourceDir }}" && mise install)
+    if ! command -v lefthook >/dev/null 2>&1 && ! mise which lefthook >/dev/null 2>&1; then
+        echo "⚠️  mise install completed, but lefthook is not available."
+        echo "💡 Check .mise.toml and re-run: mise install"
+        exit 0
+    fi
 else
     echo "⚠️  mise is not installed; cannot install lefthook automatically."
     echo "💡 Install mise (https://mise.jdx.dev/) and re-run, or install lefthook manually."
@@ -62,7 +64,11 @@ echo "✅ lefthook installed successfully!"
 # {{ if or .devcontainer .codespaces (eq .installType "full") }}
 if [ -d "{{ .chezmoi.sourceDir }}/.git" ] || git rev-parse --git-dir >/dev/null 2>&1; then
     echo "🔗 Enabling lefthook hooks..."
-    cd "{{ .chezmoi.sourceDir }}" && (lefthook install || mise exec -- lefthook install)
+    if command -v lefthook >/dev/null 2>&1; then
+        cd "{{ .chezmoi.sourceDir }}" && lefthook install
+    elif command -v mise >/dev/null 2>&1 && mise which lefthook >/dev/null 2>&1; then
+        cd "{{ .chezmoi.sourceDir }}" && "$(mise which lefthook)" install
+    fi
     echo "✅ Lefthook hooks enabled!"
 else
     echo "💡 To enable hooks later, run: lefthook install"

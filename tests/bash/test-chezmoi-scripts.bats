@@ -138,6 +138,16 @@ strip_template() {
 	grep -q "already installed\|command -v lefthook" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
 }
 
+@test "chezmoi-scripts: setup-lefthook checks packages.yaml before mise usage" {
+	grep -q "mise_required_for_current_install" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
+	grep -q "skipping lefthook setup: mise not required for this install type" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
+}
+
+@test "chezmoi-scripts: setup-lefthook installs tools with mise install, not mise exec" {
+	grep -q "mise install" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
+	! grep -q "mise exec" "$LINUX_SCRIPTS_DIR/run_once_setup-lefthook.sh"
+}
+
 @test "chezmoi-scripts: run_onchange_10-install-packages.sh.tmpl exists" {
 	[ -f "$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl" ]
 }

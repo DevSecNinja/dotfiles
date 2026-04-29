@@ -29,6 +29,21 @@ fi
 
 echo "📁 Dotfiles repository: $DOTFILES_ROOT"
 
+PACKAGE_UTILS="$DOTFILES_ROOT/home/.chezmoiscripts/lib/package-utils.sh"
+if [ ! -f "$PACKAGE_UTILS" ]; then
+	echo "⚠️  Cannot find package utility helpers"
+	echo "Skipping lefthook setup"
+	exit 0
+fi
+
+# shellcheck source=../lib/package-utils.sh
+source "$PACKAGE_UTILS"
+
+if ! mise_required_for_current_install "$DOTFILES_ROOT/home/.chezmoidata/packages.yaml"; then
+	echo "ℹ️  skipping lefthook setup: mise not required for this install type"
+	exit 0
+fi
+
 # Check if we have the required files in the dotfiles repo
 if [ ! -f "$DOTFILES_ROOT/.lefthook.toml" ] && [ ! -f "$DOTFILES_ROOT/lefthook.yml" ]; then
 	echo "⚠️  No lefthook configuration found in $DOTFILES_ROOT"
@@ -43,11 +58,11 @@ if command -v lefthook >/dev/null 2>&1; then
 	LEFTHOOK_CMD="lefthook"
 	echo "✅ lefthook already installed ($(lefthook version 2>/dev/null || echo 'unknown'))"
 elif command -v mise >/dev/null 2>&1; then
-	echo "📦 Installing lefthook via mise..."
+	echo "📦 Installing mise-managed tools..."
 	# shellcheck disable=SC2015
-	(cd "$DOTFILES_ROOT" && mise install lefthook >/dev/null 2>&1 || true)
+	(cd "$DOTFILES_ROOT" && mise install >/dev/null 2>&1 || true)
 	if mise which lefthook >/dev/null 2>&1; then
-		LEFTHOOK_CMD="mise exec -- lefthook"
+		LEFTHOOK_CMD="$(mise which lefthook)"
 		echo "✅ lefthook installed via mise"
 	fi
 fi
@@ -82,8 +97,7 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
 	exit 0
 fi
 
-# shellcheck disable=SC2086
-$LEFTHOOK_CMD install
+"$LEFTHOOK_CMD" install
 
 echo ""
 echo "✅ Lefthook setup complete!"

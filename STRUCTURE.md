@@ -130,6 +130,27 @@ Numerical prefixes ensure order: `00-`, `01-`, `02-`, etc.
 
 **Note**: `run_onchange_*` scripts will re-run when their content changes or when tracked dependencies (like `packages.yaml`) are modified.
 
+### Reusable Script Helpers
+
+Shared shell helpers live under `.chezmoiscripts/lib/` and are sourced by run
+scripts that need common runtime logic. Use
+`.chezmoiscripts/lib/package-utils.sh` when a script needs to decide whether a
+tool should be available for the current platform and install type. The helper
+detects the runtime platform/install type and parses
+`.chezmoidata/packages.yaml`, so scripts do not duplicate package-mode logic.
+
+Example:
+
+```bash
+# shellcheck source=../lib/package-utils.sh
+source "{{ .chezmoi.sourceDir }}/.chezmoiscripts/lib/package-utils.sh"
+
+if ! mise_required_for_current_install "{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"; then
+    echo "[SKIP] mise not required for this install type"
+    exit 0
+fi
+```
+
 ### Template Variables
 
 Access Chezmoi data in `.tmpl` files:
