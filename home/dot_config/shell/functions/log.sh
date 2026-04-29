@@ -519,7 +519,7 @@ _log_json_escape() {
 		{
 			s = $0
 			gsub(/\\/, "\\\\\\\\", s)
-			gsub(/"/, "\\\\\"", s)
+			gsub(/"/, "\\\"", s)
 			gsub(/\t/, "\\\\t", s)
 			gsub(/\r/, "\\\\r", s)
 			gsub(/\b/, "\\\\b", s)
