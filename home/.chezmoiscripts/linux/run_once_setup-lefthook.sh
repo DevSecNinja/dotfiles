@@ -36,7 +36,7 @@ if [ ! -f "$PACKAGE_UTILS" ]; then
 	exit 0
 fi
 
-# shellcheck source=../../.chezmoihelpers/package-utils.sh
+# shellcheck source=home/.chezmoihelpers/package-utils.sh
 source "$PACKAGE_UTILS"
 
 if ! mise_required_for_current_install "$DOTFILES_ROOT/home/.chezmoidata/packages.yaml"; then
