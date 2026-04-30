@@ -252,8 +252,19 @@ The tag push triggers
   [`script/build-log-sh-release.sh`](../../../script/build-log-sh-release.sh):
   `log.sh`, `log.sh.sha256`, `log-sh-<tag>.tar.gz`, and the tarball's
   `.sha256`.
-- Auto-creates the GitHub Release with all four files attached — no manual
-  steps on github.com needed.
+- Generates Sigstore [build-provenance attestations][attest] for `log.sh`
+  and the tarball via `actions/attest-build-provenance`. Verifiable with
+  `gh attestation verify <file> --repo DevSecNinja/dotfiles`.
+- Creates the GitHub Release in a single `gh release create` call (notes
+  + title + all four assets). Because nothing is edited or uploaded
+  post-publish, the release is compatible with the repo's **Immutable
+  Releases** setting.
+
+[attest]: https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds
+
+The repository also has tag protection on `v*` (no force-push, no
+deletion) and Immutable Releases enabled, so once a release is cut the
+tag and asset bytes are frozen for life.
 
 ---
 
