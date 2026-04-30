@@ -59,18 +59,6 @@ jobs:
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
-      - name: Compute image tags
-        # On branch / schedule / dispatch builds: just `:{arch}`.
-        # On v* tag pushes: `:{arch}` AND `:{arch}-{version}` (immutable),
-        # both built once — devcontainers/ci accepts comma-separated tags.
-        id: tags
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "image-tag=${{ matrix.arch }},${{ matrix.arch }}-${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          else
-            echo "image-tag=${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
@@ -79,11 +67,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pre-build dev container image
+        # Always push only the rolling per-arch tag. On v* tag pushes the
+        # merge job derives the immutable release manifest list from these
+        # very digests — docker manifest create resolves a tag to its
+        # current digest and freezes it in the manifest list, so :vX.Y.Z
+        # remains pinned even if :amd64 / :arm64 are later overwritten.
         uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
-          imageTag: ${{ steps.tags.outputs.image-tag }}
+          imageTag: ${{ matrix.arch }}
           cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}:${{ matrix.arch }}
           platform: ${{ matrix.platform }}
           # Push on main branch and on v* tags. PRs build for validation only.
@@ -142,9 +135,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push :latest manifest
-        # :latest is always refreshed. On tag pushes the per-arch images
-        # ALSO carry an immutable :{arch}-{version} tag (same digest), so
-        # :latest and :{version} reference identical bytes for that release.
+        # :latest is always refreshed. docker manifest create resolves
+        # :amd64 / :arm64 to their current digests and freezes them in
+        # the manifest list.
         run: |
           IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
           docker manifest create "${IMAGE}:latest" \
@@ -157,6 +150,11 @@ jobs:
       - name: Create and push release manifest tags
         if: steps.release.outputs.is-release == 'true'
         id: release-manifest
+        # Build :vX.Y.Z and :X.Y.Z manifest lists from the SAME per-arch
+        # :amd64 / :arm64 digests pushed in this run. docker resolves
+        # tag→digest at create time and the manifest list stores the
+        # digest, so the release tags remain pinned even if the rolling
+        # :amd64 / :arm64 tags are overwritten by a future main build.
         env:
           VERSION: ${{ steps.release.outputs.version }}
           VERSION_NO_V: ${{ steps.release.outputs.version-no-v }}
@@ -165,10 +163,10 @@ jobs:
           digest=""
           for tag in "${VERSION}" "${VERSION_NO_V}"; do
             docker manifest create "${IMAGE}:${tag}" \
-              "${IMAGE}:amd64-${VERSION}" \
-              "${IMAGE}:arm64-${VERSION}"
-            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:amd64-${VERSION}" --os linux --arch amd64
-            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:arm64-${VERSION}" --os linux --arch arm64
+              "${IMAGE}:amd64" \
+              "${IMAGE}:arm64"
+            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:amd64" --os linux --arch amd64
+            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:arm64" --os linux --arch arm64
             # docker manifest push prints the manifest list digest on stdout.
             push_out="$(docker manifest push "${IMAGE}:${tag}")"
             echo "Pushed ${IMAGE}:${tag} -> ${push_out}"

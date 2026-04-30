@@ -291,7 +291,11 @@ release-pinned tags alongside the rolling `:latest`:
 
 - `ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z`
 - `ghcr.io/devsecninja/dotfiles-devcontainer:X.Y.Z`
-- per-arch `:amd64-vX.Y.Z`, `:arm64-vX.Y.Z`
+
+Both release tags are manifest lists pinned to the per-arch digests
+pushed in the same run, so the release tags remain stable even after
+the rolling `:amd64` / `:arm64` tags get overwritten by a future main
+build.
 
 The multi-arch manifest digest gets a Sigstore build-provenance
 attestation pushed to the registry. Consumers can verify with:
