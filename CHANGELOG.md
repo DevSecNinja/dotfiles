@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-04-30
+
+### Bug Fixes
+- **release**: Skip [skip ci] commits when checking gate status ([`f47f2dd`](https://github.com/DevSecNinja/dotfiles/commit/f47f2dd222fa385c1e74d58b9fd413d814ba3d17))
+
+### CI/CD
+- **release**: Publish release-pinned devcontainer image with attestation ([`880b0e5`](https://github.com/DevSecNinja/dotfiles/commit/880b0e5b2348cf582f07ac77062f5d3770808d21))
+
+### Features
+- **release**: Gate release:bump on green main CI ([`50552c2`](https://github.com/DevSecNinja/dotfiles/commit/50552c21916d41a28a2e724d9b44ccfbe6a70de5))
+
+### Miscellaneous
+- Trigger CI on f47f2dd ([`fa56afc`](https://github.com/DevSecNinja/dotfiles/commit/fa56afc459fda89463497eda2bacbe1decac44c5))
+- Sign PowerShell scripts [skip ci] ([`41915a7`](https://github.com/DevSecNinja/dotfiles/commit/41915a70f243aac643f2e18fdfbfc88d7484a76c))
+
+### Testing
+- **powershell**: Align VS Code extension tests with empty common list ([`b0bc5c1`](https://github.com/DevSecNinja/dotfiles/commit/b0bc5c1ed3347a129f57e43762f77da47f440440))
+
 ## [0.1.0] - 2026-04-30
 
 ### Bug Fixes
@@ -74,6 +92,7 @@ All notable changes to this project will be documented in this file.
 - Add concurrency and timeout settings to all workflows ([`203e25c`](https://github.com/DevSecNinja/dotfiles/commit/203e25c2bbbe0e9f2521d7803cebc8a5e82a84bd))
 
 ### Miscellaneous
+- **version**: V0.1.0 ([`408dbfa`](https://github.com/DevSecNinja/dotfiles/commit/408dbfa7ef5dae3f63882bdbbbd105265be888c1))
 - Sign PowerShell scripts [skip ci] ([`ef53f12`](https://github.com/DevSecNinja/dotfiles/commit/ef53f12e285528c6f5f1a4f1e1331dec10230944))
 - Sign PowerShell scripts [skip ci] ([`d4bf380`](https://github.com/DevSecNinja/dotfiles/commit/d4bf3801096a34d13d5dbe74432e0873792e5253))
 - Sign PowerShell scripts [skip ci] ([`6cab2a0`](https://github.com/DevSecNinja/dotfiles/commit/6cab2a03b300ad29b62f56149194f03f99b4c32f))
