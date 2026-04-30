@@ -11,7 +11,7 @@ set +e
 . "{{ .chezmoi.sourceDir }}/dot_config/shell/functions/log.sh"
 LOG_TAG="install-ppas"
 
-# {{ if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
+# {{ if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu") }}
 # {{ if or .packages.linux.apt.ppas.light .packages.linux.apt.ppas.full }}
 
 log_state "Installing PPAs ({{ .installType }} mode)"
