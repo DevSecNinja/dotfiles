@@ -70,6 +70,33 @@ case "${remote_url}" in
 	;;
 esac
 
+# Walk past commits that intentionally skipped CI ([skip ci] / [ci skip]
+# / [no ci] / [skip actions] / [actions skip] in subject or body) to find
+# the most recent commit that actually exercised the pipeline. We only do
+# this when no SHA was passed explicitly; otherwise the caller wants that
+# exact commit checked.
+if [ -z "${1:-}" ]; then
+	original_sha="${sha}"
+	max_walk=10
+	walked=0
+	while [ "${walked}" -lt "${max_walk}" ]; do
+		msg="$(git log -1 --format='%B' "${sha}" 2>/dev/null || true)"
+		case "${msg}" in
+		*'[skip ci]'* | *'[ci skip]'* | *'[no ci]'* | *'[skip actions]'* | *'[actions skip]'*)
+			next="$(git rev-parse "${sha}^" 2>/dev/null || true)"
+			[ -n "${next}" ] || break
+			sha="${next}"
+			walked=$((walked + 1))
+			continue
+			;;
+		esac
+		break
+	done
+	if [ "${sha}" != "${original_sha}" ]; then
+		log_state "HEAD ${original_sha:0:7} skipped CI; checking parent ${sha:0:7}"
+	fi
+fi
+
 log_state "Checking CI for ${repo}@${sha:0:7}"
 
 # Pull every check run for the commit.
