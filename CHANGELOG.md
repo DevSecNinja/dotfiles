@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-04-30
+
+### Bug Fixes
+- **release**: Build version manifests from rolling per-arch tags ([`c5d64e0`](https://github.com/DevSecNinja/dotfiles/commit/c5d64e0e2158602ae58b8e6a98f1e4677f756876))
+
 ## [0.1.1] - 2026-04-30
 
 ### Bug Fixes
@@ -14,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - **release**: Gate release:bump on green main CI ([`50552c2`](https://github.com/DevSecNinja/dotfiles/commit/50552c21916d41a28a2e724d9b44ccfbe6a70de5))
 
 ### Miscellaneous
+- **version**: V0.1.1 ([`6bb6954`](https://github.com/DevSecNinja/dotfiles/commit/6bb6954ea235201fbcf6cd259eea76e42017ca4e))
 - Trigger CI on f47f2dd ([`fa56afc`](https://github.com/DevSecNinja/dotfiles/commit/fa56afc459fda89463497eda2bacbe1decac44c5))
 - Sign PowerShell scripts [skip ci] ([`41915a7`](https://github.com/DevSecNinja/dotfiles/commit/41915a70f243aac643f2e18fdfbfc88d7484a76c))
 
