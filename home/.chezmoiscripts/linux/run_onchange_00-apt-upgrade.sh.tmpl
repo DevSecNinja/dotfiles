@@ -51,15 +51,34 @@ if ! $SUDO_CMD apt-get update >/dev/null 2>&1; then
 	log_warn "Failed to update package lists, continuing anyway"
 fi
 
-# Check if any upgrades are available
+# Count packages that `apt-get upgrade` would actually upgrade.
 upgrade_check=$($SUDO_CMD apt-get upgrade --dry-run 2>/dev/null | grep -c "^Inst")
 
+# Total upgradable list (includes packages held back by phased/dependency
+# changes that plain `apt upgrade` will refuse to touch). The first line of
+# `apt list --upgradable` is the "Listing..." header, so subtract it.
+upgradable_total=$(apt list --upgradable 2>/dev/null | tail -n +2 | grep -c .)
+held_back=$((upgradable_total - upgrade_check))
+if [ "$held_back" -lt 0 ]; then
+	held_back=0
+fi
+
 if [ "$upgrade_check" -eq 0 ]; then
-	log_result "All packages are up to date"
+	if [ "$held_back" -gt 0 ]; then
+		log_result "No regular updates; $held_back package(s) held back"
+		log_hint "Run 'sudo apt full-upgrade' to apply held-back updates"
+	else
+		log_result "All packages are up to date"
+	fi
 	exit 0
 fi
 
-log_result "Found $upgrade_check package update(s) available"
+if [ "$held_back" -gt 0 ]; then
+	log_result "Found $upgrade_check upgradable + $held_back held-back package(s)"
+	log_hint "Held-back packages need 'sudo apt full-upgrade'"
+else
+	log_result "Found $upgrade_check package update(s) available"
+fi
 
 # Countdown Phase (skip in CI/non-interactive)
 countdown_seconds=3

@@ -15,6 +15,25 @@ LOG_TAG="install-packages"
 
 log_state "Installing development tools ({{ .installType }} mode)"
 
+# Helper: install a Homebrew package without re-printing brew's noisy
+# "already installed and up-to-date" warnings. If the formula is already
+# present we skip silently with a STEP log; otherwise we run `brew install`
+# and only surface its output on failure (via log_data).
+brew_install_quiet() {
+	pkg="$1"
+	if brew list --versions "$pkg" >/dev/null 2>&1; then
+		log_step "$pkg already installed"
+		return 0
+	fi
+	log_step "Installing $pkg"
+	if output=$(brew install "$pkg" 2>&1); then
+		log_result "Installed $pkg"
+	else
+		log_warn "Failed to install $pkg"
+		printf '%s\n' "$output" | log_data WARN "brew output"
+	fi
+}
+
 # Check if running with sudo privileges
 if [ "$EUID" -eq 0 ]; then
 	log_warn "Running as root, commands will execute directly"
@@ -112,13 +131,11 @@ fi
 if command -v brew >/dev/null 2>&1; then
 	log_step "Installing packages with Homebrew"
 	# {{ range .packages.linux.brew.light }}
-	log_step "Installing {{ . }}"
-	brew install {{ . | quote }}
+	brew_install_quiet {{ . | quote }}
 	# {{ end }}
 	# {{ if eq .installType "full" }}
 	# {{ range .packages.linux.brew.full }}
-	log_step "Installing {{ . }}"
-	brew install {{ . | quote }}
+	brew_install_quiet {{ . | quote }}
 	# {{ end }}
 	# {{ end }}
 else
@@ -144,15 +161,13 @@ fi
 log_step "Installing packages with Homebrew"
 # Install light mode packages (always)
 # {{ range .packages.darwin.brew.light }}
-log_step "Installing {{ . }}"
-brew install {{ . | quote }}
+brew_install_quiet {{ . | quote }}
 # {{ end }}
 
 # {{ if eq .installType "full" }}
 # Install full mode packages (additional)
 # {{ range .packages.darwin.brew.full }}
-log_step "Installing {{ . }}"
-brew install {{ . | quote }}
+brew_install_quiet {{ . | quote }}
 # {{ end }}
 # {{ end }}
 # {{ end }}
@@ -183,21 +198,21 @@ if command -v code >/dev/null 2>&1; then
 	}
 
 	# Install common extensions
-# {{ range .extensions.common }}
+	# {{ range .extensions.common }}
 	install_vscode_extension {{ . | quote }}
-# {{ end }}
+	# {{ end }}
 
-# {{ if eq .chezmoi.os "linux" }}
+	# {{ if eq .chezmoi.os "linux" }}
 	# Install Linux-specific extensions
-# {{ range .extensions.linux }}
+	# {{ range .extensions.linux }}
 	install_vscode_extension {{ . | quote }}
-# {{ end }}
-# {{ else if eq .chezmoi.os "darwin" }}
+	# {{ end }}
+	# {{ else if eq .chezmoi.os "darwin" }}
 	# Install macOS-specific extensions
-# {{ range .extensions.darwin }}
+	# {{ range .extensions.darwin }}
 	install_vscode_extension {{ . | quote }}
-# {{ end }}
-# {{ end }}
+	# {{ end }}
+	# {{ end }}
 
 	log_result "VS Code extensions installation complete"
 else
