@@ -7,16 +7,42 @@
 # Quick start
 # -----------
 #   . "${HOME}/.config/shell/functions/log.sh"
-#   log_info   "starting"
-#   log_state  "Deploying app"          # cyan, info-priority
-#   log_result "30 deployed, 0 failed"  # green
-#   log_hint   "Re-run to fix"          # magenta
-#   log_step   "Pulling images"         # dim
-#   log_warn   "fallback used"
-#   log_error  "connection failed"
-#   log_banner "Phase 1 complete" RESULT
-#   log_kv     duration=12s app=adguard status=ok
-#   printf '%s\n' "$payload" | log_data INFO config
+#   log_info   "starting"                # plain fact
+#   log_state  "Deploying app"           # cyan, action in progress
+#   log_result "30 deployed, 0 failed"   # green, outcome
+#   log_hint   "Re-run to fix"           # magenta, suggested next step
+#   log_step   "Pulling images"          # dim, numbered/wizard step
+#   log_warn   "fallback used"           # bold yellow
+#   log_error  "connection failed"       # bold red
+#   log_kv     duration=12s app=adguard status=ok      # logfmt key/value
+#   docker compose pull 2>&1 | log_data INFO "Pulling images for adguard"
+#   log_rule   STATE "phase 1"           # titled divider
+#   log_banner "Phase 1 complete" RESULT # boxed/wrapped title
+#
+# Choosing a helper
+# -----------------
+# Severity (filterable):
+#   log_trace / log_debug   - implementation detail, off by default
+#   log_info                - default informational fact
+#   log_notice              - noteworthy but not a problem
+#   log_warn                - recoverable problem, fallback engaged
+#   log_error               - operation failed; script may continue
+#   log_fatal               - operation failed; script will exit
+# Kinds (info-priority, never filtered, used for visual scanning):
+#   log_state               - what the script is currently doing
+#   log_result              - outcome of an operation (counts, totals)
+#   log_hint                - actionable suggestion for the reader
+#   log_step                - numbered or sequential step in a flow
+# Structured / structural:
+#   log_kv  k=v k=v ...     - one logfmt line of flat key/value pairs
+#   log_data KIND "hdr"     - header + multi-line payload from stdin;
+#                             continuation lines are prefixed with `│ `
+#                             (stdio) / `| ` (file). Use this whenever you
+#                             need to wrap the noisy output of another
+#                             command so each line stays grep-able.
+#   log_sep                 - unbroken divider (one row of one character)
+#   log_rule  KIND "title"  - titled divider, e.g. `──── title ────────`
+#   log_banner "title" KIND - boxed / wrapped title for phase boundaries
 #
 # Severity vs kind
 # ----------------
@@ -644,6 +670,18 @@ log_step() { _log_emit INFO STEP "$*"; }
 # ----------------------------------------------------------------------------
 # Public: log_kv (logfmt)
 # ----------------------------------------------------------------------------
+#
+# Emit one INFO line composed of `key=value` pairs in logfmt syntax. Values
+# containing whitespace, embedded `"`, or newlines are auto-quoted and the
+# inner quotes/backslashes escaped. Bare arguments without `=` are passed
+# through verbatim, which is useful for a leading message:
+#
+#   log_kv "deploy ok" duration=12s app=adguard status=ok
+#   # -> 2026-04-29 20:27:28 INFO   deploy ok duration=12s app=adguard status=ok
+#
+# Use this for telemetry-style lines that another tool (jq, awk, Grafana
+# Loki, etc.) will parse. For a single multi-line payload (YAML/JSON/command
+# output), use log_data instead.
 
 log_kv() {
 	# Each argument is a key=value pair. Quote values with whitespace or "=".
@@ -677,6 +715,32 @@ log_kv() {
 # ----------------------------------------------------------------------------
 # Public: log_data (read payload from stdin)
 # ----------------------------------------------------------------------------
+#
+# Usage:
+#   log_data <SEVERITY-or-KIND> <header message...>      # payload on stdin
+#
+# Reads the entire payload from stdin and emits one header line followed by
+# one continuation line per payload line. On a TTY (and non-JSON stdio)
+# continuation lines are prefixed with `│ `; in LOG_FILE the prefix is the
+# ASCII `| ` so the file stays grep-friendly. The whole block shares one
+# timestamp, which is what visually groups it.
+#
+# Typical use is wrapping the noisy output of a subcommand:
+#
+#   docker compose pull 2>&1 | log_data INFO "Pulling images for adguard"
+#   # 2026-04-29 20:27:28 INFO   [deploy] Pulling images for adguard
+#   # 2026-04-29 20:27:28 INFO   [deploy] │ [+] Pulling 6/6
+#   # 2026-04-29 20:27:28 INFO   [deploy]  │  ✔ adguard Pulled    0.4s
+#
+# Or printing a structured payload from a variable:
+#
+#   printf '%s\n' "$yaml" | log_data STATE "effective config"
+#
+# In LOG_FORMAT=json mode the entire payload is collapsed into a single JSON
+# object's `data` field (with embedded newlines preserved as the literal
+# two-char `\n` sequence) so the entry remains one JSON Line. Pass any
+# severity (INFO, WARN, ERROR, ...) or kind (STATE, RESULT, ...) as the
+# first argument to set both color and syslog priority.
 
 log_data() {
 	# log_data <KIND> <message...>
@@ -700,6 +764,30 @@ log_data() {
 # ----------------------------------------------------------------------------
 # Public: banners & rules
 # ----------------------------------------------------------------------------
+#
+# Three structural helpers, ordered by visual weight:
+#
+#   log_sep    [KIND]            unbroken divider, one row of one character.
+#                                Use to separate adjacent log groups.
+#                                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+#   log_rule   [KIND] <title>    titled divider, four leading chars + title
+#                                + remainder. Use to mark a phase change
+#                                inside a script without taking three lines.
+#                                  ──── phase 1 ───────────────────────────
+#
+#   log_banner <title> [KIND]    full banner: separator, title, separator
+#                                (or a UTF-8 box, depending on
+#                                LOG_BANNER_STYLE). Use sparingly for
+#                                top-level phase boundaries — start of run,
+#                                end of run, fatal failure, etc.
+#                                  ┌──────────────────────────────────────┐
+#                                  │ Setup complete                       │
+#                                  └──────────────────────────────────────┘
+#
+# All three respect LOG_BANNER_STYLE (unicode|ascii|heavy|box|rule),
+# LOG_RULE_WIDTH, LOG_RULE_CHAR, and the LANG=C / no-TTY / LOG_FILE / json
+# fallbacks documented near the top of this file.
 
 log_sep() {
 	_b_kind="${1:-INFO}"

@@ -12,17 +12,47 @@ The implementation lives in
 ```sh
 . "${HOME}/.config/shell/functions/log.sh"
 
-log_info   "starting"
-log_state  "Deploying app"          # cyan, info-priority
-log_result "30 deployed, 0 failed"  # green
-log_hint   "Re-run to fix"          # magenta
-log_step   "Pulling images"         # dim
+log_info   "starting"                # plain fact
+log_state  "Deploying app"           # cyan, action in progress
+log_result "30 deployed, 0 failed"   # green, outcome
+log_hint   "Re-run to fix"           # magenta, suggested next step
+log_step   "Pulling images"          # dim, numbered/wizard step
 log_warn   "fallback used"
 log_error  "connection failed"
-log_banner "Phase 1 complete" RESULT
 log_kv     duration=12s app=adguard status=ok
-printf '%s\n' "$payload" | log_data INFO config
+log_banner "Phase 1 complete" RESULT
+
+# Wrap noisy subcommand output so each line stays grep-able and
+# visually grouped under one header line:
+docker compose pull 2>&1 | log_data INFO "Pulling images for adguard"
 ```
+
+## Choosing a helper
+
+Reach for the helper that best matches **what you're saying**, not just the
+severity:
+
+| You want to log…                                | Helper                            |
+| ----------------------------------------------- | --------------------------------- |
+| A plain informational fact                      | `log_info`                        |
+| The action the script is currently taking       | `log_state "Deploying app"`       |
+| The outcome of an operation (counts, totals)    | `log_result "30 deployed, 0 failed"` |
+| A suggestion for the reader                     | `log_hint "Re-run with -v"`       |
+| One step in a numbered / wizard-style sequence  | `log_step "Pulling images"`       |
+| A noteworthy event that isn't a problem         | `log_notice`                      |
+| A recoverable problem / fallback engaged        | `log_warn`                        |
+| A failed operation; script may continue         | `log_error`                       |
+| A failure the script will exit on               | `log_fatal`                       |
+| An implementation detail (off by default)       | `log_debug` / `log_trace`         |
+| Telemetry as flat key/value pairs               | `log_kv k=v k=v …`                |
+| Multi-line payload (YAML/JSON/command output)   | `… \| log_data KIND "header"`     |
+| Unbroken divider between groups                 | `log_sep`                         |
+| Titled divider for a phase change               | `log_rule KIND "phase 1"`         |
+| Boxed/wrapped title for a top-level boundary    | `log_banner "Done" RESULT`        |
+
+`STATE` / `RESULT` / `HINT` / `STEP` are info-priority kinds — they never
+change filtering behaviour, only color and label. Use them so `grep RESULT`
+finds outcomes and `grep HINT` finds suggestions.
 
 ## Severity levels vs kinds
 
@@ -161,7 +191,24 @@ log_kv "msg=hello world" status=ok           # values with spaces auto-quoted
 
 Reads the payload from stdin. On a TTY the payload lines are prefixed with
 `│ ` so they visually belong to the previous header line; in `LOG_FILE` the
-prefix is `| ` (ASCII).
+prefix is `| ` (ASCII). The whole block shares **one timestamp**, which is
+what groups it.
+
+The primary use case is wrapping the output of another command without
+losing the rest of the log's structure:
+
+```sh
+docker compose pull 2>&1 | log_data INFO "Pulling images for adguard"
+```
+
+```text
+2026-04-30 19:36:02 INFO   [deploy] Pulling images for adguard
+2026-04-30 19:36:02 INFO   [deploy] │ [+] Pulling 6/6
+2026-04-30 19:36:02 INFO   [deploy] │  ✔ adguard-redis Pulled    0.3s
+2026-04-30 19:36:02 INFO   [deploy] │  ✔ adguard Pulled          0.4s
+```
+
+It also works for any payload variable:
 
 ```sh
 printf '%s\n' "$yaml" | log_data INFO "config"
