@@ -20,7 +20,8 @@ jobs:
     permissions:
       contents: write
       # Required by actions/attest-build-provenance to mint the OIDC token
-      # used as the Sigstore signing identity.
+      # used as the Sigstore signing identity. Must stay declared in the
+      # caller workflow (not the composite) — see the action's README.
       id-token: write
       attestations: write
     steps:
@@ -29,43 +30,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
-        with:
-          install: true
-          cache: true
-          # renovate: datasource=github-releases depName=jdx/mise
-          version: "2026.4.9"
-
-      - name: Generate release notes
-        env:
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          mise exec -- git-cliff --latest --strip all > /tmp/release-notes.md
-          {
-            printf '\n---\n\n'
-            printf '## log.sh distribution\n\n'
-            printf 'This release includes a vendorable copy of `log.sh`. See '
-            printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
-              "${REPO}" "${TAG}"
-            printf 'for the consumption snippet.\n\n'
-            printf '```sh\n'
-            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh -o scripts/lib/log.sh\n' \
-              "${REPO}" "${TAG}"
-            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
-              "${REPO}" "${TAG}"
-            printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
-            printf '```\n\n'
-            printf '### Verifying provenance\n\n'
-            printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
-            printf 'Verify with the GitHub CLI:\n\n'
-            printf '```sh\n'
-            printf 'gh attestation verify ./log.sh --repo %s\n' "${REPO}"
-            printf 'gh attestation verify ./log-sh-%s.tar.gz --repo %s\n' "${TAG}" "${REPO}"
-            printf '```\n'
-          } >> /tmp/release-notes.md
 
       - name: Build log.sh release artifacts
         run: ./script/build-log-sh-release.sh "${{ github.ref_name }}" "${GITHUB_WORKSPACE}/dist"
@@ -81,6 +45,8 @@ jobs:
         # via Sigstore. Verifiable with `gh attestation verify <file>`.
         # Sidecar .sha256 files are intentionally not attested — their
         # integrity is already proven by re-hashing the content they cover.
+        # Stays in the caller (not the composite) so the OIDC subject is
+        # this repo, not DevSecNinja/.github.
         # renovate: datasource=github-tags depName=actions/attest-build-provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
@@ -88,21 +54,19 @@ jobs:
             dist/log.sh
             dist/log-sh-${{ github.ref_name }}.tar.gz
 
-      - name: Create immutable GitHub Release
-        # Single-shot upload: notes, title, and all four assets in one
-        # `gh release create` call so the release can be marked immutable
-        # in repo Settings → General → Releases without conflicting with
-        # later edits/uploads.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh release create "${TAG}" \
-            --repo "${REPO}" \
-            --title "${TAG}" \
-            --notes-file /tmp/release-notes.md \
-            "dist/log.sh" \
-            "dist/log.sh.sha256" \
-            "dist/log-sh-${TAG}.tar.gz" \
-            "dist/log-sh-${TAG}.tar.gz.sha256"
+      - name: Publish release
+        # Composite action provides: git-cliff notes generation, optional
+        # preset notes block, and a single-shot Immutable-Releases compatible
+        # `gh release create`. See the action's README for the rationale.
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/release-publish@ee0804b737700aeecd6d1b1bc85ab57107c880e3 # main
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise
+          mise-version: "2026.4.9"
+          tag: ${{ github.ref_name }}
+          extra-notes: log-sh
+          assets: |
+            dist/log.sh
+            dist/log.sh.sha256
+            dist/log-sh-${{ github.ref_name }}.tar.gz
+            dist/log-sh-${{ github.ref_name }}.tar.gz.sha256
