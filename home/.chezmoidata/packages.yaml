@@ -130,11 +130,13 @@ packages:
           destination: "DevSecNinja.Office365AliasModule"
 
 # VS Code extensions (optional, separate from package installation)
+# Note: GitHub.copilot and GitHub.copilot-chat are now bundled as built-in
+# extensions in current VS Code releases, so they are intentionally omitted
+# here — installing them from the marketplace fails because the built-in
+# version is newer than the marketplace version.
 extensions:
   # Extensions for all platforms
-  common:
-    - GitHub.copilot
-    - GitHub.copilot-chat
+  common: []
 
   # Windows-specific extensions
   windows:
