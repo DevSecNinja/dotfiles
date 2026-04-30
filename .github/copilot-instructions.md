@@ -21,6 +21,14 @@
 
 **Always run commands in this exact order**:
 
+> **IMPORTANT — Always wrap test/validation runs with a timeout.** Bats suites
+> can hang on interactive prompts, network calls, or chezmoi apply loops, and
+> a hung suite blocks the whole agent. Wrap every invocation with a hard cap,
+> e.g. `timeout 120 ./tests/bash/run-tests.sh --ci` or pass `timeout` to the
+> terminal tool. Recommended caps: single bats file ≤ 60s, full `--ci` run ≤
+> 300s. If the timeout fires, investigate the specific test rather than
+> increasing the cap.
+
 ### 1. Install Development Tools (Required First)
 
 ```bash

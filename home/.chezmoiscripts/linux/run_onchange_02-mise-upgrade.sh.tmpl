@@ -15,40 +15,39 @@
 
 # {{ if and (or (eq .chezmoi.os "darwin") (eq .chezmoi.os "linux")) (not .isServer) }}
 
-set +e  # Continue on errors to avoid blocking chezmoi
+set +e # Continue on errors to avoid blocking chezmoi
 
-echo ""
-echo "================================================"
-echo ">> Mise Tool Upgrade"
-echo "================================================"
+# shellcheck source=../../dot_config/shell/functions/log.sh
+. "{{ .chezmoi.sourceDir }}/dot_config/shell/functions/log.sh"
+LOG_TAG="mise-upgrade"
+
+log_banner "Mise Tool Upgrade" STATE
 
 # shellcheck source=../../.chezmoihelpers/package-utils.sh
 source "{{ .chezmoi.sourceDir }}/.chezmoihelpers/package-utils.sh"
 
 if ! mise_required_for_current_install "{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"; then
-    echo "[SKIP] mise not required for this install type"
-    exit 0
+	log_info "mise not required for this install type, skipping"
+	exit 0
 fi
 
 # Check if mise is installed
 if ! command -v mise >/dev/null 2>&1; then
-    echo "[SKIP] mise not found on this system"
-    exit 0
+	log_info "mise not found on this system, skipping"
+	exit 0
 fi
 
-echo ""
-echo "[OK] mise found: $(mise --version 2>/dev/null | head -n1)"
+log_result "mise found: $(mise --version 2>/dev/null | head -n1)"
 
 # Detection Phase: Check for updates
-echo ""
-echo "Detection Phase: Checking for updates..."
+log_state "Detection Phase: Checking for updates"
 
 # Check if mise itself has updates
-echo "   Checking mise version..."
+log_step "Checking mise version"
 mise_self_update_check=$(mise self-update --check 2>/dev/null || echo "")
 
 # Check for outdated tools
-echo "   Checking for outdated tools..."
+log_step "Checking for outdated tools"
 outdated=$(mise outdated 2>/dev/null)
 outdated_count=$(echo "$outdated" | grep -E "^\S+" | wc -l | tr -d ' ')
 
@@ -56,72 +55,62 @@ outdated_count=$(echo "$outdated" | grep -E "^\S+" | wc -l | tr -d ' ')
 has_updates=false
 
 if [ -n "$mise_self_update_check" ] && echo "$mise_self_update_check" | grep -q "mise .* -> .*"; then
-    has_updates=true
-    echo "[OK] mise update available: $mise_self_update_check"
+	has_updates=true
+	log_result "mise update available: $mise_self_update_check"
 fi
 
 if [ -n "$outdated" ] && [ "$outdated_count" -gt 0 ]; then
-    has_updates=true
-    echo "[OK] Found $outdated_count tool update(s) available:"
-    echo "$outdated" | grep -E "^\S+" | sed 's/^/       - /'
+	has_updates=true
+	log_result "Found $outdated_count tool update(s) available"
+	printf '%s\n' "$outdated" | grep -E "^\S+" | log_data INFO "outdated tools"
 fi
 
 if [ "$has_updates" = false ]; then
-    echo "[OK] mise and all tools are up to date"
-    exit 0
+	log_result "mise and all tools are up to date"
+	exit 0
 fi
 
 # Countdown Phase (skip in CI/non-interactive)
 countdown_seconds=3
 
 if [ -n "$CI" ] || [ ! -t 0 ]; then
-    echo ""
-    echo "[SKIP] Skipping countdown (CI/non-interactive environment)"
+	log_info "Skipping countdown (CI/non-interactive environment)"
 else
-    echo ""
-    echo "Execution Phase: Starting upgrade in $countdown_seconds seconds..."
-    echo "   Press Ctrl+C to cancel"
+	log_state "Execution Phase: Starting upgrade in $countdown_seconds seconds"
+	log_hint "Press Ctrl+C to cancel"
 
-    for i in $(seq $countdown_seconds -1 1); do
-        echo "   $i..."
-        sleep 1
-    done
-    echo "   GO!"
+	for i in $(seq $countdown_seconds -1 1); do
+		log_step "$i..."
+		sleep 1
+	done
+	log_step "GO!"
 fi
 
 # Execution Phase: Perform upgrades
-echo ""
-echo ">> Starting upgrades..."
+log_state "Starting upgrades"
 
 # Update mise itself first
 if [ -n "$mise_self_update_check" ] && echo "$mise_self_update_check" | grep -q "mise .* -> .*"; then
-    echo ""
-    echo ">> Updating mise..."
-    if mise self-update -y 2>/dev/null; then
-        echo "[OK] mise updated successfully"
-    else
-        echo "[WARN] Failed to update mise (exit code: $?)"
-    fi
+	log_step "Updating mise"
+	if mise self-update -y 2>/dev/null; then
+		log_result "mise updated successfully"
+	else
+		log_warn "Failed to update mise (exit code: $?)"
+	fi
 fi
 
 # Upgrade all tools
 if [ "$outdated_count" -gt 0 ]; then
-    echo ""
-    echo ">> Upgrading tools..."
-    if mise upgrade 2>&1; then
-        echo ""
-        echo "[OK] Tool upgrades completed"
-    else
-        exit_code=$?
-        echo ""
-        echo "[WARN] Tool upgrades completed with errors (exit code: $exit_code)"
-    fi
+	log_step "Upgrading tools"
+	if mise upgrade 2>&1; then
+		log_result "Tool upgrades completed"
+	else
+		exit_code=$?
+		log_warn "Tool upgrades completed with errors (exit code: $exit_code)"
+	fi
 fi
 
-echo ""
-echo "================================================"
-echo "[OK] mise upgrade completed"
-echo "================================================"
+log_banner "mise upgrade completed" RESULT
 exit 0
 
 # {{ else }}
