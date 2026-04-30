@@ -200,36 +200,21 @@ tasks:
       - task: ci:validate
 
   # Release tasks
+  #
+  # Bumping is owned by release-please \u2014 see `.github/workflows/release-please.yml`.
+  # The tasks below are local previews and the local artifact builder.
+  # There is intentionally no `release:bump` task: cut releases by
+  # merging the auto-opened release PR.
+
   release:notes:
     desc: Preview the next release notes (git-cliff --unreleased)
     cmds:
       - mise exec -- git-cliff --unreleased --strip all
 
-  release:changelog:
-    desc: Render the full CHANGELOG.md without bumping
-    cmds:
-      - mise exec -- git-cliff --output CHANGELOG.md
-
   release:build:
     desc: 'Build log.sh release artifacts locally (usage: task release:build -- v0.1.0)'
     cmds:
       - ./script/build-log-sh-release.sh {{.CLI_ARGS}}
-
-  release:check-ci:
-    desc: Verify GitHub Actions are green for the current commit (precondition for release:bump)
-    cmds:
-      - ./script/check-ci-status.sh
-
-  release:bump:
-    desc: 'Cut a new release with cocogitto (usage: task release:bump -- --auto)'
-    cmds:
-      - mise exec -- cog bump {{.CLI_ARGS}}
-    preconditions:
-      - sh: '[ -n "{{.CLI_ARGS}}" ]'
-        msg: 'Pass a cog bump argument, e.g. task release:bump -- --auto OR --minor'
-      - task: test:all
-      - sh: ./script/check-ci-status.sh
-        msg: 'CI is not green on the current commit. Fix it, or rerun with FORCE=1 task release:bump -- ...'
 
   # Cleanup tasks
   clean:test-results:
