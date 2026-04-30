@@ -3,6 +3,13 @@ name: Prebuild Devcontainer
 on:
   push:
     branches: [main]
+    # Tag pushes (v*) build a release-pinned image set: :vX.Y.Z, :X.Y.Z and
+    # the multi-arch manifest list, plus a build-provenance attestation
+    # for the manifest digest. Source must be the tagged commit so the
+    # image bytes correspond to the release source tree. Path filters
+    # below only apply to branch pushes — tag pushes always run.
+    tags:
+      - 'v*'
     paths:
       - '.devcontainer/**'
       - 'home/**'
@@ -52,6 +59,18 @@ jobs:
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
+      - name: Compute image tags
+        # On branch / schedule / dispatch builds: just `:{arch}`.
+        # On v* tag pushes: `:{arch}` AND `:{arch}-{version}` (immutable),
+        # both built once — devcontainers/ci accepts comma-separated tags.
+        id: tags
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "image-tag=${{ matrix.arch }},${{ matrix.arch }}-${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image-tag=${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
@@ -64,12 +83,14 @@ jobs:
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
-          imageTag: ${{ matrix.arch }}
+          imageTag: ${{ steps.tags.outputs.image-tag }}
           cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}:${{ matrix.arch }}
           platform: ${{ matrix.platform }}
-          # Only push on main branch, PRs are built for validation only
+          # Push on main branch and on v* tags. PRs build for validation only.
           push: filter
-          refFilterForPush: refs/heads/main
+          refFilterForPush: |
+            refs/heads/main
+            refs/tags/v*
           eventFilterForPush: |
             push
             workflow_dispatch
@@ -79,14 +100,39 @@ jobs:
     name: Create Multi-Platform Manifest
     runs-on: ubuntu-24.04
     needs: prebuild
-    # Only merge when images were actually pushed
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    # Merge when images were actually pushed: main, schedule, dispatch, or v* tag.
+    if: |
+      github.ref == 'refs/heads/main'
+      || startsWith(github.ref, 'refs/tags/v')
+      || github.event_name == 'workflow_dispatch'
+      || github.event_name == 'schedule'
     timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      # Required for actions/attest-build-provenance on tag pushes
+      # (no-op for main/schedule/dispatch since the step is gated).
+      id-token: write
+      attestations: write
 
     steps:
       - name: Set lowercase repository owner
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Determine release context
+        id: release
+        run: |
+          {
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+              version="${GITHUB_REF_NAME}"
+              echo "is-release=true"
+              echo "version=${version}"
+              echo "version-no-v=${version#v}"
+            else
+              echo "is-release=false"
+            fi
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
@@ -95,7 +141,10 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push multi-platform manifest
+      - name: Create and push :latest manifest
+        # :latest is always refreshed. On tag pushes the per-arch images
+        # ALSO carry an immutable :{arch}-{version} tag (same digest), so
+        # :latest and :{version} reference identical bytes for that release.
         run: |
           IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
           docker manifest create "${IMAGE}:latest" \
@@ -104,3 +153,45 @@ jobs:
           docker manifest annotate "${IMAGE}:latest" "${IMAGE}:amd64" --os linux --arch amd64
           docker manifest annotate "${IMAGE}:latest" "${IMAGE}:arm64" --os linux --arch arm64
           docker manifest push "${IMAGE}:latest"
+
+      - name: Create and push release manifest tags
+        if: steps.release.outputs.is-release == 'true'
+        id: release-manifest
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          VERSION_NO_V: ${{ steps.release.outputs.version-no-v }}
+        run: |
+          IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
+          digest=""
+          for tag in "${VERSION}" "${VERSION_NO_V}"; do
+            docker manifest create "${IMAGE}:${tag}" \
+              "${IMAGE}:amd64-${VERSION}" \
+              "${IMAGE}:arm64-${VERSION}"
+            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:amd64-${VERSION}" --os linux --arch amd64
+            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:arm64-${VERSION}" --os linux --arch arm64
+            # docker manifest push prints the manifest list digest on stdout.
+            push_out="$(docker manifest push "${IMAGE}:${tag}")"
+            echo "Pushed ${IMAGE}:${tag} -> ${push_out}"
+            if [ "${tag}" = "${VERSION}" ]; then
+              digest="${push_out}"
+            fi
+          done
+          if [ -z "${digest}" ]; then
+            echo "::error::Failed to capture manifest digest for ${VERSION}"
+            exit 1
+          fi
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest devcontainer image build provenance
+        if: steps.release.outputs.is-release == 'true'
+        # Provenance for the multi-arch release manifest. Verify with:
+        #   gh attestation verify \
+        #     oci://ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z \
+        #     --repo DevSecNinja/dotfiles
+        # renovate: datasource=github-tags depName=actions/attest-build-provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ steps.release-manifest.outputs.image }}
+          subject-digest: ${{ steps.release-manifest.outputs.digest }}
+          push-to-registry: true
