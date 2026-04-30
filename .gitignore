@@ -48,3 +48,6 @@ package.json
 
 # MkDocs build output
 site/
+
+# Release artifacts produced by script/build-log-sh-release.sh
+dist/

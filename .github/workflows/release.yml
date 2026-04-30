@@ -1,0 +1,95 @@
+---
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: DevSecNinja/.github/.github/workflows/release.yml@e744bc05bb096d6356cc913900ff62482e656046 # main
+    permissions:
+      contents: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.4.9"
+      tag: ${{ github.ref_name }}
+
+  upload-log-sh:
+    name: Upload log.sh release assets
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          cache: true
+          # renovate: datasource=github-releases depName=jdx/mise
+          version: "2026.4.9"
+
+      - name: Build log.sh release artifacts
+        run: ./script/build-log-sh-release.sh "${{ github.ref_name }}" "${GITHUB_WORKSPACE}/dist"
+
+      - name: Verify checksums
+        working-directory: dist
+        run: |
+          sha256sum -c log.sh.sha256
+          sha256sum -c "log-sh-${{ github.ref_name }}.tar.gz.sha256"
+
+      - name: Append log.sh consumption snippet to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          existing="$(gh release view "${TAG}" --repo "${REPO}" --json body --jq .body)"
+          {
+            printf '%s\n\n' "${existing}"
+            printf -- '---\n\n'
+            printf '## log.sh distribution\n\n'
+            printf 'This release includes a vendorable copy of `log.sh`. See '
+            printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
+              "${REPO}" "${TAG}"
+            printf 'for the consumption snippet.\n\n'
+            printf '```sh\n'
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh -o scripts/lib/log.sh\n' \
+              "${REPO}" "${TAG}"
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
+              "${REPO}" "${TAG}"
+            printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
+            printf '```\n'
+          } > /tmp/release-notes.md
+          gh release edit "${TAG}" \
+            --repo "${REPO}" \
+            --notes-file /tmp/release-notes.md
+
+      - name: Upload assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release upload "${TAG}" \
+            --repo "${REPO}" \
+            --clobber \
+            "dist/log.sh" \
+            "dist/log.sh.sha256" \
+            "dist/log-sh-${TAG}.tar.gz" \
+            "dist/log-sh-${TAG}.tar.gz.sha256"

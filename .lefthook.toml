@@ -27,3 +27,11 @@ stage_fixed = true
 [pre-commit.commands.file-set-execution-bit]
 run = "./home/dot_config/shell/functions/file-set-execution-bit.sh {staged_files}"
 glob = ["**/*.sh", "**/*.bash"]
+
+# Validate the commit message against Conventional Commits via cocogitto.
+# Mirrors the rule used by `cog bump` so messages that pass here will also
+# bump cleanly. See .github/skills/commit-and-release/SKILL.md.
+[commit-msg]
+
+[commit-msg.commands.cog-verify]
+run = "mise exec -- cog verify --file {1}"

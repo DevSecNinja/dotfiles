@@ -198,6 +198,30 @@ tasks:
     desc: Run CI test pipeline
     cmds:
       - task: ci:validate
+
+  # Release tasks
+  release:notes:
+    desc: Preview the next release notes (git-cliff --unreleased)
+    cmds:
+      - mise exec -- git-cliff --unreleased --strip all
+
+  release:changelog:
+    desc: Render the full CHANGELOG.md without bumping
+    cmds:
+      - mise exec -- git-cliff --output CHANGELOG.md
+
+  release:build:
+    desc: 'Build log.sh release artifacts locally (usage: task release:build -- v0.1.0)'
+    cmds:
+      - ./script/build-log-sh-release.sh {{.CLI_ARGS}}
+
+  release:bump:
+    desc: 'Cut a new release with cocogitto (usage: task release:bump -- --auto)'
+    cmds:
+      - mise exec -- cog bump {{.CLI_ARGS}}
+    preconditions:
+      - sh: '[ -n "{{.CLI_ARGS}}" ]'
+        msg: 'Pass a cog bump argument, e.g. task release:bump -- --auto OR --minor'
       - task: test:all
 
   # Cleanup tasks

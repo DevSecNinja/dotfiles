@@ -283,6 +283,79 @@ Completion files:
 The per-helper functions (`log_info`, `log_warn`, …) are completed by the
 shell's built-in function-name completion in Bash and Zsh.
 
+## Consuming `log.sh` from other repositories
+
+Other projects can vendor `log.sh` from a tagged GitHub Release of this
+repository — no `chezmoi`, submodule, or package manager required.
+
+### One-time install
+
+```sh
+mkdir -p scripts/lib
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/log.sh \
+  -o scripts/lib/log.sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/log.sh.sha256 \
+  -o scripts/lib/log.sh.sha256
+( cd scripts/lib && sha256sum -c log.sh.sha256 )
+```
+
+Replace `v0.1.0` with the latest release tag. The release page also ships
+`log-sh-<version>.tar.gz` (library + completions + LICENSE + README) for
+projects that want shell completions too.
+
+### Use it
+
+```sh
+. scripts/lib/log.sh
+LOG_TAG=mytool
+log_info "ready"
+log_state "Phase 1"
+log_result "done"
+```
+
+### Auto-update with Renovate
+
+Renovate's regex manager can keep the pinned tag fresh. Add this to your
+consumer repo's `renovate.json5`:
+
+```json5
+{
+  customManagers: [
+    {
+      customType: "regex",
+      description: "Update DevSecNinja/dotfiles log.sh release pin",
+      managerFilePatterns: ["/(^|/)scripts/lib/log\\.sh$/", "/\\.sh$/", "/\\.sh\\.tmpl$/"],
+      matchStrings: [
+        "DevSecNinja/dotfiles/releases/download/(?<currentValue>v[^/]+)/log\\.sh",
+      ],
+      depNameTemplate: "DevSecNinja/dotfiles",
+      datasourceTemplate: "github-releases",
+    },
+  ],
+}
+```
+
+Pair with a small refresher script (committed in the consumer repo) that
+re-downloads the file when the pinned URL changes — Renovate opens a PR,
+the script runs in CI, and the vendored copy is updated.
+
+### Why not GitHub Packages, npm, or Homebrew?
+
+- **GitHub Packages** does not host plain shell tarballs; the available
+  formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency
+  that conflicts with the "works in offline / locked-down containers"
+  constraint.
+- **npm / pip** are the wrong ecosystem for POSIX shell.
+- **Homebrew** is great for dev machines but useless on minimal
+  containers and most servers.
+
+GitHub Release assets (`https://github.com/.../releases/download/...`) are
+versioned, immutable, public, cacheable, and require nothing more than
+`curl`. That's the recommended channel.
+
+If you later want an OCI artifact too, `oras push ghcr.io/devsecninja/log-sh:<tag>`
+can be layered on top of the existing release flow as a follow-up.
+
 ## Troubleshooting
 
 **No tag is shown when I run `log_info`.**

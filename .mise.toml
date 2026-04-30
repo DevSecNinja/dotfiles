@@ -22,6 +22,11 @@ lefthook = "latest"
 shellcheck = "latest"
 shfmt = "latest"
 
+# Release tooling: cocogitto drives `cog bump`, git-cliff renders CHANGELOG.md
+# and release notes. See cog.toml, cliff.toml, .github/workflows/release.yml.
+cocogitto = "latest"
+git-cliff = "latest"
+
 # Additional tools for development (commented out by default)
 # Uncomment based on your needs
 # node = "lts"

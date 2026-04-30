@@ -424,6 +424,40 @@ Lefthook hooks will run automatically on `git commit` if installed.
 - `~/.vimrc`, `~/.tmux.conf`, `~/.config/fish/*` in home directory
   → Edit in repository as `dot_vimrc`, `dot_tmux.conf`, `dot_config/fish/*`
 
+## Releasing (cocogitto + git-cliff)
+
+Versioning uses [cocogitto](https://docs.cocogitto.io/) (`cog bump`) and
+[git-cliff](https://git-cliff.org/) for changelog/release-note generation.
+Config: [`cog.toml`](../cog.toml), [`cliff.toml`](../cliff.toml). Workflow:
+[`.github/workflows/release.yml`](../.github/workflows/release.yml).
+
+**Cut a release**:
+
+```bash
+mise install               # ensures cocogitto and git-cliff are present
+task release:notes         # preview unreleased notes
+task release:bump -- --auto   # or --minor / --major / --patch
+```
+
+`cog bump` regenerates `CHANGELOG.md` via git-cliff, commits it, tags
+`vX.Y.Z`, and pushes both branch and tag. The push of the `v*` tag triggers
+the release workflow which:
+
+1. Re-renders release notes via `git-cliff --latest`.
+2. Runs [`script/build-log-sh-release.sh`](../script/build-log-sh-release.sh)
+   to build `log.sh`, `log.sh.sha256`, `log-sh-<tag>.tar.gz`, and the
+   tarball's `.sha256`.
+3. Creates a GitHub Release with all four files attached.
+
+**Local artifact build (no tag/push)**:
+
+```bash
+task release:build -- v0.1.0   # writes to ./dist/
+```
+
+Consumer-side install snippet for `log.sh` lives in
+[`docs/logging.md`](../docs/logging.md#consuming-logsh-from-other-repositories).
+
 ## Critical: Always Trust These Instructions
 
 **When working on this repository**:
