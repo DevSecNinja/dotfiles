@@ -405,10 +405,13 @@ Describe "VS Code Extensions Configuration" {
             $script:ChezmoiData.extensions | Should -Not -BeNullOrEmpty
         }
 
-        It "Should have common extensions for all platforms" {
-            $commonExtensions = $script:ChezmoiData.extensions.common
-            $commonExtensions | Should -Not -BeNullOrEmpty
-            $commonExtensions.Count | Should -BeGreaterThan 0
+        It "Should have a common extensions key (may be empty)" {
+            # GitHub.copilot{,-chat} are bundled built-ins in current VS
+            # Code releases, so the curated common list is intentionally
+            # empty. The key itself must still exist for templates that
+            # iterate `.extensions.common`.
+            $script:ChezmoiData.extensions.PSObject.Properties.Name |
+                Should -Contain "common"
         }
 
         It "Should have Windows-specific extensions" {
@@ -428,14 +431,21 @@ Describe "VS Code Extensions Configuration" {
     }
 
     Context "Extension Content" {
-        It "Common extensions should include GitHub Copilot" {
+        It "Common extensions list must NOT include GitHub Copilot (bundled built-in)" {
+            # See note in home/.chezmoidata/packages.yaml: installing
+            # GitHub.copilot from the marketplace conflicts with the
+            # newer bundled version.
             $commonExtensions = $script:ChezmoiData.extensions.common
-            $commonExtensions | Should -Contain "GitHub.copilot"
+            if ($commonExtensions) {
+                $commonExtensions | Should -Not -Contain "GitHub.copilot"
+            }
         }
 
-        It "Common extensions should include GitHub Copilot Chat" {
+        It "Common extensions list must NOT include GitHub Copilot Chat (bundled built-in)" {
             $commonExtensions = $script:ChezmoiData.extensions.common
-            $commonExtensions | Should -Contain "GitHub.copilot-chat"
+            if ($commonExtensions) {
+                $commonExtensions | Should -Not -Contain "GitHub.copilot-chat"
+            }
         }
 
         It "Windows extensions should include WSL remote extension" {
