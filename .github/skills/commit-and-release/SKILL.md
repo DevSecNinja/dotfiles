@@ -198,7 +198,12 @@ git push
 ## Creating a release
 
 **Prerequisites:** working tree must be clean (all changes committed) and
-in sync with `origin`.
+in sync with `origin`. **CI on the latest commit must be green** — the
+`task release:bump` precondition runs
+[`script/check-ci-status.sh`](../../../script/check-ci-status.sh) which
+queries GitHub's check-runs API for the current `HEAD` and refuses to
+bump on red or in-progress CI. Override (rare; e.g. an unrelated flaky
+job) with `FORCE=1`.
 
 ### Pull latest changes first
 
@@ -207,6 +212,16 @@ Always sync before releasing to avoid push rejections:
 ```sh
 git pull origin main
 ```
+
+### Verify CI is green
+
+```sh
+task release:check-ci   # explicit gate check; also runs as bump precondition
+```
+
+If this fails, fix CI on main, wait for the new run to go green, then
+retry. Cutting on red CI ships broken bytes and the immutable release
+cannot be retracted.
 
 ### Dry-run first
 
@@ -265,6 +280,31 @@ The tag push triggers
 The repository also has tag protection on `v*` (no force-push, no
 deletion) and Immutable Releases enabled, so once a release is cut the
 tag and asset bytes are frozen for life.
+
+### Release-pinned devcontainer image
+
+A `v*` tag push also triggers
+[`.github/workflows/devcontainer-prebuild.yaml`](../../workflows/devcontainer-prebuild.yaml),
+which rebuilds the dev container image from the tagged source tree
+(cache-warm via the `:amd64` / `:arm64` cache tags) and publishes
+release-pinned tags alongside the rolling `:latest`:
+
+- `ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z`
+- `ghcr.io/devsecninja/dotfiles-devcontainer:X.Y.Z`
+- per-arch `:amd64-vX.Y.Z`, `:arm64-vX.Y.Z`
+
+The multi-arch manifest digest gets a Sigstore build-provenance
+attestation pushed to the registry. Consumers can verify with:
+
+```sh
+gh attestation verify \
+  oci://ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z \
+  --repo DevSecNinja/dotfiles
+```
+
+GitHub Pages deployments (docs site) are signed transparently by
+`actions/deploy-pages` via GitHub's trusted-publisher mechanism — no
+extra attestation step is required.
 
 ---
 

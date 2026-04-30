@@ -436,18 +436,30 @@ Config: [`cog.toml`](../cog.toml), [`cliff.toml`](../cliff.toml). Workflow:
 ```bash
 mise install               # ensures cocogitto and git-cliff are present
 task release:notes         # preview unreleased notes
+task release:check-ci      # gate: refuses on red/in-progress CI
 task release:bump -- --auto   # or --minor / --major / --patch
 ```
 
+`task release:bump` runs `release:check-ci` as a precondition (uses
+[`script/check-ci-status.sh`](../script/check-ci-status.sh)). Override
+with `FORCE=1` only for known-flaky unrelated failures.
+
 `cog bump` regenerates `CHANGELOG.md` via git-cliff, commits it, tags
 `vX.Y.Z`, and pushes both branch and tag. The push of the `v*` tag triggers
-the release workflow which:
+two workflows:
 
-1. Re-renders release notes via `git-cliff --latest`.
-2. Runs [`script/build-log-sh-release.sh`](../script/build-log-sh-release.sh)
-   to build `log.sh`, `log.sh.sha256`, `log-sh-<tag>.tar.gz`, and the
-   tarball's `.sha256`.
-3. Creates a GitHub Release with all four files attached.
+1. **`release.yml`** — builds `log.sh` artifacts via
+   [`script/build-log-sh-release.sh`](../script/build-log-sh-release.sh),
+   attests them with `actions/attest-build-provenance`, and creates the
+   GitHub Release in a single `gh release create` (Immutable-Releases
+   compatible).
+2. **`devcontainer-prebuild.yaml`** — rebuilds the dev container from the
+   tagged source, publishes `:vX.Y.Z` / `:X.Y.Z` manifest tags alongside
+   `:latest`, and attests the multi-arch manifest digest in the registry.
+
+GitHub Pages deployments are signed automatically by
+`actions/deploy-pages` via GitHub's trusted-publisher mechanism — no
+extra step required.
 
 **Local artifact build (no tag/push)**:
 

@@ -215,6 +215,11 @@ tasks:
     cmds:
       - ./script/build-log-sh-release.sh {{.CLI_ARGS}}
 
+  release:check-ci:
+    desc: Verify GitHub Actions are green for the current commit (precondition for release:bump)
+    cmds:
+      - ./script/check-ci-status.sh
+
   release:bump:
     desc: 'Cut a new release with cocogitto (usage: task release:bump -- --auto)'
     cmds:
@@ -223,6 +228,8 @@ tasks:
       - sh: '[ -n "{{.CLI_ARGS}}" ]'
         msg: 'Pass a cog bump argument, e.g. task release:bump -- --auto OR --minor'
       - task: test:all
+      - sh: ./script/check-ci-status.sh
+        msg: 'CI is not green on the current commit. Fix it, or rerun with FORCE=1 task release:bump -- ...'
 
   # Cleanup tasks
   clean:test-results:
