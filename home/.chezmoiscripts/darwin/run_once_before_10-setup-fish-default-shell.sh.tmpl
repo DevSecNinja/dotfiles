@@ -10,29 +10,9 @@
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-WHITE='\033[1;37m'
-NC='\033[0m' # No Color
-
-# Logging functions
-log_info() {
-	echo -e "${WHITE}ℹ️  $*${NC}"
-}
-
-log_success() {
-	echo -e "${GREEN}✅ $*${NC}"
-}
-
-log_warning() {
-	echo -e "${YELLOW}⚠️  $*${NC}"
-}
-
-log_error() {
-	echo -e "${RED}❌ $*${NC}"
-}
+# shellcheck source=../../dot_config/shell/functions/log.sh
+. "{{ .chezmoi.sourceDir }}/dot_config/shell/functions/log.sh"
+LOG_TAG="setup-fish"
 
 # Only run on macOS
 # shellcheck disable=SC2050
@@ -41,7 +21,7 @@ if [[ "{{ .chezmoi.os }}" != "darwin" ]]; then
 	exit 0
 fi
 
-log_info "Setting up Fish shell on macOS..."
+log_state "Setting up Fish shell on macOS"
 
 # Detect Fish installation path
 # Apple Silicon Macs: /opt/homebrew/bin/fish
@@ -55,7 +35,7 @@ elif [[ -x "/usr/local/bin/fish" ]]; then
 	log_info "Detected Fish at: $FISH_PATH (Intel)"
 else
 	log_error "Fish shell not found at /opt/homebrew/bin/fish or /usr/local/bin/fish"
-	log_info "Please install Fish using: brew install fish"
+	log_hint "Please install Fish using: brew install fish"
 	exit 1
 fi
 
@@ -65,13 +45,13 @@ log_info "Found Fish version: $FISH_VERSION"
 
 # Check if Fish is already in /etc/shells
 if grep -q "^${FISH_PATH}$" /etc/shells 2>/dev/null; then
-	log_success "Fish is already in /etc/shells"
+	log_result "Fish is already in /etc/shells"
 else
-	log_warning "Fish is not in /etc/shells, adding it now..."
+	log_warn "Fish is not in /etc/shells, adding it now"
 	log_info "This requires sudo access"
 
 	if echo "$FISH_PATH" | sudo tee -a /etc/shells >/dev/null; then
-		log_success "Added $FISH_PATH to /etc/shells"
+		log_result "Added $FISH_PATH to /etc/shells"
 	else
 		log_error "Failed to add Fish to /etc/shells"
 		exit 1
@@ -84,18 +64,18 @@ log_info "Current shell: $CURRENT_SHELL"
 
 # Change default shell to Fish if not already set
 if [[ "$CURRENT_SHELL" == "$FISH_PATH" ]]; then
-	log_success "Fish is already your default shell"
+	log_result "Fish is already your default shell"
 else
-	log_warning "Changing default shell to Fish..."
+	log_warn "Changing default shell to Fish"
 
 	if chsh -s "$FISH_PATH"; then
-		log_success "Default shell changed to Fish"
-		log_info "Please restart your terminal for the changes to take effect"
+		log_result "Default shell changed to Fish"
+		log_hint "Please restart your terminal for the changes to take effect"
 	else
 		log_error "Failed to change default shell to Fish"
-		log_info "You can manually change it later with: chsh -s $FISH_PATH"
+		log_hint "You can manually change it later with: chsh -s $FISH_PATH"
 		exit 1
 	fi
 fi
 
-log_success "Fish shell setup completed successfully!"
+log_result "Fish shell setup completed successfully"
