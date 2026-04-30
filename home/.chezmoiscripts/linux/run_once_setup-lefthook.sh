@@ -67,15 +67,21 @@ elif command -v mise >/dev/null 2>&1; then
 	if ! (cd "$DOTFILES_ROOT" && mise install >/dev/null 2>&1); then
 		log_warn "mise install failed"
 	fi
-	if mise which lefthook >/dev/null 2>&1; then
-		LEFTHOOK_PATH="$(mise which lefthook)"
+	# mise resolves tools from the .mise.toml in the current directory, so
+	# `mise which` must run inside the dotfiles repo.
+	if (cd "$DOTFILES_ROOT" && mise which lefthook >/dev/null 2>&1); then
+		LEFTHOOK_PATH="$(cd "$DOTFILES_ROOT" && mise which lefthook)"
 		log_result "lefthook installed via mise"
 	fi
 fi
 
 if [ -z "$LEFTHOOK_PATH" ]; then
-	log_warn "Could not install lefthook automatically."
-	log_hint "Install mise (https://mise.jdx.dev/) and run: mise install"
+	log_warn "Could not resolve a lefthook executable."
+	if command -v mise >/dev/null 2>&1; then
+		log_hint "Run from the dotfiles repo: cd $DOTFILES_ROOT && mise install"
+	else
+		log_hint "Install mise (https://mise.jdx.dev/) and run: mise install"
+	fi
 	exit 0
 fi
 

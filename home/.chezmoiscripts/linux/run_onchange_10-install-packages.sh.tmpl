@@ -165,47 +165,37 @@ log_result "Development tools installation complete ({{ .installType }} mode)"
 if command -v code >/dev/null 2>&1; then
 	log_state "Installing VS Code extensions"
 
+	# Helper: install an extension, surfacing stderr on failure to aid
+	# diagnosis (missing marketplace, wrong `code` flavour, sign-in needed, …).
+	install_vscode_extension() {
+		ext="$1"
+		if code --list-extensions 2>/dev/null | grep -q "^${ext}$"; then
+			log_step "Extension ${ext} already installed"
+			return 0
+		fi
+		log_step "Installing extension ${ext}"
+		if output=$(code --install-extension "${ext}" --force 2>&1); then
+			log_result "Installed ${ext}"
+		else
+			log_warn "Could not install ${ext}"
+			printf '%s\n' "$output" | log_data WARN "code CLI output"
+		fi
+	}
+
 	# Install common extensions
 # {{ range .extensions.common }}
-	if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
-		log_step "Extension {{ . }} already installed"
-	else
-		log_step "Installing extension {{ . }}"
-		if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
-			log_result "Installed {{ . }}"
-		else
-			log_warn "Could not install {{ . }}"
-		fi
-	fi
+	install_vscode_extension {{ . | quote }}
 # {{ end }}
 
 # {{ if eq .chezmoi.os "linux" }}
 	# Install Linux-specific extensions
 # {{ range .extensions.linux }}
-	if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
-		log_step "Extension {{ . }} already installed"
-	else
-		log_step "Installing extension {{ . }}"
-		if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
-			log_result "Installed {{ . }}"
-		else
-			log_warn "Could not install {{ . }}"
-		fi
-	fi
+	install_vscode_extension {{ . | quote }}
 # {{ end }}
 # {{ else if eq .chezmoi.os "darwin" }}
 	# Install macOS-specific extensions
 # {{ range .extensions.darwin }}
-	if code --list-extensions 2>/dev/null | grep -q "^{{ . }}$"; then
-		log_step "Extension {{ . }} already installed"
-	else
-		log_step "Installing extension {{ . }}"
-		if code --install-extension {{ . | quote }} --force >/dev/null 2>&1; then
-			log_result "Installed {{ . }}"
-		else
-			log_warn "Could not install {{ . }}"
-		fi
-	fi
+	install_vscode_extension {{ . | quote }}
 # {{ end }}
 # {{ end }}
 
