@@ -15,20 +15,14 @@ concurrency:
 
 jobs:
   release:
-    uses: DevSecNinja/.github/.github/workflows/release.yml@e744bc05bb096d6356cc913900ff62482e656046 # main
-    permissions:
-      contents: write
-    with:
-      # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.4.9"
-      tag: ${{ github.ref_name }}
-
-  upload-log-sh:
-    name: Upload log.sh release assets
-    needs: release
+    name: Create immutable GitHub Release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      # Required by actions/attest-build-provenance to mint the OIDC token
+      # used as the Sigstore signing identity.
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -44,25 +38,14 @@ jobs:
           # renovate: datasource=github-releases depName=jdx/mise
           version: "2026.4.9"
 
-      - name: Build log.sh release artifacts
-        run: ./script/build-log-sh-release.sh "${{ github.ref_name }}" "${GITHUB_WORKSPACE}/dist"
-
-      - name: Verify checksums
-        working-directory: dist
-        run: |
-          sha256sum -c log.sh.sha256
-          sha256sum -c "log-sh-${{ github.ref_name }}.tar.gz.sha256"
-
-      - name: Append log.sh consumption snippet to release notes
+      - name: Generate release notes
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          existing="$(gh release view "${TAG}" --repo "${REPO}" --json body --jq .body)"
+          mise exec -- git-cliff --latest --strip all > /tmp/release-notes.md
           {
-            printf '%s\n\n' "${existing}"
-            printf -- '---\n\n'
+            printf '\n---\n\n'
             printf '## log.sh distribution\n\n'
             printf 'This release includes a vendorable copy of `log.sh`. See '
             printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
@@ -74,21 +57,51 @@ jobs:
             printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
               "${REPO}" "${TAG}"
             printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
+            printf '```\n\n'
+            printf '### Verifying provenance\n\n'
+            printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
+            printf 'Verify with the GitHub CLI:\n\n'
+            printf '```sh\n'
+            printf 'gh attestation verify ./log.sh --repo %s\n' "${REPO}"
+            printf 'gh attestation verify ./log-sh-%s.tar.gz --repo %s\n' "${TAG}" "${REPO}"
             printf '```\n'
-          } > /tmp/release-notes.md
-          gh release edit "${TAG}" \
-            --repo "${REPO}" \
-            --notes-file /tmp/release-notes.md
+          } >> /tmp/release-notes.md
 
-      - name: Upload assets to GitHub Release
+      - name: Build log.sh release artifacts
+        run: ./script/build-log-sh-release.sh "${{ github.ref_name }}" "${GITHUB_WORKSPACE}/dist"
+
+      - name: Verify checksums
+        working-directory: dist
+        run: |
+          sha256sum -c log.sh.sha256
+          sha256sum -c "log-sh-${{ github.ref_name }}.tar.gz.sha256"
+
+      - name: Generate build-provenance attestations
+        # Attests log.sh and the tarball to the GitHub Actions OIDC identity
+        # via Sigstore. Verifiable with `gh attestation verify <file>`.
+        # Sidecar .sha256 files are intentionally not attested — their
+        # integrity is already proven by re-hashing the content they cover.
+        # renovate: datasource=github-tags depName=actions/attest-build-provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            dist/log.sh
+            dist/log-sh-${{ github.ref_name }}.tar.gz
+
+      - name: Create immutable GitHub Release
+        # Single-shot upload: notes, title, and all four assets in one
+        # `gh release create` call so the release can be marked immutable
+        # in repo Settings → General → Releases without conflicting with
+        # later edits/uploads.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          gh release upload "${TAG}" \
+          gh release create "${TAG}" \
             --repo "${REPO}" \
-            --clobber \
+            --title "${TAG}" \
+            --notes-file /tmp/release-notes.md \
             "dist/log.sh" \
             "dist/log.sh.sha256" \
             "dist/log-sh-${TAG}.tar.gz" \

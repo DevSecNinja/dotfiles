@@ -303,6 +303,22 @@ Replace `v0.1.0` with the latest release tag. The release page also ships
 `log-sh-<version>.tar.gz` (library + completions + LICENSE + README) for
 projects that want shell completions too.
 
+### Verifying provenance (recommended)
+
+Releases are signed via [GitHub Artifact Attestations][attest] (Sigstore
+under the hood). The signing identity is the dotfiles release workflow
+itself, so a tampered asset fails verification:
+
+```sh
+gh attestation verify ./scripts/lib/log.sh --repo DevSecNinja/dotfiles
+```
+
+Tag protection on `v*` plus the "Immutable releases" repository setting
+mean a published release tag cannot be re-pointed and its assets cannot
+be rewritten — your pinned `curl` URL is stable for the life of the tag.
+
+[attest]: https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds
+
 ### Use it
 
 ```sh
