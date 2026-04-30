@@ -2,10 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-04-30
+
+### Documentation
+- **log**: Explain log_data and clarify helper selection ([`301cfba`](https://github.com/DevSecNinja/dotfiles/commit/301cfbaa1a06eba19969cd02c8d6edf7263f6c70))
+- **skill**: Record release pipeline pitfalls from v0.1.0-v0.1.2 ([`3d1a23b`](https://github.com/DevSecNinja/dotfiles/commit/3d1a23b361e9293bfea885fe4a7d17c95f66237f))
+
 ## [0.1.2] - 2026-04-30
 
 ### Bug Fixes
 - **release**: Build version manifests from rolling per-arch tags ([`c5d64e0`](https://github.com/DevSecNinja/dotfiles/commit/c5d64e0e2158602ae58b8e6a98f1e4677f756876))
+
+### Miscellaneous
+- **version**: V0.1.2 ([`2b3a7d1`](https://github.com/DevSecNinja/dotfiles/commit/2b3a7d1723591a51ed126ca064eed98200b5ee94))
 
 ## [0.1.1] - 2026-04-30
 
