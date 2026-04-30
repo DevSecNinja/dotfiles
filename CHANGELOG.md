@@ -2,11 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-04-30
+
+### Bug Fixes
+- **release**: Repin release-publish action to merged main SHA ([`992c035`](https://github.com/DevSecNinja/dotfiles/commit/992c0353a5c7994d052eda367143d7c59375dafc))
+
+### Refactoring
+- **release**: Use central release-publish composite action ([`7e7bd25`](https://github.com/DevSecNinja/dotfiles/commit/7e7bd25a168da6a6c712f3bd7ad6c9e29b4e61ae))
+
 ## [0.1.3] - 2026-04-30
 
 ### Documentation
 - **log**: Explain log_data and clarify helper selection ([`301cfba`](https://github.com/DevSecNinja/dotfiles/commit/301cfbaa1a06eba19969cd02c8d6edf7263f6c70))
 - **skill**: Record release pipeline pitfalls from v0.1.0-v0.1.2 ([`3d1a23b`](https://github.com/DevSecNinja/dotfiles/commit/3d1a23b361e9293bfea885fe4a7d17c95f66237f))
+
+### Miscellaneous
+- **version**: V0.1.3 ([`88ace8b`](https://github.com/DevSecNinja/dotfiles/commit/88ace8b7ddaa919a84a64559b8eacbe2d7dc26e7))
 
 ## [0.1.2] - 2026-04-30
 
