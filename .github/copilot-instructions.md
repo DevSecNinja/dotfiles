@@ -424,47 +424,61 @@ Lefthook hooks will run automatically on `git commit` if installed.
 - `~/.vimrc`, `~/.tmux.conf`, `~/.config/fish/*` in home directory
   → Edit in repository as `dot_vimrc`, `dot_tmux.conf`, `dot_config/fish/*`
 
-## Releasing (cocogitto + git-cliff)
+## Releasing (release-please)
 
-Versioning uses [cocogitto](https://docs.cocogitto.io/) (`cog bump`) and
-[git-cliff](https://git-cliff.org/) for changelog/release-note generation.
-Config: [`cog.toml`](../cog.toml), [`cliff.toml`](../cliff.toml). Workflow:
-[`.github/workflows/release.yml`](../.github/workflows/release.yml).
+Versioning is automated via [release-please][rp]: every push to `main`
+opens (or updates) a `chore(main): release vX.Y.Z` PR computed from
+Conventional Commits. Merge that PR to ship.
+
+[rp]: https://github.com/googleapis/release-please-action
+
+Config: [`release-please-config.json`](../release-please-config.json),
+[`.release-please-manifest.json`](../.release-please-manifest.json).
+Workflow: [`.github/workflows/release-please.yml`](../.github/workflows/release-please.yml)
+(thin caller of the central reusable in `DevSecNinja/.github`).
 
 **Cut a release**:
 
-```bash
-mise install               # ensures cocogitto and git-cliff are present
-task release:notes         # preview unreleased notes
-task release:check-ci      # gate: refuses on red/in-progress CI
-task release:bump -- --auto   # or --minor / --major / --patch
-```
+1. Make sure CI is green on `main`.
+2. Open the auto-generated `chore(main): release …` PR, sanity-check
+   the version bump and `CHANGELOG.md` diff.
+3. Merge the PR. release-please creates `vX.Y.Z` on the merge commit.
 
-`task release:bump` runs `release:check-ci` as a precondition (uses
-[`script/check-ci-status.sh`](../script/check-ci-status.sh)). Override
-with `FORCE=1` only for known-flaky unrelated failures.
+There is **no `task release:bump`** any more. `cog` is retained only
+for `cog verify` in the lefthook commit-msg hook (commit-message
+linting); `cog.toml` no longer has bump hooks. Branch protection is
+respected end-to-end — no bypass actor is used.
 
-`cog bump` regenerates `CHANGELOG.md` via git-cliff, commits it, tags
-`vX.Y.Z`, and pushes both branch and tag. The push of the `v*` tag triggers
-two workflows:
+The push of the `v*` tag triggers two workflows:
 
-1. **`release.yml`** — builds `log.sh` artifacts via
+1. **[`release.yml`](../.github/workflows/release.yml)** — builds
+   `log.sh` artifacts via
    [`script/build-log-sh-release.sh`](../script/build-log-sh-release.sh),
-   attests them with `actions/attest-build-provenance`, and creates the
-   GitHub Release in a single `gh release create` (Immutable-Releases
-   compatible).
-2. **`devcontainer-prebuild.yaml`** — rebuilds the dev container from the
-   tagged source, publishes `:vX.Y.Z` / `:X.Y.Z` manifest tags alongside
-   `:latest`, and attests the multi-arch manifest digest in the registry.
+   attests them with `actions/attest-build-provenance`, and calls the
+   `DevSecNinja/.github/actions/release-publish` composite which
+   generates notes via `git-cliff --latest --strip all` and creates
+   the GitHub Release in a single `gh release create` (Immutable-
+   Releases compatible). Composite-not-reusable: keeps the caller's
+   OIDC subject for attestations.
+2. **[`devcontainer-prebuild.yaml`](../.github/workflows/devcontainer-prebuild.yaml)** —
+   rebuilds the dev container from the tagged source, publishes
+   `:vX.Y.Z` / `:X.Y.Z` manifest tags alongside `:latest`, and attests
+   the multi-arch manifest digest in the registry.
+
+`release-please-config.json` sets `"skip-github-release": true` so
+release-please only owns the bump+tag; the GitHub Release itself is
+created by the tag-triggered `release.yml` (so the asset/attestation
+path stays unchanged).
 
 GitHub Pages deployments are signed automatically by
 `actions/deploy-pages` via GitHub's trusted-publisher mechanism — no
 extra step required.
 
-**Local artifact build (no tag/push)**:
+**Local previews / artifact build (no tag/push)**:
 
 ```bash
-task release:build -- v0.1.0   # writes to ./dist/
+task release:notes              # preview unreleased GitHub-Release-style notes
+task release:build -- v0.1.0    # build log.sh artifacts to ./dist/ for inspection
 ```
 
 Consumer-side install snippet for `log.sh` lives in

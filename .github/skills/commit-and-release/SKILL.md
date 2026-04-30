@@ -197,89 +197,89 @@ git push
 
 ## Creating a release
 
-**Prerequisites:** working tree must be clean (all changes committed) and
-in sync with `origin`. **CI on the latest commit must be green** — the
-`task release:bump` precondition runs
-[`script/check-ci-status.sh`](../../../script/check-ci-status.sh) which
-queries GitHub's check-runs API for the current `HEAD` and refuses to
-bump on red or in-progress CI. Override (rare; e.g. an unrelated flaky
-job) with `FORCE=1`.
+**TL;DR:** you no longer cut releases by running `cog bump` locally.
+Bumping is owned by [release-please][rp]. Your job is to **review and
+merge the auto-opened release PR**.
 
-### Pull latest changes first
+[rp]: https://github.com/googleapis/release-please-action
 
-Always sync before releasing to avoid push rejections:
+### How the flow works
 
-```sh
-git pull origin main
-```
-
-### Verify CI is green
-
-```sh
-task release:check-ci   # explicit gate check; also runs as bump precondition
-```
-
-If this fails, fix CI on main, wait for the new run to go green, then
-retry. Cutting on red CI ships broken bytes and the immutable release
-cannot be retracted.
-
-### Dry-run first
-
-Always preview before releasing:
-
-```sh
-mise exec -- cog bump --minor --dry-run   # shows next version, e.g. v0.2.0
-mise exec -- cog bump --patch --dry-run
-mise exec -- cog bump --auto --dry-run    # cocogitto picks the bump
-```
-
-You can also preview the upcoming release notes without bumping:
-
-```sh
-task release:notes
-```
-
-### Cut the release
-
-```sh
-mise exec -- cog bump --minor   # or --patch for bug-fix releases
-# Equivalent shortcut:
-task release:bump -- --minor
-```
-
-`cog bump` executes this pipeline automatically (configured in
-[`cog.toml`](../../../cog.toml)):
-
-1. Calculates the next semver version from conventional commits since the
-   previous tag.
-2. Runs `git-cliff` to regenerate `CHANGELOG.md` (range configured in
-   `cog.toml`, template in `cliff.toml`).
-3. Runs `dprint fmt CHANGELOG.md` if dprint is available (no-op otherwise).
-4. Stages `CHANGELOG.md` and creates a `chore(version): <version>` commit.
-5. Creates the `v<version>` git tag.
-6. Pushes the commit and the tag to `origin`.
-
-The tag push triggers
-[`.github/workflows/release.yml`](../../workflows/release.yml), which:
-
-- Generates release-scoped notes with `git-cliff --latest --strip all`.
-- Builds the `log.sh` distribution artifacts via
-  [`script/build-log-sh-release.sh`](../../../script/build-log-sh-release.sh):
-  `log.sh`, `log.sh.sha256`, `log-sh-<tag>.tar.gz`, and the tarball's
-  `.sha256`.
-- Generates Sigstore [build-provenance attestations][attest] for `log.sh`
-  and the tarball via `actions/attest-build-provenance`. Verifiable with
-  `gh attestation verify <file> --repo DevSecNinja/dotfiles`.
-- Creates the GitHub Release in a single `gh release create` call (notes
-  + title + all four assets). Because nothing is edited or uploaded
-  post-publish, the release is compatible with the repo's **Immutable
-  Releases** setting.
+1. You merge `feat`/`fix`/`chore` PRs to `main` as usual.
+2. [`.github/workflows/release-please.yml`](../../workflows/release-please.yml)
+   runs on every push to `main` and **opens (or force-updates) a release
+   PR** titled `chore(main): release vX.Y.Z` containing:
+   - The next semver derived from Conventional Commits since the last tag
+   - The corresponding `CHANGELOG.md` bump
+   - An updated `.release-please-manifest.json`
+3. CI runs on the release PR like any other PR. Branch protection is
+   fully respected — there is no bypass.
+4. When you're ready to ship, **review the release PR and merge it**.
+5. release-please then **creates the `vX.Y.Z` tag** pointing at the
+   merge commit and pushes it.
+6. The tag push triggers the existing
+   [`.github/workflows/release.yml`](../../workflows/release.yml), which:
+   - Builds the `log.sh` distribution artifacts via
+     [`script/build-log-sh-release.sh`](../../../script/build-log-sh-release.sh):
+     `log.sh`, `log.sh.sha256`, `log-sh-<tag>.tar.gz`, and the tarball's
+     `.sha256`.
+   - Generates Sigstore [build-provenance attestations][attest] for
+     `log.sh` and the tarball via `actions/attest-build-provenance`.
+     Verifiable with `gh attestation verify <file> --repo DevSecNinja/dotfiles`.
+   - Calls the central
+     [`actions/release-publish`](https://github.com/DevSecNinja/.github/tree/main/actions/release-publish)
+     composite action which generates Conventional-Commit notes via
+     `git-cliff --latest --strip all`, appends the `log.sh` consumption
+     snippet (preset `extra-notes: log-sh`), and creates the GitHub
+     Release in a single `gh release create` call. Because nothing is
+     edited or uploaded post-publish, the release is compatible with
+     the repo's **Immutable Releases** setting.
 
 [attest]: https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds
 
 The repository also has tag protection on `v*` (no force-push, no
 deletion) and Immutable Releases enabled, so once a release is cut the
 tag and asset bytes are frozen for life.
+
+### Two CHANGELOGs, by design
+
+- **In-tree `CHANGELOG.md`** is owned by release-please. Style: simple
+  sectioned per-PR notes. Lives in the release PR commit.
+- **GitHub Release notes** are owned by `git-cliff` (driven by
+  [`cliff.toml`](../../../cliff.toml)) via the `release-publish`
+  composite action. Style: scope-prefixed, commit-linked.
+
+This split is intentional. The in-tree changelog is for browsers of the
+repo; the Release body is for asset consumers and includes the `log.sh`
+distribution snippet and attestation-verification commands.
+
+### Local previews (optional)
+
+Before merging the release PR you can preview what the GitHub Release
+body will look like:
+
+```sh
+task release:notes      # git-cliff --unreleased --strip all
+```
+
+To build the log.sh distribution artifacts locally for inspection:
+
+```sh
+task release:build -- v0.1.0
+```
+
+There is intentionally **no `task release:bump`** — release-please
+owns bumping.
+
+### What if release-please's PR looks wrong?
+
+- **Wrong version**: override by adding a `Release-As: X.Y.Z` footer to
+  a commit on main. release-please picks it up on the next push.
+- **Wrong changelog grouping**: edit
+  [`release-please-config.json`](../../../release-please-config.json)
+  (`changelog-sections`).
+- **Force a release** when only `chore` commits exist since the last
+  tag: push an empty commit with a `Release-As: X.Y.Z` footer.
 
 ### Release-pinned devcontainer image
 
@@ -319,40 +319,40 @@ this list before changing anything in the release flow.
    `[skip actions]` / `[actions skip]` in commit subject OR body** —
    GitHub Actions scans the entire commit message and silently skips
    the run. This even applies to commits that *document* those
-   markers (e.g. a commit body explaining how the gate handles them).
-   When you must reference them, escape: backticks alone aren't
-   enough — break the bracket pair, e.g. `[skip` `ci]` or
-   `[skip&nbsp;ci]`. The CI gate
-   ([`script/check-ci-status.sh`](../../../script/check-ci-status.sh))
-   walks past such commits when checking, but it cannot un-skip the
-   pipeline that should have run.
+   markers. When you must reference them, escape: backticks alone
+   aren't enough — break the bracket pair.
 
 2. **Cutting a release on red main ships broken bytes forever.**
    Immutable Releases means you cannot retract or rebuild — only cut a
-   new version. Always confirm `task release:check-ci` is green before
-   `task release:bump`. The precondition makes this automatic, but
-   `FORCE=1` is a foot-gun.
+   new version. With release-please this is naturally guarded: the
+   release PR can't merge until required CI is green.
 
 3. **`devcontainers/ci@v0.3` does NOT honour comma-separated values
    in `imageTag`.** Despite documentation suggesting otherwise, only
    the first tag is pushed. If you need multiple tags per build, use
    a single `imageTag` and derive additional tags via
-   `docker manifest create` in a follow-up step (which resolves a tag
-   to its digest at create time and freezes that digest in the
-   manifest list — perfect for building an immutable `:vX.Y.Z` from a
-   rolling `:amd64` / `:arm64`).
+   `docker manifest create` in a follow-up step.
 
 4. **`gh release create` is single-shot for Immutable Releases.**
    Any subsequent `gh release upload --clobber` or `gh release edit`
-   is rejected. Plan to assemble all assets, notes, title, and
-   attestations in one step.
+   is rejected. The `release-publish` composite action assembles all
+   assets, notes, title, and attestations in one step — don't add
+   post-publish steps. release-please's own GitHub Release creation
+   is **disabled** in
+   [`release-please-config.json`](../../../release-please-config.json)
+   (`"skip-github-release": true`) so it doesn't clash with the
+   tag-triggered publish.
 
-5. **Reusable workflows can't host attestations.** `attest-build-provenance`
-   needs the OIDC token from the same job that produced the artifact.
-   A reusable workflow inherits a different OIDC subject, so attestations
-   created from inside the reusable workflow won't verify against the
-   caller's source repo. Keep `attest-build-provenance` in the calling
-   workflow.
+5. **Reusable workflows can't host attestations.**
+   `attest-build-provenance` needs the OIDC token from the same job
+   that produced the artifact. A reusable workflow inherits a
+   different OIDC subject, so attestations created from inside the
+   reusable workflow won't verify against the caller's source repo.
+   The `release-publish` composite action lives in
+   `DevSecNinja/.github` but **runs in the caller's job** (composite
+   actions do, reusable workflows don't), which is why
+   `attest-build-provenance` and the artifact build remain inline in
+   `release.yml` even after consolidation.
 
 6. **The OCI manifest digest comes from `docker manifest push` stdout**
    (e.g. `sha256:bb91…`). Capture it and pass it to
@@ -360,7 +360,7 @@ this list before changing anything in the release flow.
    digest yourself with `sha256sum` on the manifest body — that's the
    wrong digest format for OCI.
 
-7. **Verify v0.1.2-style verification works after every release**:
+7. **Verify attestations work after every release**:
 
    ```sh
    gh attestation verify \
@@ -371,6 +371,12 @@ this list before changing anything in the release flow.
 
    A passing release pipeline that fails verification means consumers
    can't trust your bytes. Run both spot-checks before the celebration.
+
+8. **Direct `git push` to main is forbidden.** Branch protection
+   requires all status checks. The legacy `cog bump` flow needed a
+   per-release bypass; release-please does not. If a release-please
+   PR somehow gets stuck, fix the underlying blocker (CI red, missing
+   review) rather than reaching for a bypass.
 
 ---
 
