@@ -58,11 +58,8 @@ jobs:
         # Composite action provides: git-cliff notes generation, optional
         # preset notes block, and a single-shot Immutable-Releases compatible
         # `gh release create`. See the action's README for the rationale.
-        #
-        # NOTE: pinned to the PR branch in DevSecNinja/.github#32. Re-pin
-        # to the merged-on-main SHA once that PR lands.
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/release-publish@1f5bcf20495c36c07f1040a4f79a8053a4649cdb # feat/release-publish-action
+        uses: DevSecNinja/.github/actions/release-publish@ee0804b737700aeecd6d1b1bc85ab57107c880e3 # main
         with:
           # renovate: datasource=github-releases depName=jdx/mise
           mise-version: "2026.4.9"
