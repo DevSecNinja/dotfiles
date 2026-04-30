@@ -310,6 +310,68 @@ GitHub Pages deployments (docs site) are signed transparently by
 `actions/deploy-pages` via GitHub's trusted-publisher mechanism — no
 extra attestation step is required.
 
+### Pitfalls and lessons (learned the hard way)
+
+These are real failure modes hit while building this pipeline. Reread
+this list before changing anything in the release flow.
+
+1. **Never write `[skip ci]` / `[ci skip]` / `[no ci]` /
+   `[skip actions]` / `[actions skip]` in commit subject OR body** —
+   GitHub Actions scans the entire commit message and silently skips
+   the run. This even applies to commits that *document* those
+   markers (e.g. a commit body explaining how the gate handles them).
+   When you must reference them, escape: backticks alone aren't
+   enough — break the bracket pair, e.g. `[skip` `ci]` or
+   `[skip&nbsp;ci]`. The CI gate
+   ([`script/check-ci-status.sh`](../../../script/check-ci-status.sh))
+   walks past such commits when checking, but it cannot un-skip the
+   pipeline that should have run.
+
+2. **Cutting a release on red main ships broken bytes forever.**
+   Immutable Releases means you cannot retract or rebuild — only cut a
+   new version. Always confirm `task release:check-ci` is green before
+   `task release:bump`. The precondition makes this automatic, but
+   `FORCE=1` is a foot-gun.
+
+3. **`devcontainers/ci@v0.3` does NOT honour comma-separated values
+   in `imageTag`.** Despite documentation suggesting otherwise, only
+   the first tag is pushed. If you need multiple tags per build, use
+   a single `imageTag` and derive additional tags via
+   `docker manifest create` in a follow-up step (which resolves a tag
+   to its digest at create time and freezes that digest in the
+   manifest list — perfect for building an immutable `:vX.Y.Z` from a
+   rolling `:amd64` / `:arm64`).
+
+4. **`gh release create` is single-shot for Immutable Releases.**
+   Any subsequent `gh release upload --clobber` or `gh release edit`
+   is rejected. Plan to assemble all assets, notes, title, and
+   attestations in one step.
+
+5. **Reusable workflows can't host attestations.** `attest-build-provenance`
+   needs the OIDC token from the same job that produced the artifact.
+   A reusable workflow inherits a different OIDC subject, so attestations
+   created from inside the reusable workflow won't verify against the
+   caller's source repo. Keep `attest-build-provenance` in the calling
+   workflow.
+
+6. **The OCI manifest digest comes from `docker manifest push` stdout**
+   (e.g. `sha256:bb91…`). Capture it and pass it to
+   `attest-build-provenance` as `subject-digest`; never compute a
+   digest yourself with `sha256sum` on the manifest body — that's the
+   wrong digest format for OCI.
+
+7. **Verify v0.1.2-style verification works after every release**:
+
+   ```sh
+   gh attestation verify \
+     oci://ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z \
+     --repo DevSecNinja/dotfiles
+   gh attestation verify <log.sh-download> --repo DevSecNinja/dotfiles
+   ```
+
+   A passing release pipeline that fails verification means consumers
+   can't trust your bytes. Run both spot-checks before the celebration.
+
 ---
 
 ## Release complete
