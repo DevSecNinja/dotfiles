@@ -378,6 +378,40 @@ this list before changing anything in the release flow.
    PR somehow gets stuck, fix the underlying blocker (CI red, missing
    review) rather than reaching for a bypass.
 
+9. **release-please's first run fails with "GitHub Actions is not
+   permitted to create or approve pull requests"** unless the repo
+   (or org) setting is enabled. Flip
+   *Settings → Actions → General → Workflow permissions →
+   "Allow GitHub Actions to create and approve pull requests"* once
+   per repo (or once at the org level for the whole fleet). This is a
+   GitHub-level guardrail and **cannot** be granted via workflow YAML
+   `permissions:` alone. The branch + commit will be created
+   successfully; only the PR-open step fails. After flipping, the
+   next push to main retries automatically — release-please reuses
+   the already-created `release-please--branches--main--*` branch.
+
+10. **`GITHUB_TOKEN`-opened PRs do not trigger CI.** This is by GitHub
+    design (to prevent recursive workflow loops). When release-please
+    runs without the App-token wiring, the release PR opens
+    successfully but **zero status checks fire** — branch protection
+    then permanently blocks the merge. The fix is to authenticate
+    release-please as a GitHub App: pass `app-id` (input) and
+    `app-private-key` (secret) to the central reusable. App-opened PRs
+    fire `pull_request: opened` events normally, so required CI runs.
+    See: [DevSecNinja/.github docs/release-please-onboarding.md](https://github.com/DevSecNinja/.github/blob/main/docs/release-please-onboarding.md).
+    Per-repo prerequisites: install the App, add `vars.RELEASE_PLEASE_APP_ID`,
+    add `secrets.RELEASE_PLEASE_APP_PRIVATE_KEY` (use
+    `gh secret set ... < file.pem` to preserve newlines — pasting into
+    the web UI sometimes strips them and yields
+    `error:1E08010C:DECODER routines::unsupported`).
+
+11. **`chore:` / `docs:` / `ci:` commits don't trigger a version bump.**
+    Only `feat:` (minor), `fix:` (patch), and `feat!:` / `BREAKING
+    CHANGE:` (major) move the needle in the default `simple`
+    release-type config. If you merge a PR and the existing release PR
+    doesn't update, this is usually why — the version it already
+    proposes is unchanged.
+
 ---
 
 ## Release complete
