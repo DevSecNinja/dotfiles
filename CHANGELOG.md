@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0](https://github.com/DevSecNinja/dotfiles/compare/v0.1.4...v0.2.0) (2026-05-01)
+
+
+### Features
+
+* add workflow_dispatch to sign-powershell.yml ([#256](https://github.com/DevSecNinja/dotfiles/issues/256)) ([11acaf7](https://github.com/DevSecNinja/dotfiles/commit/11acaf78d549ecf3870e0cba9f9262675eda13a5))
+* **ci:** page Grafana IRM on main-branch workflow failures ([#255](https://github.com/DevSecNinja/dotfiles/issues/255)) ([8b48ad6](https://github.com/DevSecNinja/dotfiles/commit/8b48ad675b1a6cd402150b08ee0c5958186e6a57))
+* **git:** add 'sco' alias for auto-stash checkout ([#252](https://github.com/DevSecNinja/dotfiles/issues/252)) ([b97e761](https://github.com/DevSecNinja/dotfiles/commit/b97e76143fc3ca52580900356ce2575bb3d2b240))
+* **github-release:** update release twpayne/chezmoi ( 2.69.1 ➔ 2.70.2 ) ([#246](https://github.com/DevSecNinja/dotfiles/issues/246)) ([9b34099](https://github.com/DevSecNinja/dotfiles/commit/9b34099834aadb3ee2645503e85f147d3af07371))
+* **release:** adopt release-please for branch-protection-respecting bumps ([8cea8cd](https://github.com/DevSecNinja/dotfiles/commit/8cea8cd1ea859f35133fa7eb2c967677268ac7a7))
+* **release:** adopt release-please for branch-protection-respecting bumps ([3f23dd9](https://github.com/DevSecNinja/dotfiles/commit/3f23dd9b19ceb054159ef43f0939a2a92a103b6b))
+* **windows:** untangle winget upgrade from chezmoi update ([#253](https://github.com/DevSecNinja/dotfiles/issues/253)) ([93a0605](https://github.com/DevSecNinja/dotfiles/commit/93a0605b4de54ef14a3874b6b4aa4b76fbccbfb0))
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.15 ➔ v2026.4.16 ) ([#262](https://github.com/DevSecNinja/dotfiles/issues/262)) ([a44a08d](https://github.com/DevSecNinja/dotfiles/commit/a44a08dd8b498c7bd266d47c452c9d7d42254ee2))
+* **github-release:** update release jdx/mise ( v2026.4.9 ➔ v2026.4.15 ) ([#245](https://github.com/DevSecNinja/dotfiles/issues/245)) ([6620fa6](https://github.com/DevSecNinja/dotfiles/commit/6620fa6dffe0b448485850fd5adaf814e30bcd5e))
+* **log:** color stderr writes when stdout is a pipe ([6aa47a4](https://github.com/DevSecNinja/dotfiles/commit/6aa47a4a07c74414841cd91ac3faa43636e411ee))
+* **release:** adopt draft-publish flow so release-please can tag ([#261](https://github.com/DevSecNinja/dotfiles/issues/261)) ([b78025f](https://github.com/DevSecNinja/dotfiles/commit/b78025f83aef1aa0bf0191e90f81da8674f4182b))
+
 ## [0.1.4] - 2026-04-30
 
 ### Bug Fixes
@@ -164,4 +185,3 @@ All notable changes to this project will be documented in this file.
 
 ### Testing
 - Assert deterministic password tr shim ([`4fdd963`](https://github.com/DevSecNinja/dotfiles/commit/4fdd963f6efcbca56eed50cc2070386bde85403b))
-
