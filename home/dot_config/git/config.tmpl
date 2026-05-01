@@ -46,6 +46,18 @@
 	amend = commit --amend --no-edit
 	config-list = config --list --show-origin
 	ignored = ls-files --ignored --exclude-standard --others
+	# Auto-stash, checkout, then pop the stash (mirrors merge/rebase autoStash).
+	# Usage: git sco <branch>
+	sco = "!f() { \
+		if git diff-index --quiet HEAD -- && [ -z \"$(git ls-files --others --exclude-standard)\" ]; then \
+			git checkout \"$@\"; \
+		else \
+			msg=\"auto-stash before checkout $*\"; \
+			git stash push --include-untracked -m \"$msg\" >/dev/null && \
+			git checkout \"$@\" && \
+			git stash pop; \
+		fi; \
+	}; f"
 
 # {{ if and (eq .chezmoi.os "darwin") (not .codespaces) }}
 [credential]
