@@ -156,7 +156,11 @@ jobs:
     name: Notify Grafana IRM
     needs:
       - release
-    if: ${{ always() && github.event_name == 'push' }}
+    # Run on both tag-push and workflow_dispatch so manual reruns
+    # also page. `always()` ensures we still notify on a failed
+    # release job; the action itself decides resolved vs firing
+    # based on the `release` job's `result`.
+    if: ${{ always() }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
