@@ -29,10 +29,10 @@ This approach works seamlessly across different PowerShell versions and doesn't 
 - **PSReadLine** - Enhanced command-line editing with history search
 - **Custom aliases** - Unix-like shortcuts (ll, gs, gp, etc.)
 - **Git-aware prompt** - Shows current branch
-- **Winget Upgrade Automation** - Automated package upgrades with `wup` or `winup` commands
+- **Winget Upgrade Automation** - On-demand package upgrades with `wup` or `winup` commands (the Windows counterpart of `brewup` on Linux/macOS)
   - Detection phase: Only runs if updates are available
   - Execution phase: 3-second countdown before upgrading (can be cancelled)
-  - Automatically runs during `chezmoi update`
+  - Invoked explicitly by the user (no longer wired into `chezmoi update`)
   - Uses Microsoft.WinGet.Client PowerShell module when available
 
 ## Usage
@@ -60,8 +60,7 @@ Invoke-WingetUpgrade -CountdownSeconds 0
 Invoke-WingetUpgrade -Force
 ```
 
-**Automatic Upgrades:**
-The winget upgrade check runs automatically during `chezmoi update` (when the script or dependencies change). You can cancel the upgrade by pressing Ctrl+C during the 3-second countdown.
+**Note:** Winget upgrades are intentionally decoupled from `chezmoi update`. Run `wup` / `winup` whenever you want to upgrade installed packages, similar to how `brewup` works on Linux/macOS. You can cancel the upgrade by pressing Ctrl+C during the 3-second countdown.
 
 ## Customization
 
