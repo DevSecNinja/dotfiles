@@ -62,7 +62,7 @@ jobs:
         uses: DevSecNinja/.github/actions/release-publish@ee0804b737700aeecd6d1b1bc85ab57107c880e3 # main
         with:
           # renovate: datasource=github-releases depName=jdx/mise
-          mise-version: "2026.4.15"
+          mise-version: "2026.4.16"
           tag: ${{ github.ref_name }}
           extra-notes: log-sh
           assets: |
