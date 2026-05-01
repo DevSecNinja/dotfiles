@@ -1,10 +1,26 @@
 ---
 name: Release
 
+# Triggered on `release: created` (which fires for both draft and
+# published releases) so we run when release-please creates the draft
+# Release for a new tag (`draft: true` + `force-tag-creation: true`
+# in release-please-config.json). We then:
+#
+#   1. Build log.sh artifacts and the tarball.
+#   2. Mint build-provenance attestations against the caller's OIDC
+#      subject (must stay in this caller, NOT the composite — see
+#      actions/attest-build-provenance README).
+#   3. Upload assets to the existing draft release and merge in the
+#      log.sh consumption snippet via `gh release edit --notes-file`.
+#   4. Flip `--draft=false` to publish.
+#
+# Drafts are mutable, so the upload + notes-edit + publish sequence
+# is compatible with Immutable Releases (which only constrain the
+# Release once *published*).
+
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [created]
 
 permissions:
   contents: read
@@ -15,7 +31,11 @@ concurrency:
 
 jobs:
   release:
-    name: Create immutable GitHub Release
+    name: Build, attest, and publish
+    # Skip the run for releases that aren't drafts (e.g. someone
+    # manually publishes via the UI) so we don't try to upload
+    # assets to an already-published immutable release.
+    if: ${{ github.event.release.draft }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -24,21 +44,24 @@ jobs:
       # caller workflow (not the composite) — see the action's README.
       id-token: write
       attestations: write
+    env:
+      TAG: ${{ github.event.release.tag_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Build log.sh release artifacts
-        run: ./script/build-log-sh-release.sh "${{ github.ref_name }}" "${GITHUB_WORKSPACE}/dist"
+        run: ./script/build-log-sh-release.sh "${TAG}" "${GITHUB_WORKSPACE}/dist"
 
       - name: Verify checksums
         working-directory: dist
         run: |
           sha256sum -c log.sh.sha256
-          sha256sum -c "log-sh-${{ github.ref_name }}.tar.gz.sha256"
+          sha256sum -c "log-sh-${TAG}.tar.gz.sha256"
 
       - name: Generate build-provenance attestations
         # Attests log.sh and the tarball to the GitHub Actions OIDC identity
@@ -52,34 +75,74 @@ jobs:
         with:
           subject-path: |
             dist/log.sh
-            dist/log-sh-${{ github.ref_name }}.tar.gz
+            dist/log-sh-${{ github.event.release.tag_name }}.tar.gz
 
-      - name: Publish release
-        # Composite action provides: git-cliff notes generation, optional
-        # preset notes block, and a single-shot Immutable-Releases compatible
-        # `gh release create`. See the action's README for the rationale.
-        # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/release-publish@ee0804b737700aeecd6d1b1bc85ab57107c880e3 # main
-        with:
-          # renovate: datasource=github-releases depName=jdx/mise
-          mise-version: "2026.4.16"
-          tag: ${{ github.ref_name }}
-          extra-notes: log-sh
-          assets: |
-            dist/log.sh
-            dist/log.sh.sha256
-            dist/log-sh-${{ github.ref_name }}.tar.gz
-            dist/log-sh-${{ github.ref_name }}.tar.gz.sha256
+      - name: Compose release notes (release-please body + log.sh snippet)
+        env:
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          set -euo pipefail
+          # Start with whatever release-please put in the draft body
+          # (the auto-generated CHANGELOG slice for this version).
+          printf '%s' "${BODY}" >/tmp/release-notes.md
+          # Append the log.sh consumption + provenance verification block.
+          {
+            printf '\n\n---\n\n'
+            printf '## log.sh distribution\n\n'
+            printf 'This release includes a vendorable copy of `log.sh`. See '
+            printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
+                "${REPO}" "${TAG}"
+            printf 'for the consumption snippet.\n\n'
+            printf '### Quick start\n\n'
+            printf '```sh\n'
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh -o scripts/lib/log.sh\n' \
+                "${REPO}" "${TAG}"
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
+                "${REPO}" "${TAG}"
+            printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
+            printf '```\n\n'
+            printf '### Verifying provenance\n\n'
+            printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
+            printf 'Verify with the GitHub CLI:\n\n'
+            printf '```sh\n'
+            printf 'gh attestation verify ./log.sh --repo %s\n' "${REPO}"
+            printf 'gh attestation verify ./log-sh-%s.tar.gz --repo %s\n' "${TAG}" "${REPO}"
+            printf '```\n'
+          } >>/tmp/release-notes.md
 
-  # --- Page on tag-push release failure (homelab IRM pager) ---
-  # alert_uid is keyed on the tag (REF_NAME), so each release has its own
-  # alert group. resolve-on-success is disabled because there is no
+      - name: Upload assets and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release upload "${TAG}" \
+              --repo "${REPO}" \
+              "dist/log.sh" \
+              "dist/log.sh.sha256" \
+              "dist/log-sh-${TAG}.tar.gz" \
+              "dist/log-sh-${TAG}.tar.gz.sha256"
+          # Edit notes and flip the draft flag in a single API call so
+          # the release transitions to "published" atomically — this is
+          # the moment Immutable Releases lock the Release down.
+          gh release edit "${TAG}" \
+              --repo "${REPO}" \
+              --notes-file /tmp/release-notes.md \
+              --draft=false
+
+  # --- Page on release-publish failure (homelab IRM pager) ---
+  # alert_uid is keyed on the tag, so each release has its own alert
+  # group. resolve-on-success is disabled because there is no
   # subsequent run on the same tag to post a green resolve.
   notify-irm:
     name: Notify Grafana IRM
     needs:
       - release
-    if: ${{ always() }}
+    # Only page when this run actually executed (i.e. the draft gate
+    # passed) — skipping the release job for a non-draft event should
+    # not page.
+    if: ${{ always() && github.event.release.draft }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
