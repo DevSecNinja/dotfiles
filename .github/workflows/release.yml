@@ -24,20 +24,11 @@ name: Release
 # Drafts are mutable, so the upload + notes-edit + publish sequence
 # is compatible with Immutable Releases (which only constrain the
 # Release once *published*).
-#
-# `workflow_dispatch` is exposed so failed runs can be retried
-# manually by tag without a fresh release-please bump.
 
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to (re)publish, e.g. v0.2.0"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -58,15 +49,13 @@ jobs:
       id-token: write
       attestations: write
     env:
-      # Tag from either trigger. `github.ref_name` is the short tag name
-      # for `push: tags` (e.g. "v0.2.0") and the branch for dispatch,
-      # so the dispatch input takes precedence when set.
-      TAG: ${{ inputs.tag || github.ref_name }}
+      # Short tag name for the `push: tags` trigger (e.g. "v0.2.0").
+      TAG: ${{ github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -91,7 +80,7 @@ jobs:
         with:
           subject-path: |
             dist/log.sh
-            dist/log-sh-${{ inputs.tag || github.ref_name }}.tar.gz
+            dist/log-sh-${{ github.ref_name }}.tar.gz
 
       - name: Compose release notes (release-please body + log.sh snippet)
         env:
@@ -156,10 +145,9 @@ jobs:
     name: Notify Grafana IRM
     needs:
       - release
-    # Run on both tag-push and workflow_dispatch so manual reruns
-    # also page. `always()` ensures we still notify on a failed
-    # release job; the action itself decides resolved vs firing
-    # based on the `release` job's `result`.
+    # `always()` plus the `release` job dependency keeps the firing
+    # condition meaningful; the action itself derives resolved-vs-firing
+    # from `needs.release.result`.
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     permissions:
