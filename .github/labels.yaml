@@ -1,0 +1,92 @@
+---
+# Areas
+- name: area/docs
+  color: "0e8a16"
+- name: area/github
+  color: "0e8a16"
+- name: area/powershell
+  color: "0e8a16"
+- name: area/renovate
+  color: "0e8a16"
+- name: area/scripts
+  color: "0e8a16"
+- name: area/shell
+  color: "0e8a16"
+
+# Renovate Types
+- name: renovate/container
+  color: "027fa0"
+- name: renovate/github-action
+  color: "027fa0"
+- name: renovate/github-release
+  color: "027fa0"
+- name: renovate/gomod
+  color: "027fa0"
+- name: renovate/mise
+  color: "027fa0"
+
+# Semantic Types
+- name: type/digest
+  color: "ffeC19"
+- name: type/patch
+  color: "ffeC19"
+- name: type/minor
+  color: "ff9800"
+- name: type/major
+  color: "f6412d"
+
+# Merge strategy (driven by renovate preset)
+- name: "merge: auto"
+  color: "0e8a16"
+- name: "merge: manual"
+  color: "fbca04"
+
+# Automation
+- name: automated
+  color: "ededed"
+  description: "Automated change opened by a workflow"
+- name: chore
+  color: "ededed"
+  description: "Maintenance task with no user-facing change"
+
+# release-please
+- name: "autorelease: pending"
+  color: "ededed"
+- name: "autorelease: tagged"
+  color: "ededed"
+
+# Uncategorized
+- name: bug
+  color: "d73a4a"
+  description: "Something isn't working"
+- name: dependencies
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+- name: documentation
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+- name: duplicate
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+- name: enhancement
+  color: "a2eeef"
+  description: "New feature or request"
+- name: good first issue
+  color: "7057ff"
+  description: "Good for newcomers"
+- name: help wanted
+  color: "008672"
+  description: "Extra attention is needed"
+- name: hold
+  color: "ee0701"
+- name: invalid
+  color: "e4e669"
+  description: "This doesn't seem right"
+- name: question
+  color: "d876e3"
+  description: "Further information is requested"
+- name: stale-dependency
+  color: "e4e669"
+- name: wontfix
+  color: "ffffff"
+  description: "This will not be worked on"
