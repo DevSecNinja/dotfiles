@@ -1,26 +1,43 @@
 ---
 name: Release
 
-# Triggered on `release: created` (which fires for both draft and
-# published releases) so we run when release-please creates the draft
-# Release for a new tag (`draft: true` + `force-tag-creation: true`
-# in release-please-config.json). We then:
+# Triggered on tag push (`v*`) rather than `release: created` because
+# the latter does not fire reliably when release-please creates the
+# draft Release via its GitHub App token. Tag push events propagate
+# correctly and run before/independently of the draft creation.
 #
-#   1. Build log.sh artifacts and the tarball.
-#   2. Mint build-provenance attestations against the caller's OIDC
-#      subject (must stay in this caller, NOT the composite — see
-#      actions/attest-build-provenance README).
-#   3. Upload assets to the existing draft release and merge in the
-#      log.sh consumption snippet via `gh release edit --notes-file`.
-#   4. Flip `--draft=false` to publish.
+# Flow:
+#   1. release-please merges its release PR.
+#   2. release-please pushes the `vX.Y.Z` tag (force-tag-creation: true)
+#      and creates the draft GitHub Release (draft: true).
+#   3. This workflow fires on the tag push, looks up the (already
+#      existing) draft Release for that tag, then:
+#        a. Builds log.sh artifacts and the tarball.
+#        b. Mints build-provenance attestations against the caller's
+#           OIDC subject (must stay in this caller, NOT a composite —
+#           see actions/attest-build-provenance README).
+#        c. Uploads the four assets to the draft.
+#        d. Appends the log.sh consumption + provenance snippet to
+#           release-please's auto-generated notes.
+#        e. Flips `--draft=false` to publish.
 #
 # Drafts are mutable, so the upload + notes-edit + publish sequence
 # is compatible with Immutable Releases (which only constrain the
 # Release once *published*).
+#
+# `workflow_dispatch` is exposed so failed runs can be retried
+# manually by tag without a fresh release-please bump.
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re)publish, e.g. v0.2.0"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,10 +49,6 @@ concurrency:
 jobs:
   release:
     name: Build, attest, and publish
-    # Skip the run for releases that aren't drafts (e.g. someone
-    # manually publishes via the UI) so we don't try to upload
-    # assets to an already-published immutable release.
-    if: ${{ github.event.release.draft }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -45,12 +58,15 @@ jobs:
       id-token: write
       attestations: write
     env:
-      TAG: ${{ github.event.release.tag_name }}
+      # Tag from either trigger. `github.ref_name` is the short tag name
+      # for `push: tags` (e.g. "v0.2.0") and the branch for dispatch,
+      # so the dispatch input takes precedence when set.
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -75,17 +91,18 @@ jobs:
         with:
           subject-path: |
             dist/log.sh
-            dist/log-sh-${{ github.event.release.tag_name }}.tar.gz
+            dist/log-sh-${{ inputs.tag || github.ref_name }}.tar.gz
 
       - name: Compose release notes (release-please body + log.sh snippet)
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          BODY: ${{ github.event.release.body }}
         run: |
           set -euo pipefail
-          # Start with whatever release-please put in the draft body
-          # (the auto-generated CHANGELOG slice for this version).
-          printf '%s' "${BODY}" >/tmp/release-notes.md
+          # Fetch the draft Release body release-please created for this
+          # tag. `gh release view --json body` returns the auto-generated
+          # CHANGELOG slice as plain markdown.
+          gh release view "${TAG}" --repo "${REPO}" --json body --jq '.body' >/tmp/release-notes.md
           # Append the log.sh consumption + provenance verification block.
           {
             printf '\n\n---\n\n'
@@ -139,10 +156,7 @@ jobs:
     name: Notify Grafana IRM
     needs:
       - release
-    # Only page when this run actually executed (i.e. the draft gate
-    # passed) — skipping the release job for a non-draft event should
-    # not page.
-    if: ${{ always() && github.event.release.draft }}
+    if: ${{ always() && github.event_name == 'push' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
