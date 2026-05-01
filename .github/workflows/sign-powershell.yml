@@ -56,36 +56,30 @@ jobs:
             exit 1
           }
 
-      - name: Check for changes
-        id: check_changes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected - all scripts already signed"
-          else
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected - scripts were signed"
-          fi
-
-      - name: Commit signed scripts
-        if: steps.check_changes.outputs.changes == 'true' && github.event_name != 'pull_request'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "*.ps1"
-          git commit -m "chore: sign PowerShell scripts [skip ci]"
-          git push
-
-      - name: Comment on PR
-        if: steps.check_changes.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      # Branch protection on `main` blocks direct pushes from
+      # `github-actions[bot]`, and we deliberately do NOT sign on pull_request
+      # events (any PR author would otherwise get their scripts signed with
+      # the maintainer's certificate). Instead, after a push to `main`, open a
+      # follow-up PR with the signed files so the change still goes through
+      # the protected-branch flow. The PR is created with the default
+      # GITHUB_TOKEN, so the bot's commit will not retrigger workflows on
+      # push (preventing signing loops). When the PR is merged, this workflow
+      # re-runs but the composite finds no diff and exits as a no-op.
+      - name: Open PR with signed scripts
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@6764c0fb5ffc25207571b159dc255c8f77922c62 # main
         with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ PowerShell scripts have been signed. Please pull the latest changes after merge.'
-            })
+          branch: chore/sign-powershell-scripts
+          title: 'chore: sign PowerShell scripts'
+          paths: '**/*.ps1'
+          labels: |
+            automated
+            chore
+          body: |
+            Automated signing of PowerShell scripts after merge to `main`.
+
+            Triggered by: ${{ github.event.head_commit.message }}
+            Commit: ${{ github.sha }}
+
+            Merging this PR replaces the direct push the workflow used to
+            perform, which is blocked by branch protection on `main`.
