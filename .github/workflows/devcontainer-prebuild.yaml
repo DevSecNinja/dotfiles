@@ -193,3 +193,23 @@ jobs:
           subject-name: ${{ steps.release-manifest.outputs.image }}
           subject-digest: ${{ steps.release-manifest.outputs.digest }}
           push-to-registry: true
+
+  # --- Page on main-branch / scheduled / dispatch / tag failure (homelab IRM pager) ---
+  # PR runs are excluded — they only build for validation and a red PR check
+  # is signal enough.
+  notify-irm:
+    name: Notify Grafana IRM
+    needs:
+      - prebuild
+      - merge
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Notify Grafana IRM
+        uses: DevSecNinja/.github/.github/actions/notify-irm@a877d35266a54e54ef043e60a290ed76b4d7b34e # main
+        with:
+          webhook-url: ${{ secrets.GRAFANA_IRM_WEBHOOK_URL }}
+          # `needs.*.result` is system-controlled, safe to interpolate.
+          job-failed: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}

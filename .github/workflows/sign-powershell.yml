@@ -89,3 +89,20 @@ jobs:
               repo: context.repo.repo,
               body: '✅ PowerShell scripts have been signed. Please pull the latest changes after merge.'
             })
+
+  # --- Page on main-branch script-signing failure (homelab IRM pager) ---
+  notify-irm:
+    name: Notify Grafana IRM
+    needs:
+      - sign-scripts
+    if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Notify Grafana IRM
+        uses: DevSecNinja/.github/.github/actions/notify-irm@a877d35266a54e54ef043e60a290ed76b4d7b34e # main
+        with:
+          webhook-url: ${{ secrets.GRAFANA_IRM_WEBHOOK_URL }}
+          # `needs.*.result` is system-controlled, safe to interpolate.
+          job-failed: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
