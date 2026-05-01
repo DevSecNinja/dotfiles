@@ -68,24 +68,60 @@ jobs:
             echo "Changes detected - scripts were signed"
           fi
 
-      - name: Commit signed scripts
-        if: steps.check_changes.outputs.changes == 'true' && github.event_name != 'pull_request'
+      # Branch protection on `main` blocks direct pushes from
+      # `github-actions[bot]`, and we deliberately do NOT sign on pull_request
+      # events (any PR author would otherwise get their scripts signed with
+      # the maintainer's certificate). Instead, after a push to `main`, open a
+      # follow-up PR with the signed files via the preinstalled `gh` CLI so
+      # the change still goes through the protected-branch flow. The PR is
+      # created with the default GITHUB_TOKEN, so the bot's commit will not
+      # retrigger workflows on push (preventing signing loops). When the PR
+      # is merged, this workflow re-runs but finds no diff and exits as a
+      # no-op.
+      - name: Open PR with signed scripts
+        if: steps.check_changes.outputs.changes == 'true'
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "*.ps1"
-          git commit -m "chore: sign PowerShell scripts [skip ci]"
-          git push
+          set -euo pipefail
 
-      - name: Comment on PR
-        if: steps.check_changes.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ PowerShell scripts have been signed. Please pull the latest changes after merge.'
-            })
+          BRANCH="chore/sign-powershell-scripts"
+          TITLE="chore: sign PowerShell scripts"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Recreate the branch from the current main so each run produces a
+          # clean, single-commit PR rather than accumulating history.
+          git checkout -B "$BRANCH"
+          git add '**/*.ps1'
+          git commit -m "$TITLE"
+          git push --force-with-lease origin "$BRANCH"
+
+          # If a PR for this branch already exists (previous run not yet
+          # merged), gh pr create exits non-zero. Reuse the existing PR in
+          # that case — the force-push above already updated its contents.
+          BODY=$(cat <<EOF
+          Automated signing of PowerShell scripts after merge to \`main\`.
+
+          Triggered by: $HEAD_COMMIT_MESSAGE
+          Commit: $HEAD_SHA
+
+          Merging this PR replaces the direct push the workflow used to
+          perform, which is blocked by branch protection on \`main\`.
+          EOF
+          )
+
+          if ! gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --label automated \
+              --label chore; then
+            echo "PR already exists for $BRANCH; updated via force-push."
+            gh pr view "$BRANCH" --json number,url
+          fi
