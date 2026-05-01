@@ -1,8 +1,9 @@
 name: CI
 
+# PR-only (plus dispatch). Branch protection makes the merge commit
+# identical to the last PR head, so re-running on push to main is
+# duplicate work. See DevSecNinja/.github docs/workflow-trigger-conventions.md.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -486,29 +487,3 @@ jobs:
           files: test-results.xml
           check_name: 'Pester Test Results'
           comment_mode: off
-
-  # --- Page on main-branch CI failure (homelab IRM pager) ---
-  notify-irm:
-    name: Notify Grafana IRM
-    needs:
-      - validate
-      - test-devcontainer
-      - test-install
-      - test-coder-install
-      - test-light-server
-      - test-dev-server
-      - test-windows
-      - test-windows-coder
-      - test-bash-scripts
-      - test-powershell-scripts
-    if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - name: Notify Grafana IRM
-        uses: DevSecNinja/.github/.github/actions/notify-irm@b2509636243e456253c938184dfe1855d6401e6d # main
-        with:
-          webhook-url: ${{ secrets.GRAFANA_IRM_WEBHOOK_URL }}
-          # `needs.*.result` is system-controlled, safe to interpolate.
-          job-failed: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
