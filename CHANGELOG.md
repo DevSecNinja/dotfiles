@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0](https://github.com/DevSecNinja/dotfiles/compare/v0.1.4...v0.2.0) (2026-05-01)
+
+
+### Features
+
+* **github-release:** update release twpayne/chezmoi ( 2.69.1 ➔ 2.70.2 ) ([#246](https://github.com/DevSecNinja/dotfiles/issues/246)) ([9b34099](https://github.com/DevSecNinja/dotfiles/commit/9b34099834aadb3ee2645503e85f147d3af07371))
+* **release:** adopt release-please for branch-protection-respecting bumps ([8cea8cd](https://github.com/DevSecNinja/dotfiles/commit/8cea8cd1ea859f35133fa7eb2c967677268ac7a7))
+* **release:** adopt release-please for branch-protection-respecting bumps ([3f23dd9](https://github.com/DevSecNinja/dotfiles/commit/3f23dd9b19ceb054159ef43f0939a2a92a103b6b))
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.9 ➔ v2026.4.15 ) ([#245](https://github.com/DevSecNinja/dotfiles/issues/245)) ([6620fa6](https://github.com/DevSecNinja/dotfiles/commit/6620fa6dffe0b448485850fd5adaf814e30bcd5e))
+* **log:** color stderr writes when stdout is a pipe ([6aa47a4](https://github.com/DevSecNinja/dotfiles/commit/6aa47a4a07c74414841cd91ac3faa43636e411ee))
+
 ## [0.1.4] - 2026-04-30
 
 ### Bug Fixes
@@ -164,4 +179,3 @@ All notable changes to this project will be documented in this file.
 
 ### Testing
 - Assert deterministic password tr shim ([`4fdd963`](https://github.com/DevSecNinja/dotfiles/commit/4fdd963f6efcbca56eed50cc2070386bde85403b))
-
