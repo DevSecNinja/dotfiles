@@ -36,8 +36,9 @@ function Install-PowerShellModule {
                 # scripts look in ~\Documents\WindowsPowerShell\Modules and
                 # cannot see PS7-only modules. If we are currently running in
                 # Windows PowerShell 5.1 and the module is not already
-                # available here, install it for the current host too so later
-                # chezmoi scripts (e.g. run_winget-upgrade.ps1) can load it.
+                # available here, install it for the current host too so
+                # interactive PowerShell sessions and any future chezmoi
+                # scripts can load it.
                 if ($PSVersionTable.PSVersion.Major -lt 7) {
                     # Get-Module -ListAvailable checks the current host's module
                     # paths (PSModulePath), so under Windows PowerShell 5.1 this

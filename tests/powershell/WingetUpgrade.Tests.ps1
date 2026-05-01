@@ -8,7 +8,6 @@
     Validates:
     - Test-WingetUpdates function
     - Invoke-WingetUpgrade function
-    - run_winget-upgrade.ps1 script
     - Module availability checks
     - Compatibility with PowerShell Core and Windows PowerShell
 
@@ -165,49 +164,13 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
 }
 
 Describe "Winget Upgrade Script" -Tag "Integration" {
-    Context "run_winget-upgrade.ps1" {
-        BeforeAll {
-            $script:ScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_winget-upgrade.ps1"
-        }
-
-        It "Should exist" {
-            Test-Path $script:ScriptPath | Should -Be $true
-        }
-
-        It "Should be a plain .ps1 file (not a template)" {
-            $script:ScriptPath | Should -Match '\.ps1$'
-        }
-
-        It "Should load DotfilesHelpers module" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Get-Command.*Invoke-WingetUpgrade'
-            $content | Should -Match 'DotfilesHelpers'
-        }
-
-        It "Should check for Microsoft.WinGet.Client module" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Microsoft\.WinGet\.Client'
-        }
-
-        It "Should call Invoke-WingetUpgrade function" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'Invoke-WingetUpgrade.*-CountdownSeconds'
-        }
-
-        It "Should use run_ prefix for chezmoi execution" {
-            $scriptName = Split-Path $script:ScriptPath -Leaf
-            $scriptName | Should -Match '^run_'
-        }
-
-        It "Should be compatible with PowerShell 5.1+" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match '#Requires -Version 5\.1'
-        }
-
-        It "Should handle missing module gracefully" {
-            $content = Get-Content $script:ScriptPath -Raw
-            $content | Should -Match 'not found'
-            $content | Should -Match 'exit 0'
+    Context "Decoupled from chezmoi update" {
+        # The winget upgrade is intentionally NOT wired into 'chezmoi apply' /
+        # 'chezmoi update'. Users invoke it explicitly via 'wup' / 'winup' /
+        # Invoke-WingetUpgrade, mirroring how 'brewup' works on Linux/macOS.
+        It "Should not have a chezmoi run_winget-upgrade.ps1 script" {
+            $legacyScript = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_winget-upgrade.ps1"
+            Test-Path $legacyScript | Should -Be $false
         }
     }
 
@@ -215,7 +178,8 @@ Describe "Winget Upgrade Script" -Tag "Integration" {
         # When chezmoi runs .ps1 scripts under Windows PowerShell 5.1, modules
         # installed via 'pwsh' (PowerShell 7) are not visible. Install-PowerShellModule
         # must also install the module for Windows PowerShell 5.1 so that
-        # run_winget-upgrade.ps1 can load Microsoft.WinGet.Client. See issue
+        # interactive PowerShell sessions and any future chezmoi scripts can
+        # load Microsoft.WinGet.Client. See issue
         # "Fresh install on workstation with errors".
         BeforeAll {
             $script:InstallModulePath = Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers\Public\ModuleInstallation.ps1"
