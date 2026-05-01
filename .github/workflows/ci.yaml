@@ -434,7 +434,7 @@ jobs:
     uses: ./.github/workflows/bats.yml
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.4.9"
+      mise-version: "2026.4.15"
       test-dirs: "tests/bash/"
       check-name: "Bash Test Results (Bats)"
 
