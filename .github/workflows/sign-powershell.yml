@@ -56,72 +56,30 @@ jobs:
             exit 1
           }
 
-      - name: Check for changes
-        id: check_changes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected - all scripts already signed"
-          else
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected - scripts were signed"
-          fi
-
       # Branch protection on `main` blocks direct pushes from
       # `github-actions[bot]`, and we deliberately do NOT sign on pull_request
       # events (any PR author would otherwise get their scripts signed with
       # the maintainer's certificate). Instead, after a push to `main`, open a
-      # follow-up PR with the signed files via the preinstalled `gh` CLI so
-      # the change still goes through the protected-branch flow. The PR is
-      # created with the default GITHUB_TOKEN, so the bot's commit will not
-      # retrigger workflows on push (preventing signing loops). When the PR
-      # is merged, this workflow re-runs but finds no diff and exits as a
-      # no-op.
+      # follow-up PR with the signed files so the change still goes through
+      # the protected-branch flow. The PR is created with the default
+      # GITHUB_TOKEN, so the bot's commit will not retrigger workflows on
+      # push (preventing signing loops). When the PR is merged, this workflow
+      # re-runs but the composite finds no diff and exits as a no-op.
       - name: Open PR with signed scripts
-        if: steps.check_changes.outputs.changes == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          HEAD_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@6764c0fb5ffc25207571b159dc255c8f77922c62 # main
+        with:
+          branch: chore/sign-powershell-scripts
+          title: 'chore: sign PowerShell scripts'
+          paths: '**/*.ps1'
+          labels: |
+            automated
+            chore
+          body: |
+            Automated signing of PowerShell scripts after merge to `main`.
 
-          BRANCH="chore/sign-powershell-scripts"
-          TITLE="chore: sign PowerShell scripts"
+            Triggered by: ${{ github.event.head_commit.message }}
+            Commit: ${{ github.sha }}
 
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Recreate the branch from the current main so each run produces a
-          # clean, single-commit PR rather than accumulating history.
-          git checkout -B "$BRANCH"
-          git add '**/*.ps1'
-          git commit -m "$TITLE"
-          git push --force-with-lease origin "$BRANCH"
-
-          # If a PR for this branch already exists (previous run not yet
-          # merged), gh pr create exits non-zero. Reuse the existing PR in
-          # that case — the force-push above already updated its contents.
-          BODY=$(cat <<EOF
-          Automated signing of PowerShell scripts after merge to \`main\`.
-
-          Triggered by: $HEAD_COMMIT_MESSAGE
-          Commit: $HEAD_SHA
-
-          Merging this PR replaces the direct push the workflow used to
-          perform, which is blocked by branch protection on \`main\`.
-          EOF
-          )
-
-          if ! gh pr create \
-              --base main \
-              --head "$BRANCH" \
-              --title "$TITLE" \
-              --body "$BODY" \
-              --label automated \
-              --label chore; then
-            echo "PR already exists for $BRANCH; updated via force-push."
-            gh pr view "$BRANCH" --json number,url
-          fi
+            Merging this PR replaces the direct push the workflow used to
+            perform, which is blocked by branch protection on `main`.
