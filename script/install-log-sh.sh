@@ -102,7 +102,8 @@ trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
 if [ -z "$version" ]; then
 	latest_json="${tmp}/latest.json"
-	download "https://api.github.com/repos/${repo}/releases/latest" "$latest_json"
+	download "https://api.github.com/repos/${repo}/releases/latest" "$latest_json" ||
+		die "could not download latest release metadata for ${repo}"
 	if command -v jq >/dev/null 2>&1; then
 		version="$(jq -r '.tag_name // empty' "$latest_json")"
 	else
@@ -121,20 +122,26 @@ if [ -z "$base_url" ]; then
 fi
 
 asset="log-sh-${version}.tar.gz"
-download "${base_url%/}/${asset}" "${tmp}/${asset}"
-download "${base_url%/}/${asset}.sha256" "${tmp}/${asset}.sha256"
+download "${base_url%/}/${asset}" "${tmp}/${asset}" ||
+	die "could not download ${asset}"
+download "${base_url%/}/${asset}.sha256" "${tmp}/${asset}.sha256" ||
+	die "could not download ${asset}.sha256"
 
 if command -v sha256sum >/dev/null 2>&1; then
-	(cd "$tmp" && sha256sum -c "${asset}.sha256")
+	(cd "$tmp" && sha256sum -c "${asset}.sha256") ||
+		die "checksum verification failed for ${asset}"
 elif command -v shasum >/dev/null 2>&1; then
-	(cd "$tmp" && shasum -a 256 -c "${asset}.sha256")
+	(cd "$tmp" && shasum -a 256 -c "${asset}.sha256") ||
+		die "checksum verification failed for ${asset}"
 else
 	die "sha256sum or shasum is required to verify ${asset}"
 fi
 
-tar -xzf "${tmp}/${asset}" -C "$tmp"
+tar -xzf "${tmp}/${asset}" -C "$tmp" ||
+	die "could not extract ${asset}"
 pkgdir="${tmp}/log-sh-${version}"
-[ -d "$pkgdir" ] || die "release archive did not contain ${pkgdir##*/}"
+[ -d "$pkgdir" ] ||
+	die "release archive did not contain the expected top-level ${pkgdir##*/} directory"
 
 mkdir -p \
 	"${prefix}/lib/log-sh" \
