@@ -22,6 +22,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
       - name: Install mise
         uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
@@ -71,6 +75,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
