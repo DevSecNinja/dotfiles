@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1](https://github.com/DevSecNinja/dotfiles/compare/v0.2.0...v0.2.1) (2026-05-02)
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.16 ➔ v2026.4.17 ) ([#269](https://github.com/DevSecNinja/dotfiles/issues/269)) ([b2ebe8d](https://github.com/DevSecNinja/dotfiles/commit/b2ebe8d7cb3998dc7440f0cf1b1b59daae4981b6))
+* **release:** notify IRM on workflow_dispatch reruns ([#265](https://github.com/DevSecNinja/dotfiles/issues/265)) ([573ffe5](https://github.com/DevSecNinja/dotfiles/commit/573ffe5f9f8745179778aa52bc3a7d21e806c849))
+* **release:** trigger on tag push instead of release:created ([#263](https://github.com/DevSecNinja/dotfiles/issues/263)) ([e530803](https://github.com/DevSecNinja/dotfiles/commit/e530803f5c96b592512a55987a966f1f0aa4750d))
+
 ## [0.2.0](https://github.com/DevSecNinja/dotfiles/compare/v0.1.4...v0.2.0) (2026-05-01)
 
 
