@@ -106,7 +106,7 @@ if [ -z "$version" ]; then
 	if command -v jq >/dev/null 2>&1; then
 		version="$(jq -r '.tag_name // empty' "$latest_json")"
 	else
-		version="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$latest_json" | sed -n '1p')"
+		version="$(awk -F '"' '/"tag_name"[[:space:]]*:/ { print $4; exit }' "$latest_json")"
 	fi
 	[ -n "$version" ] || die "could not determine latest release tag"
 fi
