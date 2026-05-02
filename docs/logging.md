@@ -341,8 +341,14 @@ Install the packaged tarball into a prefix. This installs the library,
 README, license, and shell completions without copying release assets by hand:
 
 ```sh
+tmp="$(mktemp -d)"
 curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh \
-  | sh -s -- --version v0.1.0 --prefix "$HOME/.local"
+  -o "$tmp/install-log-sh.sh"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh.sha256 \
+  -o "$tmp/install-log-sh.sh.sha256"
+( cd "$tmp" && sha256sum -c install-log-sh.sh.sha256 )
+sh "$tmp/install-log-sh.sh" --version v0.1.0 --prefix "$HOME/.local"
+rm -rf "$tmp"
 ```
 
 Then source it from scripts or shell startup files:

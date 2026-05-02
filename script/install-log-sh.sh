@@ -109,7 +109,7 @@ if [ -z "$version" ]; then
 	else
 		version="$(awk -F '"' '/"tag_name"[[:space:]]*:/ { print $4; exit }' "$latest_json")"
 	fi
-	[ -n "$version" ] || die "could not determine latest release tag"
+	[ -n "$version" ] || die "could not parse latest release tag from GitHub API response"
 fi
 
 case "$version" in

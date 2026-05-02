@@ -102,8 +102,14 @@ Reusable POSIX shell logging library extracted from
 Prefix install (library + completions):
 
 \`\`\`sh
+tmp="\$(mktemp -d)"
 curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/${version}/install-log-sh.sh \\
-  | sh -s -- --version ${version} --prefix "\$HOME/.local"
+  -o "\$tmp/install-log-sh.sh"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/${version}/install-log-sh.sh.sha256 \\
+  -o "\$tmp/install-log-sh.sh.sha256"
+( cd "\$tmp" && sha256sum -c install-log-sh.sh.sha256 )
+sh "\$tmp/install-log-sh.sh" --version ${version} --prefix "\$HOME/.local"
+rm -rf "\$tmp"
 \`\`\`
 
 Vendored single file:

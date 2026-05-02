@@ -104,9 +104,16 @@ jobs:
             printf 'for the consumption snippet.\n\n'
             printf '### Quick start\n\n'
             printf '```sh\n'
+            printf 'tmp="$(mktemp -d)"\n'
             printf 'curl -fsSL https://github.com/%s/releases/download/%s/install-log-sh.sh \\\n' \
                 "${REPO}" "${TAG}"
-            printf '  | sh -s -- --version %s --prefix "$HOME/.local"\n' "${TAG}"
+            printf '  -o "$tmp/install-log-sh.sh"\n'
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/install-log-sh.sh.sha256 \\\n' \
+                "${REPO}" "${TAG}"
+            printf '  -o "$tmp/install-log-sh.sh.sha256"\n'
+            printf '( cd "$tmp" && sha256sum -c install-log-sh.sh.sha256 )\n'
+            printf 'sh "$tmp/install-log-sh.sh" --version %s --prefix "$HOME/.local"\n' "${TAG}"
+            printf 'rm -rf "$tmp"\n'
             printf '```\n\n'
             printf '### Verifying provenance\n\n'
             printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
