@@ -37,6 +37,36 @@ setup() {
 	assert_harden_count ".github/workflows/todo-to-issue.yml" 1
 }
 
+@test "github workflows: harden-runner precedes checkout in hardened jobs" {
+	while IFS= read -r workflow; do
+		awk '
+			function finish_job() {
+				if (job_has_harden && checkout_before_harden) {
+					printf "%s:%d: checkout appears before harden-runner\n", FILENAME, checkout_line
+					failed = 1
+				}
+			}
+			/^[[:space:]]{2}[A-Za-z0-9_-]+:/ {
+				finish_job()
+				job_has_harden = 0
+				checkout_before_harden = 0
+				checkout_line = 0
+			}
+			/uses: actions\/checkout@/ && !job_has_harden {
+				checkout_before_harden = 1
+				checkout_line = FNR
+			}
+			/uses: DevSecNinja\/\.github\/actions\/harden-runner@/ {
+				job_has_harden = 1
+			}
+			END {
+				finish_job()
+				exit failed
+			}
+		' "$workflow"
+	done < <(grep -R -l 'uses: DevSecNinja/.github/actions/harden-runner@' "$WORKFLOWS_DIR")
+}
+
 @test "github workflows: do not call upstream harden-runner directly" {
 	run grep -R -n 'uses: step-security/harden-runner@' "$WORKFLOWS_DIR"
 	[ "$status" -eq 1 ]

@@ -27,15 +27,15 @@ jobs:
     name: Build docs
     runs-on: ubuntu-24.04
     steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Harden runner
-        # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
