@@ -102,7 +102,13 @@ jobs:
             printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
                 "${REPO}" "${TAG}"
             printf 'for the consumption snippet.\n\n'
-            printf '### Quick start\n\n'
+            printf '### One-line install\n\n'
+            printf '```sh\n'
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/install-log-sh.sh \\\n' \
+                "${REPO}" "${TAG}"
+            printf '  | sh -s -- --version %s --prefix "$HOME/.local"\n' "${TAG}"
+            printf '```\n\n'
+            printf '### Verified install\n\n'
             printf '```sh\n'
             printf 'tmp="$(mktemp -d)"\n'
             printf 'curl -fsSL https://github.com/%s/releases/download/%s/install-log-sh.sh \\\n' \

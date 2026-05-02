@@ -341,6 +341,19 @@ Install the packaged tarball into a prefix. This installs the library,
 README, license, and shell completions without copying release assets by hand:
 
 ```sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/latest/download/install-log-sh.sh | sh
+```
+
+That installs the latest release into `$HOME/.local`. For a pinned release:
+
+```sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh \
+  | sh -s -- --version v0.1.0 --prefix "$HOME/.local"
+```
+
+For security-conscious automation, verify the installer before running it:
+
+```sh
 tmp="$(mktemp -d)"
 curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh \
   -o "$tmp/install-log-sh.sh"

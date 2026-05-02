@@ -94,6 +94,18 @@ teardown() {
 	rm -rf "$extract"
 }
 
+@test "build script: README inside tarball includes one-line installer" {
+	run "$BUILD_SCRIPT" v9.9.9 "$OUTDIR"
+	assert_success
+	extract="$(mktemp -d)"
+	tar -xzf "$OUTDIR/log-sh-v9.9.9.tar.gz" -C "$extract"
+	run grep -F "curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v9.9.9/install-log-sh.sh" "$extract/log-sh-v9.9.9/README.md"
+	assert_success
+	run grep -F "| sh -s -- --version v9.9.9 --prefix \"\$HOME/.local\"" "$extract/log-sh-v9.9.9/README.md"
+	assert_success
+	rm -rf "$extract"
+}
+
 @test "build script: extracted shell scripts have valid sh and bash syntax" {
 	run "$BUILD_SCRIPT" v9.9.9 "$OUTDIR"
 	assert_success
