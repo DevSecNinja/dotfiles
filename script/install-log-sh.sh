@@ -51,7 +51,7 @@ download() {
 		if command -v curl >/dev/null 2>&1; then
 			curl -fsSL "$src" -o "$dest"
 		elif command -v wget >/dev/null 2>&1; then
-			wget -qO "$dest" "$src"
+			wget -O "$dest" "$src"
 		else
 			die "curl or wget is required to download $src"
 		fi
@@ -103,7 +103,11 @@ trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 if [ -z "$version" ]; then
 	latest_json="${tmp}/latest.json"
 	download "https://api.github.com/repos/${repo}/releases/latest" "$latest_json"
-	version="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$latest_json" | sed -n '1p')"
+	if command -v jq >/dev/null 2>&1; then
+		version="$(jq -r '.tag_name // empty' "$latest_json")"
+	else
+		version="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$latest_json" | sed -n '1p')"
+	fi
 	[ -n "$version" ] || die "could not determine latest release tag"
 fi
 

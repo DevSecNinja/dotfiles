@@ -125,13 +125,13 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "${TAG}" \
-             --repo "${REPO}" \
-             "dist/log.sh" \
-             "dist/log.sh.sha256" \
-             "dist/install-log-sh.sh" \
-             "dist/install-log-sh.sh.sha256" \
-             "dist/log-sh-${TAG}.tar.gz" \
-              "dist/log-sh-${TAG}.tar.gz.sha256"
+            --repo "${REPO}" \
+            "dist/log.sh" \
+            "dist/log.sh.sha256" \
+            "dist/install-log-sh.sh" \
+            "dist/install-log-sh.sh.sha256" \
+            "dist/log-sh-${TAG}.tar.gz" \
+            "dist/log-sh-${TAG}.tar.gz.sha256"
           # Edit notes and flip the draft flag in a single API call so
           # the release transitions to "published" atomically — this is
           # the moment Immutable Releases lock the Release down.
