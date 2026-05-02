@@ -335,7 +335,45 @@ shell's built-in function-name completion in Bash and Zsh.
 Other projects can vendor `log.sh` from a tagged GitHub Release of this
 repository — no `chezmoi`, submodule, or package manager required.
 
-### One-time install
+### Prefix install (recommended for machines)
+
+Install the packaged tarball into a prefix. This installs the library,
+README, license, and shell completions without copying release assets by hand:
+
+```sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/latest/download/install-log-sh.sh | sh
+```
+
+That installs the latest release into `$HOME/.local`. For a pinned release:
+
+```sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh \
+  | sh -s -- --version v0.1.0 --prefix "$HOME/.local"
+```
+
+For security-conscious automation, verify the installer before running it:
+
+```sh
+tmp="$(mktemp -d)"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh \
+  -o "$tmp/install-log-sh.sh"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/install-log-sh.sh.sha256 \
+  -o "$tmp/install-log-sh.sh.sha256"
+( cd "$tmp" && sha256sum -c install-log-sh.sh.sha256 )
+sh "$tmp/install-log-sh.sh" --version v0.1.0 --prefix "$HOME/.local"
+rm -rf "$tmp"
+```
+
+Then source it from scripts or shell startup files:
+
+```sh
+. "$HOME/.local/lib/log-sh/log.sh"
+```
+
+Omit `--version` to install the latest release, or keep the explicit tag for
+reproducible installs.
+
+### Vendored single-file install
 
 ```sh
 mkdir -p scripts/lib
@@ -346,9 +384,10 @@ curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/v0.1.0/log.
 ( cd scripts/lib && sha256sum -c log.sh.sha256 )
 ```
 
-Replace `v0.1.0` with the latest release tag. The release page also ships
-`log-sh-<version>.tar.gz` (library + completions + LICENSE + README) for
-projects that want shell completions too.
+Replace `v0.1.0` with the latest release tag. The release page also ships an
+`install-log-sh.sh` installer and `log-sh-<version>.tar.gz` (library +
+installer + completions + LICENSE + README) for projects that want a
+prefix-style package.
 
 ### Verifying provenance (recommended)
 
@@ -402,7 +441,13 @@ Pair with a small refresher script (committed in the consumer repo) that
 re-downloads the file when the pinned URL changes — Renovate opens a PR,
 the script runs in CI, and the vendored copy is updated.
 
-### Why not GitHub Packages, npm, or Homebrew?
+### Packaging choice
+
+The supported packaging path is GitHub Release assets: a raw vendorable
+`log.sh`, a prefix installer, and a tarball containing the library,
+completions, README, and license.
+
+Why not GitHub Packages, npm, or Homebrew?
 
 - **GitHub Packages** does not host plain shell tarballs; the available
   formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency

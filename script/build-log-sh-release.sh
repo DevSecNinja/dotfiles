@@ -10,12 +10,15 @@
 # Produces in OUTPUT_DIR:
 #   log.sh                       - raw library file (for direct curl)
 #   log.sh.sha256                - sha256 of log.sh
+#   install-log-sh.sh            - installer for prefix-style installs
+#   install-log-sh.sh.sha256     - sha256 of install-log-sh.sh
 #   log-sh-<version>.tar.gz      - tarball with library + completions + LICENSE
 #   log-sh-<version>.tar.gz.sha256
 #
 # The tarball layout is:
 #   log-sh-<version>/
 #     log.sh
+#     install-log-sh.sh
 #     LICENSE
 #     README.md             (consumption snippet, generated)
 #     completions/
@@ -47,12 +50,13 @@ v*) ;;
 esac
 
 src_log="${REPO_ROOT}/home/dot_config/shell/functions/log.sh"
+src_installer="${REPO_ROOT}/script/install-log-sh.sh"
 src_license="${REPO_ROOT}/LICENSE"
 src_fish="${REPO_ROOT}/home/dot_config/fish/completions/log.fish"
 src_bash="${REPO_ROOT}/home/dot_config/shell/completions.d/log.bash"
 src_zsh="${REPO_ROOT}/home/dot_config/shell/completions.d/log.zsh"
 
-for f in "$src_log" "$src_license" "$src_fish" "$src_bash" "$src_zsh"; do
+for f in "$src_log" "$src_installer" "$src_license" "$src_fish" "$src_bash" "$src_zsh"; do
 	if [ ! -f "$f" ]; then
 		printf 'error: required source file missing: %s\n' "$f" >&2
 		exit 1
@@ -63,12 +67,16 @@ mkdir -p "$outdir"
 rm -f \
 	"${outdir}/log.sh" \
 	"${outdir}/log.sh.sha256" \
+	"${outdir}/install-log-sh.sh" \
+	"${outdir}/install-log-sh.sh.sha256" \
 	"${outdir}/log-sh-${version}.tar.gz" \
 	"${outdir}/log-sh-${version}.tar.gz.sha256"
 
 # Raw single-file asset (for direct `curl ... -o scripts/lib/log.sh`).
 cp "$src_log" "${outdir}/log.sh"
+cp "$src_installer" "${outdir}/install-log-sh.sh"
 chmod 0644 "${outdir}/log.sh"
+chmod 0755 "${outdir}/install-log-sh.sh"
 
 # Tarball with companion files.
 stage="$(mktemp -d)"
@@ -77,6 +85,7 @@ pkgdir="${stage}/log-sh-${version}"
 mkdir -p "${pkgdir}/completions"
 
 cp "$src_log" "${pkgdir}/log.sh"
+cp "$src_installer" "${pkgdir}/install-log-sh.sh"
 cp "$src_license" "${pkgdir}/LICENSE"
 cp "$src_fish" "${pkgdir}/completions/log.fish"
 cp "$src_bash" "${pkgdir}/completions/log.bash"
@@ -89,6 +98,28 @@ Reusable POSIX shell logging library extracted from
 [DevSecNinja/dotfiles](https://github.com/DevSecNinja/dotfiles).
 
 ## Install
+
+Prefix install (library + completions):
+
+\`\`\`sh
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/${version}/install-log-sh.sh \\
+  | sh -s -- --version ${version} --prefix "\$HOME/.local"
+\`\`\`
+
+Verified installer:
+
+\`\`\`sh
+tmp="\$(mktemp -d)"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/${version}/install-log-sh.sh \\
+  -o "\$tmp/install-log-sh.sh"
+curl -fsSL https://github.com/DevSecNinja/dotfiles/releases/download/${version}/install-log-sh.sh.sha256 \\
+  -o "\$tmp/install-log-sh.sh.sha256"
+( cd "\$tmp" && sha256sum -c install-log-sh.sh.sha256 )
+sh "\$tmp/install-log-sh.sh" --version ${version} --prefix "\$HOME/.local"
+rm -rf "\$tmp"
+\`\`\`
+
+Vendored single file:
 
 \`\`\`sh
 mkdir -p scripts/lib
@@ -127,6 +158,7 @@ tar \
 
 # sha256 sidecars.
 (cd "$outdir" && sha256sum "log.sh" >"log.sh.sha256")
+(cd "$outdir" && sha256sum "install-log-sh.sh" >"install-log-sh.sh.sha256")
 (cd "$outdir" && sha256sum "log-sh-${version}.tar.gz" \
 	>"log-sh-${version}.tar.gz.sha256")
 
@@ -134,5 +166,7 @@ printf 'Built release artifacts for %s in %s:\n' "$version" "$outdir"
 ls -1 \
 	"${outdir}/log.sh" \
 	"${outdir}/log.sh.sha256" \
+	"${outdir}/install-log-sh.sh" \
+	"${outdir}/install-log-sh.sh.sha256" \
 	"${outdir}/log-sh-${version}.tar.gz" \
 	"${outdir}/log-sh-${version}.tar.gz.sha256"
