@@ -12,7 +12,7 @@ name: Release
 #      and creates the draft GitHub Release (draft: true).
 #   3. This workflow fires on the tag push, looks up the (already
 #      existing) draft Release for that tag, then:
-#        a. Builds log.sh artifacts and the tarball.
+#        a. Builds log.sh artifacts, installer, and the tarball.
 #        b. Mints build-provenance attestations against the caller's
 #           OIDC subject (must stay in this caller, NOT a composite —
 #           see actions/attest-build-provenance README).
@@ -66,10 +66,11 @@ jobs:
         working-directory: dist
         run: |
           sha256sum -c log.sh.sha256
+          sha256sum -c install-log-sh.sh.sha256
           sha256sum -c "log-sh-${TAG}.tar.gz.sha256"
 
       - name: Generate build-provenance attestations
-        # Attests log.sh and the tarball to the GitHub Actions OIDC identity
+        # Attests log.sh, the installer, and the tarball to the GitHub Actions OIDC identity
         # via Sigstore. Verifiable with `gh attestation verify <file>`.
         # Sidecar .sha256 files are intentionally not attested — their
         # integrity is already proven by re-hashing the content they cover.
@@ -80,6 +81,7 @@ jobs:
         with:
           subject-path: |
             dist/log.sh
+            dist/install-log-sh.sh
             dist/log-sh-${{ github.ref_name }}.tar.gz
 
       - name: Compose release notes (release-please body + log.sh snippet)
@@ -96,23 +98,22 @@ jobs:
           {
             printf '\n\n---\n\n'
             printf '## log.sh distribution\n\n'
-            printf 'This release includes a vendorable copy of `log.sh`. See '
+            printf 'This release includes a prefix installer and vendorable copy of `log.sh`. See '
             printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
                 "${REPO}" "${TAG}"
             printf 'for the consumption snippet.\n\n'
             printf '### Quick start\n\n'
             printf '```sh\n'
-            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh -o scripts/lib/log.sh\n' \
+            printf 'curl -fsSL https://github.com/%s/releases/download/%s/install-log-sh.sh \\\n' \
                 "${REPO}" "${TAG}"
-            printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
-                "${REPO}" "${TAG}"
-            printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
+            printf '  | sh -s -- --version %s --prefix "$HOME/.local"\n' "${TAG}"
             printf '```\n\n'
             printf '### Verifying provenance\n\n'
             printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
             printf 'Verify with the GitHub CLI:\n\n'
             printf '```sh\n'
             printf 'gh attestation verify ./log.sh --repo %s\n' "${REPO}"
+            printf 'gh attestation verify ./install-log-sh.sh --repo %s\n' "${REPO}"
             printf 'gh attestation verify ./log-sh-%s.tar.gz --repo %s\n' "${TAG}" "${REPO}"
             printf '```\n'
           } >>/tmp/release-notes.md
@@ -124,10 +125,12 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "${TAG}" \
-              --repo "${REPO}" \
-              "dist/log.sh" \
-              "dist/log.sh.sha256" \
-              "dist/log-sh-${TAG}.tar.gz" \
+             --repo "${REPO}" \
+             "dist/log.sh" \
+             "dist/log.sh.sha256" \
+             "dist/install-log-sh.sh" \
+             "dist/install-log-sh.sh.sha256" \
+             "dist/log-sh-${TAG}.tar.gz" \
               "dist/log-sh-${TAG}.tar.gz.sha256"
           # Edit notes and flip the draft flag in a single API call so
           # the release transitions to "published" atomically — this is
