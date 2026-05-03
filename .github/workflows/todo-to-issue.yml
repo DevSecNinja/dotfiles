@@ -20,10 +20,15 @@ jobs:
     runs-on: "ubuntu-24.04"
     timeout-minutes: 10
     steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
       - name: "TODO to Issue"
         uses: "alstr/todo-to-issue-action@64aca8fda7023259aada83ba44ad988c4c443657" # v5
         with:
