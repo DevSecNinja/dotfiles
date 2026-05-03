@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2](https://github.com/DevSecNinja/dotfiles/compare/v0.2.1...v0.2.2) (2026-05-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **github-action:** Update action jdx/mise-action ( v2 ➔ v4.0.1 ) ([#247](https://github.com/DevSecNinja/dotfiles/issues/247))
+
+### Features
+
+* **harden-runner:** harden GitHub Actions jobs ([#271](https://github.com/DevSecNinja/dotfiles/issues/271)) ([5506be1](https://github.com/DevSecNinja/dotfiles/commit/5506be11c2a37899961ca421735bcf4782450fbc))
+
+
+### Miscellaneous Chores
+
+* release 0.2.2 ([8789d6a](https://github.com/DevSecNinja/dotfiles/commit/8789d6ab70364bcaa1345a5c6ecf29a0a761322a))
+
+
+### Continuous Integration
+
+* **github-action:** Update action jdx/mise-action ( v2 ➔ v4.0.1 ) ([#247](https://github.com/DevSecNinja/dotfiles/issues/247)) ([464e45a](https://github.com/DevSecNinja/dotfiles/commit/464e45af47193e66f1e53db43dd433a412f83956))
+
 ## [0.2.1](https://github.com/DevSecNinja/dotfiles/compare/v0.2.0...v0.2.1) (2026-05-02)
 
 
