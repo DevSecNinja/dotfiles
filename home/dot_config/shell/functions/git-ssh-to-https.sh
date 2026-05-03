@@ -95,4 +95,3 @@ git-ssh-to-https() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 	git-ssh-to-https "$@"
 fi
-

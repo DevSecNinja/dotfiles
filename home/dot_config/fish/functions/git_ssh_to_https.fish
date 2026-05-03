@@ -77,4 +77,3 @@ function git_ssh_to_https --description "Convert Git origin remote from SSH to H
         end
     end
 end
-
