@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for git_ssh_to_https Fish function using Bats
+# Bats test suite for the git_ssh_to_https Fish implementation
 
 setup() {
 	REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"

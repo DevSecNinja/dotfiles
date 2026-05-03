@@ -10,7 +10,7 @@ setup() {
 	export ORIGINAL_DIR
 
 	cd "$TEST_DIR" || return
-	git init -q
+	git init -q -b main
 	git config user.email "test@example.com"
 	git config user.name "Test User"
 	touch .gitkeep
