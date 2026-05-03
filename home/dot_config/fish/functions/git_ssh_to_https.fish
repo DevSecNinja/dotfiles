@@ -42,23 +42,25 @@ function git_ssh_to_https --description "Convert Git origin remote from SSH to H
         return 0
     end
 
-    set -l https_url ""
+    set -l host ""
+    set -l path ""
 
     if string match -qr '^git@([^:]+):(.+)$' $current_url
         set -l matches (string match -r '^git@([^:]+):(.+)$' $current_url)
-        set -l host $matches[2]
-        set -l path (string replace -r '\.git$' '' $matches[3])
-        set https_url "https://$host/$path.git"
+        set host $matches[2]
+        set path $matches[3]
     else if string match -qr '^ssh://git@([^/]+)/(.+)$' $current_url
         set -l matches (string match -r '^ssh://git@([^/]+)/(.+)$' $current_url)
-        set -l host $matches[2]
-        set -l path (string replace -r '\.git$' '' $matches[3])
-        set https_url "https://$host/$path.git"
+        set host $matches[2]
+        set path $matches[3]
     else
         echo "❌ Unsupported URL format: $current_url"
         echo "💡 This function supports SSH URLs like git@github.com:user/repo.git and ssh://git@github.com/user/repo.git"
         return 1
     end
+
+    set path (string replace -r '\.git$' '' $path)
+    set -l https_url "https://$host/$path.git"
 
     if test "$dry_run" = true
         echo "🔍 DRY RUN - No changes will be made"

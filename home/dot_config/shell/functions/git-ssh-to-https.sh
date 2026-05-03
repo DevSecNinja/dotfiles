@@ -55,23 +55,23 @@ git-ssh-to-https() {
 		return 0
 	fi
 
-	local https_url=""
+	local host=""
+	local path=""
 
 	if [[ "$current_url" =~ ^git@([^:]+):(.+)$ ]]; then
-		local host="${BASH_REMATCH[1]}"
-		local path="${BASH_REMATCH[2]}"
-		path="${path%.git}"
-		https_url="https://${host}/${path}.git"
+		host="${BASH_REMATCH[1]}"
+		path="${BASH_REMATCH[2]}"
 	elif [[ "$current_url" =~ ^ssh://git@([^/]+)/(.+)$ ]]; then
-		local host="${BASH_REMATCH[1]}"
-		local path="${BASH_REMATCH[2]}"
-		path="${path%.git}"
-		https_url="https://${host}/${path}.git"
+		host="${BASH_REMATCH[1]}"
+		path="${BASH_REMATCH[2]}"
 	else
 		echo "❌ Unsupported URL format: $current_url"
 		echo "💡 This function supports SSH URLs like git@github.com:user/repo.git and ssh://git@github.com/user/repo.git"
 		return 1
 	fi
+
+	path="${path%.git}"
+	local https_url="https://${host}/${path}.git"
 
 	if [[ "$dry_run" == true ]]; then
 		echo "🔍 DRY RUN - No changes will be made"
