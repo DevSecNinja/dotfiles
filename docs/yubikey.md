@@ -16,7 +16,7 @@ and the smart-card daemon needed for OATH:
 
 | OS        | Package(s)                                  |
 | --------- | ------------------------------------------- |
-| macOS     | `ykman` (Homebrew)                          |
+| macOS     | `ykman`, `openssh` (Homebrew — Apple's bundled OpenSSH lacks FIDO2) |
 | Debian/Ubuntu | `yubikey-manager`, `pcscd`, `scdaemon`  |
 | Fedora    | `yubikey-manager`, `pcsc-lite`              |
 | Windows   | `Yubico.YubikeyManagerCLI` (winget)         |
@@ -62,6 +62,34 @@ cd "$(chezmoi source-path)" \
   && git pull
 chezmoi apply
 ```
+
+### macOS: "No FIDO SecurityKeyProvider specified"
+
+If `yk-ssh-new` fails with:
+
+```
+No FIDO SecurityKeyProvider specified
+Key enrollment failed: invalid format
+```
+
+…you're running Apple's bundled `/usr/bin/ssh-keygen`, which is built
+without libfido2. Install Homebrew's OpenSSH (it's added to the YubiKey
+package set, so a re-apply does it for you) and put it ahead of `/usr/bin`
+on your PATH:
+
+```bash
+brew install openssh
+# Apple Silicon
+export PATH="/opt/homebrew/bin:$PATH"
+# Intel
+export PATH="/usr/local/bin:$PATH"
+
+ssh -V       # expect OpenSSH_9.x — *not* OpenSSH_9.x p1, LibreSSL …
+yk-ssh-new
+```
+
+`yk-ssh-new` now detects this case and prints the same instructions before
+attempting key generation.
 
 ## Helpers (Bash/Zsh + Fish)
 

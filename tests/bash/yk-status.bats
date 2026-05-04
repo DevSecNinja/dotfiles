@@ -109,3 +109,58 @@ Form factor: Keychain (USB-C)"
 	[[ "$output" =~ "YubiKey #22" ]]
 	[[ ! "$output" =~ "YubiKey #11" ]]
 }
+
+@test "yk-status: shows device type in output" {
+	mock_ykman
+	export YKMAN_SERIALS="12345"
+	export YKMAN_INFO_12345="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4
+Form factor: Keychain (USB-C)"
+	run yk-status
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Device type: YubiKey 5C NFC FIPS" ]]
+}
+
+@test "yk-status: --json includes device_type" {
+	mock_ykman
+	export YKMAN_SERIALS="12345"
+	export YKMAN_INFO_12345="Device type: YubiKey 5 NFC
+Firmware version: 5.7.4"
+	run yk-status --json
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ \"device_type\":\"YubiKey\ 5\ NFC\" ]]
+}
+
+@test "yk-status: zsh does not leak local declarations across iterations" {
+	# Regression test for: with multiple YubiKeys connected, zsh printed
+	# `info=$'...'`, `fw=...`, `major=...`, `minor=...` lines on every
+	# iteration after the first because `local` was re-declared inside the
+	# read loop. The fix is to declare all locals once at the function top.
+	if ! command -v zsh >/dev/null 2>&1; then
+		skip "zsh not installed"
+	fi
+	mock_ykman
+	export YKMAN_SERIALS="11
+22
+33"
+	export YKMAN_INFO_11="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_INFO_22="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.4.3"
+	export YKMAN_INFO_33="Device type: YubiKey 5C
+Firmware version: 5.2.4"
+	run zsh -c "
+		source '${BATS_TEST_DIRNAME}/../../home/dot_config/shell/functions/yk-status.sh'
+		yk-status
+	"
+	[ "$status" -eq 0 ]
+	# These leak markers appeared on the broken version; verify they're gone.
+	[[ ! "$output" =~ info=\$\' ]]
+	[[ ! "$output" =~ fw=5\.7\.4$ ]]
+	[[ ! "$output" =~ ^major=5$ ]]
+	[[ ! "$output" =~ ^minor=[0-9]+$ ]]
+	# Sanity check that all three keys still rendered.
+	[[ "$output" =~ "YubiKey #11" ]]
+	[[ "$output" =~ "YubiKey #22" ]]
+	[[ "$output" =~ "YubiKey #33" ]]
+}

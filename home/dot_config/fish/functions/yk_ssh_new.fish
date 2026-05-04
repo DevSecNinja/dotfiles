@@ -46,6 +46,35 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
         return 1
     end
 
+    # macOS guard: Apple's bundled OpenSSH lacks libfido2 / SecurityKeyProvider.
+    if test (uname) = Darwin
+        set -l sshkeygen_path (command -v ssh-keygen)
+        if test "$sshkeygen_path" = /usr/bin/ssh-keygen; or test "$sshkeygen_path" = /usr/sbin/ssh-keygen
+            echo "Error: Apple's bundled ssh-keygen at $sshkeygen_path lacks FIDO2 support." >&2
+            echo "       The error 'No FIDO SecurityKeyProvider specified' / 'invalid format'" >&2
+            echo "       comes from this. Install Homebrew's OpenSSH and put it ahead of /usr/bin:" >&2
+            echo "" >&2
+            echo "         brew install openssh" >&2
+            set -l brew_prefix ""
+            if command -q brew
+                set brew_prefix (brew --prefix 2>/dev/null)
+            else if test -x /opt/homebrew/bin/brew
+                set brew_prefix /opt/homebrew
+            else if test -x /usr/local/bin/brew
+                set brew_prefix /usr/local
+            end
+            if test -n "$brew_prefix"
+                echo "         fish_add_path -m $brew_prefix/bin" >&2
+            else
+                echo "         fish_add_path -m /opt/homebrew/bin   # Apple Silicon" >&2
+                echo "         fish_add_path -m /usr/local/bin      # Intel" >&2
+            end
+            echo "" >&2
+            echo "       Then re-run yk_ssh_new." >&2
+            return 1
+        end
+    end
+
     mkdir -p (dirname $output)
     chmod 700 (dirname $output) 2>/dev/null
 

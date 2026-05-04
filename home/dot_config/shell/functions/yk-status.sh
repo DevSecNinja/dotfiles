@@ -2,8 +2,7 @@
 # yk-status - One-glance health check for connected YubiKey(s)
 #
 # Lists every connected YubiKey (by serial) and prints firmware, form factor,
-# and enabled applications. Highlights FIPS devices and warns on firmware
-# below 5.7 (where some newer features like ed25519 PIV are unavailable).
+# device type, and whether it is a FIPS device. Warns on firmware below 5.7.
 #
 # Usage: yk-status [--json] [--serial <SN>]
 #
@@ -12,8 +11,22 @@
 #   - Works with multiple YubiKeys connected simultaneously.
 
 yk-status() {
+	# Declare ALL locals once at the function top. zsh's `local` is
+	# function-scoped, and re-declaring an already-declared local inside a
+	# loop iteration causes zsh to print the assignment (a typeset side
+	# effect). Bash doesn't have this quirk; declaring once works in both.
 	local json=false
 	local target_serial=""
+	local serials=""
+	local first=true
+	local serial=""
+	local info=""
+	local device_type=""
+	local fw=""
+	local form_factor=""
+	local fips="false"
+	local major=""
+	local minor=""
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -42,8 +55,6 @@ yk-status() {
 		return 1
 	fi
 
-	# Collect serials. `ykman list` prints one device per line including serial.
-	local serials
 	if ! serials="$(ykman list --serials 2>/dev/null)"; then
 		echo "Error: failed to list YubiKeys (is one inserted?)" >&2
 		return 1
@@ -57,39 +68,36 @@ yk-status() {
 		serials="$target_serial"
 	fi
 
-	local first=true
 	if [[ "$json" == true ]]; then
 		printf '['
 	fi
 
 	while IFS= read -r serial; do
 		[[ -z "$serial" ]] && continue
-		local info
 		info="$(ykman --device "$serial" info 2>/dev/null)" || {
 			echo "Error: failed to query device $serial" >&2
 			continue
 		}
-		local fw form_factor fips
+		device_type="$(echo "$info" | awk -F': *' 'tolower($1) ~ /device type/ {print $2; exit}')"
 		fw="$(echo "$info" | awk -F': *' 'tolower($1) ~ /firmware version/ {print $2; exit}')"
 		form_factor="$(echo "$info" | awk -F': *' 'tolower($1) ~ /form factor/ {print $2; exit}')"
 		fips="false"
-		if echo "$info" | grep -qiE 'fips'; then
+		if echo "$device_type" | grep -qiE 'fips'; then
 			fips="true"
 		fi
 
 		if [[ "$json" == true ]]; then
 			[[ "$first" == false ]] && printf ','
 			first=false
-			printf '{"serial":"%s","firmware":"%s","form_factor":"%s","fips":%s}' \
-				"$serial" "${fw:-unknown}" "${form_factor:-unknown}" "$fips"
+			printf '{"serial":"%s","device_type":"%s","firmware":"%s","form_factor":"%s","fips":%s}' \
+				"$serial" "${device_type:-unknown}" "${fw:-unknown}" "${form_factor:-unknown}" "$fips"
 		else
 			echo "YubiKey #$serial"
+			echo "  Device type: ${device_type:-unknown}"
 			echo "  Firmware:    ${fw:-unknown}"
 			echo "  Form factor: ${form_factor:-unknown}"
 			echo "  FIPS:        $fips"
-			# Warn about features that need >= 5.7
 			if [[ -n "$fw" ]]; then
-				local major minor
 				major="${fw%%.*}"
 				minor="${fw#*.}"
 				minor="${minor%%.*}"
