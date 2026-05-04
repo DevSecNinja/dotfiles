@@ -30,6 +30,7 @@ yk-ssh-new() {
 	local application=""
 	local comment=""
 	local user_specified_output=false
+	local print_summary=true
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -49,6 +50,10 @@ yk-ssh-new() {
 			;;
 		--no-verify-required)
 			verify_required=false
+			shift
+			;;
+		--no-summary)
+			print_summary=false
 			shift
 			;;
 		--output | -o)
@@ -73,6 +78,8 @@ Options:
   --type {ed25519-sk|ecdsa-sk}   Key type (default: ed25519-sk)
   --no-resident                  Don't store credential on the key
   --no-verify-required           Don't require PIN (touch only)
+  --no-summary                   Don't print the "Next steps" footer (used
+                                 by yk-enroll, which prints its own).
   --output, -o PATH              Output path (default: ~/.ssh/id_<type>)
   --application STR              FIDO application (default: ssh:<hostname>)
   --comment, -C STR              SSH key comment (default: user@host)
@@ -176,10 +183,13 @@ EOF
 	echo
 	echo "Public key:"
 	cat "${output}.pub"
+	if [[ "$print_summary" != true ]]; then
+		return 0
+	fi
 	echo
 	echo "Next steps:"
-	echo "  1. Add to GitHub:    gh ssh-key add ${output}.pub --title \"\$(hostname -s)-yk\""
-	echo "  2. Add to ssh-agent: ssh-add $output"
+	echo "  1. Add to GitHub:    gh ssh-key add ${output}.pub --title \"<descriptive title>\""
+	echo "  2. Test it:          ssh -T git@github.com  # AddKeysToAgent in ~/.ssh/config handles ssh-add automatically"
 	if [[ "$resident" == true ]]; then
 		echo "  3. On new machines:  ssh-add -K   # reload from YubiKey"
 	fi

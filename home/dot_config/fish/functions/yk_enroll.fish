@@ -152,7 +152,7 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
         echo "  No SSH key at $out_path. (skipped: --check)" >&2
     else
         echo "  Generating $type SSH key on YubiKey $serial..." >&2
-        set -l new_args --type $type --output $out_path
+        set -l new_args --type $type --output $out_path --no-summary
         test "$resident" = false; and set new_args $new_args --no-resident
         test "$verify_required" = false; and set new_args $new_args --no-verify-required
         if not yk_ssh_new $new_args
@@ -183,12 +183,24 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
         return 1
     end
     set -l hostshort (hostname -s 2>/dev/null; or hostname)
+    set -l suggested_title "$device_type @ $hostshort"
+    if test -z "$device_type"
+        set suggested_title "YubiKey @ $hostshort"
+    end
     echo "" >&2
     echo "Done. Next steps for serial $serial:" >&2
-    echo "  1. Add to GitHub:    gh ssh-key add $out_path.pub --title \"$hostshort-yk-$serial\"" >&2
-    echo "  2. Add to ssh-agent: ssh-add $out_path" >&2
+    echo "  1. Add to GitHub:" >&2
+    echo "       gh ssh-key add $out_path.pub --title \"$suggested_title\"" >&2
+    echo "     (or use the GitHub UI — pick any title that helps you recognise the key)" >&2
+    echo "" >&2
+    echo "  2. Test it:           ssh -T git@github.com" >&2
+    echo "     (your SSH config already has 'AddKeysToAgent yes' + IdentityFile, so the" >&2
+    echo "      key auto-loads on first use — no manual ssh-add needed. Run" >&2
+    echo "      'chezmoi apply' once after enrolling so ~/.ssh/config picks up the" >&2
+    echo "      new per-serial key file.)" >&2
     if test "$resident" = true
-        echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey" >&2
+        echo "" >&2
+        echo "  3. On new machines:   ssh-add -K   # reload all resident keys from this YubiKey" >&2
     end
     echo "" >&2
     echo "  Multi-key tip: re-run yk_enroll with each YubiKey plugged in (one" >&2
