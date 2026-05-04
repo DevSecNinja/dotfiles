@@ -37,17 +37,16 @@ chezmoi edit-config-template   # set useYubiKey to true, or pass --promptBool
 chezmoi apply
 
 # 4) On a *new* machine, after `chezmoi apply`:
-yk-ssh-load                    # ssh-add -K — pulls keys back from the YubiKey
+yk-enroll                      # mints a fresh per-serial resident key
 ```
 
 > **Safe migration:** `useYubiKey: true` only swaps your `~/.ssh/config`
-> over to the FIDO2 `IdentityFile` lines once `~/.ssh/id_ed25519_sk` (or
-> `id_ecdsa_sk`) actually exists on disk. If you flip the toggle before
-> generating / loading a resident key, chezmoi keeps the 1Password
-> `IdentityAgent` line and the `Include ~/.ssh/1Password/config` block as
-> a fallback so your existing SSH access survives. Run `yk-ssh-new` (new
-> machine: provisioning a key) or `yk-ssh-load` (new machine: pulling
-> resident keys back from the YubiKey) and re-run `chezmoi apply`.
+> over to the FIDO2 `IdentityFile` lines once `~/.ssh/id_ed25519_sk*` (or
+> `id_ecdsa_sk*`) actually exists on disk. If you flip the toggle before
+> enrolling a key, chezmoi keeps the 1Password `IdentityAgent` line and
+> the `Include ~/.ssh/1Password/config` block as a fallback so your
+> existing SSH access survives. Run `yk-enroll` and re-run
+> `chezmoi apply`.
 
 ### Locked yourself out?
 
@@ -199,18 +198,18 @@ its own "Done." footer so you don't miss it.
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
 | ----------------------- | ------------------- | ---------------------------------------------------------- |
-| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment, idempotent              |
-| `yk-status`             | `yk_status`         | Firmware / form-factor / FIPS info per device              |
+| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment + health check, idempotent |
+| `yk-status`             | `yk_status`         | Per-device health: firmware, FIPS, PIN status, SSH key check |
 | `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
 | `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
-| `yk-ssh-load`           | `yk_ssh_load`       | `ssh-add -K`: load resident keys from the YubiKey          |
 | `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
 
-`pubkey` now picks the first available of:
-`id_ed25519_sk.pub` → `id_ecdsa_sk.pub` → `id_ed25519.pub` → `id_rsa.pub`,
-so it transparently follows you onto a YubiKey.
+`pubkey` discovers per-serial files: it picks the first match of
+`id_ed25519_sk_*.pub` → `id_ed25519_sk.pub` → `id_ecdsa_sk_*.pub` →
+`id_ecdsa_sk.pub` → `id_ed25519.pub` → `id_rsa.pub`, so it transparently
+follows you onto a YubiKey enrolled with `yk-enroll`.
 
 ## Firmware compatibility
 
