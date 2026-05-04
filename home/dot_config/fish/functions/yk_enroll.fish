@@ -201,8 +201,9 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     echo "     (or use the GitHub UI — pick any title that helps you recognise the key)" >&2
     echo "" >&2
     echo "  2. Test it:           ssh -T git@github.com" >&2
-    echo "     (your SSH config already has 'AddKeysToAgent yes' + IdentityFile, so the" >&2
-    echo "      key auto-loads on first use — no manual ssh-add needed. Run" >&2
+    echo "     (your SSH config has 'IdentitiesOnly yes' + IdentityFile, so OpenSSH" >&2
+    echo "      talks to the YubiKey directly each time — no manual ssh-add needed," >&2
+    echo "      and no agent caching that would block the FIDO2 PIN re-prompt. Run" >&2
     echo "      'chezmoi apply' once after enrolling so ~/.ssh/config picks up the" >&2
     echo "      new per-serial key file.)" >&2
     if test "$resident" = true

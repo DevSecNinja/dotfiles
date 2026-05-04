@@ -139,6 +139,29 @@ key:
 yk-enroll --rotate-pin
 ```
 
+### Why not `AddKeysToAgent yes`?
+
+For FIDO2 (`*-sk`) keys the SSH config sets `IdentitiesOnly yes` and
+**does not** set `AddKeysToAgent yes`. The reason: the private key never
+leaves the YubiKey, so `ssh-agent` has nothing to cache except the
+handle. With `verify-required` set on the credential, every signing
+op needs a fresh PIN — but `ssh-agent` (especially on macOS) cannot
+re-prompt for the FIDO2 PIN, so the second `ssh` call fails with:
+
+```
+sign_and_send_pubkey: signing failed for ED25519-SK "..." from agent: agent refused operation
+```
+
+Letting OpenSSH talk to the YubiKey directly each time keeps the touch
++ PIN dance interactive and reliable. If you ever land in the broken
+state (e.g. you ran an older config that did `AddKeysToAgent yes`),
+clear the agent and you're back in business:
+
+```bash
+ssh-add -D                   # drop all cached keys
+ssh -T git@github.com        # works again
+```
+
 ### Multiple YubiKeys
 
 A FIDO2 resident credential lives only on the YubiKey that minted it —
