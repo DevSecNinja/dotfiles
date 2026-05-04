@@ -110,9 +110,7 @@ EOF
 	# verify git config. We don't *write* git config here — that's owned by
 	# git/config.tmpl + the chezmoi `useYubiKey` var. Instead we explain how
 	# to enable it if it isn't on yet.
-	local email
-	email="$(git config --get user.email 2>/dev/null || true)"
-	if [[ -z "$email" ]]; then
+	if [[ -z "$(git config --get user.email 2>/dev/null || true)" ]]; then
 		echo "Error: git config user.email is not set." >&2
 		return 1
 	fi
@@ -145,18 +143,26 @@ EOF
 		return 1
 	fi
 
-	local pubkey registered=0 already=0
+	# allowed_signers for self keys is owned by chezmoi (see
+	# home/dot_config/git/allowed_signers.tmpl). We only verify presence
+	# here; writing them ourselves would cause `chezmoi apply` to flag the
+	# file as drifted on every subsequent run.
+	local pubkey missing=0
 	for key in "${keys[@]}"; do
 		pubkey="$(cat "$key")"
 		if grep -Fq -- "$pubkey" "$allowed_signers" 2>/dev/null; then
 			echo "Already registered: $key"
-			already=$((already + 1))
 		else
-			printf '%s %s\n' "$email" "$pubkey" >>"$allowed_signers"
-			echo "Registered $key for $email"
-			registered=$((registered + 1))
+			echo "Missing from allowed_signers: $key"
+			missing=$((missing + 1))
 		fi
 	done
+	if [[ $missing -gt 0 ]]; then
+		echo
+		echo "Hint: $missing key(s) not yet in $allowed_signers."
+		echo "      Set chezmoi data 'useYubiKey: true' and run \`chezmoi apply\`"
+		echo "      to populate allowed_signers from your enrolled YubiKey pubkeys."
+	fi
 
 	# Verify config
 	local fmt sign signer
