@@ -205,6 +205,7 @@ its own "Done." footer so you don't miss it.
 | `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
+| `yk-git-sign-setup`     | `yk_git_sign_setup` | Register your SSH pubkey for git commit signing            |
 
 `pubkey` discovers per-serial files: it picks the first match of
 `id_ed25519_sk_*.pub` → `id_ed25519_sk.pub` → `id_ecdsa_sk_*.pub` →
@@ -231,6 +232,60 @@ When more than one YubiKey is connected, every helper either:
 - delegates to `yk-pick`, which uses `fzf` if available.
 
 Run `yk-status` to see all serials at a glance.
+
+## Git commit signing
+
+Once your YubiKey-backed SSH key exists, you can use it to sign git commits and
+tags — no GPG required. This is gated by the same `useYubiKey` chezmoi var.
+
+```bash
+# 1) Enroll your YubiKey (mints ~/.ssh/id_ed25519_sk_<serial>)
+yk-enroll
+
+# 2) Upload the pubkey to GitHub as BOTH an authentication AND a signing key.
+#    Both are required: the first lets you push/pull over SSH, the second is
+#    what gets you the green "Verified" badge on signed commits.
+gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type authentication --title "<title>"
+gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type signing       --title "<title>"
+
+# 3) chezmoi picks up the new key:
+#      ~/.ssh/config gets per-serial IdentityFile lines (via glob)
+#      ~/.config/git/config gets [gpg] format=ssh + user.signingkey
+#      ~/.config/git/allowed_signers gets every per-serial pubkey
+chezmoi apply
+
+# 4) Register your pubkey(s) as trusted signers + verify
+yk-git-sign-setup
+yk-git-sign-setup --check
+
+# 5) Smoke test
+git commit -S --allow-empty -m "test signing"
+git log --show-signature -1
+```
+
+> **Uploading a *signing* key isn't optional** — the whole point of signing is
+> the verified badge. `yk-enroll`'s "Done." block lists both `gh ssh-key add`
+> commands explicitly, and `work-checklist` includes them as separate
+> checklist items.
+
+### Multi-YubiKey signing
+
+`user.signingkey` is a single path, so chezmoi picks the first per-serial
+pubkey it finds (`id_ed25519_sk_*` first, then legacy un-suffixed). Whichever
+YubiKey is plugged in, OpenSSH walks every `IdentityFile` until one matches
+the SSH config — but git always asks the device that holds the **`user.signingkey`**
+private key. If you carry multiple YubiKeys, set `user.signingkey` to the
+specific pubkey you want to sign with (or override per-repo via
+`git config user.signingkey ~/.ssh/id_ed25519_sk_<other-serial>.pub`).
+
+`allowed_signers` lists **all** per-serial pubkeys so verification works
+regardless of which YubiKey signed the commit.
+
+### Add a coworker's key
+
+```bash
+yk-git-sign-setup --add /path/to/coworker.pub --principal coworker@example.com
+```
 
 ## Migrating off 1Password
 

@@ -143,6 +143,13 @@ Firmware version: 5.7.4"
 	[[ ! "$output" =~ "Next steps:" ]]
 	# But the wizard's own "Done. Next steps for serial" block must.
 	[[ "$output" =~ "Done. Next steps for serial" ]]
+	# Both gh ssh-key add invocations (auth + signing) must be present —
+	# uploading a *signing* key isn't optional, that's the whole point.
+	[[ "$output" =~ "--type authentication" ]]
+	[[ "$output" =~ "--type signing" ]]
+	# The wizard nudges users through the git-signing wiring.
+	[[ "$output" =~ "yk-git-sign-setup" ]]
+	[[ "$output" =~ "chezmoi apply" ]]
 }
 
 @test "yk-enroll: idempotent — skips key generation when file exists" {

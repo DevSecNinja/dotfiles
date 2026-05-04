@@ -29,9 +29,16 @@ or per-user MFA enrollment). Tick each one off after running install.sh.
         Run:  yk-enroll
         Then: yk-enroll --rotate-pin   # if FIPS, change the factory PIN
 
-  [ ] Add YubiKey SSH pubkey(s) to GitHub
-        Run:  gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub \
-                --title "$(hostname -s)-yk-<serial>"
+  [ ] Add YubiKey SSH pubkey(s) to GitHub — BOTH types per key
+        For each ~/.ssh/id_ed25519_sk_<serial>.pub:
+          gh ssh-key add <path> --type authentication --title "<title>"
+          gh ssh-key add <path> --type signing       --title "<title>"
+        Signing isn't useful without the second one (no Verified badge).
+
+  [ ] Wire git for SSH commit signing
+        chezmoi apply                  # writes ~/.config/git/config + allowed_signers
+        yk-git-sign-setup              # registers your pubkey(s) as trusted signers
+        yk-git-sign-setup --check
 
   [ ] Sign in to GitHub CLI:        gh auth login
   [ ] Sign in to Azure CLI:         az login
