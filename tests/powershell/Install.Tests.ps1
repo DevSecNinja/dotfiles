@@ -89,6 +89,10 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'twpayne\.chezmoi'
     }
 
+    It "Should pin winget installs to the community source" {
+        $script:Content | Should -Match '--source\s+winget'
+    }
+
     It "Should accept package and source agreements unattended" {
         $script:Content | Should -Match '--accept-source-agreements'
         $script:Content | Should -Match '--accept-package-agreements'
