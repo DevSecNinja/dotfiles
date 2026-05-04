@@ -11,9 +11,12 @@ setup() {
 	export HOME="$TEST_HOME"
 	export PATH="$TEST_BIN_DIR:$ORIGINAL_PATH"
 
-	# Mock ssh-keygen: write a fake pubkey at -f path + ".pub"
+	# Mock ssh-keygen: write a fake pubkey at -f path + ".pub", and
+	# record the full args under $TEST_BIN_DIR/ssh-keygen.args so tests
+	# can assert which flags were passed (e.g. -N for passphrase).
 	cat >"$TEST_BIN_DIR/ssh-keygen" <<'EOF'
 #!/bin/bash
+printf '%s\n' "$@" >"${TEST_BIN_DIR:?}/ssh-keygen.args"
 out=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -81,4 +84,25 @@ teardown() {
 	run yk-ssh-new --no-resident
 	[ "$status" -eq 0 ]
 	[[ ! "$output" =~ "ssh-add -K" ]]
+}
+
+@test "yk-ssh-new: defaults to no passphrase (-N \"\") for FIDO2 keys" {
+	run yk-ssh-new
+	[ "$status" -eq 0 ]
+	[ -f "$TEST_BIN_DIR/ssh-keygen.args" ]
+	# -N followed by an empty string must appear in the recorded args.
+	# Using grep -A1 to find the line after "-N" and assert it's empty.
+	run grep -A1 -x -- '-N' "$TEST_BIN_DIR/ssh-keygen.args"
+	[ "$status" -eq 0 ]
+	# Output is "-N\n" plus the next line (the empty passphrase).
+	[ "${lines[0]}" = "-N" ]
+	[ "${lines[1]}" = "" ]
+}
+
+@test "yk-ssh-new: --passphrase omits -N so ssh-keygen prompts" {
+	run yk-ssh-new --passphrase
+	[ "$status" -eq 0 ]
+	# -N must NOT be in the recorded args.
+	run grep -x -- '-N' "$TEST_BIN_DIR/ssh-keygen.args"
+	[ "$status" -ne 0 ]
 }

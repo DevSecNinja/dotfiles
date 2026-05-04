@@ -1,5 +1,5 @@
 function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiKey"
-    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required \
+    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required passphrase \
         'o/output=' 'application=' 'C/comment=' -- $argv
     or return 1
 
@@ -11,6 +11,8 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
         echo "  --type {ed25519-sk|ecdsa-sk}   Key type (default: ed25519-sk)"
         echo "  --no-resident                  Don't store credential on the key"
         echo "  --no-verify-required           Don't require PIN (touch only)"
+        echo "  --passphrase                   Prompt for SSH-key passphrase (default: none;"
+        echo "                                 the file is just a handle to the hardware key)"
         echo "  -o, --output PATH              Output path (default: ~/.ssh/id_<type>)"
         echo "  --application STR              FIDO application (default: ssh:<hostname>)"
         echo "  -C, --comment STR              SSH key comment (default: user@host)"
@@ -89,6 +91,13 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
     end
     if not set -q _flag_no_verify_required
         set args $args -O verify-required
+    end
+    # FIDO2 (*-sk) keys: the on-disk file is just a handle to a credential
+    # stored on the YubiKey. Encrypting it adds friction without crypto
+    # value (the handle is useless without the YubiKey + touch + PIN).
+    # Default to no passphrase; opt in with --passphrase.
+    if not set -q _flag_passphrase
+        set args $args -N ""
     end
 
     echo "Generating $type key (touch your YubiKey when it blinks)..."
