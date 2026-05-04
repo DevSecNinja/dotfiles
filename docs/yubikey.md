@@ -91,13 +91,59 @@ yk-ssh-new
 `yk-ssh-new` now detects this case and prints the same instructions before
 attempting key generation.
 
+## Enrolling YubiKeys (recommended workflow)
+
+`yk-enroll` is the one-stop wizard for taking a fresh (or partially
+configured) YubiKey to the point where you can `ssh` and sign Git commits
+with it. It is **idempotent** — re-run it any time to verify what's
+already in place.
+
+```bash
+yk-enroll              # interactive: walks through every step
+yk-enroll --check      # read-only audit; never prompts or writes
+```
+
+The wizard runs five steps:
+
+1. **Preflight** — confirms `ykman` and a FIDO2-capable `ssh-keygen` are
+   on your PATH (catches the macOS Apple-OpenSSH trap from the previous
+   section).
+2. **Detect** — refuses to proceed unless **exactly one** YubiKey is
+   plugged in, so it's never ambiguous which key is being enrolled.
+3. **Capability check** — fails fast if firmware is too old for the
+   requested key type (suggests `--type ecdsa-sk` for fw <5.2.3).
+4. **FIDO2 PIN** — sets one if missing; reports it as set otherwise.
+5. **SSH key** — generates a resident `ed25519-sk` key at
+   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present.
+
+It then prints the exact `gh ssh-key add` and `ssh-add` commands you
+should run.
+
+### Multiple YubiKeys
+
+A FIDO2 resident credential lives only on the YubiKey that minted it —
+there is no way to copy it to a second key. To use **all** your YubiKeys
+for SSH:
+
+1. Plug in **only the first** YubiKey, run `yk-enroll`.
+2. Repeat for each additional YubiKey. Each gets its own
+   `~/.ssh/id_ed25519_sk_<serial>` (private + public).
+3. Add **every resulting `.pub`** to GitHub (`gh ssh-key add` for each).
+4. From then on, any plugged-in YubiKey can authenticate / commit. SSH
+   picks whichever is touched.
+
+> **Don't try to "expand" an existing key onto a second YubiKey** — the
+> hardware doesn't allow it. Enrolling a second key is the supported
+> path, and `yk-enroll` makes it a one-command operation.
+
 ## Helpers (Bash/Zsh + Fish)
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
 | ----------------------- | ------------------- | ---------------------------------------------------------- |
+| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment, idempotent              |
 | `yk-status`             | `yk_status`         | Firmware / form-factor / FIPS info per device              |
 | `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
-| `yk-ssh-new`            | `yk_ssh_new`        | Generate `ed25519-sk` (or `ecdsa-sk`) on the YubiKey       |
+| `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
 | `yk-ssh-load`           | `yk_ssh_load`       | `ssh-add -K`: load resident keys from the YubiKey          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
