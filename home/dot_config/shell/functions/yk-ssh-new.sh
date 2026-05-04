@@ -30,6 +30,12 @@ yk-ssh-new() {
 	local application=""
 	local comment=""
 	local user_specified_output=false
+	# FIDO2 (*-sk) keys: the on-disk file is just a handle to a credential
+	# stored on the YubiKey. The actual private key never leaves the
+	# hardware, so encrypting the handle with a passphrase adds friction
+	# without cryptographic value. Default to no passphrase; opt in with
+	# --passphrase if you want one anyway.
+	local use_passphrase=false
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -49,6 +55,10 @@ yk-ssh-new() {
 			;;
 		--no-verify-required)
 			verify_required=false
+			shift
+			;;
+		--passphrase)
+			use_passphrase=true
 			shift
 			;;
 		--output | -o)
@@ -73,6 +83,9 @@ Options:
   --type {ed25519-sk|ecdsa-sk}   Key type (default: ed25519-sk)
   --no-resident                  Don't store credential on the key
   --no-verify-required           Don't require PIN (touch only)
+  --passphrase                   Prompt for an SSH-key passphrase (default: none;
+                                 the on-disk file is just a handle to the
+                                 hardware-backed credential)
   --output, -o PATH              Output path (default: ~/.ssh/id_<type>)
   --application STR              FIDO application (default: ssh:<hostname>)
   --comment, -C STR              SSH key comment (default: user@host)
@@ -159,6 +172,10 @@ EOF
 	fi
 	if [[ "$verify_required" == true ]]; then
 		args+=(-O verify-required)
+	fi
+	# No passphrase by default — see comment near top of function.
+	if [[ "$use_passphrase" == false ]]; then
+		args+=(-N "")
 	fi
 
 	echo "Generating $type key (touch your YubiKey when it blinks)..."

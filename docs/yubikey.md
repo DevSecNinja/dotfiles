@@ -139,6 +139,24 @@ key:
 yk-enroll --rotate-pin
 ```
 
+### No SSH-key passphrase by default
+
+For FIDO2 (`*-sk`) keys, the file at `~/.ssh/id_ed25519_sk_<serial>` is
+**just a handle** to the credential stored on the YubiKey. The actual
+private key never leaves the hardware and is gated by touch + your
+FIDO2 PIN. Encrypting the handle with a passphrase therefore adds
+friction on every `ssh` without any cryptographic benefit — someone
+with your handle file *and* your YubiKey *and* your PIN already has
+everything.
+
+`yk-ssh-new` (and by extension `yk-enroll`) passes `-N ""` to
+`ssh-keygen` so it doesn't prompt. If you really want a passphrase
+anyway, opt in:
+
+```bash
+yk-ssh-new --passphrase
+```
+
 ### Multiple YubiKeys
 
 A FIDO2 resident credential lives only on the YubiKey that minted it —
