@@ -187,11 +187,13 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
         echo "Not done: $out_path.pub does not exist. Re-run yk_enroll." >&2
         return 1
     end
-    set -l hostshort (hostname -s 2>/dev/null; or hostname)
-    set -l suggested_title "$device_type @ $hostshort"
-    if test -z "$device_type"
-        set suggested_title "YubiKey @ $hostshort"
-    end
+    # A YubiKey is portable across machines, so the suggested GitHub-key
+    # title intentionally omits the hostname. Last 4 digits of the serial
+    # disambiguate when you have multiple identical-looking devices.
+    set -l serial_short (string sub -s -4 -- $serial)
+    set -l device_label "$device_type"
+    test -z "$device_label"; and set device_label "YubiKey"
+    set -l suggested_title "$device_label (·$serial_short)"
     echo "" >&2
     echo "Done. Next steps for serial $serial:" >&2
     echo "  1. Add to GitHub:" >&2

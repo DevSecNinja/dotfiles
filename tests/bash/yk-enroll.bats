@@ -134,8 +134,10 @@ Firmware version: 5.7.4"
 	[ -f "$TEST_HOME/.ssh/id_ed25519_sk_12345.pub" ]
 	[[ "$output" =~ "gh ssh-key add" ]]
 	[[ "$output" =~ "id_ed25519_sk_12345.pub" ]]
-	# Suggested title uses the device type, not "<host>-yk-<serial>".
-	[[ "$output" =~ "YubiKey 5C NFC FIPS @ " ]]
+	# Suggested title uses device type + last 4 of serial; no hostname
+	# (a YubiKey is portable, so a host-prefixed title is misleading).
+	[[ "$output" =~ "YubiKey 5C NFC FIPS (·2345)" ]]
+	[[ ! "$output" =~ "@ " ]]
 	# yk-ssh-new's "Next steps" footer must NOT appear (yk-enroll prints
 	# its own Done block and passes --no-summary to yk-ssh-new).
 	[[ ! "$output" =~ "Next steps:" ]]
