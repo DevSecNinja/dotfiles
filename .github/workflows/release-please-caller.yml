@@ -1,0 +1,44 @@
+---
+name: Release Please
+
+# Drives semver bumping via the central reusable workflow. On every push
+# to main this opens (or updates) a `chore(main): release vX.Y.Z` PR
+# with the next version's CHANGELOG bump (computed from Conventional
+# Commits).
+#
+# Unlike consumer repos, `.github` itself does NOT have a tag-triggered
+# release publishing workflow — release-please creates the GitHub
+# Release directly (`skip-github-release: false`).
+#
+# Branch protection is fully respected: every release commit lands via
+# PR through normal CI. No bypass actor required.
+#
+# Onboarding guide:
+#   docs/release-please-onboarding.md
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    # Self-reference: same repo, pinned to the SHA that introduced the
+    # App-token wiring. Re-pin to the next vX.Y.Z tag once cut.
+    # renovate: datasource=github-tags depName=DevSecNinja/.github
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@fa92001d3877b58e3c8f8b0fa2f6f9230fbb0792 # main
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
