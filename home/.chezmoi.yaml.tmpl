@@ -53,6 +53,17 @@
 {{-   $privateDomain = promptString "private domain" $privateDomain -}}
 {{- end -}}
 
+{{- /* Whether to wire SSH/Git for a YubiKey instead of the 1Password agent. */ -}}
+{{- /* Default false keeps the existing 1Password-based flow during the    */ -}}
+{{- /* migration to Apple Passwords + Bitwarden. Flip to true once your    */ -}}
+{{- /* YubiKey is provisioned (see docs/yubikey.md).                       */ -}}
+{{- $useYubiKey := false -}}
+{{- if hasKey . "useYubiKey" -}}
+{{-   $useYubiKey = .useYubiKey -}}
+{{- else if $interactive -}}
+{{-   $useYubiKey = promptBool "use YubiKey for SSH" $useYubiKey -}}
+{{- end -}}
+
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
 {{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
@@ -207,5 +218,6 @@ data:
   lastname: {{ $lastname | quote }}
   name: {{ $name | quote }}
   privateDomain: {{ $privateDomain | quote }}
+  useYubiKey: {{ $useYubiKey }}
   username: {{ $username | quote }}
   wsl: {{ $wsl }}

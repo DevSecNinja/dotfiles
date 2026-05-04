@@ -67,3 +67,4 @@ nav:
       - Chezmoi Variables: chezmoi-variables.md
       - Development Tools: development-tools.md
       - Shell Logging: logging.md
+      - YubiKey: yubikey.md

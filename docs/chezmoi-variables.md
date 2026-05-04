@@ -19,6 +19,13 @@ templates and scripts.
 - `ci` — Running in CI environment (`true` / `false`).
 - `installType` — Installation mode (`light` or `full`).
 
+## Hardware tokens
+
+- `useYubiKey` — When `true`, the SSH config is wired for a hardware-backed
+  FIDO2 key (`~/.ssh/id_ed25519_sk`) and the 1Password SSH agent include is
+  skipped. Defaults to `false` to preserve the existing 1Password flow.
+  See [yubikey.md](yubikey.md) for the provisioning workflow.
+
 ## Windows Enterprise (Windows and WSL)
 
 - `isEntraIDJoined` — Device is Entra ID (Azure AD) joined.
