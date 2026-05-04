@@ -1,8 +1,13 @@
 #!/bin/bash
 # yk-status - One-glance health check for connected YubiKey(s)
 #
-# Lists every connected YubiKey (by serial) and prints firmware, form factor,
-# device type, and whether it is a FIPS device. Warns on firmware below 5.7.
+# For every connected YubiKey, shows the device type, serial, firmware,
+# form factor, FIPS status, and a small per-device checklist:
+#
+#   - FIDO2 PIN set?
+#   - Resident SSH key file present at ~/.ssh/id_*_sk_<serial>?
+#
+# Warns on firmware below 5.7.
 #
 # Usage: yk-status [--json] [--serial <SN>]
 #
@@ -27,6 +32,10 @@ yk-status() {
 	local fips="false"
 	local major=""
 	local minor=""
+	local fido_info=""
+	local pin_set="unknown"
+	local ssh_key=""
+	local ssh_pub=""
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -86,24 +95,64 @@ yk-status() {
 			fips="true"
 		fi
 
+		# Health: FIDO2 PIN. Same regex logic as yk-enroll: positive
+		# signals 'PIN is set' (legacy) or 'PIN: N attempt(s) remaining'
+		# / 'PIN: Configured' (modern); negative signals 'PIN is not
+		# set' / 'PIN: Not set' / 'PIN: not configured'.
+		fido_info="$(ykman --device "$serial" fido info 2>/dev/null || true)"
+		pin_set="unknown"
+		if [[ -n "$fido_info" ]]; then
+			if grep -qiE 'PIN is set|PIN:[[:space:]]*[0-9]+[[:space:]]+attempt|PIN:[[:space:]]*configured' <<<"$fido_info" &&
+				! grep -qiE 'PIN is not set|PIN:[[:space:]]*not[[:space:]]+(set|configured)' <<<"$fido_info"; then
+				pin_set="true"
+			else
+				pin_set="false"
+			fi
+		fi
+
+		# Health: SSH key file. yk-enroll writes per-serial files.
+		ssh_key=""
+		ssh_pub=""
+		for _yk_pat in \
+			"$HOME/.ssh/id_ed25519_sk_${serial}" \
+			"$HOME/.ssh/id_ecdsa_sk_${serial}"; do
+			if [[ -f "$_yk_pat" && -f "${_yk_pat}.pub" ]]; then
+				ssh_key="$_yk_pat"
+				ssh_pub="${_yk_pat}.pub"
+				break
+			fi
+		done
+		unset _yk_pat
+
 		if [[ "$json" == true ]]; then
 			[[ "$first" == false ]] && printf ','
 			first=false
-			printf '{"serial":"%s","device_type":"%s","firmware":"%s","form_factor":"%s","fips":%s}' \
-				"$serial" "${device_type:-unknown}" "${fw:-unknown}" "${form_factor:-unknown}" "$fips"
+			printf '{"serial":"%s","device_type":"%s","firmware":"%s","form_factor":"%s","fips":%s,"pin_set":"%s","ssh_key":"%s"}' \
+				"$serial" "${device_type:-unknown}" "${fw:-unknown}" "${form_factor:-unknown}" "$fips" "$pin_set" "$ssh_key"
 		else
-			echo "YubiKey #$serial"
-			echo "  Device type: ${device_type:-unknown}"
-			echo "  Firmware:    ${fw:-unknown}"
-			echo "  Form factor: ${form_factor:-unknown}"
-			echo "  FIPS:        $fips"
+			# Heading line: device type is the most recognisable thing.
+			local heading="${device_type:-YubiKey}"
+			heading="$heading  ·  serial $serial  ·  fw ${fw:-?}"
+			[[ "$fips" == "true" ]] && heading="$heading  ·  FIPS"
+			echo "$heading"
+			echo "  Form factor:   ${form_factor:-unknown}"
+			case "$pin_set" in
+			true) echo "  FIDO2 PIN:     [OK] set" ;;
+			false) echo "  FIDO2 PIN:     [WARN] not set    (run \`yk-enroll\`)" ;;
+			*) echo "  FIDO2 PIN:     [?]  could not query (ykman fido info failed)" ;;
+			esac
+			if [[ -n "$ssh_key" ]]; then
+				echo "  SSH key:       [OK] $ssh_pub"
+			else
+				echo "  SSH key:       [WARN] not enrolled  (run \`yk-enroll\`)"
+			fi
 			if [[ -n "$fw" ]]; then
 				major="${fw%%.*}"
 				minor="${fw#*.}"
 				minor="${minor%%.*}"
 				if [[ "$major" =~ ^[0-9]+$ ]] && [[ "$minor" =~ ^[0-9]+$ ]]; then
 					if ((major < 5)) || { ((major == 5)) && ((minor < 7)); }; then
-						echo "  Note:        firmware <5.7 — some features (e.g. PIV ed25519) unavailable"
+						echo "  Note:          firmware <5.7 — some features (e.g. PIV ed25519) unavailable"
 					fi
 				fi
 			fi
