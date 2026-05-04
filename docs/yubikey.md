@@ -101,6 +101,7 @@ already in place.
 ```bash
 yk-enroll              # interactive: walks through every step
 yk-enroll --check      # read-only audit; never prompts or writes
+yk-enroll --rotate-pin # change FIDO2 PIN even if one is already set
 ```
 
 The wizard runs five steps:
@@ -113,11 +114,30 @@ The wizard runs five steps:
 3. **Capability check** — fails fast if firmware is too old for the
    requested key type (suggests `--type ecdsa-sk` for fw <5.2.3).
 4. **FIDO2 PIN** — sets one if missing; reports it as set otherwise.
+   On **FIPS** YubiKeys it explicitly warns about the factory default
+   (see below) and tells you to use `--rotate-pin`.
 5. **SSH key** — generates a resident `ed25519-sk` key at
-   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present.
+   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present. After
+   `ssh-keygen` returns the wizard verifies the key file actually exists
+   on disk before declaring success — so cancelling the FIDO2 PIN prompt
+   (Ctrl+C) is reported as an abort, never as a successful enrollment.
 
 It then prints the exact `gh ssh-key add` and `ssh-add` commands you
 should run.
+
+### FIPS YubiKeys ship with a factory PIN
+
+The **YubiKey 5 FIPS** series ships with a publicly known factory FIDO2
+PIN of `123456` — `ykman fido info` will report "PIN is set" on a
+brand-new device. The non-FIPS YubiKey 5 ships with no PIN at all.
+
+`yk-enroll` detects FIPS devices via the device-type string and warns
+you when this is likely the case. Rotate the PIN before relying on the
+key:
+
+```bash
+yk-enroll --rotate-pin
+```
 
 ### Multiple YubiKeys
 
