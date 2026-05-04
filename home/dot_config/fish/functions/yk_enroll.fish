@@ -194,4 +194,6 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     echo "  Multi-key tip: re-run yk_enroll with each YubiKey plugged in (one" >&2
     echo "  at a time), add every resulting .pub to GitHub, and any of them" >&2
     echo "  can then sign / SSH." >&2
+    echo "" >&2
+    echo "  On a work machine? Also run:  work_checklist" >&2
 end

@@ -252,6 +252,8 @@ EOF
 	echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
 	echo "  at a time), add every resulting .pub to GitHub, and any of them"
 	echo "  can then sign / SSH."
+	echo
+	echo "  On a work machine? Also run:  work-checklist"
 }
 
 # --- internal pretty-printers ------------------------------------------------

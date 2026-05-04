@@ -156,6 +156,22 @@ for SSH:
 > hardware doesn't allow it. Enrolling a second key is the supported
 > path, and `yk-enroll` makes it a one-command operation.
 
+### On work machines
+
+Some setup steps can't be automated by chezmoi (network-gated URLs,
+browser-based MFA enrollment, per-user sign-ins). They live in a
+separate helper, `work-checklist`, so you don't have to remember them
+on a fresh machine:
+
+```bash
+work-checklist        # prints the manual post-install checklist
+```
+
+Currently includes (among others) **`https://aka.ms/CloudMFA`** for
+corporate SSO MFA enrollment, plus the `gh ssh-key add` / `gh auth
+login` / `az login` reminders. The wizard mentions `work-checklist` in
+its own "Done." footer so you don't miss it.
+
 ## Helpers (Bash/Zsh + Fish)
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
@@ -165,6 +181,7 @@ for SSH:
 | `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
 | `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
 | `yk-ssh-load`           | `yk_ssh_load`       | `ssh-add -K`: load resident keys from the YubiKey          |
+| `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
 
