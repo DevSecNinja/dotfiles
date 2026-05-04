@@ -196,24 +196,25 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     set -l suggested_title "$device_label (·$serial_short)"
     echo "" >&2
     echo "Done. Next steps for serial $serial:" >&2
-    echo "  1. Add to GitHub:" >&2
-    echo "       gh ssh-key add $out_path.pub --title \"$suggested_title\"" >&2
-    echo "     (or use the GitHub UI — pick any title that helps you recognise the key)" >&2
+    echo "  1. Add to GitHub (BOTH types — needed for SSH and the Verified badge):" >&2
+    echo "       gh ssh-key add $out_path.pub --type authentication --title \"$suggested_title\"" >&2
+    echo "       gh ssh-key add $out_path.pub --type signing       --title \"$suggested_title\"" >&2
+    echo "     (or use the GitHub UI — each YubiKey needs to be added under SSH and" >&2
+    echo "      Signing keys; same pubkey, different list.)" >&2
     echo "" >&2
-    echo "  2. Test it:           ssh -T git@github.com" >&2
-    echo "     (your SSH config has 'IdentitiesOnly yes' + IdentityFile, so OpenSSH" >&2
-    echo "      talks to the YubiKey directly each time — no manual ssh-add needed," >&2
-    echo "      and no agent caching that would block the FIDO2 PIN re-prompt. Run" >&2
-    echo "      'chezmoi apply' once after enrolling so ~/.ssh/config picks up the" >&2
-    echo "      new per-serial key file.)" >&2
-    if test "$resident" = true
-        echo "" >&2
-        echo "  3. On new machines:   ssh-add -K   # reload all resident keys from this YubiKey" >&2
-    end
+    echo "  2. Wire git for SSH commit signing (writes ~/.config/git/allowed_signers):" >&2
+    echo "       chezmoi apply       # picks up the new key in ~/.ssh/config + git config" >&2
+    echo "       yk_git_sign_setup   # registers the pubkey as a trusted signer" >&2
+    echo "       yk_git_sign_setup --check" >&2
+    echo "" >&2
+    echo "  3. Test it:" >&2
+    echo "       ssh -T git@github.com                                # touch + PIN" >&2
+    echo "       git commit -S --allow-empty -m 'test signing'        # touch + PIN" >&2
+    echo "       git log --show-signature -1" >&2
     echo "" >&2
     echo "  Multi-key tip: re-run yk_enroll with each YubiKey plugged in (one" >&2
-    echo "  at a time), add every resulting .pub to GitHub, and any of them" >&2
-    echo "  can then sign / SSH." >&2
+    echo "  at a time), add every resulting .pub to GitHub under BOTH SSH key" >&2
+    echo "  lists, and any of them can then sign / SSH." >&2
     echo "" >&2
     echo "  On a work machine? Also run:  work_checklist" >&2
 end

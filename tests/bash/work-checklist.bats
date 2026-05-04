@@ -23,3 +23,17 @@ setup() {
 	run work-checklist
 	[ "$first" = "$output" ]
 }
+
+@test "work-checklist: includes BOTH gh ssh-key add types" {
+	run work-checklist
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "--type authentication" ]]
+	[[ "$output" =~ "--type signing" ]]
+}
+
+@test "work-checklist: includes git signing wiring step" {
+	run work-checklist
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "yk-git-sign-setup" ]]
+	[[ "$output" =~ "Wire git for SSH commit signing" ]]
+}

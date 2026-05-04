@@ -262,24 +262,25 @@ EOF
 	# disambiguate when you have multiple identical-looking devices.
 	local serial_short="${serial: -4}"
 	local suggested_title="${device_type:-YubiKey} (·${serial_short})"
-	echo "  1. Add to GitHub:"
-	echo "       gh ssh-key add ${out_path}.pub --title \"${suggested_title}\""
-	echo "     (or use the GitHub UI — pick any title that helps you recognise the key)"
+	echo "  1. Add to GitHub (BOTH types — needed for SSH and the Verified badge):"
+	echo "       gh ssh-key add ${out_path}.pub --type authentication --title \"${suggested_title}\""
+	echo "       gh ssh-key add ${out_path}.pub --type signing       --title \"${suggested_title}\""
+	echo "     (or use the GitHub UI — each YubiKey needs to be added under SSH and"
+	echo "      Signing keys; same pubkey, different list.)"
 	echo
-	echo "  2. Test it:           ssh -T git@github.com"
-	echo "     (your SSH config has 'IdentitiesOnly yes' + IdentityFile, so OpenSSH"
-	echo "      talks to the YubiKey directly each time — no manual ssh-add needed,"
-	echo "      and no agent caching that would block the FIDO2 PIN re-prompt. Run"
-	echo "      \`chezmoi apply\` once after enrolling so ~/.ssh/config picks up the"
-	echo "      new per-serial key file.)"
-	if [[ "$resident" == true ]]; then
-		echo
-		echo "  3. On new machines:   ssh-add -K   # reload all resident keys from this YubiKey"
-	fi
+	echo "  2. Wire git for SSH commit signing (writes ~/.config/git/allowed_signers):"
+	echo "       chezmoi apply       # picks up the new key in ~/.ssh/config + git config"
+	echo "       yk-git-sign-setup   # registers the pubkey as a trusted signer"
+	echo "       yk-git-sign-setup --check"
+	echo
+	echo "  3. Test it:"
+	echo "       ssh -T git@github.com                                # touch + PIN"
+	echo "       git commit -S --allow-empty -m 'test signing'        # touch + PIN"
+	echo "       git log --show-signature -1"
 	echo
 	echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
-	echo "  at a time), add every resulting .pub to GitHub, and any of them"
-	echo "  can then sign / SSH."
+	echo "  at a time), add every resulting .pub to GitHub under BOTH SSH key"
+	echo "  lists, and any of them can then sign / SSH."
 	echo
 	echo "  On a work machine? Also run:  work-checklist"
 }
