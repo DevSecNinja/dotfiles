@@ -62,22 +62,24 @@ alias motd='fastfetch'
 # Discovers both the legacy un-suffixed `id_<type>_sk.pub` and per-serial
 # `id_<type>_sk_<serial>.pub` files written by `yk-enroll`.
 pubkey() {
+	# Use find for glob expansion so unmatched patterns don't error out
+	# under zsh (which has NOMATCH on by default and aborts the function
+	# on `for x in $unmatched_glob`).
 	_pubkey_key=""
-	# Prefer hardware-backed FIDO2 keys: per-serial files first (newest
-	# wins via natural sort), then legacy un-suffixed, then non-FIDO2 keys.
+	# Prefer hardware-backed FIDO2 keys: per-serial files first, then
+	# legacy un-suffixed, then non-FIDO2.
 	for _pubkey_pattern in \
-		"$HOME/.ssh/id_ed25519_sk_"*.pub \
-		"$HOME/.ssh/id_ed25519_sk.pub" \
-		"$HOME/.ssh/id_ecdsa_sk_"*.pub \
-		"$HOME/.ssh/id_ecdsa_sk.pub" \
-		"$HOME/.ssh/id_ed25519.pub" \
-		"$HOME/.ssh/id_rsa.pub"; do
-		for _pubkey_candidate in $_pubkey_pattern; do
-			if [ -f "$_pubkey_candidate" ]; then
-				_pubkey_key="$_pubkey_candidate"
-				break 2
-			fi
-		done
+		"id_ed25519_sk_*" \
+		"id_ed25519_sk" \
+		"id_ecdsa_sk_*" \
+		"id_ecdsa_sk" \
+		"id_ed25519" \
+		"id_rsa"; do
+		_pubkey_candidate="$(find "$HOME/.ssh" -maxdepth 1 -name "${_pubkey_pattern}.pub" -type f 2>/dev/null | sort | head -n1)"
+		if [ -n "$_pubkey_candidate" ] && [ -f "$_pubkey_candidate" ]; then
+			_pubkey_key="$_pubkey_candidate"
+			break
+		fi
 	done
 	unset _pubkey_pattern _pubkey_candidate
 	if [ -z "$_pubkey_key" ]; then

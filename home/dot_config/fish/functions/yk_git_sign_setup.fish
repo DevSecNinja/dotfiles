@@ -122,6 +122,8 @@ function yk_git_sign_setup --description "Configure git to sign commits with you
     echo "Required next step: upload each pubkey to GitHub as both an"
     echo "  authentication AND signing key (signing isn't useful otherwise):"
     for key in $keys
-        echo "    gh ssh-key add $key --type signing --title \"<descriptive title>\""
+        echo "    gh ssh-key add $key --type authentication --title \"<descriptive title>\""
+        echo "    gh ssh-key add $key --type signing       --title \"<descriptive title>\""
     end
+    echo "  Or via the GitHub UI:  https://github.com/settings/keys"
 end

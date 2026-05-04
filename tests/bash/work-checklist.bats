@@ -29,6 +29,7 @@ setup() {
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "--type authentication" ]]
 	[[ "$output" =~ "--type signing" ]]
+	[[ "$output" =~ "https://github.com/settings/keys" ]]
 }
 
 @test "work-checklist: includes git signing wiring step" {

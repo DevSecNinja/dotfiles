@@ -247,6 +247,8 @@ yk-enroll
 #    what gets you the green "Verified" badge on signed commits.
 gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type authentication --title "<title>"
 gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type signing       --title "<title>"
+# Or via the GitHub UI:
+#   https://github.com/settings/keys
 
 # 3) chezmoi picks up the new key:
 #      ~/.ssh/config gets per-serial IdentityFile lines (via glob)

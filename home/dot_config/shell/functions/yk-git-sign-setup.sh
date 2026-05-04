@@ -182,8 +182,10 @@ EOF
 	echo "Required next step: upload each pubkey to GitHub as both an"
 	echo "  authentication AND signing key (signing isn't useful otherwise):"
 	for key in "${keys[@]}"; do
-		echo "    gh ssh-key add $key --type signing --title \"<descriptive title>\""
+		echo "    gh ssh-key add $key --type authentication --title \"<descriptive title>\""
+		echo "    gh ssh-key add $key --type signing       --title \"<descriptive title>\""
 	done
+	echo "  Or via the GitHub UI:  https://github.com/settings/keys"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
