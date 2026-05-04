@@ -265,8 +265,9 @@ EOF
 	echo "     (or use the GitHub UI — pick any title that helps you recognise the key)"
 	echo
 	echo "  2. Test it:           ssh -T git@github.com"
-	echo "     (your SSH config already has 'AddKeysToAgent yes' + IdentityFile, so the"
-	echo "      key auto-loads on first use — no manual ssh-add needed. Run"
+	echo "     (your SSH config has 'IdentitiesOnly yes' + IdentityFile, so OpenSSH"
+	echo "      talks to the YubiKey directly each time — no manual ssh-add needed,"
+	echo "      and no agent caching that would block the FIDO2 PIN re-prompt. Run"
 	echo "      \`chezmoi apply\` once after enrolling so ~/.ssh/config picks up the"
 	echo "      new per-serial key file.)"
 	if [[ "$resident" == true ]]; then
