@@ -16,6 +16,7 @@ function work_checklist --description "Print manual post-install checklist for w
     echo "        For each ~/.ssh/id_ed25519_sk_<serial>.pub:"
     echo "          gh ssh-key add <path> --type authentication --title \"<title>\""
     echo "          gh ssh-key add <path> --type signing       --title \"<title>\""
+    echo "        Or via the GitHub UI:  https://github.com/settings/keys"
     echo "        Signing isn't useful without the second one (no Verified badge)."
     echo ""
     echo "  [ ] Wire git for SSH commit signing"

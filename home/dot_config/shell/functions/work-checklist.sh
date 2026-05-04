@@ -33,6 +33,7 @@ or per-user MFA enrollment). Tick each one off after running install.sh.
         For each ~/.ssh/id_ed25519_sk_<serial>.pub:
           gh ssh-key add <path> --type authentication --title "<title>"
           gh ssh-key add <path> --type signing       --title "<title>"
+        Or via the GitHub UI:  https://github.com/settings/keys
         Signing isn't useful without the second one (no Verified badge).
 
   [ ] Wire git for SSH commit signing

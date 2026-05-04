@@ -147,6 +147,8 @@ Firmware version: 5.7.4"
 	# uploading a *signing* key isn't optional, that's the whole point.
 	[[ "$output" =~ "--type authentication" ]]
 	[[ "$output" =~ "--type signing" ]]
+	# GitHub UI fallback link should also be shown.
+	[[ "$output" =~ "https://github.com/settings/keys" ]]
 	# The wizard nudges users through the git-signing wiring.
 	[[ "$output" =~ "yk-git-sign-setup" ]]
 	[[ "$output" =~ "chezmoi apply" ]]

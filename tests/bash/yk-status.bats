@@ -60,7 +60,7 @@ EOF
 	[[ "$output" =~ "No YubiKey detected" ]]
 }
 
-@test "yk-status: heading uses device type, serial, fw, FIPS marker" {
+@test "yk-status: heading uses device type, vertical Serial/Firmware/FIPS lines" {
 	mock_ykman
 	export YKMAN_SERIALS="12345"
 	export YKMAN_INFO_12345="Device type: YubiKey 5C NFC FIPS
@@ -70,13 +70,18 @@ Form factor: Keychain (USB-C), NFC"
 	export YKMAN_FIDO_12345="PIN:                          8 attempt(s) remaining"
 	run yk-status
 	[ "$status" -eq 0 ]
+	# Heading is just the device type.
 	[[ "$output" =~ "YubiKey 5C NFC FIPS" ]]
-	[[ "$output" =~ "serial 12345" ]]
-	[[ "$output" =~ "fw 5.7.4" ]]
-	[[ "$output" =~ "·  FIPS" ]]
+	# Detail rows are vertical, one fact per line.
+	[[ "$output" =~ "Serial:        12345" ]]
+	[[ "$output" =~ "Firmware:      5.7.4" ]]
+	[[ "$output" =~ "FIPS:          yes" ]]
 	[[ "$output" =~ "Form factor:" ]]
-	# No more legacy "YubiKey #<serial>" header.
+	# No more legacy horizontal heading or "#serial".
 	[[ ! "$output" =~ "YubiKey #" ]]
+	[[ ! "$output" =~ "·  serial" ]]
+	[[ ! "$output" =~ "·  fw" ]]
+	[[ ! "$output" =~ "·  FIPS" ]]
 }
 
 @test "yk-status: PIN check shows [OK] when PIN is set (modern ykman)" {
@@ -137,8 +142,9 @@ Form factor: Keychain (USB-C)"
 	run yk-status
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "firmware <5.7" ]]
-	# Non-FIPS heading must NOT have the FIPS marker.
-	[[ ! "$output" =~ "·  FIPS" ]]
+	# Non-FIPS heading: FIPS row says no.
+	[[ "$output" =~ "FIPS:          no" ]]
+	[[ ! "$output" =~ "FIPS:          yes" ]]
 }
 
 @test "yk-status: handles multiple keys" {
@@ -153,8 +159,8 @@ Firmware version: 5.4.3"
 	export YKMAN_FIDO_22="PIN:                          Not set"
 	run yk-status
 	[ "$status" -eq 0 ]
-	[[ "$output" =~ "serial 11" ]]
-	[[ "$output" =~ "serial 22" ]]
+	[[ "$output" =~ "Serial:        11" ]]
+	[[ "$output" =~ "Serial:        22" ]]
 }
 
 @test "yk-status: --json includes device_type, pin_set, ssh_key" {
@@ -185,8 +191,8 @@ Firmware version: 5.7.4"
 	export YKMAN_FIDO_22="PIN:                          8 attempt(s) remaining"
 	run yk-status --serial 22
 	[ "$status" -eq 0 ]
-	[[ "$output" =~ "serial 22" ]]
-	[[ ! "$output" =~ "serial 11" ]]
+	[[ "$output" =~ "Serial:        22" ]]
+	[[ ! "$output" =~ "Serial:        11" ]]
 }
 
 @test "yk-status: zsh does not leak local declarations across iterations" {
@@ -221,7 +227,7 @@ Firmware version: 5.2.4"
 	[[ ! "$output" =~ fw=5\.7\.4$ ]]
 	[[ ! "$output" =~ ^major=5$ ]]
 	[[ ! "$output" =~ ^minor=[0-9]+$ ]]
-	[[ "$output" =~ "serial 11" ]]
-	[[ "$output" =~ "serial 22" ]]
-	[[ "$output" =~ "serial 33" ]]
+	[[ "$output" =~ "Serial:        11" ]]
+	[[ "$output" =~ "Serial:        22" ]]
+	[[ "$output" =~ "Serial:        33" ]]
 }

@@ -189,6 +189,7 @@ EOF
 	echo
 	echo "Next steps:"
 	echo "  1. Add to GitHub:    gh ssh-key add ${output}.pub --title \"<descriptive title>\""
+	echo "     Or via the GitHub UI:  https://github.com/settings/keys"
 	echo "  2. Test it:          ssh -T git@github.com  # AddKeysToAgent in ~/.ssh/config handles ssh-add automatically"
 	if [[ "$resident" == true ]]; then
 		echo "  3. On new machines:  ssh-add -K   # reload from YubiKey"

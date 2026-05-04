@@ -112,6 +112,7 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
     echo
     echo "Next steps:"
     echo "  1. Add to GitHub:    gh ssh-key add $output.pub --title \"<descriptive title>\""
+    echo "     Or via the GitHub UI:  https://github.com/settings/keys"
     echo "  2. Test it:          ssh -T git@github.com  # AddKeysToAgent in ~/.ssh/config handles ssh-add automatically"
     if not set -q _flag_no_resident
         echo "  3. On new machines:  ssh-add -K   # reload from YubiKey"

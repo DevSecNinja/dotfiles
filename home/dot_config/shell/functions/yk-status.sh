@@ -130,21 +130,22 @@ yk-status() {
 			printf '{"serial":"%s","device_type":"%s","firmware":"%s","form_factor":"%s","fips":%s,"pin_set":"%s","ssh_key":"%s"}' \
 				"$serial" "${device_type:-unknown}" "${fw:-unknown}" "${form_factor:-unknown}" "$fips" "$pin_set" "$ssh_key"
 		else
-			# Heading line: device type is the most recognisable thing.
-			local heading="${device_type:-YubiKey}"
-			heading="$heading  ·  serial $serial  ·  fw ${fw:-?}"
-			[[ "$fips" == "true" ]] && heading="$heading  ·  FIPS"
-			echo "$heading"
+			# Heading: device type only (most recognisable). Detail lines
+			# are vertical so a glance at the column gives every fact.
+			echo "${device_type:-YubiKey}"
+			echo "  Serial:        $serial"
+			echo "  Firmware:      ${fw:-unknown}"
+			echo "  FIPS:          $([[ $fips == true ]] && echo yes || echo no)"
 			echo "  Form factor:   ${form_factor:-unknown}"
 			case "$pin_set" in
 			true) echo "  FIDO2 PIN:     [OK] set" ;;
-			false) echo "  FIDO2 PIN:     [WARN] not set    (run \`yk-enroll\`)" ;;
+			false) echo "  FIDO2 PIN:     [WARN] not set    (run yk-enroll)" ;;
 			*) echo "  FIDO2 PIN:     [?]  could not query (ykman fido info failed)" ;;
 			esac
 			if [[ -n "$ssh_key" ]]; then
 				echo "  SSH key:       [OK] $ssh_pub"
 			else
-				echo "  SSH key:       [WARN] not enrolled  (run \`yk-enroll\`)"
+				echo "  SSH key:       [WARN] not enrolled  (run yk-enroll)"
 			fi
 			if [[ -n "$fw" ]]; then
 				major="${fw%%.*}"

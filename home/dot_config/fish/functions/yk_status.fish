@@ -80,22 +80,29 @@ function yk_status --description "One-glance health check for connected YubiKey(
         else
             set -l label "$device_type"
             test -z "$label"; and set label "YubiKey"
-            set -l heading "$label  ·  serial $serial  ·  fw $fw"
-            test "$fips" = true; and set heading "$heading  ·  FIPS"
-            echo "$heading"
+            # Heading: device type only. Detail lines are vertical so a
+            # glance at the column gives every fact.
+            echo "$label"
+            echo "  Serial:        $serial"
+            echo "  Firmware:      $fw"
+            if test "$fips" = true
+                echo "  FIPS:          yes"
+            else
+                echo "  FIPS:          no"
+            end
             echo "  Form factor:   $form_factor"
             switch $pin_set
                 case true
                     echo "  FIDO2 PIN:     [OK] set"
                 case false
-                    echo "  FIDO2 PIN:     [WARN] not set    (run \`yk_enroll\`)"
+                    echo "  FIDO2 PIN:     [WARN] not set    (run yk_enroll)"
                 case '*'
                     echo "  FIDO2 PIN:     [?]  could not query (ykman fido info failed)"
             end
             if test -n "$ssh_key"
                 echo "  SSH key:       [OK] $ssh_pub"
             else
-                echo "  SSH key:       [WARN] not enrolled  (run \`yk_enroll\`)"
+                echo "  SSH key:       [WARN] not enrolled  (run yk_enroll)"
             end
             if test -n "$fw"
                 set -l major (string split . -- $fw)[1]

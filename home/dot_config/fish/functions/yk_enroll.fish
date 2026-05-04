@@ -199,8 +199,10 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     echo "  1. Add to GitHub (BOTH types — needed for SSH and the Verified badge):" >&2
     echo "       gh ssh-key add $out_path.pub --type authentication --title \"$suggested_title\"" >&2
     echo "       gh ssh-key add $out_path.pub --type signing       --title \"$suggested_title\"" >&2
-    echo "     (or use the GitHub UI — each YubiKey needs to be added under SSH and" >&2
-    echo "      Signing keys; same pubkey, different list.)" >&2
+    echo "     Or via the GitHub UI:" >&2
+    echo "       https://github.com/settings/keys" >&2
+    echo "     (each YubiKey needs to be added under both SSH and Signing keys;" >&2
+    echo "      same pubkey content, two list entries.)" >&2
     echo "" >&2
     echo "  2. Wire git for SSH commit signing (writes ~/.config/git/allowed_signers):" >&2
     echo "       chezmoi apply       # picks up the new key in ~/.ssh/config + git config" >&2

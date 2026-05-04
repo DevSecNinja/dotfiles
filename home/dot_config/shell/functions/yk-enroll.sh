@@ -265,8 +265,10 @@ EOF
 	echo "  1. Add to GitHub (BOTH types — needed for SSH and the Verified badge):"
 	echo "       gh ssh-key add ${out_path}.pub --type authentication --title \"${suggested_title}\""
 	echo "       gh ssh-key add ${out_path}.pub --type signing       --title \"${suggested_title}\""
-	echo "     (or use the GitHub UI — each YubiKey needs to be added under SSH and"
-	echo "      Signing keys; same pubkey, different list.)"
+	echo "     Or via the GitHub UI:"
+	echo "       https://github.com/settings/keys"
+	echo "     (each YubiKey needs to be added under both SSH and Signing keys;"
+	echo "      same pubkey content, two list entries.)"
 	echo
 	echo "  2. Wire git for SSH commit signing (writes ~/.config/git/allowed_signers):"
 	echo "       chezmoi apply       # picks up the new key in ~/.ssh/config + git config"
