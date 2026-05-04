@@ -66,6 +66,7 @@ packages:
       # Installed only when useYubiKey is true.
       yubikey:
         - ykman
+        - openssh # macOS bundled OpenSSH lacks FIDO2 / SecurityKeyProvider
       # TODO: Homebrew: add support for casks * app store apps
       # Move them under brew (brew.brew and brew.cask and brew.app-store)
       # casks:
