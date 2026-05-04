@@ -57,4 +57,28 @@ alias sysinfo='fastfetch'
 alias motd='fastfetch'
 
 # SSH
-alias pubkey="more ~/.ssh/id_rsa.pub | pbcopy | echo '=> Public key copied to pasteboard.'"
+# Print the first available public key (preferring hardware-backed) and copy
+# it to the system clipboard via clipboard-copy (auto-detects backend).
+pubkey() {
+	_pubkey_key=""
+	for _pubkey_candidate in id_ed25519_sk id_ecdsa_sk id_ed25519 id_rsa; do
+		if [ -f "$HOME/.ssh/${_pubkey_candidate}.pub" ]; then
+			_pubkey_key="$HOME/.ssh/${_pubkey_candidate}.pub"
+			break
+		fi
+	done
+	unset _pubkey_candidate
+	if [ -z "$_pubkey_key" ]; then
+		echo "No SSH public key found in ~/.ssh" >&2
+		unset _pubkey_key
+		return 1
+	fi
+	cat "$_pubkey_key"
+	if command -v clipboard-copy >/dev/null 2>&1 && clipboard-copy --check >/dev/null 2>&1; then
+		clipboard-copy <"$_pubkey_key"
+		echo "=> Public key ($(basename "$_pubkey_key")) copied to clipboard."
+	else
+		echo "=> $(basename "$_pubkey_key") (no clipboard backend; not copied)."
+	fi
+	unset _pubkey_key
+}
