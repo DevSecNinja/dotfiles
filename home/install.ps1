@@ -43,9 +43,9 @@ if (-not $chezmoiExists) {
 
     try {
         if ($ChezmoiVersion -eq "latest") {
-            winget install --id twpayne.chezmoi --silent --accept-source-agreements --accept-package-agreements
+            winget install --id twpayne.chezmoi --source winget --silent --accept-source-agreements --accept-package-agreements
         } else {
-            winget install --id twpayne.chezmoi --version $ChezmoiVersion --silent --accept-source-agreements --accept-package-agreements
+            winget install --id twpayne.chezmoi --source winget --version $ChezmoiVersion --silent --accept-source-agreements --accept-package-agreements
         }
 
         if ($LASTEXITCODE -ne 0) {
