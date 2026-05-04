@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0](https://github.com/DevSecNinja/dotfiles/compare/v0.2.2...v0.3.0) (2026-05-04)
+
+
+### Features
+
+* **yubikey:** add SSH helpers, clipboard-copy and useYubiKey toggle ([#280](https://github.com/DevSecNinja/dotfiles/issues/280)) ([e26cf66](https://github.com/DevSecNinja/dotfiles/commit/e26cf6640900bbacf743b93a1079cb0725f1844d))
+* **yubikey:** add yk-ssh-copy-id helper ([#305](https://github.com/DevSecNinja/dotfiles/issues/305)) ([dedaa2a](https://github.com/DevSecNinja/dotfiles/commit/dedaa2a9e08faaadd2a38ac42ef76aefef9c2f9a))
+* **yubikey:** auto-install ykman via packages.yaml when useYubiKey is true ([#286](https://github.com/DevSecNinja/dotfiles/issues/286)) ([222e450](https://github.com/DevSecNinja/dotfiles/commit/222e450a04ed2662a24bef472b28a7245e715ad9))
+* **yubikey:** idempotent enrollment wizard (`yk-enroll`) ([#293](https://github.com/DevSecNinja/dotfiles/issues/293)) ([8966c94](https://github.com/DevSecNinja/dotfiles/commit/8966c9468cd1fdb5bfedf6fb5f3ea10c64b1667e))
+* **yubikey:** SSH-based git commit signing (per-serial + signing-key upload mandatory) ([#282](https://github.com/DevSecNinja/dotfiles/issues/282)) ([b3e7fee](https://github.com/DevSecNinja/dotfiles/commit/b3e7feef942cd92c2b59bd1db5d1f7f4ff80f1c6))
+* **yubikey:** yk-status health checks; pubkey per-serial; remove yk-ssh-load ([#303](https://github.com/DevSecNinja/dotfiles/issues/303)) ([8c5dc13](https://github.com/DevSecNinja/dotfiles/commit/8c5dc13de4d39ec75fea0b0403dd23b4f8ad387e))
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.17 ➔ v2026.4.18 ) ([#277](https://github.com/DevSecNinja/dotfiles/issues/277)) ([71889c5](https://github.com/DevSecNinja/dotfiles/commit/71889c5f975a45e161b49c8216c3f5bbd0f3864a))
+* **yubikey:** detect modern ykman PIN status format ([#300](https://github.com/DevSecNinja/dotfiles/issues/300)) ([631fef1](https://github.com/DevSecNinja/dotfiles/commit/631fef19f0377c470d0ccc182fc2c607ba149593))
+* **yubikey:** don't lie about ykman PIN-rotation prompt order ([#296](https://github.com/DevSecNinja/dotfiles/issues/296)) ([f9520ae](https://github.com/DevSecNinja/dotfiles/commit/f9520ae590de0310b212b0f65bd4112c15e506d1))
+* **yubikey:** drop `AddKeysToAgent` — `ssh-agent` can't re-prompt for the FIDO2 PIN ([#302](https://github.com/DevSecNinja/dotfiles/issues/302)) ([9eb385e](https://github.com/DevSecNinja/dotfiles/commit/9eb385e6bdb08d9aca324499e9766bdc5fbe44b4))
+* **yubikey:** drop hostname from suggested GitHub-key title ([#301](https://github.com/DevSecNinja/dotfiles/issues/301)) ([c526c9d](https://github.com/DevSecNinja/dotfiles/commit/c526c9d90f5c2348c7a3013d162095dede99b7cd))
+* **yubikey:** keep 1Password SSH fallback until FIDO2 keys exist ([#288](https://github.com/DevSecNinja/dotfiles/issues/288)) ([26ba093](https://github.com/DevSecNinja/dotfiles/commit/26ba0931bd82e593e2d7c2cf9818e098c23ee769))
+* **yubikey:** polish enrollment UX — no duplicate footer, useful title, auto-load via SSH config ([#298](https://github.com/DevSecNinja/dotfiles/issues/298)) ([82ecb92](https://github.com/DevSecNinja/dotfiles/commit/82ecb9298aeeb953b8b37a12e2e08ced683cf696))
+* **yubikey:** verify enrollment + FIPS PIN handling + work-checklist ([#295](https://github.com/DevSecNinja/dotfiles/issues/295)) ([8ae532c](https://github.com/DevSecNinja/dotfiles/commit/8ae532c0e2a96afb999b00a3e0c2ab6521e8b77c))
+* **yubikey:** vertical yk-status, pubkey zsh nomatch, GitHub UI link, drop stale yk-ssh-load files ([#304](https://github.com/DevSecNinja/dotfiles/issues/304)) ([82956c1](https://github.com/DevSecNinja/dotfiles/commit/82956c17277a0faf0969df7649db5880bb29c37f))
+* **yubikey:** yk-git-sign-setup must not write self-keys to allowed_signers (chezmoi drift) ([#306](https://github.com/DevSecNinja/dotfiles/issues/306)) ([19c2d7b](https://github.com/DevSecNinja/dotfiles/commit/19c2d7b32fa04c1596ddfb61eeb854511c77e33c))
+* **yubikey:** zsh leak in `yk-status`, device type, clearer macOS FIDO2 error ([#290](https://github.com/DevSecNinja/dotfiles/issues/290)) ([5bf62c2](https://github.com/DevSecNinja/dotfiles/commit/5bf62c2c03ad57ea48f59adc88533c99a3d3023c))
+
 ## [0.2.2](https://github.com/DevSecNinja/dotfiles/compare/v0.2.1...v0.2.2) (2026-05-03)
 
 
