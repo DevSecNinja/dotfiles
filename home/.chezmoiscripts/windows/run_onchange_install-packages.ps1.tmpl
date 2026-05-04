@@ -54,6 +54,25 @@ if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
 # {{ end }}
 # {{ end }}
 
+# {{ if .useYubiKey }}
+# YubiKey extras — installed when useYubiKey is true
+# {{ range .packages.windows.winget.yubikey }}
+Write-Host "Checking {{ . }} (yubikey)..." -NoNewline
+$result = winget list --id {{ . | quote }} --exact 2>&1
+if ($LASTEXITCODE -eq 0 -and $result -match {{ . | quote }}) {
+    Write-Host " [OK]" -ForegroundColor Green
+} else {
+    Write-Host " Installing..." -ForegroundColor Yellow
+    winget install --id {{ . | quote }} --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] {{ . }} installed" -ForegroundColor Green
+    } else {
+        Write-Host "  [FAILED] Could not install {{ . }}" -ForegroundColor Red
+    }
+}
+# {{ end }}
+# {{ end }}
+
 Write-Host "`nDevelopment tools installation complete ({{ .installType }} mode)!" -ForegroundColor Green
 
 # Install VS Code extensions if code command is available

@@ -9,6 +9,20 @@ It's also designed to **survive the migration off 1Password**: the
 1Password SSH agent integration is gated behind the `useYubiKey` chezmoi
 variable and stays the default until you flip it.
 
+## What gets installed
+
+When `useYubiKey: true`, `chezmoi apply` also installs `ykman` (yubikey-manager)
+and the smart-card daemon needed for OATH:
+
+| OS        | Package(s)                                  |
+| --------- | ------------------------------------------- |
+| macOS     | `ykman` (Homebrew)                          |
+| Debian/Ubuntu | `yubikey-manager`, `pcscd`, `scdaemon`  |
+| Fedora    | `yubikey-manager`, `pcsc-lite`              |
+| Windows   | `Yubico.YubikeyManagerCLI` (winget)         |
+
+Set `useYubiKey: false` (the default) and none of these are touched.
+
 ## Quick start
 
 ```bash
