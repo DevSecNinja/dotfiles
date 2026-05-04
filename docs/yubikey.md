@@ -40,6 +40,29 @@ chezmoi apply
 yk-ssh-load                    # ssh-add -K — pulls keys back from the YubiKey
 ```
 
+> **Safe migration:** `useYubiKey: true` only swaps your `~/.ssh/config`
+> over to the FIDO2 `IdentityFile` lines once `~/.ssh/id_ed25519_sk` (or
+> `id_ecdsa_sk`) actually exists on disk. If you flip the toggle before
+> generating / loading a resident key, chezmoi keeps the 1Password
+> `IdentityAgent` line and the `Include ~/.ssh/1Password/config` block as
+> a fallback so your existing SSH access survives. Run `yk-ssh-new` (new
+> machine: provisioning a key) or `yk-ssh-load` (new machine: pulling
+> resident keys back from the YubiKey) and re-run `chezmoi apply`.
+
+### Locked yourself out?
+
+If `git@github.com: Permission denied (publickey)` appears after enabling
+the toggle on a machine where the keys aren't there yet:
+
+```bash
+chezmoi init --data=false --apply   # the --apply is the key bit
+# or pull source over HTTPS and re-apply:
+cd "$(chezmoi source-path)" \
+  && git remote set-url origin https://github.com/DevSecNinja/dotfiles.git \
+  && git pull
+chezmoi apply
+```
+
 ## Helpers (Bash/Zsh + Fish)
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
