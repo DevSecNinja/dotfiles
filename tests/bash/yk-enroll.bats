@@ -99,11 +99,18 @@ EOF
 	mock_ykman
 	export YKMAN_SERIALS="11
 22"
+	export YKMAN_INFO_11="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_INFO_22="Device type: YubiKey 5C
+Firmware version: 5.4.3"
 	run yk-enroll
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "Multiple YubiKeys connected" ]]
-	[[ "$output" =~ "- 11" ]]
-	[[ "$output" =~ "- 22" ]]
+	[[ "$output" =~ "YubiKey 5C NFC FIPS" ]]
+	[[ "$output" =~ "serial 11" ]]
+	[[ "$output" =~ "fw 5.7.4" ]]
+	[[ "$output" =~ "YubiKey 5C" ]]
+	[[ "$output" =~ "serial 22" ]]
 }
 
 @test "yk-enroll: rejects ed25519-sk on firmware <5.2.3" {

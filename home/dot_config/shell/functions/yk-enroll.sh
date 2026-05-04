@@ -105,7 +105,13 @@ EOF
 	if [[ "$count" -gt 1 ]]; then
 		_yk_fail "  Multiple YubiKeys connected ($count). Enrollment must be unambiguous."
 		_yk_fail "  Unplug all but the one to enroll, then re-run. Detected:"
-		while IFS= read -r s; do echo "    - $s" >&2; done <<<"$serials"
+		while IFS= read -r s; do
+			local s_info s_dt s_fw
+			s_info="$(ykman --device "$s" info 2>/dev/null || true)"
+			s_dt="$(awk -F': *' 'tolower($1) ~ /device type/ {print $2; exit}' <<<"$s_info")"
+			s_fw="$(awk -F': *' 'tolower($1) ~ /firmware version/ {print $2; exit}' <<<"$s_info")"
+			printf '    - %s  (serial %s%s)\n' "${s_dt:-YubiKey}" "$s" "${s_fw:+, fw $s_fw}" >&2
+		done <<<"$serials"
 		return 1
 	fi
 	local serial

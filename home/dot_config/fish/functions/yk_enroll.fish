@@ -58,7 +58,15 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
         echo "  Multiple YubiKeys connected ("(count $serials)"). Enrollment must be unambiguous." >&2
         echo "  Unplug all but the one to enroll, then re-run. Detected:" >&2
         for s in $serials
-            echo "    - $s" >&2
+            set -l s_info (ykman --device $s info 2>/dev/null)
+            set -l s_dt (printf '%s\n' $s_info | awk -F': *' 'tolower($1) ~ /device type/ {print $2; exit}')
+            set -l s_fw (printf '%s\n' $s_info | awk -F': *' 'tolower($1) ~ /firmware version/ {print $2; exit}')
+            test -z "$s_dt"; and set s_dt "YubiKey"
+            if test -n "$s_fw"
+                echo "    - $s_dt  (serial $s, fw $s_fw)" >&2
+            else
+                echo "    - $s_dt  (serial $s)" >&2
+            end
         end
         return 1
     end
