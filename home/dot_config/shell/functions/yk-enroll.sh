@@ -257,9 +257,11 @@ EOF
 	fi
 	echo
 	echo "Done. Next steps for serial $serial:"
-	local hostshort
-	hostshort="$(hostname -s 2>/dev/null || hostname)"
-	local suggested_title="${device_type:-YubiKey} @ ${hostshort}"
+	# A YubiKey is portable across machines, so the suggested GitHub-key
+	# title intentionally omits the hostname. Last 4 digits of the serial
+	# disambiguate when you have multiple identical-looking devices.
+	local serial_short="${serial: -4}"
+	local suggested_title="${device_type:-YubiKey} (·${serial_short})"
 	echo "  1. Add to GitHub:"
 	echo "       gh ssh-key add ${out_path}.pub --title \"${suggested_title}\""
 	echo "     (or use the GitHub UI — pick any title that helps you recognise the key)"
