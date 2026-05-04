@@ -1,5 +1,5 @@
 function yk_enroll --description "Idempotent YubiKey enrollment wizard"
-    argparse --name=yk_enroll h/help check 't/type=' no-resident no-verify-required -- $argv
+    argparse --name=yk_enroll h/help check 't/type=' no-resident no-verify-required rotate-pin -- $argv
     or return 1
 
     if set -q _flag_help
@@ -12,6 +12,8 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
         echo "                         SSH key type (default: ed25519-sk)."
         echo "  --no-verify-required   Skip PIN-on-every-use for SSH (touch only)."
         echo "  --no-resident          Don't store SSH credential on the key."
+        echo "  --rotate-pin           Force a FIDO2 PIN change even if one is set"
+        echo "                         (use this on FIPS keys with factory default)."
         return 0
     end
 
@@ -23,6 +25,8 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     set -q _flag_no_verify_required; and set verify_required false
     set -l resident true
     set -q _flag_no_resident; and set resident false
+    set -l rotate_pin false
+    set -q _flag_rotate_pin; and set rotate_pin true
 
     # ----- Step 1: preflight ------------------------------------------------
     echo "" >&2
@@ -87,6 +91,9 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     echo "  $type supported on firmware $fw" >&2
 
     # ----- Step 4: FIDO2 PIN -----------------------------------------------
+    # YubiKey 5 FIPS ships with factory default FIDO2 PIN '123456'; the
+    # non-FIPS YubiKey 5 ships with no PIN. Always nudge users to rotate
+    # on FIPS keys, and --rotate-pin forces a rotation regardless.
     echo "" >&2
     echo "[4/5] FIDO2 PIN" >&2
     set -l fido_info (ykman --device $serial fido info 2>/dev/null)
@@ -96,8 +103,32 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
             set pin_set true
         end
     end
+    set -l is_fips false
+    if string match -q '*FIPS*' -- $device_type
+        set is_fips true
+    end
     if test "$pin_set" = true
-        echo "  FIDO2 PIN is set." >&2
+        if test "$is_fips" = true
+            echo "  FIDO2 PIN is set — but this is a FIPS YubiKey, which ships with" >&2
+            echo "  factory default PIN '123456'. If you haven't changed it yourself," >&2
+            echo "  rotate it now." >&2
+        else
+            echo "  FIDO2 PIN is set." >&2
+        end
+        if test "$rotate_pin" = true
+            if test "$check_only" = true
+                echo "  --rotate-pin requested but --check is read-only; skipping." >&2
+            else
+                echo "  Rotating FIDO2 PIN now (enter current PIN, then new one twice)..." >&2
+                if not ykman --device $serial fido access change-pin
+                    echo "  Failed to change FIDO2 PIN." >&2
+                    return 1
+                end
+                echo "  FIDO2 PIN rotated." >&2
+            end
+        else if test "$is_fips" = true
+            echo "  Re-run with --rotate-pin to change it now." >&2
+        end
     else if test "$check_only" = true
         echo "  FIDO2 PIN is NOT set. (skipped: --check)" >&2
     else
@@ -128,22 +159,41 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
             echo "  SSH key generation failed." >&2
             return 1
         end
+        # Verify post-condition: ssh-keygen can be killed mid-prompt
+        # (e.g. Ctrl+C at the FIDO2 PIN prompt) and the function may
+        # still return 0 in fish's pipeline. Trust the filesystem.
+        if not test -f "$out_path"; or not test -f "$out_path.pub"
+            echo "  Aborted: $out_path was not created (cancelled or failed)." >&2
+            return 1
+        end
         echo "  Enrolled: $out_path" >&2
     end
 
     # ----- Summary ----------------------------------------------------------
+    # Only emit the "Done" block if the pubkey actually exists on disk.
+    # Under --check this is informational only — audits don't fail just
+    # because state is incomplete.
+    if not test -f "$out_path.pub"
+        echo "" >&2
+        if test "$check_only" = true
+            echo "Audit: enrollment is incomplete — $out_path.pub does not exist." >&2
+            return 0
+        end
+        echo "Not done: $out_path.pub does not exist. Re-run yk_enroll." >&2
+        return 1
+    end
     set -l hostshort (hostname -s 2>/dev/null; or hostname)
     echo "" >&2
     echo "Done. Next steps for serial $serial:" >&2
-    if test -e "$out_path.pub"
-        echo "  1. Add to GitHub:    gh ssh-key add $out_path.pub --title \"$hostshort-yk-$serial\"" >&2
-        echo "  2. Add to ssh-agent: ssh-add $out_path" >&2
-        if test "$resident" = true
-            echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey" >&2
-        end
-        echo "" >&2
-        echo "  Multi-key tip: re-run yk_enroll with each YubiKey plugged in (one" >&2
-        echo "  at a time), add every resulting .pub to GitHub, and any of them" >&2
-        echo "  can then sign / SSH." >&2
+    echo "  1. Add to GitHub:    gh ssh-key add $out_path.pub --title \"$hostshort-yk-$serial\"" >&2
+    echo "  2. Add to ssh-agent: ssh-add $out_path" >&2
+    if test "$resident" = true
+        echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey" >&2
     end
+    echo "" >&2
+    echo "  Multi-key tip: re-run yk_enroll with each YubiKey plugged in (one" >&2
+    echo "  at a time), add every resulting .pub to GitHub, and any of them" >&2
+    echo "  can then sign / SSH." >&2
+    echo "" >&2
+    echo "  On a work machine? Also run:  work_checklist" >&2
 end

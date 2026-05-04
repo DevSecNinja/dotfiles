@@ -30,6 +30,7 @@ yk-enroll() {
 	local type="ed25519-sk"
 	local verify_required=true
 	local resident=true
+	local rotate_pin=false
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -49,6 +50,10 @@ yk-enroll() {
 			resident=false
 			shift
 			;;
+		--rotate-pin)
+			rotate_pin=true
+			shift
+			;;
 		-h | --help)
 			cat <<EOF
 Usage: yk-enroll [OPTIONS]
@@ -60,6 +65,8 @@ Options:
                          SSH key type (default: ed25519-sk).
   --no-verify-required   Skip PIN-on-every-use for SSH (touch only).
   --no-resident          Don't store SSH credential on the key (no ssh-add -K).
+  --rotate-pin           Force a FIDO2 PIN change even if one is already set
+                         (use this on FIPS keys with the factory default).
 EOF
 			return 0
 			;;
@@ -135,6 +142,11 @@ EOF
 	_yk_ok "  $type supported on firmware ${fw:-?}"
 
 	# ----- Step 4: FIDO2 PIN -------------------------------------------------
+	# Note: YubiKey 5 FIPS series ships with a *factory default* FIDO2 PIN of
+	# 123456 — `ykman fido info` reports 'PIN is set' even on a brand-new
+	# device. The non-FIPS YubiKey 5 ships with no PIN at all. So on FIPS
+	# keys we always nudge the user to rotate, and `--rotate-pin` forces a
+	# rotation prompt regardless of detected state.
 	_yk_step "4/5" "FIDO2 PIN"
 	local fido_info
 	fido_info="$(ykman --device "$serial" fido info 2>/dev/null || true)"
@@ -142,8 +154,32 @@ EOF
 	if grep -qiE 'PIN is set|PIN.*set' <<<"$fido_info" && ! grep -qiE 'PIN is not set' <<<"$fido_info"; then
 		pin_set=true
 	fi
+	local is_fips=false
+	if [[ "$device_type" == *FIPS* ]]; then
+		is_fips=true
+	fi
 	if [[ "$pin_set" == true ]]; then
-		_yk_ok "  FIDO2 PIN is set."
+		if [[ "$is_fips" == true ]]; then
+			_yk_warn "  FIDO2 PIN is set — but this is a FIPS YubiKey, which ships with"
+			_yk_warn "  factory default PIN '123456'. If you haven't changed it yourself,"
+			_yk_warn "  rotate it now."
+		else
+			_yk_ok "  FIDO2 PIN is set."
+		fi
+		if [[ "$rotate_pin" == true ]]; then
+			if [[ "$check_only" == true ]]; then
+				_yk_warn "  --rotate-pin requested but --check is read-only; skipping."
+			else
+				echo "  Rotating FIDO2 PIN now (enter current PIN, then new one twice)..." >&2
+				if ! ykman --device "$serial" fido access change-pin; then
+					_yk_fail "  Failed to change FIDO2 PIN."
+					return 1
+				fi
+				_yk_ok "  FIDO2 PIN rotated."
+			fi
+		elif [[ "$is_fips" == true ]]; then
+			_yk_warn "  Re-run with --rotate-pin to change it now."
+		fi
 	else
 		if [[ "$check_only" == true ]]; then
 			_yk_warn "  FIDO2 PIN is NOT set. (skipped: --check)"
@@ -182,22 +218,42 @@ EOF
 				_yk_fail "  SSH key generation failed."
 				return 1
 			fi
+			# Verify post-condition: ssh-keygen can be killed mid-prompt
+			# (e.g. Ctrl+C at the FIDO2 PIN prompt) without yk-ssh-new
+			# returning a non-zero status in every shell. Trust the
+			# filesystem, not the exit code.
+			if [[ ! -f "$out_path" || ! -f "${out_path}.pub" ]]; then
+				_yk_fail "  Aborted: $out_path was not created (cancelled or failed)."
+				return 1
+			fi
 			_yk_ok "  Enrolled: $out_path"
 		fi
 	fi
 
 	# ----- Summary -----------------------------------------------------------
+	# Only emit the "Done" block if the pubkey actually exists on disk.
+	# Under --check this is informational only — audits don't fail just
+	# because state is incomplete.
+	if [[ ! -f "${out_path}.pub" ]]; then
+		echo
+		if [[ "$check_only" == true ]]; then
+			_yk_warn "Audit: enrollment is incomplete — ${out_path}.pub does not exist."
+			return 0
+		fi
+		_yk_fail "Not done: ${out_path}.pub does not exist. Re-run yk-enroll."
+		return 1
+	fi
 	echo
 	echo "Done. Next steps for serial $serial:"
-	if [[ -e "${out_path}.pub" ]]; then
-		echo "  1. Add to GitHub:    gh ssh-key add ${out_path}.pub --title \"$(hostname -s 2>/dev/null || hostname)-yk-${serial}\""
-		echo "  2. Add to ssh-agent: ssh-add ${out_path}"
-		[[ "$resident" == true ]] && echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey"
-		echo
-		echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
-		echo "  at a time), add every resulting .pub to GitHub, and any of them"
-		echo "  can then sign / SSH."
-	fi
+	echo "  1. Add to GitHub:    gh ssh-key add ${out_path}.pub --title \"$(hostname -s 2>/dev/null || hostname)-yk-${serial}\""
+	echo "  2. Add to ssh-agent: ssh-add ${out_path}"
+	[[ "$resident" == true ]] && echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey"
+	echo
+	echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
+	echo "  at a time), add every resulting .pub to GitHub, and any of them"
+	echo "  can then sign / SSH."
+	echo
+	echo "  On a work machine? Also run:  work-checklist"
 }
 
 # --- internal pretty-printers ------------------------------------------------

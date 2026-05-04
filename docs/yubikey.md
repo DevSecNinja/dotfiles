@@ -101,6 +101,7 @@ already in place.
 ```bash
 yk-enroll              # interactive: walks through every step
 yk-enroll --check      # read-only audit; never prompts or writes
+yk-enroll --rotate-pin # change FIDO2 PIN even if one is already set
 ```
 
 The wizard runs five steps:
@@ -113,11 +114,30 @@ The wizard runs five steps:
 3. **Capability check** — fails fast if firmware is too old for the
    requested key type (suggests `--type ecdsa-sk` for fw <5.2.3).
 4. **FIDO2 PIN** — sets one if missing; reports it as set otherwise.
+   On **FIPS** YubiKeys it explicitly warns about the factory default
+   (see below) and tells you to use `--rotate-pin`.
 5. **SSH key** — generates a resident `ed25519-sk` key at
-   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present.
+   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present. After
+   `ssh-keygen` returns the wizard verifies the key file actually exists
+   on disk before declaring success — so cancelling the FIDO2 PIN prompt
+   (Ctrl+C) is reported as an abort, never as a successful enrollment.
 
 It then prints the exact `gh ssh-key add` and `ssh-add` commands you
 should run.
+
+### FIPS YubiKeys ship with a factory PIN
+
+The **YubiKey 5 FIPS** series ships with a publicly known factory FIDO2
+PIN of `123456` — `ykman fido info` will report "PIN is set" on a
+brand-new device. The non-FIPS YubiKey 5 ships with no PIN at all.
+
+`yk-enroll` detects FIPS devices via the device-type string and warns
+you when this is likely the case. Rotate the PIN before relying on the
+key:
+
+```bash
+yk-enroll --rotate-pin
+```
 
 ### Multiple YubiKeys
 
@@ -136,6 +156,22 @@ for SSH:
 > hardware doesn't allow it. Enrolling a second key is the supported
 > path, and `yk-enroll` makes it a one-command operation.
 
+### On work machines
+
+Some setup steps can't be automated by chezmoi (network-gated URLs,
+browser-based MFA enrollment, per-user sign-ins). They live in a
+separate helper, `work-checklist`, so you don't have to remember them
+on a fresh machine:
+
+```bash
+work-checklist        # prints the manual post-install checklist
+```
+
+Currently includes (among others) **`https://aka.ms/CloudMFA`** for
+corporate SSO MFA enrollment, plus the `gh ssh-key add` / `gh auth
+login` / `az login` reminders. The wizard mentions `work-checklist` in
+its own "Done." footer so you don't miss it.
+
 ## Helpers (Bash/Zsh + Fish)
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
@@ -145,6 +181,7 @@ for SSH:
 | `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
 | `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
 | `yk-ssh-load`           | `yk_ssh_load`       | `ssh-add -K`: load resident keys from the YubiKey          |
+| `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
 

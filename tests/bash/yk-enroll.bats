@@ -220,3 +220,86 @@ Firmware version: 5.4.3"
 	[ -f "$TEST_HOME/.ssh/id_ed25519_sk_22" ]
 	[ -f "$TEST_HOME/.ssh/id_ed25519_sk_11" ]
 }
+
+@test "yk-enroll: warns about FIPS factory default PIN" {
+	mock_ykman
+	export YKMAN_SERIALS="35984479"
+	export YKMAN_INFO_35984479="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_35984479="PIN is set, with 8 attempts remaining."
+	# Non-interactive (run by bats has no controlling tty), so no prompt.
+	run yk-enroll --check
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "FIPS YubiKey" ]]
+	[[ "$output" =~ "factory default PIN '123456'" ]]
+	[[ "$output" =~ "rotate it now" ]]
+}
+
+@test "yk-enroll: --rotate-pin forces change-pin even when PIN is set" {
+	mock_ykman
+	export YKMAN_SERIALS="35984479"
+	export YKMAN_INFO_35984479="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_35984479="PIN is set, with 8 attempts remaining."
+	# Existing key file so step 5 short-circuits cleanly.
+	mkdir -p "$TEST_HOME/.ssh"
+	echo "existing" >"$TEST_HOME/.ssh/id_ed25519_sk_35984479"
+	echo "existing" >"$TEST_HOME/.ssh/id_ed25519_sk_35984479.pub"
+	run yk-enroll --rotate-pin
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Rotating FIDO2 PIN now" ]]
+	[[ "$output" =~ "FIDO2 PIN rotated" ]]
+}
+
+@test "yk-enroll: --rotate-pin under --check is a no-op" {
+	mock_ykman
+	export YKMAN_SERIALS="35984479"
+	export YKMAN_INFO_35984479="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_35984479="PIN is set, with 8 attempts remaining."
+	export YKMAN_PIN_FAIL=1 # would fail if actually called
+	run yk-enroll --rotate-pin --check
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "--rotate-pin requested but --check is read-only" ]]
+}
+
+@test "yk-enroll: non-FIPS key with PIN set does NOT prompt for rotation" {
+	mock_ykman
+	export YKMAN_SERIALS="12345"
+	export YKMAN_INFO_12345="Device type: YubiKey 5C NFC
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_12345="PIN is set, with 8 attempts remaining."
+	mkdir -p "$TEST_HOME/.ssh"
+	echo "existing" >"$TEST_HOME/.ssh/id_ed25519_sk_12345"
+	echo "existing" >"$TEST_HOME/.ssh/id_ed25519_sk_12345.pub"
+	run yk-enroll
+	[ "$status" -eq 0 ]
+	[[ ! "$output" =~ "factory default" ]]
+	[[ ! "$output" =~ "Change FIDO2 PIN now" ]]
+	[[ "$output" =~ "FIDO2 PIN is set." ]]
+}
+
+@test "yk-enroll: aborts when ssh-keygen exits 0 but no file was written (Ctrl+C)" {
+	# Regression: user pressed Ctrl+C at the FIDO2 PIN prompt during
+	# enrollment. ssh-keygen returned 0 (or fish's pipeline lost the
+	# non-zero), so the wizard previously printed "Enrolled" and "Done"
+	# even though no key file was created. Trust the filesystem.
+	mock_ykman
+	export YKMAN_SERIALS="35984479"
+	export YKMAN_INFO_35984479="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_35984479="PIN is set, with 8 attempts remaining."
+	# Replace the default ssh-keygen mock with one that "succeeds" but
+	# writes nothing (mimicking interrupted FIDO2 enrollment).
+	cat >"$TEST_BIN_DIR/ssh-keygen" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+	chmod +x "$TEST_BIN_DIR/ssh-keygen"
+	run yk-enroll
+	[ "$status" -eq 1 ]
+	[[ ! "$output" =~ "Enrolled:" ]]
+	[[ ! "$output" =~ "Done. Next steps" ]]
+	[[ "$output" =~ "was not created" ]]
+	[ ! -f "$TEST_HOME/.ssh/id_ed25519_sk_35984479" ]
+}
