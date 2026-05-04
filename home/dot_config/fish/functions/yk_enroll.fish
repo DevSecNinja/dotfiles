@@ -94,12 +94,15 @@ function yk_enroll --description "Idempotent YubiKey enrollment wizard"
     # YubiKey 5 FIPS ships with factory default FIDO2 PIN '123456'; the
     # non-FIPS YubiKey 5 ships with no PIN. Always nudge users to rotate
     # on FIPS keys, and --rotate-pin forces a rotation regardless.
+    # ykman PIN reporting varies between versions:
+    #   - legacy:  'PIN is set' / 'PIN is not set'
+    #   - modern:  'PIN: 8 attempt(s) remaining' / 'PIN: Not set'
     echo "" >&2
     echo "[4/5] FIDO2 PIN" >&2
     set -l fido_info (ykman --device $serial fido info 2>/dev/null)
     set -l pin_set false
-    if printf '%s\n' $fido_info | grep -qiE 'PIN is set|PIN.*set'
-        if not printf '%s\n' $fido_info | grep -qiE 'PIN is not set'
+    if printf '%s\n' $fido_info | grep -qiE 'PIN is set|PIN:[[:space:]]*[0-9]+[[:space:]]+attempt|PIN:[[:space:]]*configured'
+        if not printf '%s\n' $fido_info | grep -qiE 'PIN is not set|PIN:[[:space:]]*not[[:space:]]+(set|configured)'
             set pin_set true
         end
     end

@@ -143,15 +143,25 @@ EOF
 
 	# ----- Step 4: FIDO2 PIN -------------------------------------------------
 	# Note: YubiKey 5 FIPS series ships with a *factory default* FIDO2 PIN of
-	# 123456 — `ykman fido info` reports 'PIN is set' even on a brand-new
-	# device. The non-FIPS YubiKey 5 ships with no PIN at all. So on FIPS
-	# keys we always nudge the user to rotate, and `--rotate-pin` forces a
+	# 123456 — `ykman fido info` reports 'PIN is set' (older ykman) or
+	# 'PIN: 8 attempt(s) remaining' (ykman ≥5) even on a brand-new device.
+	# The non-FIPS YubiKey 5 ships with no PIN at all. So on FIPS keys we
+	# always nudge the user to rotate, and `--rotate-pin` forces a
 	# rotation prompt regardless of detected state.
 	_yk_step "4/5" "FIDO2 PIN"
 	local fido_info
 	fido_info="$(ykman --device "$serial" fido info 2>/dev/null || true)"
 	local pin_set=false
-	if grep -qiE 'PIN is set|PIN.*set' <<<"$fido_info" && ! grep -qiE 'PIN is not set' <<<"$fido_info"; then
+	# Positive signals (any of these means the PIN is set):
+	#   - legacy ykman:  'PIN is set'
+	#   - modern ykman:  'PIN: 8 attempt(s) remaining' (any number; the
+	#                    'remaining' wording only appears once a PIN is set)
+	#   - modern ykman:  'PIN: Configured'
+	# Negative signals override (in case the line contains both):
+	#   - 'PIN is not set'
+	#   - 'PIN: Not set' / 'PIN: not configured'
+	if grep -qiE 'PIN is set|PIN:[[:space:]]*[0-9]+[[:space:]]+attempt|PIN:[[:space:]]*configured' <<<"$fido_info" &&
+		! grep -qiE 'PIN is not set|PIN:[[:space:]]*not[[:space:]]+(set|configured)' <<<"$fido_info"; then
 		pin_set=true
 	fi
 	local is_fips=false

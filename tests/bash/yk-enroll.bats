@@ -310,3 +310,46 @@ EOF
 	[[ "$output" =~ "was not created" ]]
 	[ ! -f "$TEST_HOME/.ssh/id_ed25519_sk_35984479" ]
 }
+
+@test "yk-enroll: detects modern ykman PIN format ('PIN: 8 attempt(s) remaining')" {
+	# Regression: real-world ykman 5.x output is
+	#   PIN:                          8 attempt(s) remaining
+	# The old regex 'PIN is set|PIN.*set' missed this entirely, so the
+	# wizard treated a configured PIN as 'PIN is not set' and tried to
+	# set a new one (which then prompted for the *current* PIN, very
+	# confusing).
+	mock_ykman
+	export YKMAN_SERIALS="35984479"
+	export YKMAN_INFO_35984479="Device type: YubiKey 5C NFC FIPS
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_35984479="FIPS approved:                True
+AAGUID:                       79f3c8ba-9e35-484b-8f47-53a5a0f5c630
+PIN:                          8 attempt(s) remaining
+Minimum PIN length:           8
+Always Require UV:            On
+Credential storage remaining: 99
+Enterprise Attestation:       Enabled"
+	mkdir -p "$TEST_HOME/.ssh"
+	echo existing >"$TEST_HOME/.ssh/id_ed25519_sk_35984479"
+	echo existing >"$TEST_HOME/.ssh/id_ed25519_sk_35984479.pub"
+	run yk-enroll
+	[ "$status" -eq 0 ]
+	# Must NOT think the PIN is missing.
+	[[ ! "$output" =~ "No FIDO2 PIN set" ]]
+	[[ ! "$output" =~ "Setting one now" ]]
+	# It's a FIPS key, so the FIPS warning fires (correctly).
+	[[ "$output" =~ "factory default PIN" ]]
+}
+
+@test "yk-enroll: detects modern ykman 'PIN: Not set' as no PIN" {
+	mock_ykman
+	export YKMAN_SERIALS="12345"
+	export YKMAN_INFO_12345="Device type: YubiKey 5C NFC
+Firmware version: 5.7.4"
+	export YKMAN_FIDO_12345="AAGUID:                       deadbeef
+PIN:                          Not set
+Minimum PIN length:           4"
+	run yk-enroll --check
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "FIDO2 PIN is NOT set" ]]
+}
