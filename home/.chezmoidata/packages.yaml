@@ -26,16 +26,26 @@ packages:
         - zsh
       full:
         - gh # GitHub CLI
+      # Installed only when useYubiKey is true.
+      yubikey:
+        - yubikey-manager # provides `ykman` CLI
+        - pcscd # smart-card daemon (required for OATH)
+        - scdaemon
     brew:
       light: []
       full:
         - go-task
         - mise
+      yubikey:
+        - ykman
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
       light: []
       full: []
+      yubikey:
+        - yubikey-manager
+        - pcsc-lite
 
   # macOS packages
   darwin:
@@ -53,6 +63,9 @@ packages:
         - go-task
         - mise
         - python@3
+      # Installed only when useYubiKey is true.
+      yubikey:
+        - ykman
       # TODO: Homebrew: add support for casks * app store apps
       # Move them under brew (brew.brew and brew.cask and brew.app-store)
       # casks:
@@ -107,6 +120,9 @@ packages:
         - JanDeDobbeleer.OhMyPosh
         - Microsoft.WSL
         - Task.Task
+      # Installed only when useYubiKey is true.
+      yubikey:
+        - Yubico.YubikeyManagerCLI
 
     # PowerShell modules (installed via PowerShellGet)
     powershell_modules:
