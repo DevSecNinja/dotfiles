@@ -35,7 +35,7 @@ BeforeAll {
             if ($wingetCmd) {
                 Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
                 try {
-                    winget install --id twpayne.chezmoi --silent --accept-source-agreements --accept-package-agreements | Out-Null
+                    winget install --id twpayne.chezmoi --source winget --silent --accept-source-agreements --accept-package-agreements | Out-Null
 
                     # Refresh PATH for current session
                     $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")

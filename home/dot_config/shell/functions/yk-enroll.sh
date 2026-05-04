@@ -170,7 +170,9 @@ EOF
 			if [[ "$check_only" == true ]]; then
 				_yk_warn "  --rotate-pin requested but --check is read-only; skipping."
 			else
-				echo "  Rotating FIDO2 PIN now (enter current PIN, then new one twice)..." >&2
+				echo "  Rotating FIDO2 PIN now. Follow ykman's prompts (it may ask for the" >&2
+				echo "  new PIN first, then again to confirm, then the current PIN — the" >&2
+				echo "  exact order depends on firmware and PIN policy)." >&2
 				if ! ykman --device "$serial" fido access change-pin; then
 					_yk_fail "  Failed to change FIDO2 PIN."
 					return 1
