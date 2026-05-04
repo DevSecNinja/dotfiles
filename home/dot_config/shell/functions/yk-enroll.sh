@@ -213,7 +213,7 @@ EOF
 				# shellcheck disable=SC1091
 				. "$HOME/.config/shell/functions/yk-ssh-new.sh" 2>/dev/null || true
 			fi
-			local new_args=(--type "$type" --output "$out_path")
+			local new_args=(--type "$type" --output "$out_path" --no-summary)
 			[[ "$resident" == false ]] && new_args+=(--no-resident)
 			[[ "$verify_required" == false ]] && new_args+=(--no-verify-required)
 			if ! yk-ssh-new "${new_args[@]}"; then
@@ -247,9 +247,22 @@ EOF
 	fi
 	echo
 	echo "Done. Next steps for serial $serial:"
-	echo "  1. Add to GitHub:    gh ssh-key add ${out_path}.pub --title \"$(hostname -s 2>/dev/null || hostname)-yk-${serial}\""
-	echo "  2. Add to ssh-agent: ssh-add ${out_path}"
-	[[ "$resident" == true ]] && echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey"
+	local hostshort
+	hostshort="$(hostname -s 2>/dev/null || hostname)"
+	local suggested_title="${device_type:-YubiKey} @ ${hostshort}"
+	echo "  1. Add to GitHub:"
+	echo "       gh ssh-key add ${out_path}.pub --title \"${suggested_title}\""
+	echo "     (or use the GitHub UI — pick any title that helps you recognise the key)"
+	echo
+	echo "  2. Test it:           ssh -T git@github.com"
+	echo "     (your SSH config already has 'AddKeysToAgent yes' + IdentityFile, so the"
+	echo "      key auto-loads on first use — no manual ssh-add needed. Run"
+	echo "      \`chezmoi apply\` once after enrolling so ~/.ssh/config picks up the"
+	echo "      new per-serial key file.)"
+	if [[ "$resident" == true ]]; then
+		echo
+		echo "  3. On new machines:   ssh-add -K   # reload all resident keys from this YubiKey"
+	fi
 	echo
 	echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
 	echo "  at a time), add every resulting .pub to GitHub, and any of them"

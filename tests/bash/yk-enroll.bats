@@ -134,6 +134,13 @@ Firmware version: 5.7.4"
 	[ -f "$TEST_HOME/.ssh/id_ed25519_sk_12345.pub" ]
 	[[ "$output" =~ "gh ssh-key add" ]]
 	[[ "$output" =~ "id_ed25519_sk_12345.pub" ]]
+	# Suggested title uses the device type, not "<host>-yk-<serial>".
+	[[ "$output" =~ "YubiKey 5C NFC FIPS @ " ]]
+	# yk-ssh-new's "Next steps" footer must NOT appear (yk-enroll prints
+	# its own Done block and passes --no-summary to yk-ssh-new).
+	[[ ! "$output" =~ "Next steps:" ]]
+	# But the wizard's own "Done. Next steps for serial" block must.
+	[[ "$output" =~ "Done. Next steps for serial" ]]
 }
 
 @test "yk-enroll: idempotent — skips key generation when file exists" {

@@ -1,5 +1,5 @@
 function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiKey"
-    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required \
+    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required no-summary \
         'o/output=' 'application=' 'C/comment=' -- $argv
     or return 1
 
@@ -11,6 +11,8 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
         echo "  --type {ed25519-sk|ecdsa-sk}   Key type (default: ed25519-sk)"
         echo "  --no-resident                  Don't store credential on the key"
         echo "  --no-verify-required           Don't require PIN (touch only)"
+        echo "  --no-summary                   Don't print the 'Next steps' footer (used"
+        echo "                                 by yk_enroll, which prints its own)."
         echo "  -o, --output PATH              Output path (default: ~/.ssh/id_<type>)"
         echo "  --application STR              FIDO application (default: ssh:<hostname>)"
         echo "  -C, --comment STR              SSH key comment (default: user@host)"
@@ -104,10 +106,13 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
     echo
     echo "Public key:"
     cat "$output.pub"
+    if set -q _flag_no_summary
+        return 0
+    end
     echo
     echo "Next steps:"
-    echo "  1. Add to GitHub:    gh ssh-key add $output.pub --title \"$hostshort-yk\""
-    echo "  2. Add to ssh-agent: ssh-add $output"
+    echo "  1. Add to GitHub:    gh ssh-key add $output.pub --title \"<descriptive title>\""
+    echo "  2. Test it:          ssh -T git@github.com  # AddKeysToAgent in ~/.ssh/config handles ssh-add automatically"
     if not set -q _flag_no_resident
         echo "  3. On new machines:  ssh-add -K   # reload from YubiKey"
     end
