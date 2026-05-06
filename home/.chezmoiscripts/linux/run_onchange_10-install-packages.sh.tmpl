@@ -86,6 +86,23 @@ else
 fi
 # {{ end }}
 # {{ end }}
+
+# {{ if .useYubiKey }}
+# YubiKey extras (apt) — installed when useYubiKey is true
+# {{ range .packages.linux.apt.yubikey }}
+log_step "Installing {{ . }} (yubikey)"
+if $SUDO_CMD apt-get install -y {{ . | quote }}; then
+	log_result "Successfully installed {{ . }}"
+else
+	exit_code=$?
+	if [ $exit_code -eq 100 ]; then
+		log_warn "Package {{ . }} not found in repositories"
+	else
+		log_warn "Failed to install {{ . }} (exit code: $exit_code)"
+	fi
+fi
+# {{ end }}
+# {{ end }}
 # {{ else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
 
 log_step "Installing packages with DNF"
@@ -112,6 +129,18 @@ else
 fi
 # {{ end }}
 # {{ end }}
+
+# {{ if .useYubiKey }}
+# YubiKey extras (dnf) — installed when useYubiKey is true
+# {{ range .packages.linux.dnf.yubikey }}
+log_step "Installing {{ . }} (yubikey)"
+if $SUDO_CMD dnf install -y {{ . | quote }}; then
+	log_result "Successfully installed {{ . }}"
+else
+	log_warn "Failed to install {{ . }}"
+fi
+# {{ end }}
+# {{ end }}
 # {{ end }}
 
 # Check if Homebrew packages are defined for Linux
@@ -135,6 +164,11 @@ if command -v brew >/dev/null 2>&1; then
 	# {{ end }}
 	# {{ if eq .installType "full" }}
 	# {{ range .packages.linux.brew.full }}
+	brew_install_quiet {{ . | quote }}
+	# {{ end }}
+	# {{ end }}
+	# {{ if .useYubiKey }}
+	# {{ range .packages.linux.brew.yubikey }}
 	brew_install_quiet {{ . | quote }}
 	# {{ end }}
 	# {{ end }}
@@ -167,6 +201,13 @@ brew_install_quiet {{ . | quote }}
 # {{ if eq .installType "full" }}
 # Install full mode packages (additional)
 # {{ range .packages.darwin.brew.full }}
+brew_install_quiet {{ . | quote }}
+# {{ end }}
+# {{ end }}
+
+# {{ if .useYubiKey }}
+# YubiKey extras (darwin brew) — installed when useYubiKey is true
+# {{ range .packages.darwin.brew.yubikey }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 # {{ end }}

@@ -59,15 +59,29 @@ alias motd='fastfetch'
 # SSH
 # Print the first available public key (preferring hardware-backed) and copy
 # it to the system clipboard via clipboard-copy (auto-detects backend).
+# Discovers both the legacy un-suffixed `id_<type>_sk.pub` and per-serial
+# `id_<type>_sk_<serial>.pub` files written by `yk-enroll`.
 pubkey() {
+	# Use find for glob expansion so unmatched patterns don't error out
+	# under zsh (which has NOMATCH on by default and aborts the function
+	# on `for x in $unmatched_glob`).
 	_pubkey_key=""
-	for _pubkey_candidate in id_ed25519_sk id_ecdsa_sk id_ed25519 id_rsa; do
-		if [ -f "$HOME/.ssh/${_pubkey_candidate}.pub" ]; then
-			_pubkey_key="$HOME/.ssh/${_pubkey_candidate}.pub"
+	# Prefer hardware-backed FIDO2 keys: per-serial files first, then
+	# legacy un-suffixed, then non-FIDO2.
+	for _pubkey_pattern in \
+		"id_ed25519_sk_*" \
+		"id_ed25519_sk" \
+		"id_ecdsa_sk_*" \
+		"id_ecdsa_sk" \
+		"id_ed25519" \
+		"id_rsa"; do
+		_pubkey_candidate="$(find "$HOME/.ssh" -maxdepth 1 -name "${_pubkey_pattern}.pub" -type f 2>/dev/null | sort | head -n1)"
+		if [ -n "$_pubkey_candidate" ] && [ -f "$_pubkey_candidate" ]; then
+			_pubkey_key="$_pubkey_candidate"
 			break
 		fi
 	done
-	unset _pubkey_candidate
+	unset _pubkey_pattern _pubkey_candidate
 	if [ -z "$_pubkey_key" ]; then
 		echo "No SSH public key found in ~/.ssh" >&2
 		unset _pubkey_key

@@ -1,5 +1,5 @@
 function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiKey"
-    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required \
+    argparse --name=yk_ssh_new h/help 't/type=' no-resident no-verify-required passphrase no-summary \
         'o/output=' 'application=' 'C/comment=' -- $argv
     or return 1
 
@@ -11,6 +11,10 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
         echo "  --type {ed25519-sk|ecdsa-sk}   Key type (default: ed25519-sk)"
         echo "  --no-resident                  Don't store credential on the key"
         echo "  --no-verify-required           Don't require PIN (touch only)"
+        echo "  --passphrase                   Prompt for SSH-key passphrase (default: none;"
+        echo "                                 the file is just a handle to the hardware key)"
+        echo "  --no-summary                   Don't print the 'Next steps' footer (used"
+        echo "                                 by yk_enroll, which prints its own)."
         echo "  -o, --output PATH              Output path (default: ~/.ssh/id_<type>)"
         echo "  --application STR              FIDO application (default: ssh:<hostname>)"
         echo "  -C, --comment STR              SSH key comment (default: user@host)"
@@ -46,6 +50,35 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
         return 1
     end
 
+    # macOS guard: Apple's bundled OpenSSH lacks libfido2 / SecurityKeyProvider.
+    if test (uname) = Darwin
+        set -l sshkeygen_path (command -v ssh-keygen)
+        if test "$sshkeygen_path" = /usr/bin/ssh-keygen; or test "$sshkeygen_path" = /usr/sbin/ssh-keygen
+            echo "Error: Apple's bundled ssh-keygen at $sshkeygen_path lacks FIDO2 support." >&2
+            echo "       The error 'No FIDO SecurityKeyProvider specified' / 'invalid format'" >&2
+            echo "       comes from this. Install Homebrew's OpenSSH and put it ahead of /usr/bin:" >&2
+            echo "" >&2
+            echo "         brew install openssh" >&2
+            set -l brew_prefix ""
+            if command -q brew
+                set brew_prefix (brew --prefix 2>/dev/null)
+            else if test -x /opt/homebrew/bin/brew
+                set brew_prefix /opt/homebrew
+            else if test -x /usr/local/bin/brew
+                set brew_prefix /usr/local
+            end
+            if test -n "$brew_prefix"
+                echo "         fish_add_path -m $brew_prefix/bin" >&2
+            else
+                echo "         fish_add_path -m /opt/homebrew/bin   # Apple Silicon" >&2
+                echo "         fish_add_path -m /usr/local/bin      # Intel" >&2
+            end
+            echo "" >&2
+            echo "       Then re-run yk_ssh_new." >&2
+            return 1
+        end
+    end
+
     mkdir -p (dirname $output)
     chmod 700 (dirname $output) 2>/dev/null
 
@@ -61,6 +94,13 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
     if not set -q _flag_no_verify_required
         set args $args -O verify-required
     end
+    # FIDO2 (*-sk) keys: the on-disk file is just a handle to a credential
+    # stored on the YubiKey. Encrypting it adds friction without crypto
+    # value (the handle is useless without the YubiKey + touch + PIN).
+    # Default to no passphrase; opt in with --passphrase.
+    if not set -q _flag_passphrase
+        set args $args -N ""
+    end
 
     echo "Generating $type key (touch your YubiKey when it blinks)..."
     echo "  Output:      $output"
@@ -75,10 +115,14 @@ function yk_ssh_new --description "Generate a hardware-backed SSH key on a YubiK
     echo
     echo "Public key:"
     cat "$output.pub"
+    if set -q _flag_no_summary
+        return 0
+    end
     echo
     echo "Next steps:"
-    echo "  1. Add to GitHub:    gh ssh-key add $output.pub --title \"$hostshort-yk\""
-    echo "  2. Add to ssh-agent: ssh-add $output"
+    echo "  1. Add to GitHub:    gh ssh-key add $output.pub --title \"<descriptive title>\""
+    echo "     Or via the GitHub UI:  https://github.com/settings/keys"
+    echo "  2. Test it:          ssh -T git@github.com  # AddKeysToAgent in ~/.ssh/config handles ssh-add automatically"
     if not set -q _flag_no_resident
         echo "  3. On new machines:  ssh-add -K   # reload from YubiKey"
     end

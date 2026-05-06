@@ -1,0 +1,8 @@
+{{- /* Files chezmoi should remove from the destination on apply, even though */ -}}
+{{- /* they're no longer in the source state. Useful when a helper is dropped */ -}}
+{{- /* and we don't want stale copies lingering in the user's home.           */ -}}
+{{- /*                                                                         */ -}}
+{{- /* yk-ssh-load was removed in PR #303 (made obsolete by per-serial SSH    */ -}}
+{{- /* config glob and IdentitiesOnly yes from PR #302). On Unix:             */ -}}
+.config/shell/functions/yk-ssh-load.sh
+.config/fish/functions/yk_ssh_load.fish

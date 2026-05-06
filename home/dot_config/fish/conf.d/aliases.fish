@@ -57,13 +57,26 @@ alias motd 'fastfetch'
 # SSH
 # Print the first available public key (preferring hardware-backed) and copy
 # it to the system clipboard via clipboard_copy (auto-detects backend).
+# Discovers both the legacy un-suffixed `id_<type>_sk.pub` and per-serial
+# `id_<type>_sk_<serial>.pub` files written by `yk_enroll`.
 function pubkey --description "Print and copy the first available SSH public key"
     set -l key
-    for candidate in id_ed25519_sk id_ecdsa_sk id_ed25519 id_rsa
-        if test -f "$HOME/.ssh/$candidate.pub"
-            set key "$HOME/.ssh/$candidate.pub"
-            break
+    # Prefer hardware-backed FIDO2 keys: per-serial files first, then
+    # legacy un-suffixed, then non-FIDO2.
+    for pattern in \
+            "$HOME/.ssh/id_ed25519_sk_"*.pub \
+            "$HOME/.ssh/id_ed25519_sk.pub" \
+            "$HOME/.ssh/id_ecdsa_sk_"*.pub \
+            "$HOME/.ssh/id_ecdsa_sk.pub" \
+            "$HOME/.ssh/id_ed25519.pub" \
+            "$HOME/.ssh/id_rsa.pub"
+        for candidate in $pattern
+            if test -f "$candidate"
+                set key "$candidate"
+                break
+            end
         end
+        test -n "$key"; and break
     end
     if test -z "$key"
         echo "No SSH public key found in ~/.ssh" >&2

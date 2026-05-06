@@ -71,7 +71,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 **Framework**: [Bats 1.13+](https://github.com/bats-core/bats-core)
 
 **Coverage**:
-- Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, etc.)
+- Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, `git-ssh-to-https`, etc.)
 - **Configuration validation** (Chezmoi, Fish, shell scripts) ✨
 - **Dotfiles verification** (applied files existence) ✨
 - **Integration tests** (Chezmoi apply dry-run, Fish loading) ✨
@@ -89,7 +89,8 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - `gh-check-ssh-keys.bats` - Tests GitHub SSH key verification
 - `gh-env-var.bats` - Tests GitHub environment variable utilities
 - `gh-ssh-keys-integration.bats` - Integration tests for GitHub SSH workflows
-- `git-https-to-ssh.bats` - Tests Git remote URL conversion
+- `git-https-to-ssh.bats` - Tests Git HTTPS-to-SSH remote URL conversion
+- `git-ssh-to-https.bats` - Tests Git SSH-to-HTTPS remote URL conversion
 
 **Test Files** (validation & integration):
 - `validate-chezmoi.bats` - Validates Chezmoi configuration syntax
