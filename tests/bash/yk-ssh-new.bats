@@ -106,3 +106,14 @@ teardown() {
 	run grep -x -- '-N' "$TEST_BIN_DIR/ssh-keygen.args"
 	[ "$status" -ne 0 ]
 }
+
+@test "yk-ssh-new: --no-summary suppresses Next steps footer" {
+	run yk-ssh-new --no-summary
+	[ "$status" -eq 0 ]
+	# Public key block still printed.
+	[[ "$output" =~ "Public key" ]]
+	# But the Next steps footer is gone.
+	[[ ! "$output" =~ "Next steps:" ]]
+	[[ ! "$output" =~ "ssh-add -K" ]]
+	[[ ! "$output" =~ "gh ssh-key add" ]]
+}

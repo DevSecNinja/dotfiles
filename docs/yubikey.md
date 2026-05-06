@@ -37,17 +37,16 @@ chezmoi edit-config-template   # set useYubiKey to true, or pass --promptBool
 chezmoi apply
 
 # 4) On a *new* machine, after `chezmoi apply`:
-yk-ssh-load                    # ssh-add -K — pulls keys back from the YubiKey
+yk-enroll                      # mints a fresh per-serial resident key
 ```
 
 > **Safe migration:** `useYubiKey: true` only swaps your `~/.ssh/config`
-> over to the FIDO2 `IdentityFile` lines once `~/.ssh/id_ed25519_sk` (or
-> `id_ecdsa_sk`) actually exists on disk. If you flip the toggle before
-> generating / loading a resident key, chezmoi keeps the 1Password
-> `IdentityAgent` line and the `Include ~/.ssh/1Password/config` block as
-> a fallback so your existing SSH access survives. Run `yk-ssh-new` (new
-> machine: provisioning a key) or `yk-ssh-load` (new machine: pulling
-> resident keys back from the YubiKey) and re-run `chezmoi apply`.
+> over to the FIDO2 `IdentityFile` lines once `~/.ssh/id_ed25519_sk*` (or
+> `id_ecdsa_sk*`) actually exists on disk. If you flip the toggle before
+> enrolling a key, chezmoi keeps the 1Password `IdentityAgent` line and
+> the `Include ~/.ssh/1Password/config` block as a fallback so your
+> existing SSH access survives. Run `yk-enroll` and re-run
+> `chezmoi apply`.
 
 ### Locked yourself out?
 
@@ -157,6 +156,29 @@ anyway, opt in:
 yk-ssh-new --passphrase
 ```
 
+### Why not `AddKeysToAgent yes`?
+
+For FIDO2 (`*-sk`) keys the SSH config sets `IdentitiesOnly yes` and
+**does not** set `AddKeysToAgent yes`. The reason: the private key never
+leaves the YubiKey, so `ssh-agent` has nothing to cache except the
+handle. With `verify-required` set on the credential, every signing
+op needs a fresh PIN — but `ssh-agent` (especially on macOS) cannot
+re-prompt for the FIDO2 PIN, so the second `ssh` call fails with:
+
+```
+sign_and_send_pubkey: signing failed for ED25519-SK "..." from agent: agent refused operation
+```
+
+Letting OpenSSH talk to the YubiKey directly each time keeps the touch
++ PIN dance interactive and reliable. If you ever land in the broken
+state (e.g. you ran an older config that did `AddKeysToAgent yes`),
+clear the agent and you're back in business:
+
+```bash
+ssh-add -D                   # drop all cached keys
+ssh -T git@github.com        # works again
+```
+
 ### Multiple YubiKeys
 
 A FIDO2 resident credential lives only on the YubiKey that minted it —
@@ -194,18 +216,19 @@ its own "Done." footer so you don't miss it.
 
 | Bash/Zsh                | Fish                | Purpose                                                    |
 | ----------------------- | ------------------- | ---------------------------------------------------------- |
-| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment, idempotent              |
-| `yk-status`             | `yk_status`         | Firmware / form-factor / FIPS info per device              |
+| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment + health check, idempotent |
+| `yk-status`             | `yk_status`         | Per-device health: firmware, FIPS, PIN status, SSH key check |
 | `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
 | `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
-| `yk-ssh-load`           | `yk_ssh_load`       | `ssh-add -K`: load resident keys from the YubiKey          |
 | `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
+| `yk-git-sign-setup`     | `yk_git_sign_setup` | Register your SSH pubkey for git commit signing            |
 
-`pubkey` now picks the first available of:
-`id_ed25519_sk.pub` → `id_ecdsa_sk.pub` → `id_ed25519.pub` → `id_rsa.pub`,
-so it transparently follows you onto a YubiKey.
+`pubkey` discovers per-serial files: it picks the first match of
+`id_ed25519_sk_*.pub` → `id_ed25519_sk.pub` → `id_ecdsa_sk_*.pub` →
+`id_ecdsa_sk.pub` → `id_ed25519.pub` → `id_rsa.pub`, so it transparently
+follows you onto a YubiKey enrolled with `yk-enroll`.
 
 ## Firmware compatibility
 
@@ -227,6 +250,62 @@ When more than one YubiKey is connected, every helper either:
 - delegates to `yk-pick`, which uses `fzf` if available.
 
 Run `yk-status` to see all serials at a glance.
+
+## Git commit signing
+
+Once your YubiKey-backed SSH key exists, you can use it to sign git commits and
+tags — no GPG required. This is gated by the same `useYubiKey` chezmoi var.
+
+```bash
+# 1) Enroll your YubiKey (mints ~/.ssh/id_ed25519_sk_<serial>)
+yk-enroll
+
+# 2) Upload the pubkey to GitHub as BOTH an authentication AND a signing key.
+#    Both are required: the first lets you push/pull over SSH, the second is
+#    what gets you the green "Verified" badge on signed commits.
+gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type authentication --title "<title>"
+gh ssh-key add ~/.ssh/id_ed25519_sk_<serial>.pub --type signing       --title "<title>"
+# Or via the GitHub UI:
+#   https://github.com/settings/keys
+
+# 3) chezmoi picks up the new key:
+#      ~/.ssh/config gets per-serial IdentityFile lines (via glob)
+#      ~/.config/git/config gets [gpg] format=ssh + user.signingkey
+#      ~/.config/git/allowed_signers gets every per-serial pubkey
+chezmoi apply
+
+# 4) Register your pubkey(s) as trusted signers + verify
+yk-git-sign-setup
+yk-git-sign-setup --check
+
+# 5) Smoke test
+git commit -S --allow-empty -m "test signing"
+git log --show-signature -1
+```
+
+> **Uploading a *signing* key isn't optional** — the whole point of signing is
+> the verified badge. `yk-enroll`'s "Done." block lists both `gh ssh-key add`
+> commands explicitly, and `work-checklist` includes them as separate
+> checklist items.
+
+### Multi-YubiKey signing
+
+`user.signingkey` is a single path, so chezmoi picks the first per-serial
+pubkey it finds (`id_ed25519_sk_*` first, then legacy un-suffixed). Whichever
+YubiKey is plugged in, OpenSSH walks every `IdentityFile` until one matches
+the SSH config — but git always asks the device that holds the **`user.signingkey`**
+private key. If you carry multiple YubiKeys, set `user.signingkey` to the
+specific pubkey you want to sign with (or override per-repo via
+`git config user.signingkey ~/.ssh/id_ed25519_sk_<other-serial>.pub`).
+
+`allowed_signers` lists **all** per-serial pubkeys so verification works
+regardless of which YubiKey signed the commit.
+
+### Add a coworker's key
+
+```bash
+yk-git-sign-setup --add /path/to/coworker.pub --principal coworker@example.com
+```
 
 ## Migrating off 1Password
 

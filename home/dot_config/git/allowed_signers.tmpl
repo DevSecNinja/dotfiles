@@ -1,0 +1,34 @@
+{{- /* allowed_signers controls which SSH keys git considers valid for verifying */ -}}
+{{- /* signed commits/tags. Populated automatically from your YubiKey enrollment  */ -}}
+{{- /* (yk-enroll writes per-serial pubkeys at ~/.ssh/id_*_sk_<serial>.pub).      */ -}}
+{{- /* Add coworkers' keys with `yk-git-sign-setup --add ...`.                    */ -}}
+{{- /* Format: <principals> <key-type> <key> [comment]                            */ -}}
+{{- /*   man ssh-keygen, "ALLOWED SIGNERS" section.                               */ -}}
+# Managed by chezmoi. Add additional principals via `yk-git-sign-setup --add`.
+# Lines starting with '#' are ignored.
+{{ if .useYubiKey -}}
+{{- /* Inline every per-serial FIDO2 pubkey we find so any plugged-in YubiKey     */ -}}
+{{- /* verifies. Falls back to the legacy un-suffixed names if present.           */ -}}
+{{- $found := false -}}
+{{- range glob (joinPath .chezmoi.homeDir ".ssh" "id_ed25519_sk_*.pub") -}}
+{{ $.email }} {{ include . | trim }}
+{{ $found = true -}}
+{{- end -}}
+{{- range glob (joinPath .chezmoi.homeDir ".ssh" "id_ecdsa_sk_*.pub") -}}
+{{ $.email }} {{ include . | trim }}
+{{ $found = true -}}
+{{- end -}}
+{{- $legacyEd := joinPath .chezmoi.homeDir ".ssh" "id_ed25519_sk.pub" -}}
+{{- if stat $legacyEd -}}
+{{ .email }} {{ include $legacyEd | trim }}
+{{ $found = true -}}
+{{- end -}}
+{{- $legacyEc := joinPath .chezmoi.homeDir ".ssh" "id_ecdsa_sk.pub" -}}
+{{- if stat $legacyEc -}}
+{{ .email }} {{ include $legacyEc | trim }}
+{{ $found = true -}}
+{{- end -}}
+{{- if not $found }}
+# No FIDO2 SSH pubkey found yet. Run `yk-enroll` and re-run `chezmoi apply`.
+{{- end }}
+{{- end }}

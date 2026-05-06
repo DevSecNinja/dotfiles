@@ -143,15 +143,25 @@ EOF
 
 	# ----- Step 4: FIDO2 PIN -------------------------------------------------
 	# Note: YubiKey 5 FIPS series ships with a *factory default* FIDO2 PIN of
-	# 123456 — `ykman fido info` reports 'PIN is set' even on a brand-new
-	# device. The non-FIPS YubiKey 5 ships with no PIN at all. So on FIPS
-	# keys we always nudge the user to rotate, and `--rotate-pin` forces a
+	# 123456 — `ykman fido info` reports 'PIN is set' (older ykman) or
+	# 'PIN: 8 attempt(s) remaining' (ykman ≥5) even on a brand-new device.
+	# The non-FIPS YubiKey 5 ships with no PIN at all. So on FIPS keys we
+	# always nudge the user to rotate, and `--rotate-pin` forces a
 	# rotation prompt regardless of detected state.
 	_yk_step "4/5" "FIDO2 PIN"
 	local fido_info
 	fido_info="$(ykman --device "$serial" fido info 2>/dev/null || true)"
 	local pin_set=false
-	if grep -qiE 'PIN is set|PIN.*set' <<<"$fido_info" && ! grep -qiE 'PIN is not set' <<<"$fido_info"; then
+	# Positive signals (any of these means the PIN is set):
+	#   - legacy ykman:  'PIN is set'
+	#   - modern ykman:  'PIN: 8 attempt(s) remaining' (any number; the
+	#                    'remaining' wording only appears once a PIN is set)
+	#   - modern ykman:  'PIN: Configured'
+	# Negative signals override (in case the line contains both):
+	#   - 'PIN is not set'
+	#   - 'PIN: Not set' / 'PIN: not configured'
+	if grep -qiE 'PIN is set|PIN:[[:space:]]*[0-9]+[[:space:]]+attempt|PIN:[[:space:]]*configured' <<<"$fido_info" &&
+		! grep -qiE 'PIN is not set|PIN:[[:space:]]*not[[:space:]]+(set|configured)' <<<"$fido_info"; then
 		pin_set=true
 	fi
 	local is_fips=false
@@ -170,7 +180,9 @@ EOF
 			if [[ "$check_only" == true ]]; then
 				_yk_warn "  --rotate-pin requested but --check is read-only; skipping."
 			else
-				echo "  Rotating FIDO2 PIN now (enter current PIN, then new one twice)..." >&2
+				echo "  Rotating FIDO2 PIN now. Follow ykman's prompts (it may ask for the" >&2
+				echo "  new PIN first, then again to confirm, then the current PIN — the" >&2
+				echo "  exact order depends on firmware and PIN policy)." >&2
 				if ! ykman --device "$serial" fido access change-pin; then
 					_yk_fail "  Failed to change FIDO2 PIN."
 					return 1
@@ -211,7 +223,7 @@ EOF
 				# shellcheck disable=SC1091
 				. "$HOME/.config/shell/functions/yk-ssh-new.sh" 2>/dev/null || true
 			fi
-			local new_args=(--type "$type" --output "$out_path")
+			local new_args=(--type "$type" --output "$out_path" --no-summary)
 			[[ "$resident" == false ]] && new_args+=(--no-resident)
 			[[ "$verify_required" == false ]] && new_args+=(--no-verify-required)
 			if ! yk-ssh-new "${new_args[@]}"; then
@@ -245,13 +257,32 @@ EOF
 	fi
 	echo
 	echo "Done. Next steps for serial $serial:"
-	echo "  1. Add to GitHub:    gh ssh-key add ${out_path}.pub --title \"$(hostname -s 2>/dev/null || hostname)-yk-${serial}\""
-	echo "  2. Add to ssh-agent: ssh-add ${out_path}"
-	[[ "$resident" == true ]] && echo "  3. On new machines:  ssh-add -K   # reload all resident keys from this YubiKey"
+	# A YubiKey is portable across machines, so the suggested GitHub-key
+	# title intentionally omits the hostname. Last 4 digits of the serial
+	# disambiguate when you have multiple identical-looking devices.
+	local serial_short="${serial: -4}"
+	local suggested_title="${device_type:-YubiKey} (·${serial_short})"
+	echo "  1. Add to GitHub (BOTH types — needed for SSH and the Verified badge):"
+	echo "       gh ssh-key add ${out_path}.pub --type authentication --title \"${suggested_title}\""
+	echo "       gh ssh-key add ${out_path}.pub --type signing       --title \"${suggested_title}\""
+	echo "     Or via the GitHub UI:"
+	echo "       https://github.com/settings/keys"
+	echo "     (each YubiKey needs to be added under both SSH and Signing keys;"
+	echo "      same pubkey content, two list entries.)"
+	echo
+	echo "  2. Wire git for SSH commit signing (writes ~/.config/git/allowed_signers):"
+	echo "       chezmoi apply       # picks up the new key in ~/.ssh/config + git config"
+	echo "       yk-git-sign-setup   # registers the pubkey as a trusted signer"
+	echo "       yk-git-sign-setup --check"
+	echo
+	echo "  3. Test it:"
+	echo "       ssh -T git@github.com                                # touch + PIN"
+	echo "       git commit -S --allow-empty -m 'test signing'        # touch + PIN"
+	echo "       git log --show-signature -1"
 	echo
 	echo "  Multi-key tip: re-run yk-enroll with each YubiKey plugged in (one"
-	echo "  at a time), add every resulting .pub to GitHub, and any of them"
-	echo "  can then sign / SSH."
+	echo "  at a time), add every resulting .pub to GitHub under BOTH SSH key"
+	echo "  lists, and any of them can then sign / SSH."
 	echo
 	echo "  On a work machine? Also run:  work-checklist"
 }
