@@ -224,6 +224,8 @@ its own "Done." footer so you don't miss it.
 | `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
 | `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
 | `yk-git-sign-setup`     | `yk_git_sign_setup` | Register your SSH pubkey for git commit signing            |
+| `yk-otp`                | `yk_otp`            | TOTP code from the OATH applet (fzf + clipboard)           |
+| `yk-touch-watch`        | `yk_touch_watch`    | Notify when a YubiKey is waiting for a touch               |
 
 `pubkey` discovers per-serial files: it picks the first match of
 `id_ed25519_sk_*.pub` → `id_ed25519_sk.pub` → `id_ecdsa_sk_*.pub` →
@@ -250,6 +252,26 @@ When more than one YubiKey is connected, every helper either:
 - delegates to `yk-pick`, which uses `fzf` if available.
 
 Run `yk-status` to see all serials at a glance.
+
+## TOTP (OATH)
+
+Use the YubiKey's OATH applet to generate 6/8-digit TOTP codes from the CLI,
+no phone needed:
+
+```bash
+yk-otp                  # picks the only match, or fzf when multiple
+yk-otp github           # filter by substring
+yk-otp --list           # just list account names
+yk-otp --no-copy aws    # print but don't touch the clipboard
+```
+
+The selected code is also copied to the clipboard via `clipboard-copy`. If
+the account is configured as "requires touch", `yk-otp` prints a hint and
+waits for the tap.
+
+`yk-touch-watch` runs in the background and notifies (desktop notification +
+terminal bell) when a YubiKey operation is blocking on a touch — useful when
+SSH/git seem to "hang" silently. Run with `--once` to fire once and exit.
 
 ## Git commit signing
 

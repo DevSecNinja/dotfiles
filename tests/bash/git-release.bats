@@ -208,7 +208,9 @@ teardown() {
 	git push -q origin main
 
 	git tag -a v1.2.3 -m "Test tag"
+	git commit --allow-empty -q -m "Existing target tag"
 	git tag -a v1.2.4 -m "Existing next tag"
+	git reset --hard -q HEAD~1
 
 	run git-release patch
 	[ "$status" -eq 1 ]
