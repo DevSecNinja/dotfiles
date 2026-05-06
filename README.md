@@ -203,6 +203,14 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - ⚡ CI workflows use prebuilt images for faster test execution
 - 📦 Available at: `ghcr.io/devsecninja/dotfiles-devcontainer:latest`
 
+**Image size notes (checked 2026-05-06):**
+- Current `latest` size is ~884 MB compressed for `linux/amd64` and ~942 MB for `linux/arm64` (`docker buildx imagetools inspect`), with ~2.0 GB local unpacked size for `linux/amd64`.
+- Implemented: remove Homebrew's build/download cache after prebuild. This drops about 130 MB from the unpacked image with no loss of installed tools; the trade-off is a slower first `brew update` inside the container.
+- Larger optional savings:
+  - Skip Linux Homebrew in the prebuild: saves about 550 MB unpacked (`/home/linuxbrew` plus cache), but removes preinstalled `mise`/`go-task` unless replaced by another installer.
+  - Remove the PowerShell/Pester devcontainer feature: saves about 200 MB unpacked, but PowerShell tests would no longer work out of the box.
+  - Start from a slimmer Debian base instead of `devcontainers/base`: could save several hundred MB, but would lose the maintained Dev Containers defaults and require more custom setup.
+
 **Using the DevContainer:**
 
 1. **In VSCode:**
