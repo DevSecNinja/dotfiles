@@ -3,9 +3,9 @@ name: Prebuild Devcontainer
 on:
   push:
     branches: [main]
-    # Tag pushes (v*) build a release-pinned image set: :vX.Y.Z, :X.Y.Z and
-    # the multi-arch manifest list, plus a build-provenance attestation
-    # for the manifest digest. Source must be the tagged commit so the
+    # Tag pushes (v*) build a release-pinned multi-arch manifest list tagged
+    # as :vX.Y.Z, plus a build-provenance attestation for the manifest digest.
+    # Source must be the tagged commit so the
     # image bytes correspond to the release source tree. Path filters
     # below only apply to branch pushes — tag pushes always run.
     tags:
@@ -77,6 +77,9 @@ jobs:
         # current digest and freezes it in the manifest list, so :vX.Y.Z
         # remains pinned even if :amd64 / :arm64 are later overwritten.
         uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
+        env:
+          DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
@@ -129,7 +132,6 @@ jobs:
               version="${GITHUB_REF_NAME}"
               echo "is-release=true"
               echo "version=${version}"
-              echo "version-no-v=${version#v}"
             else
               echo "is-release=false"
             fi
@@ -158,30 +160,23 @@ jobs:
       - name: Create and push release manifest tags
         if: steps.release.outputs.is-release == 'true'
         id: release-manifest
-        # Build :vX.Y.Z and :X.Y.Z manifest lists from the SAME per-arch
-        # :amd64 / :arm64 digests pushed in this run. docker resolves
-        # tag→digest at create time and the manifest list stores the
-        # digest, so the release tags remain pinned even if the rolling
-        # :amd64 / :arm64 tags are overwritten by a future main build.
+        # Build :vX.Y.Z from the SAME per-arch :amd64 / :arm64 digests pushed
+        # in this run. docker resolves tag→digest at create time and the
+        # manifest list stores the digest, so the release tag remains pinned
+        # even if the rolling :amd64 / :arm64 tags are overwritten by a future
+        # main build.
         env:
           VERSION: ${{ steps.release.outputs.version }}
-          VERSION_NO_V: ${{ steps.release.outputs.version-no-v }}
         run: |
           IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
-          digest=""
-          for tag in "${VERSION}" "${VERSION_NO_V}"; do
-            docker manifest create "${IMAGE}:${tag}" \
-              "${IMAGE}:amd64" \
-              "${IMAGE}:arm64"
-            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:amd64" --os linux --arch amd64
-            docker manifest annotate "${IMAGE}:${tag}" "${IMAGE}:arm64" --os linux --arch arm64
-            # docker manifest push prints the manifest list digest on stdout.
-            push_out="$(docker manifest push "${IMAGE}:${tag}")"
-            echo "Pushed ${IMAGE}:${tag} -> ${push_out}"
-            if [ "${tag}" = "${VERSION}" ]; then
-              digest="${push_out}"
-            fi
-          done
+          docker manifest create "${IMAGE}:${VERSION}" \
+            "${IMAGE}:amd64" \
+            "${IMAGE}:arm64"
+          docker manifest annotate "${IMAGE}:${VERSION}" "${IMAGE}:amd64" --os linux --arch amd64
+          docker manifest annotate "${IMAGE}:${VERSION}" "${IMAGE}:arm64" --os linux --arch arm64
+          # docker manifest push prints the manifest list digest on stdout.
+          digest="$(docker manifest push "${IMAGE}:${VERSION}")"
+          echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
           if [ -z "${digest}" ]; then
             echo "::error::Failed to capture manifest digest for ${VERSION}"
             exit 1

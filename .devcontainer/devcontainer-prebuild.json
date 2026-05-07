@@ -6,7 +6,11 @@
     // re-downloading features at container startup. Mismatches force feature reinstallation.
     "build": {
         "dockerfile": "Dockerfile",
-        "context": ".."
+        "context": "..",
+        "args": {
+            "DOTFILES_DEVCONTAINER_VERSION": "${localEnv:DOTFILES_DEVCONTAINER_VERSION}",
+            "DOTFILES_DEVCONTAINER_REVISION": "${localEnv:DOTFILES_DEVCONTAINER_REVISION}"
+        }
     },
     "features": {
         "ghcr.io/devcontainers/features/git-lfs:1": {

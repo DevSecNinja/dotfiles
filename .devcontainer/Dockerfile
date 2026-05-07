@@ -6,6 +6,12 @@
 
 FROM mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
 
+ARG DOTFILES_DEVCONTAINER_VERSION=latest
+ARG DOTFILES_DEVCONTAINER_REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/DevSecNinja/dotfiles" \
+    org.opencontainers.image.version="${DOTFILES_DEVCONTAINER_VERSION}" \
+    org.opencontainers.image.revision="${DOTFILES_DEVCONTAINER_REVISION}"
+
 # Copy dotfiles source into the image for chezmoi to install tools during build
 COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
 
