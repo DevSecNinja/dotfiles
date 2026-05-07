@@ -77,6 +77,9 @@ jobs:
         # current digest and freezes it in the manifest list, so :vX.Y.Z
         # remains pinned even if :amd64 / :arm64 are later overwritten.
         uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
+        env:
+          DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}

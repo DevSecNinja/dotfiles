@@ -17,6 +17,28 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
+@test "validate-devcontainer: prebuild image includes release-specific OCI metadata" {
+	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
+	prebuild_config="$REPO_ROOT/.devcontainer/devcontainer-prebuild.json"
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+
+	[ -f "$dockerfile" ]
+	[ -f "$prebuild_config" ]
+	[ -f "$workflow" ]
+
+	run grep -F 'ARG DOTFILES_DEVCONTAINER_VERSION=latest' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'org.opencontainers.image.version="${DOTFILES_DEVCONTAINER_VERSION}"' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F '"DOTFILES_DEVCONTAINER_VERSION": "${localEnv:DOTFILES_DEVCONTAINER_VERSION}"' "$prebuild_config"
+	[ "$status" -eq 0 ]
+
+	run grep -F "DOTFILES_DEVCONTAINER_VERSION: \${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}" "$workflow"
+	[ "$status" -eq 0 ]
+}
+
 @test "validate-devcontainer: release prebuild publishes only the v-prefixed version tag" {
 	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
 
