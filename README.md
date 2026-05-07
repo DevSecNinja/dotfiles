@@ -202,6 +202,7 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - 🏗️ Images are rebuilt weekly and on every devcontainer configuration change
 - ⚡ CI workflows use prebuilt images for faster test execution
 - 📦 Available at: `ghcr.io/devsecninja/dotfiles-devcontainer:latest`
+- Current `latest` size is ~884 MB compressed for `linux/amd64` and ~942 MB for `linux/arm64` (`docker buildx imagetools inspect`), with ~2.0 GB local unpacked size for `linux/amd64`.
 
 **Using the DevContainer:**
 

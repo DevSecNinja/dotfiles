@@ -18,6 +18,10 @@ COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
 USER vscode
 RUN REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
     && rm -f "${HOME}/.config/chezmoi/chezmoi.yaml" \
+    && if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then \
+        /home/linuxbrew/.linuxbrew/bin/brew cleanup --prune=all -s || echo "[WARN] Homebrew cleanup failed; continuing"; \
+    fi \
+    && rm -rf "${HOME}/.cache/Homebrew" \
     && sudo rm -rf /tmp/dotfiles-src \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
