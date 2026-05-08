@@ -25,9 +25,10 @@ COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcont
 USER vscode
 RUN REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
     && /tmp/devcontainer-software-manifest.sh /tmp/dotfiles-devcontainer \
-    && sudo mkdir -p /usr/local/share/dotfiles-devcontainer \
-    && sudo cp /tmp/dotfiles-devcontainer/manifest.md /tmp/dotfiles-devcontainer/release-notes.md /usr/local/share/dotfiles-devcontainer/ \
-    && sudo chmod 0644 /usr/local/share/dotfiles-devcontainer/manifest.md /usr/local/share/dotfiles-devcontainer/release-notes.md \
+    && manifest_dir=/usr/local/share/dotfiles-devcontainer \
+    && sudo mkdir -p "${manifest_dir}" \
+    && sudo cp /tmp/dotfiles-devcontainer/*.md "${manifest_dir}/" \
+    && sudo chmod 0644 "${manifest_dir}"/*.md \
     && rm -f "${HOME}/.config/chezmoi/chezmoi.yaml" \
     && if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then \
         /home/linuxbrew/.linuxbrew/bin/brew cleanup --prune=all -s || echo "[WARN] Homebrew cleanup failed; continuing"; \

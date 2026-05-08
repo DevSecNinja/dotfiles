@@ -19,7 +19,7 @@ if [ -r /etc/os-release ]; then
 fi
 
 clean_inline() {
-	printf '%s' "${1:-unknown}" | tr -d '\000-\010\013\014\016-\037' | sed 's/`/'\''/g'
+	printf '%s' "${1:-unknown}" | tr -d '[:cntrl:]' | sed "s/\`/'/g"
 }
 
 tool_version() {
@@ -110,6 +110,7 @@ write_mise_tools() {
 
 	if ! MISE_YES=1 mise ls --current 2>/dev/null; then
 		printf '_mise tool list is unavailable._\n'
+		return 0
 	fi
 }
 

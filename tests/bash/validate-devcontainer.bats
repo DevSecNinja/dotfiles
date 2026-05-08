@@ -65,7 +65,7 @@ setup() {
 	run grep -F 'script/devcontainer-software-manifest.sh' "$dockerfile"
 	[ "$status" -eq 0 ]
 
-	run grep -F '/usr/local/share/dotfiles-devcontainer/manifest.md' "$dockerfile"
+	run grep -F 'manifest_dir=/usr/local/share/dotfiles-devcontainer' "$dockerfile"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'Export devcontainer release notes' "$workflow"
