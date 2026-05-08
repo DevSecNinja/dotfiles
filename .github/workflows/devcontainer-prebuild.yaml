@@ -187,9 +187,8 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Export devcontainer release notes
-        if: steps.release.outputs.is-release == 'true'
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ steps.release.outputs.version || 'latest' }}
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
@@ -207,10 +206,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload devcontainer software manifest
-        if: steps.release.outputs.is-release == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: devcontainer-${{ steps.release.outputs.version }}-software-manifest
+          name: devcontainer-${{ steps.release.outputs.version || 'latest' }}-software-manifest
           path: dist/devcontainer/*.md
           if-no-files-found: error
 
