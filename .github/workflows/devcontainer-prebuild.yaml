@@ -13,12 +13,14 @@ on:
     paths:
       - '.devcontainer/**'
       - 'home/**'
+      - 'script/devcontainer-software-manifest.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   pull_request:
     branches: [main]
     paths:
       - '.devcontainer/**'
       - 'home/**'
+      - 'script/devcontainer-software-manifest.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   schedule:
     # Weekly on Mondays at 00:00

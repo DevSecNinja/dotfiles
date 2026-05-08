@@ -65,6 +65,10 @@ setup() {
 	run grep -F 'script/devcontainer-software-manifest.sh' "$dockerfile"
 	[ "$status" -eq 0 ]
 
+	run grep -cF 'script/devcontainer-software-manifest.sh' "$workflow"
+	[ "$status" -eq 0 ]
+	[ "$output" -eq 2 ]
+
 	run grep -F 'manifest_dir=/usr/local/share/dotfiles-devcontainer' "$dockerfile"
 	[ "$status" -eq 0 ]
 
