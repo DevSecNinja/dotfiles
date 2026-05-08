@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1](https://github.com/DevSecNinja/dotfiles/compare/v0.3.0...v0.3.1) (2026-05-08)
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.18 ➔ v2026.4.19 ) ([#313](https://github.com/DevSecNinja/dotfiles/issues/313)) ([21347a3](https://github.com/DevSecNinja/dotfiles/commit/21347a3f4a43b1f1f8c9cabe8d674f64a8214d93))
+* **github-release:** update release jdx/mise ( v2026.4.19 ➔ v2026.4.20 ) ([#317](https://github.com/DevSecNinja/dotfiles/issues/317)) ([baea8c4](https://github.com/DevSecNinja/dotfiles/commit/baea8c4d47375351fb10068f1996a360ed873254))
+* publish latest devcontainer manifest artifact ([c52b0af](https://github.com/DevSecNinja/dotfiles/commit/c52b0afe685bb8c64a1318ae6b08ff6af1976c76))
+
 ## [0.3.0](https://github.com/DevSecNinja/dotfiles/compare/v0.2.2...v0.3.0) (2026-05-07)
 
 
