@@ -75,7 +75,10 @@ setup() {
 	run grep -F 'Export devcontainer release notes' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'devcontainer-${{ steps.release.outputs.version }}-software-manifest' "$workflow"
+	run grep -F "VERSION: \${{ steps.release.outputs.version || 'latest' }}" "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F "devcontainer-\${{ steps.release.outputs.version || 'latest' }}-software-manifest" "$workflow"
 	[ "$status" -eq 0 ]
 }
 
