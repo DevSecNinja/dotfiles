@@ -184,6 +184,34 @@ jobs:
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
+      - name: Export devcontainer release notes
+        if: steps.release.outputs.is-release == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
+          outdir="dist/devcontainer"
+          mkdir -p "${outdir}"
+          container="$(docker create --platform linux/amd64 "${IMAGE}:${VERSION}")"
+          trap 'docker rm -f "${container}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container}:/usr/local/share/dotfiles-devcontainer/manifest.md" \
+            "${outdir}/devcontainer-${VERSION}-manifest.md"
+          docker cp "${container}:/usr/local/share/dotfiles-devcontainer/release-notes.md" \
+            "${outdir}/devcontainer-${VERSION}-release-notes.md"
+          {
+            printf '## Devcontainer prebuild\n\n'
+            cat "${outdir}/devcontainer-${VERSION}-release-notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload devcontainer software manifest
+        if: steps.release.outputs.is-release == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: devcontainer-${{ steps.release.outputs.version }}-software-manifest
+          path: dist/devcontainer/*.md
+          if-no-files-found: error
+
       - name: Attest devcontainer image build provenance
         if: steps.release.outputs.is-release == 'true'
         # Provenance for the multi-arch release manifest. Verify with:
