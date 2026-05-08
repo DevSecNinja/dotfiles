@@ -58,6 +58,10 @@ as the default shell, and VS Code extensions (GitHub Copilot, Pester) are
 pre-installed. Prebuilt images are published at
 `ghcr.io/devsecninja/dotfiles-devcontainer:latest`.
 
+Prebuilt images include package release notes at
+`/usr/local/share/dotfiles-devcontainer/release-notes.md` and a full package
+inventory at `/usr/local/share/dotfiles-devcontainer/manifest.md`.
+
 ### Using the DevContainer
 
 === "VS Code"

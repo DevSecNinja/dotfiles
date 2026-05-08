@@ -52,3 +52,49 @@ setup() {
 	run grep -F 'VERSION_NO_V' "$workflow"
 	[ "$status" -ne 0 ]
 }
+
+@test "validate-devcontainer: prebuild image includes generated package manifest" {
+	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+	script="$REPO_ROOT/script/devcontainer-software-manifest.sh"
+
+	[ -f "$dockerfile" ]
+	[ -f "$workflow" ]
+	[ -x "$script" ]
+
+	run grep -F 'script/devcontainer-software-manifest.sh' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -cF 'script/devcontainer-software-manifest.sh' "$workflow"
+	[ "$status" -eq 0 ]
+	[ "$output" -eq 2 ]
+
+	run grep -F 'manifest_dir=/usr/local/share/dotfiles-devcontainer' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'Export devcontainer release notes' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'devcontainer-${{ steps.release.outputs.version }}-software-manifest' "$workflow"
+	[ "$status" -eq 0 ]
+}
+
+@test "validate-devcontainer: package manifest script emits release notes and package inventory" {
+	script="$REPO_ROOT/script/devcontainer-software-manifest.sh"
+	outdir="${BATS_TEST_TMPDIR}/devcontainer-manifest"
+
+	run "$script" "$outdir"
+	[ "$status" -eq 0 ]
+
+	[ -f "$outdir/release-notes.md" ]
+	[ -f "$outdir/manifest.md" ]
+
+	run grep -F '# Devcontainer release notes' "$outdir/release-notes.md"
+	[ "$status" -eq 0 ]
+
+	run grep -F '## Key tools' "$outdir/release-notes.md"
+	[ "$status" -eq 0 ]
+
+	run grep -F '## APT packages' "$outdir/manifest.md"
+	[ "$status" -eq 0 ]
+}

@@ -14,6 +14,7 @@ LABEL org.opencontainers.image.source="https://github.com/DevSecNinja/dotfiles" 
 
 # Copy dotfiles source into the image for chezmoi to install tools during build
 COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
+COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcontainer-software-manifest.sh
 
 # Pre-install dotfiles and all tools as vscode user (non-interactive)
 #   REMOTE_CONTAINERS=true  → triggers devcontainer detection → full install mode
@@ -23,11 +24,17 @@ COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
 #   The state DB is preserved so unchanged run_once scripts won't re-run
 USER vscode
 RUN REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
+    && /tmp/devcontainer-software-manifest.sh /tmp/dotfiles-devcontainer \
+    && manifest_dir=/usr/local/share/dotfiles-devcontainer \
+    && sudo mkdir -p "${manifest_dir}" \
+    && sudo cp /tmp/dotfiles-devcontainer/*.md "${manifest_dir}/" \
+    && sudo chmod 0644 "${manifest_dir}"/*.md \
     && rm -f "${HOME}/.config/chezmoi/chezmoi.yaml" \
     && if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then \
         /home/linuxbrew/.linuxbrew/bin/brew cleanup --prune=all -s || echo "[WARN] Homebrew cleanup failed; continuing"; \
     fi \
     && rm -rf "${HOME}/.cache/Homebrew" \
+    && rm -rf /tmp/dotfiles-devcontainer /tmp/devcontainer-software-manifest.sh \
     && sudo rm -rf /tmp/dotfiles-src \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
