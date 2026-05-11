@@ -79,21 +79,77 @@ function Test-VersionAtLeast {
     }
 }
 
-function Install-ChezmoiFromRelease {
+function Update-PathFromMachineAndUser {
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+    if ($machinePath -and $userPath) {
+        $env:Path = $machinePath + ";" + $userPath
+    }
+    elseif ($machinePath) {
+        $env:Path = $machinePath
+    }
+}
+
+function Install-ChezmoiWithWinget {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Version
+        [string]$Version,
+
+        [Parameter()]
+        [switch]$Upgrade
     )
 
-    $binDir = Join-Path $env:LOCALAPPDATA "Programs\chezmoi\bin"
-    $tag = if ($Version -eq "latest") { "latest" } else { "v$Version" }
+    $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $wingetPath) {
+        Write-Error "winget is not available. Please install Windows Package Manager (winget) first."
+        exit 1
+    }
 
-    Write-Host "Installing chezmoi $Version using the official release installer..." -ForegroundColor Cyan
-    $installScript = Invoke-RestMethod -Uri "https://get.chezmoi.io/ps1" -UseBasicParsing
-    $installBlock = [scriptblock]::Create($installScript)
-    & $installBlock -BinDir $binDir -Tag $tag
+    $action = if ($Upgrade) { "upgrade" } else { "install" }
+    $wingetArgs = @(
+        $action,
+        "--id", "twpayne.chezmoi",
+        "--source", "winget",
+        "--silent",
+        "--accept-source-agreements",
+        "--accept-package-agreements"
+    )
 
-    $env:Path = "$binDir;$env:Path"
+    if ($Version -ne "latest") {
+        $wingetArgs += @("--version", $Version)
+    }
+
+    Write-Host "Running: winget $($wingetArgs -join ' ')" -ForegroundColor Cyan
+    winget @wingetArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "winget $action failed with exit code $LASTEXITCODE"
+    }
+
+    Write-Host "Chezmoi installed successfully with winget" -ForegroundColor Green
+    Write-Host "Refreshing path environment variable..." -ForegroundColor Cyan
+    Update-PathFromMachineAndUser
+}
+
+function Assert-RequiredChezmoiVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RequiredVersion
+    )
+
+    $chezmoiCommand = Get-Command chezmoi -ErrorAction SilentlyContinue
+    if (-not $chezmoiCommand) {
+        Write-Error "chezmoi was not found after package-manager installation."
+        exit 1
+    }
+
+    $installedVersion = Get-ChezmoiVersion -CommandInfo $chezmoiCommand
+    if (-not $installedVersion -or -not (Test-VersionAtLeast -Version $installedVersion -MinimumVersion $RequiredVersion)) {
+        $displayVersion = if ($installedVersion) { $installedVersion } else { "unknown" }
+        Write-Error "chezmoi $displayVersion is installed, but this source requires $RequiredVersion or later. Wait for the winget package to be updated, then rerun this installer."
+        exit 1
+    }
 }
 
 $isInteractive = Test-Interactive
@@ -114,46 +170,21 @@ if ($chezmoiExists -and $requiredChezmoiVersion) {
     if (-not $installedChezmoiVersion -or -not (Test-VersionAtLeast -Version $installedChezmoiVersion -MinimumVersion $requiredChezmoiVersion)) {
         $displayChezmoiVersion = if ($installedChezmoiVersion) { $installedChezmoiVersion } else { "unknown" }
         Write-Warning "chezmoi $displayChezmoiVersion is older than required $requiredChezmoiVersion"
-        Install-ChezmoiFromRelease -Version $requiredChezmoiVersion
+        Install-ChezmoiWithWinget -Version $requiredChezmoiVersion -Upgrade
+        Assert-RequiredChezmoiVersion -RequiredVersion $requiredChezmoiVersion
         $chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
     }
 }
 
 if (-not $chezmoiExists) {
     if ($requiredChezmoiVersion) {
-        Install-ChezmoiFromRelease -Version $requiredChezmoiVersion
+        Install-ChezmoiWithWinget -Version $requiredChezmoiVersion
+        Assert-RequiredChezmoiVersion -RequiredVersion $requiredChezmoiVersion
         $chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
     }
     else {
-        # Check if winget is available
-        $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
-        if (-not $wingetPath) {
-            Write-Error "winget is not available. Please install Windows Package Manager (winget) first."
-            exit 1
-        }
-
-        Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
-
         try {
-            winget install --id twpayne.chezmoi --source winget --silent --accept-source-agreements --accept-package-agreements
-
-            if ($LASTEXITCODE -ne 0) {
-                throw "winget install failed with exit code $LASTEXITCODE"
-            }
-
-            Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
-
-            # Refresh path environment variable for current session
-            Write-Host "Refreshing path environment variable..." -ForegroundColor Cyan
-            $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-            $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-            if ($machinePath -and $userPath) {
-                $env:Path = $machinePath + ";" + $userPath
-            }
-            elseif ($machinePath) {
-                $env:Path = $machinePath
-            }
+            Install-ChezmoiWithWinget -Version "latest"
         }
         catch {
             Write-Error "Failed to install chezmoi: $_"

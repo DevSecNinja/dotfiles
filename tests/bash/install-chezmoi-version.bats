@@ -7,13 +7,13 @@ setup() {
 
 	FAKE_HOME="${BATS_TEST_TMPDIR}/home"
 	FAKE_BIN="${BATS_TEST_TMPDIR}/bin"
+	NO_MANAGER_BIN="${BATS_TEST_TMPDIR}/no-manager-bin"
 	CHEZMOI_RUN_LOG="${BATS_TEST_TMPDIR}/chezmoi-run.log"
-	INSTALLER_LOG="${BATS_TEST_TMPDIR}/installer.log"
-	FAKE_INSTALLER_SCRIPT="${BATS_TEST_TMPDIR}/fake-installer.sh"
+	MISE_LOG="${BATS_TEST_TMPDIR}/mise.log"
 	REQUIRED_VERSION="$(tr -d '[:space:]' <"${REPO_ROOT}/home/.chezmoiversion")"
-	export FAKE_HOME FAKE_BIN CHEZMOI_RUN_LOG INSTALLER_LOG FAKE_INSTALLER_SCRIPT REQUIRED_VERSION
+	export FAKE_HOME FAKE_BIN NO_MANAGER_BIN CHEZMOI_RUN_LOG MISE_LOG REQUIRED_VERSION
 
-	mkdir -p "$FAKE_HOME" "$FAKE_BIN"
+	mkdir -p "$FAKE_HOME" "$FAKE_BIN" "$NO_MANAGER_BIN"
 
 	cat >"${FAKE_BIN}/chezmoi" <<'EOF'
 #!/bin/sh
@@ -28,65 +28,46 @@ fi
 } >"${CHEZMOI_RUN_LOG}"
 EOF
 	chmod +x "${FAKE_BIN}/chezmoi"
+	cp "${FAKE_BIN}/chezmoi" "${NO_MANAGER_BIN}/chezmoi"
 
-	cat >"$FAKE_INSTALLER_SCRIPT" <<'EOF'
+	cat >"${FAKE_BIN}/mise" <<'EOF'
 #!/bin/sh
-bindir=
-tag=
-while [ "$#" -gt 0 ]; do
-	case "$1" in
-	-b)
-		bindir="$2"
-		shift 2
-		;;
-	-t)
-		tag="$2"
-		shift 2
-		;;
-	*)
-		shift
-		;;
-	esac
-done
-printf 'bindir=%s\ntag=%s\n' "$bindir" "$tag" >"${INSTALLER_LOG}"
-mkdir -p "$bindir"
-cat >"${bindir}/chezmoi" <<'EOS'
+if [ "${1:-}" = "which" ] && [ "${2:-}" = "chezmoi" ]; then
+	printf '%s\n' "${HOME}/.local/bin/chezmoi"
+	exit 0
+fi
+printf '%s\n' "$*" >"${MISE_LOG}"
+mkdir -p "${HOME}/.local/bin"
+cat >"${HOME}/.local/bin/chezmoi" <<'EOS'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then
 	printf 'chezmoi version %s\n' "${REQUIRED_VERSION}"
 	exit 0
 fi
 {
-	printf 'source=installer\n'
+	printf 'source=mise\n'
 	printf 'version=%s\n' "${REQUIRED_VERSION}"
 	printf 'args=%s\n' "$*"
 } >"${CHEZMOI_RUN_LOG}"
 EOS
-chmod +x "${bindir}/chezmoi"
+chmod +x "${HOME}/.local/bin/chezmoi"
 EOF
-	chmod +x "$FAKE_INSTALLER_SCRIPT"
-
-	cat >"${FAKE_BIN}/curl" <<'EOF'
-#!/bin/sh
-cat "${FAKE_INSTALLER_SCRIPT}"
-EOF
-	chmod +x "${FAKE_BIN}/curl"
+	chmod +x "${FAKE_BIN}/mise"
 }
 
-@test "install.sh installs required chezmoi when existing version is too old" {
+@test "install.sh installs required chezmoi with mise when existing version is too old" {
 	run env \
 		HOME="$FAKE_HOME" \
 		PATH="${FAKE_BIN}:/usr/bin:/bin" \
 		CHEZMOI_FAKE_VERSION="0.0.1" \
 		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
-		INSTALLER_LOG="$INSTALLER_LOG" \
-		FAKE_INSTALLER_SCRIPT="$FAKE_INSTALLER_SCRIPT" \
+		MISE_LOG="$MISE_LOG" \
 		REQUIRED_VERSION="$REQUIRED_VERSION" \
 		"$REPO_ROOT/home/install.sh"
 
 	[ "$status" -eq 0 ]
-	grep -q "tag=v${REQUIRED_VERSION}" "$INSTALLER_LOG"
-	grep -q "source=installer" "$CHEZMOI_RUN_LOG"
+	grep -q "use --global chezmoi@${REQUIRED_VERSION}" "$MISE_LOG"
+	grep -q "source=mise" "$CHEZMOI_RUN_LOG"
 	grep -q "args=init --apply --no-tty --force --source=${REPO_ROOT}/home" "$CHEZMOI_RUN_LOG"
 }
 
@@ -96,13 +77,26 @@ EOF
 		PATH="${FAKE_BIN}:/usr/bin:/bin" \
 		CHEZMOI_FAKE_VERSION="$REQUIRED_VERSION" \
 		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
-		INSTALLER_LOG="$INSTALLER_LOG" \
-		FAKE_INSTALLER_SCRIPT="$FAKE_INSTALLER_SCRIPT" \
+		MISE_LOG="$MISE_LOG" \
 		REQUIRED_VERSION="$REQUIRED_VERSION" \
 		"$REPO_ROOT/home/install.sh"
 
 	[ "$status" -eq 0 ]
-	[ ! -f "$INSTALLER_LOG" ]
+	[ ! -f "$MISE_LOG" ]
 	grep -q "source=path" "$CHEZMOI_RUN_LOG"
 	grep -q "version=${REQUIRED_VERSION}" "$CHEZMOI_RUN_LOG"
+}
+
+@test "install.sh errors when required version is unavailable from package managers" {
+	run env \
+		HOME="$FAKE_HOME" \
+		PATH="${NO_MANAGER_BIN}:/usr/bin:/bin" \
+		CHEZMOI_FAKE_VERSION="0.0.1" \
+		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
+		REQUIRED_VERSION="$REQUIRED_VERSION" \
+		"$REPO_ROOT/home/install.sh"
+
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"No supported package manager provided chezmoi ${REQUIRED_VERSION} or later."* ]]
+	[ ! -f "$CHEZMOI_RUN_LOG" ]
 }

@@ -89,9 +89,10 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'Get-RequiredChezmoiVersion'
     }
 
-    It "Should install required chezmoi releases with the official installer" {
-        $script:Content | Should -Match 'https://get\.chezmoi\.io/ps1'
-        $script:Content | Should -Match 'Install-ChezmoiFromRelease'
+    It "Should install required chezmoi releases with winget" {
+        $script:Content | Should -Match 'Install-ChezmoiWithWinget'
+        $script:Content | Should -Match '--version'
+        $script:Content | Should -Not -Match 'https://get\.chezmoi\.io/ps1'
     }
 
     It "Should compare installed chezmoi against the required version" {
@@ -100,12 +101,13 @@ Describe "home/install.ps1" -Tag "Unit" {
     }
 
     It "Should install chezmoi via winget" {
-        $script:Content | Should -Match 'winget\s+install'
+        $script:Content | Should -Match 'winget\s+@wingetArgs'
+        $script:Content | Should -Match 'install'
         $script:Content | Should -Match 'twpayne\.chezmoi'
     }
 
     It "Should pin winget installs to the community source" {
-        $script:Content | Should -Match '--source\s+winget'
+        $script:Content | Should -Match '"--source", "winget"'
     }
 
     It "Should accept package and source agreements unattended" {

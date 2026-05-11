@@ -25,6 +25,7 @@ read_required_chezmoi_version() {
 }
 
 chezmoi_version() {
+	# Handle both "chezmoi version X.Y.Z" and "chezmoi X.Y.Z" output formats.
 	"$1" --version 2>/dev/null | sed -n 's/^chezmoi version \([0-9][^ ]*\).*/\1/p; s/^chezmoi \([0-9][^ ]*\).*/\1/p' | head -n 1
 }
 
@@ -44,71 +45,108 @@ version_at_least() {
 	'
 }
 
-install_chezmoi_from_release() {
-	required_version="$1"
-	bin_dir="${HOME}/.local/bin"
-	chezmoi="${bin_dir}/chezmoi"
-
-	if [ -n "$required_version" ]; then
-		log_state "Installing chezmoi ${required_version} to '${chezmoi}'"
-	else
-		log_state "Installing latest chezmoi to '${chezmoi}'"
+find_chezmoi() {
+	if command -v chezmoi >/dev/null 2>&1; then
+		command -v chezmoi
+	elif [ -x "${HOME}/.local/bin/chezmoi" ]; then
+		printf '%s\n' "${HOME}/.local/bin/chezmoi"
 	fi
-
-	if command -v curl >/dev/null; then
-		chezmoi_install_script="$(curl -fsLS https://get.chezmoi.io)"
-	elif command -v wget >/dev/null; then
-		chezmoi_install_script="$(wget -qO- https://get.chezmoi.io)"
-	else
-		log_error "To install chezmoi, you must have curl or wget installed."
-		exit 1
-	fi
-
-	if [ -n "$required_version" ]; then
-		sh -c "${chezmoi_install_script}" -- -b "${bin_dir}" -t "v${required_version}"
-	else
-		sh -c "${chezmoi_install_script}" -- -b "${bin_dir}"
-	fi
-	unset chezmoi_install_script bin_dir required_version
 }
 
-required_chezmoi_version="$(read_required_chezmoi_version)"
+use_required_chezmoi_version() {
+	chezmoi="$(find_chezmoi || true)"
+	use_required_chezmoi_binary "${chezmoi:-}" "$1"
+}
 
-if ! chezmoi="$(command -v chezmoi)"; then
-	# Check if chezmoi is already installed at the expected fallback path but not in PATH
-	# (e.g. in a prebuilt devcontainer image where ~/.local/bin is not yet in PATH)
-	if [ -x "${HOME}/.local/bin/chezmoi" ]; then
-		chezmoi="${HOME}/.local/bin/chezmoi"
-	else
-		log_warn "chezmoi not found, attempting to install..."
-	fi
-fi
+use_required_chezmoi_binary() {
+	chezmoi="$1"
+	[ -x "${chezmoi:-}" ] || return 1
 
-if [ -x "${chezmoi:-}" ] && [ -n "$required_chezmoi_version" ]; then
+	required_version="$2"
 	installed_chezmoi_version="$(chezmoi_version "$chezmoi")"
-	if [ -z "$installed_chezmoi_version" ] || ! version_at_least "$installed_chezmoi_version" "$required_chezmoi_version"; then
-		log_warn "chezmoi ${installed_chezmoi_version:-unknown} is older than required ${required_chezmoi_version}"
-		install_chezmoi_from_release "$required_chezmoi_version"
+	if [ -n "$installed_chezmoi_version" ] && version_at_least "$installed_chezmoi_version" "$required_version"; then
+		return 0
 	fi
-	unset installed_chezmoi_version
-fi
 
-if ! [ -x "${chezmoi:-}" ]; then
-	if [ -n "$required_chezmoi_version" ]; then
-		install_chezmoi_from_release "$required_chezmoi_version"
+	return 1
+}
+
+install_required_chezmoi_with_package_manager() {
+	required_version="$1"
+
+	if command -v mise >/dev/null 2>&1; then
+		log_state "Installing chezmoi ${required_version} with mise"
+		MISE_YES=1 mise use --global "chezmoi@${required_version}" || log_warn "mise could not install chezmoi ${required_version}"
+		mise_chezmoi="$(mise which chezmoi 2>/dev/null || true)"
+		if use_required_chezmoi_binary "$mise_chezmoi" "$required_version"; then
+			return 0
+		fi
+	fi
+
+	if command -v brew >/dev/null 2>&1; then
+		log_state "Installing chezmoi ${required_version} with Homebrew"
+		brew install chezmoi || brew upgrade chezmoi || log_warn "Homebrew could not install or upgrade chezmoi"
+		if use_required_chezmoi_version "$required_version"; then
+			return 0
+		fi
+	fi
+
+	log_error "No supported package manager provided chezmoi ${required_version} or later."
+	log_error "Update your package manager metadata/packages and re-run this installer."
+	exit 1
+}
+
+install_latest_chezmoi() {
 	# Try brew first
-	elif command -v brew >/dev/null; then
+	if command -v brew >/dev/null; then
 		log_state "Installing chezmoi with brew..."
 		brew install chezmoi
 		chezmoi="$(command -v chezmoi)"
 	# Try mise second
 	elif command -v mise >/dev/null; then
 		log_state "Installing chezmoi with mise..."
-		mise use --global chezmoi@latest
-		chezmoi="$(command -v chezmoi)"
-	# Fall back to install script
+		MISE_YES=1 mise use --global chezmoi@latest
+		chezmoi="$(mise which chezmoi 2>/dev/null || find_chezmoi)"
+	# Fall back to install script when the repository does not pin a version
 	else
-		install_chezmoi_from_release ""
+		bin_dir="${HOME}/.local/bin"
+		chezmoi="${bin_dir}/chezmoi"
+		log_state "Installing latest chezmoi to '${chezmoi}'"
+		if command -v curl >/dev/null; then
+			chezmoi_install_script="$(curl -fsLS https://get.chezmoi.io)"
+		elif command -v wget >/dev/null; then
+			chezmoi_install_script="$(wget -qO- https://get.chezmoi.io)"
+		else
+			log_error "To install chezmoi, you must have curl or wget installed."
+			exit 1
+		fi
+		sh -c "${chezmoi_install_script}" -- -b "${bin_dir}"
+		unset chezmoi_install_script bin_dir
+	fi
+}
+
+required_chezmoi_version="$(read_required_chezmoi_version)"
+
+if ! chezmoi="$(find_chezmoi)"; then
+	# Check if chezmoi is already installed at the expected fallback path but not in PATH
+	# (e.g. in a prebuilt devcontainer image where ~/.local/bin is not yet in PATH)
+	log_warn "chezmoi not found, attempting to install..."
+fi
+
+if [ -x "${chezmoi:-}" ] && [ -n "$required_chezmoi_version" ]; then
+	installed_chezmoi_version="$(chezmoi_version "$chezmoi")"
+	if [ -z "$installed_chezmoi_version" ] || ! version_at_least "$installed_chezmoi_version" "$required_chezmoi_version"; then
+		log_warn "chezmoi ${installed_chezmoi_version:-unknown} is older than required ${required_chezmoi_version}"
+		install_required_chezmoi_with_package_manager "$required_chezmoi_version"
+	fi
+	unset installed_chezmoi_version
+fi
+
+if ! [ -x "${chezmoi:-}" ]; then
+	if [ -n "$required_chezmoi_version" ]; then
+		install_required_chezmoi_with_package_manager "$required_chezmoi_version"
+	else
+		install_latest_chezmoi
 	fi
 fi
 
