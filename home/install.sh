@@ -14,6 +14,7 @@ if [ -f "${script_dir}/dot_config/shell/functions/log.sh" ]; then
 else
 	log_warn() { printf '%s\n' "$*" >&2; }
 	log_error() { printf '%s\n' "$*" >&2; }
+	log_hint() { printf '%s\n' "$*" >&2; }
 	log_state() { printf '%s\n' "$*" >&2; }
 fi
 
@@ -76,7 +77,7 @@ install_required_chezmoi_with_package_manager() {
 
 	if command -v mise >/dev/null 2>&1; then
 		log_state "Installing chezmoi ${required_version} with mise"
-		MISE_YES=1 mise use --global "chezmoi@${required_version}" || log_warn "mise could not install chezmoi ${required_version}; trying alternative package managers"
+		MISE_YES=1 mise use --global "chezmoi@${required_version}" || log_warn "mise could not install chezmoi ${required_version}; its registry may need updating"
 		mise_chezmoi="$(MISE_YES=1 mise which chezmoi 2>/dev/null || true)"
 		if use_required_chezmoi_binary "$mise_chezmoi" "$required_version"; then
 			return 0
@@ -85,14 +86,18 @@ install_required_chezmoi_with_package_manager() {
 
 	if command -v brew >/dev/null 2>&1; then
 		log_state "Installing chezmoi ${required_version} with Homebrew"
-		brew install chezmoi || brew upgrade chezmoi || log_warn "Homebrew could not install or upgrade chezmoi to the required version"
+		if brew list chezmoi >/dev/null 2>&1; then
+			brew upgrade chezmoi || log_warn "Homebrew could not upgrade chezmoi to the required version"
+		else
+			brew install chezmoi || log_warn "Homebrew could not install chezmoi to the required version"
+		fi
 		if use_required_chezmoi_version "$required_version"; then
 			return 0
 		fi
 	fi
 
 	log_error "No supported package manager provided chezmoi ${required_version} or later."
-	log_error "Update your package manager metadata/packages and re-run this installer."
+	log_hint "Update package manager metadata (for example, 'mise plugins update' or 'brew update') and re-run this installer."
 	exit 1
 }
 
