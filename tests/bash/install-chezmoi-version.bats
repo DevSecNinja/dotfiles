@@ -97,6 +97,6 @@ EOF
 	"$REPO_ROOT/home/install.sh"
 
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"No supported package manager can provide chezmoi ${REQUIRED_VERSION} or later."* ]]
+	printf '%s' "$output" | grep -qF "No supported package manager can provide chezmoi ${REQUIRED_VERSION} or later."
 	[ ! -f "$CHEZMOI_RUN_LOG" ]
 }

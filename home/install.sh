@@ -77,7 +77,7 @@ install_required_chezmoi_with_package_manager() {
 
 	if command -v mise >/dev/null 2>&1; then
 		log_state "Installing chezmoi ${required_version} with mise"
-		MISE_YES=1 mise use --global "chezmoi@${required_version}" || log_warn "mise could not install chezmoi ${required_version}; mise registry may need updating"
+		MISE_YES=1 mise use --global "chezmoi@${required_version}" || log_warn "mise could not install chezmoi ${required_version}; try running: mise plugins update"
 		mise_chezmoi="$(MISE_YES=1 mise which chezmoi 2>/dev/null || true)"
 		if use_required_chezmoi_binary "$mise_chezmoi" "$required_version"; then
 			return 0
