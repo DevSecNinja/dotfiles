@@ -111,9 +111,9 @@ function Update-WingetSource {
 }
 
 function Get-WingetChezmoiVersion {
-    $searchOutput = winget find chezmoi --source winget --accept-source-agreements 2>&1
+    $searchOutput = winget search --id twpayne.chezmoi --exact --source winget --accept-source-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "winget find chezmoi failed with exit code $LASTEXITCODE. Output: $($searchOutput -join ' ')"
+        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output: $($searchOutput -join ' ')"
         return $null
     }
 
@@ -196,7 +196,7 @@ function Assert-RequiredChezmoiVersion {
     $installedVersion = Get-ChezmoiVersion -CommandInfo $chezmoiCommand
     if (-not $installedVersion -or -not (Test-VersionAtLeast -Version $installedVersion -MinimumVersion $RequiredVersion)) {
         $displayVersion = if ($installedVersion) { $installedVersion } else { "unknown" }
-        $remediation = "Run 'winget source update' and check availability with 'winget search twpayne.chezmoi', then rerun this installer when the required version is available."
+        $remediation = "Run 'winget source update' and check availability with 'winget search --id twpayne.chezmoi --exact', then rerun this installer when the required version is available."
         Write-Error "chezmoi $displayVersion was installed, but this source requires $RequiredVersion or later. $remediation"
         exit 1
     }

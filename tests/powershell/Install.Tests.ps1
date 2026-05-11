@@ -119,10 +119,10 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'winget source reset --force'
     }
 
-    It "Should preserve winget diagnostics for source and package failures" {
-        $script:Content | Should -Match 'winget find chezmoi'
+    It "Should capture winget output without suppressing stderr" {
+        $script:Content | Should -Match 'winget search --id twpayne\.chezmoi --exact'
         $script:Content | Should -Match 'Output:'
-        $script:Content | Should -Not -Match 'winget find[^\r\n]+2>\$null'
+        $script:Content | Should -Not -Match 'winget search[^\r\n]+2>\$null'
     }
 
     It "Should accept package and source agreements unattended" {
