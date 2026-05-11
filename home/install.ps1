@@ -26,57 +26,144 @@ function Test-Interactive {
     return $true
 }
 
+function Get-RequiredChezmoiVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SourceDir
+    )
+
+    $versionFile = Join-Path $SourceDir ".chezmoiversion"
+    if (Test-Path $versionFile) {
+        return (Get-Content $versionFile -Raw).Trim()
+    }
+
+    return $null
+}
+
+function Get-ChezmoiVersion {
+    param(
+        [Parameter(Mandatory = $true)]
+        $CommandInfo
+    )
+
+    try {
+        $versionOutput = & $CommandInfo.Source --version 2>$null | Select-Object -First 1
+    }
+    catch {
+        return $null
+    }
+
+    if ($versionOutput -match '(\d+\.\d+\.\d+(?:[-+][^\s]+)?)') {
+        return $Matches[1]
+    }
+
+    return $null
+}
+
+function Test-VersionAtLeast {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+
+        [Parameter(Mandatory = $true)]
+        [string]$MinimumVersion
+    )
+
+    try {
+        $normalizedVersion = $Version -replace '[-+].*$', ''
+        $normalizedMinimum = $MinimumVersion -replace '[-+].*$', ''
+        return ([version]$normalizedVersion) -ge ([version]$normalizedMinimum)
+    }
+    catch {
+        return $false
+    }
+}
+
+function Install-ChezmoiFromRelease {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Version
+    )
+
+    $binDir = Join-Path $env:LOCALAPPDATA "Programs\chezmoi\bin"
+    $tag = if ($Version -eq "latest") { "latest" } else { "v$Version" }
+
+    Write-Host "Installing chezmoi $Version using the official release installer..." -ForegroundColor Cyan
+    $installScript = Invoke-RestMethod -Uri "https://get.chezmoi.io/ps1" -UseBasicParsing
+    $installBlock = [scriptblock]::Create($installScript)
+    & $installBlock -BinDir $binDir -Tag $tag
+
+    $env:Path = "$binDir;$env:Path"
+}
+
 $isInteractive = Test-Interactive
 
-# Check if winget is available
-$wingetPath = Get-Command winget -ErrorAction SilentlyContinue
-if (-not $wingetPath) {
-    Write-Error "winget is not available. Please install Windows Package Manager (winget) first."
-    exit 1
+# Get the source directory (script's directory)
+$sourceDir = $PSScriptRoot
+$requiredChezmoiVersion = if ($ChezmoiVersion -eq "latest") {
+    Get-RequiredChezmoiVersion -SourceDir $sourceDir
+} else {
+    $ChezmoiVersion
 }
 
 # Check if chezmoi is already installed
 $chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
 
-if (-not $chezmoiExists) {
-    Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
-
-    try {
-        if ($ChezmoiVersion -eq "latest") {
-            winget install --id twpayne.chezmoi --source winget --silent --accept-source-agreements --accept-package-agreements
-        } else {
-            winget install --id twpayne.chezmoi --source winget --version $ChezmoiVersion --silent --accept-source-agreements --accept-package-agreements
-        }
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "winget install failed with exit code $LASTEXITCODE"
-        }
-
-        Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
-
-        # Refresh path environment variable for current session
-        Write-Host "Refreshing path environment variable..." -ForegroundColor Cyan
-        $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-        if ($machinePath -and $userPath) {
-            $env:Path = $machinePath + ";" + $userPath
-        }
-        elseif ($machinePath) {
-            $env:Path = $machinePath
-        }
+if ($chezmoiExists -and $requiredChezmoiVersion) {
+    $installedChezmoiVersion = Get-ChezmoiVersion -CommandInfo $chezmoiExists
+    if (-not $installedChezmoiVersion -or -not (Test-VersionAtLeast -Version $installedChezmoiVersion -MinimumVersion $requiredChezmoiVersion)) {
+        $displayChezmoiVersion = if ($installedChezmoiVersion) { $installedChezmoiVersion } else { "unknown" }
+        Write-Warning "chezmoi $displayChezmoiVersion is older than required $requiredChezmoiVersion"
+        Install-ChezmoiFromRelease -Version $requiredChezmoiVersion
+        $chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
     }
-    catch {
-        Write-Error "Failed to install chezmoi: $_"
-        exit 1
+}
+
+if (-not $chezmoiExists) {
+    if ($requiredChezmoiVersion) {
+        Install-ChezmoiFromRelease -Version $requiredChezmoiVersion
+        $chezmoiExists = Get-Command chezmoi -ErrorAction SilentlyContinue
+    }
+    else {
+        # Check if winget is available
+        $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
+        if (-not $wingetPath) {
+            Write-Error "winget is not available. Please install Windows Package Manager (winget) first."
+            exit 1
+        }
+
+        Write-Host "Installing chezmoi using winget..." -ForegroundColor Cyan
+
+        try {
+            winget install --id twpayne.chezmoi --source winget --silent --accept-source-agreements --accept-package-agreements
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "winget install failed with exit code $LASTEXITCODE"
+            }
+
+            Write-Host "✅ Chezmoi installed successfully" -ForegroundColor Green
+
+            # Refresh path environment variable for current session
+            Write-Host "Refreshing path environment variable..." -ForegroundColor Cyan
+            $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+            if ($machinePath -and $userPath) {
+                $env:Path = $machinePath + ";" + $userPath
+            }
+            elseif ($machinePath) {
+                $env:Path = $machinePath
+            }
+        }
+        catch {
+            Write-Error "Failed to install chezmoi: $_"
+            exit 1
+        }
     }
 }
 else {
     Write-Host "Chezmoi already installed" -ForegroundColor Green
 }
-
-# Get the source directory (script's directory)
-$sourceDir = $PSScriptRoot
 
 # Build chezmoi arguments
 $chezmoiArgs = @("init", "--apply")

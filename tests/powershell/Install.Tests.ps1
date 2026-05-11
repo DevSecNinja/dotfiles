@@ -84,6 +84,21 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'Get-Command\s+chezmoi'
     }
 
+    It "Should read the repository minimum chezmoi version" {
+        $script:Content | Should -Match '\.chezmoiversion'
+        $script:Content | Should -Match 'Get-RequiredChezmoiVersion'
+    }
+
+    It "Should install required chezmoi releases with the official installer" {
+        $script:Content | Should -Match 'https://get\.chezmoi\.io/ps1'
+        $script:Content | Should -Match 'Install-ChezmoiFromRelease'
+    }
+
+    It "Should compare installed chezmoi against the required version" {
+        $script:Content | Should -Match 'Test-VersionAtLeast'
+        $script:Content | Should -Match 'Get-ChezmoiVersion'
+    }
+
     It "Should install chezmoi via winget" {
         $script:Content | Should -Match 'winget\s+install'
         $script:Content | Should -Match 'twpayne\.chezmoi'
