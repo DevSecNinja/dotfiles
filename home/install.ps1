@@ -91,6 +91,39 @@ function Update-PathFromMachineAndUser {
     }
 }
 
+function Update-WingetSource {
+    winget source update
+    if ($LASTEXITCODE -eq 0) {
+        return
+    }
+
+    Write-Warning "winget source update failed; resetting winget sources"
+    winget source reset --force
+    if ($LASTEXITCODE -ne 0) {
+        throw "winget source reset failed with exit code $LASTEXITCODE"
+    }
+
+    winget source update
+    if ($LASTEXITCODE -ne 0) {
+        throw "winget source update failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Get-WingetChezmoiVersion {
+    $searchOutput = winget find chezmoi --source winget --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return $null
+    }
+
+    foreach ($line in $searchOutput) {
+        if ($line -match 'twpayne\.chezmoi\s+(\d+\.\d+\.\d+(?:[-+][^\s]+)?)') {
+            return $Matches[1]
+        }
+    }
+
+    return $null
+}
+
 function Install-ChezmoiWithWinget {
     param(
         [Parameter(Mandatory = $true)]
@@ -106,6 +139,18 @@ function Install-ChezmoiWithWinget {
         exit 1
     }
 
+    Update-WingetSource
+
+    $wingetVersion = $null
+    if ($Version -ne "latest") {
+        $wingetVersion = Get-WingetChezmoiVersion
+        if (-not $wingetVersion -or -not (Test-VersionAtLeast -Version $wingetVersion -MinimumVersion $Version)) {
+            $displayVersion = if ($wingetVersion) { $wingetVersion } else { "unknown" }
+            Write-Error "winget provides chezmoi $displayVersion, but this source requires $Version or later."
+            exit 1
+        }
+    }
+
     $action = if ($Upgrade) { "upgrade" } else { "install" }
     $wingetArgs = @(
         $action,
@@ -116,8 +161,8 @@ function Install-ChezmoiWithWinget {
         "--accept-package-agreements"
     )
 
-    if ($Version -ne "latest") {
-        $wingetArgs += @("--version", $Version)
+    if ($wingetVersion -and -not $Upgrade) {
+        $wingetArgs += @("--version", $wingetVersion)
     }
 
     Write-Host "Running: winget $($wingetArgs -join ' ')" -ForegroundColor Cyan
