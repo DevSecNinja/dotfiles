@@ -94,9 +94,9 @@ EOF
 		CHEZMOI_FAKE_VERSION="0.0.1" \
 		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
 		REQUIRED_VERSION="$REQUIRED_VERSION" \
-		"$REPO_ROOT/home/install.sh"
+	"$REPO_ROOT/home/install.sh"
 
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"No supported package manager provided chezmoi ${REQUIRED_VERSION} or later."* ]]
+	[[ "$output" == *"No supported package manager can provide chezmoi ${REQUIRED_VERSION} or later."* ]]
 	[ ! -f "$CHEZMOI_RUN_LOG" ]
 }

@@ -89,7 +89,7 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'Get-RequiredChezmoiVersion'
     }
 
-    It "Should install required chezmoi releases with winget" {
+    It "Should install required chezmoi release with winget" {
         $script:Content | Should -Match 'Install-ChezmoiWithWinget'
         $script:Content | Should -Match '--version'
         $script:Content | Should -Not -Match 'https://get\.chezmoi\.io/ps1'
@@ -101,6 +101,7 @@ Describe "home/install.ps1" -Tag "Unit" {
     }
 
     It "Should install chezmoi via winget" {
+        $script:Content | Should -Match '\$wingetArgs\s*=\s*@\('
         $script:Content | Should -Match 'winget\s+@wingetArgs'
         $script:Content | Should -Match 'install'
         $script:Content | Should -Match 'twpayne\.chezmoi'
