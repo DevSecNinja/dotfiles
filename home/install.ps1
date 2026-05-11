@@ -107,22 +107,22 @@ function Update-WingetSource {
         return
     }
 
-    Write-Warning "winget source update failed; resetting winget sources. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceUpdateOutput)"
+    Write-Warning "winget source update failed; resetting winget sources. Captured stdout/stderr: $(Format-CommandOutput -Output $sourceUpdateOutput)"
     $sourceResetOutput = winget source reset --force 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source reset failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceResetOutput)"
+        throw "winget source reset failed with exit code $LASTEXITCODE. Captured stdout/stderr: $(Format-CommandOutput -Output $sourceResetOutput)"
     }
 
     $sourceUpdateOutput = winget source update 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source update failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceUpdateOutput)"
+        throw "winget source update failed with exit code $LASTEXITCODE. Captured stdout/stderr: $(Format-CommandOutput -Output $sourceUpdateOutput)"
     }
 }
 
 function Get-WingetChezmoiVersion {
     $searchOutput = winget search --id twpayne.chezmoi --exact --source winget --accept-source-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $searchOutput)"
+        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Captured stdout/stderr: $(Format-CommandOutput -Output $searchOutput)"
         return $null
     }
 
@@ -132,7 +132,7 @@ function Get-WingetChezmoiVersion {
         }
     }
 
-    Write-Warning "winget search did not return a parseable chezmoi version. Output (stdout/stderr): $(Format-CommandOutput -Output $searchOutput)"
+    Write-Warning "winget search did not return a parseable chezmoi version. Captured stdout/stderr: $(Format-CommandOutput -Output $searchOutput)"
     return $null
 }
 
@@ -208,7 +208,7 @@ function Assert-RequiredChezmoiVersion {
     $installedVersion = Get-ChezmoiVersion -CommandInfo $chezmoiCommand
     if (-not $installedVersion -or -not (Test-VersionAtLeast -Version $installedVersion -MinimumVersion $RequiredVersion)) {
         $displayVersion = if ($installedVersion) { $installedVersion } else { "unknown" }
-        $remediation = "Run 'winget source update' and check availability with 'winget search --id twpayne.chezmoi --exact', then rerun this installer when the required version is available."
+        $remediation = "Run 'winget source update' and check availability with 'winget search --id twpayne.chezmoi --exact --source winget --accept-source-agreements', then rerun this installer when the required version is available."
         Write-Error "chezmoi $displayVersion was installed, but this source requires $RequiredVersion or later. $remediation"
         exit 1
     }
