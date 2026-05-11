@@ -91,6 +91,15 @@ function Update-PathFromMachineAndUser {
     }
 }
 
+function Format-CommandOutput {
+    param(
+        [Parameter()]
+        [object[]]$Output
+    )
+
+    return ($Output | ForEach-Object { "$_" }) -join [Environment]::NewLine
+}
+
 function Update-WingetSource {
     Write-Host "Updating winget sources..." -ForegroundColor Cyan
     $sourceUpdateOutput = winget source update 2>&1
@@ -98,32 +107,32 @@ function Update-WingetSource {
         return
     }
 
-    Write-Warning "winget source update failed; resetting winget sources. Output (stdout/stderr): $($sourceUpdateOutput -join ' ')"
+    Write-Warning "winget source update failed; resetting winget sources. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceUpdateOutput)"
     $sourceResetOutput = winget source reset --force 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source reset failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($sourceResetOutput -join ' ')"
+        throw "winget source reset failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceResetOutput)"
     }
 
     $sourceUpdateOutput = winget source update 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source update failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($sourceUpdateOutput -join ' ')"
+        throw "winget source update failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $sourceUpdateOutput)"
     }
 }
 
 function Get-WingetChezmoiVersion {
     $searchOutput = winget search --id twpayne.chezmoi --exact --source winget --accept-source-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($searchOutput -join ' ')"
+        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output (stdout/stderr): $(Format-CommandOutput -Output $searchOutput)"
         return $null
     }
 
     foreach ($line in $searchOutput) {
-        if ($line -match '^\s*chezmoi\s+twpayne\.chezmoi\s+(\d+\.\d+\.\d+(?:[-+][^\s]+)?)\s+winget\s*$') {
+        if ($line -match '^\s*\S+\s+twpayne\.chezmoi\s+(\d+\.\d+\.\d+(?:[-+][^\s]+)?)\b') {
             return $Matches[1]
         }
     }
 
-    Write-Warning "winget search did not return a parseable chezmoi version. Output (stdout/stderr): $($searchOutput -join ' ')"
+    Write-Warning "winget search did not return a parseable chezmoi version. Output (stdout/stderr): $(Format-CommandOutput -Output $searchOutput)"
     return $null
 }
 
@@ -144,6 +153,8 @@ function Install-ChezmoiWithWinget {
 
     Update-WingetSource
 
+    # Keep the discovered package version so fresh installs can pin a version
+    # that winget actually provides while still satisfying .chezmoiversion.
     $wingetVersion = $null
     if ($Version -ne "latest") {
         $wingetVersion = Get-WingetChezmoiVersion
