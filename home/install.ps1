@@ -98,22 +98,22 @@ function Update-WingetSource {
         return
     }
 
-    Write-Warning "winget source update failed; resetting winget sources. Output: $($sourceUpdateOutput -join ' ')"
+    Write-Warning "winget source update failed; resetting winget sources. Output (stdout/stderr): $($sourceUpdateOutput -join ' ')"
     $sourceResetOutput = winget source reset --force 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source reset failed with exit code $LASTEXITCODE. Output: $($sourceResetOutput -join ' ')"
+        throw "winget source reset failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($sourceResetOutput -join ' ')"
     }
 
     $sourceUpdateOutput = winget source update 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source update failed with exit code $LASTEXITCODE. Output: $($sourceUpdateOutput -join ' ')"
+        throw "winget source update failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($sourceUpdateOutput -join ' ')"
     }
 }
 
 function Get-WingetChezmoiVersion {
     $searchOutput = winget search --id twpayne.chezmoi --exact --source winget --accept-source-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output: $($searchOutput -join ' ')"
+        Write-Warning "winget search chezmoi failed with exit code $LASTEXITCODE. Output (stdout/stderr): $($searchOutput -join ' ')"
         return $null
     }
 
@@ -123,6 +123,7 @@ function Get-WingetChezmoiVersion {
         }
     }
 
+    Write-Warning "winget search did not return a parseable chezmoi version. Output (stdout/stderr): $($searchOutput -join ' ')"
     return $null
 }
 
@@ -148,7 +149,7 @@ function Install-ChezmoiWithWinget {
         $wingetVersion = Get-WingetChezmoiVersion
         if (-not $wingetVersion -or -not (Test-VersionAtLeast -Version $wingetVersion -MinimumVersion $Version)) {
             $displayVersion = if ($wingetVersion) { $wingetVersion } else { "unknown" }
-            Write-Error "winget provides chezmoi $displayVersion, but this source requires $Version or later. No manual installer fallback is used; wait for winget to publish the required version."
+            Write-Error "winget provides chezmoi $displayVersion, but this source requires $Version or later. No manual installer fallback is used; run 'winget source update' manually or check winget community source status before retrying."
             exit 1
         }
     }
