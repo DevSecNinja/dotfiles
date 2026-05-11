@@ -118,7 +118,7 @@ function Get-WingetChezmoiVersion {
     }
 
     foreach ($line in $searchOutput) {
-        if ($line -match 'twpayne\.chezmoi\s+(\d+\.\d+\.\d+(?:[-+][^\s]+)?)') {
+        if ($line -match '^\s*chezmoi\s+twpayne\.chezmoi\s+(\d+\.\d+\.\d+(?:[-+][^\s]+)?)\s+winget\s*$') {
             return $Matches[1]
         }
     }

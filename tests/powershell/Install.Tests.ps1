@@ -122,6 +122,7 @@ Describe "home/install.ps1" -Tag "Unit" {
     It "Should capture winget output without suppressing stderr" {
         $script:Content | Should -Match 'winget search --id twpayne\.chezmoi --exact'
         $script:Content | Should -Match 'Output:'
+        $script:Content | Should -Match '\^\\s\*chezmoi\\s\+twpayne\\\.chezmoi'
         $script:Content | Should -Not -Match 'winget search[^\r\n]+2>\$null'
     }
 
