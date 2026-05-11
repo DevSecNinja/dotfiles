@@ -92,26 +92,28 @@ function Update-PathFromMachineAndUser {
 }
 
 function Update-WingetSource {
-    winget source update
+    Write-Host "Updating winget sources..." -ForegroundColor Cyan
+    $sourceUpdateOutput = winget source update 2>&1
     if ($LASTEXITCODE -eq 0) {
         return
     }
 
-    Write-Warning "winget source update failed; resetting winget sources"
-    winget source reset --force
+    Write-Warning "winget source update failed; resetting winget sources. Output: $($sourceUpdateOutput -join ' ')"
+    $sourceResetOutput = winget source reset --force 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source reset failed with exit code $LASTEXITCODE"
+        throw "winget source reset failed with exit code $LASTEXITCODE. Output: $($sourceResetOutput -join ' ')"
     }
 
-    winget source update
+    $sourceUpdateOutput = winget source update 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "winget source update failed with exit code $LASTEXITCODE"
+        throw "winget source update failed with exit code $LASTEXITCODE. Output: $($sourceUpdateOutput -join ' ')"
     }
 }
 
 function Get-WingetChezmoiVersion {
-    $searchOutput = winget find chezmoi --source winget --accept-source-agreements 2>$null
+    $searchOutput = winget find chezmoi --source winget --accept-source-agreements 2>&1
     if ($LASTEXITCODE -ne 0) {
+        Write-Warning "winget find chezmoi failed with exit code $LASTEXITCODE. Output: $($searchOutput -join ' ')"
         return $null
     }
 
@@ -146,7 +148,7 @@ function Install-ChezmoiWithWinget {
         $wingetVersion = Get-WingetChezmoiVersion
         if (-not $wingetVersion -or -not (Test-VersionAtLeast -Version $wingetVersion -MinimumVersion $Version)) {
             $displayVersion = if ($wingetVersion) { $wingetVersion } else { "unknown" }
-            Write-Error "winget provides chezmoi $displayVersion, but this source requires $Version or later."
+            Write-Error "winget provides chezmoi $displayVersion, but this source requires $Version or later. No manual installer fallback is used; wait for winget to publish the required version."
             exit 1
         }
     }
@@ -161,6 +163,8 @@ function Install-ChezmoiWithWinget {
         "--accept-package-agreements"
     )
 
+    # Let winget upgrades move to its latest available package; pin fresh installs
+    # to the discovered package version that satisfies .chezmoiversion.
     if ($wingetVersion -and -not $Upgrade) {
         $wingetArgs += @("--version", $wingetVersion)
     }

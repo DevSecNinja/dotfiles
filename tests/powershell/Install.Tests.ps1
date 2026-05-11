@@ -114,8 +114,15 @@ Describe "home/install.ps1" -Tag "Unit" {
 
     It "Should refresh winget sources before installing" {
         $script:Content | Should -Match 'Update-WingetSource'
+        $script:Content | Should -Match 'Updating winget sources'
         $script:Content | Should -Match 'winget source update'
         $script:Content | Should -Match 'winget source reset --force'
+    }
+
+    It "Should preserve winget diagnostics for source and package failures" {
+        $script:Content | Should -Match 'winget find chezmoi'
+        $script:Content | Should -Match 'Output:'
+        $script:Content | Should -Not -Match 'winget find[^\r\n]+2>\$null'
     }
 
     It "Should accept package and source agreements unattended" {
