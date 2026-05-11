@@ -147,7 +147,7 @@ function Assert-RequiredChezmoiVersion {
     $installedVersion = Get-ChezmoiVersion -CommandInfo $chezmoiCommand
     if (-not $installedVersion -or -not (Test-VersionAtLeast -Version $installedVersion -MinimumVersion $RequiredVersion)) {
         $displayVersion = if ($installedVersion) { $installedVersion } else { "unknown" }
-        Write-Error "chezmoi $displayVersion is installed, but this source requires $RequiredVersion or later. When the winget package is available, rerun this installer or run 'winget upgrade --id twpayne.chezmoi --source winget --version $RequiredVersion'."
+        Write-Error "chezmoi $displayVersion is installed, but this source requires $RequiredVersion or later. Wait for the required version to become available in winget, then rerun this installer."
         exit 1
     }
 }
