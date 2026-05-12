@@ -97,8 +97,8 @@ echo ""
 echo "🏠 Step 2: Verifying dotfiles installation (postCreateCommand)..."
 echo ""
 
-# Ensure PATH includes .local/bin for chezmoi
-export PATH="${HOME}/.local/bin:${PATH}"
+# Ensure PATH includes local package-manager bins for chezmoi
+export PATH="${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}"
 
 # Check if chezmoi was installed by postCreateCommand
 if check_command "chezmoi" "Chezmoi"; then

@@ -7,6 +7,9 @@ set -eu
 # POSIX way to get script's dir: https://stackoverflow.com/a/29834779/12156188
 script_dir="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" && pwd -P)"
 
+PATH="${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}"
+export PATH
+
 if [ -f "${script_dir}/dot_config/shell/functions/log.sh" ]; then
 	# shellcheck source=home/dot_config/shell/functions/log.sh
 	. "${script_dir}/dot_config/shell/functions/log.sh"
@@ -101,36 +104,12 @@ install_required_chezmoi_with_package_manager() {
 	exit 1
 }
 
-install_latest_chezmoi() {
-	# Try brew first
-	if command -v brew >/dev/null; then
-		log_state "Installing chezmoi with brew..."
-		brew install chezmoi
-		chezmoi="$(command -v chezmoi)"
-	# Try mise second
-	elif command -v mise >/dev/null; then
-		log_state "Installing chezmoi with mise..."
-		MISE_YES=1 mise use --global chezmoi@latest
-		chezmoi="$(MISE_YES=1 mise which chezmoi 2>/dev/null || find_chezmoi)"
-	# Fall back to install script when the repository does not pin a version
-	else
-		bin_dir="${HOME}/.local/bin"
-		chezmoi="${bin_dir}/chezmoi"
-		log_state "Installing latest chezmoi to '${chezmoi}'"
-		if command -v curl >/dev/null; then
-			chezmoi_install_script="$(curl -fsLS https://get.chezmoi.io)"
-		elif command -v wget >/dev/null; then
-			chezmoi_install_script="$(wget -qO- https://get.chezmoi.io)"
-		else
-			log_error "To install chezmoi, you must have curl or wget installed."
-			exit 1
-		fi
-		sh -c "${chezmoi_install_script}" -- -b "${bin_dir}"
-		unset chezmoi_install_script bin_dir
-	fi
-}
-
 required_chezmoi_version="$(read_required_chezmoi_version)"
+
+if [ -z "$required_chezmoi_version" ]; then
+	log_error ".chezmoiversion is required so chezmoi installs remain pinned."
+	exit 1
+fi
 
 if ! chezmoi="$(find_chezmoi)"; then
 	# Check if chezmoi is already installed at the expected fallback path but not in PATH
@@ -148,11 +127,7 @@ if [ -x "${chezmoi:-}" ] && [ -n "$required_chezmoi_version" ]; then
 fi
 
 if ! [ -x "${chezmoi:-}" ]; then
-	if [ -n "$required_chezmoi_version" ]; then
-		install_required_chezmoi_with_package_manager "$required_chezmoi_version"
-	else
-		install_latest_chezmoi
-	fi
+	install_required_chezmoi_with_package_manager "$required_chezmoi_version"
 fi
 
 # Check if running in non-interactive environment

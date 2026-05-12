@@ -10,7 +10,7 @@ python = "3.14.4"
 task = "latest"
 
 # Chezmoi for dotfile management
-chezmoi = "latest"
+chezmoi = "2.70.2"
 
 # Bats for bash testing
 bats = "1.13.0"

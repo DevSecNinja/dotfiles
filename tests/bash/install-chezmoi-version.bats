@@ -87,6 +87,27 @@ EOF
 	grep -q "version=${REQUIRED_VERSION}" "$CHEZMOI_RUN_LOG"
 }
 
+@test ".mise.toml chezmoi pin matches .chezmoiversion" {
+	run awk -F\" '/^chezmoi = / { print $2 }' "${REPO_ROOT}/.mise.toml"
+
+	[ "$status" -eq 0 ]
+	[ "$output" = "$REQUIRED_VERSION" ]
+}
+
+@test "renovate tracks both chezmoi version pins" {
+	run grep -E "chezmoiversion|mise" "${REPO_ROOT}/renovate.json5"
+
+	[ "$status" -eq 0 ]
+	printf '%s\n' "$output" | grep -qF ".chezmoiversion"
+	printf '%s\n' "$output" | grep -qF ".mise"
+}
+
+@test "install.sh does not use unpinned chezmoi installer paths" {
+	run grep -E "chezmoi@latest|get\\.chezmoi\\.io" "${REPO_ROOT}/home/install.sh"
+
+	[ "$status" -ne 0 ]
+}
+
 @test "install.sh errors when required version is unavailable from package managers" {
 	run env \
 		HOME="$FAKE_HOME" \
@@ -94,7 +115,7 @@ EOF
 		CHEZMOI_FAKE_VERSION="0.0.1" \
 		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
 		REQUIRED_VERSION="$REQUIRED_VERSION" \
-	"$REPO_ROOT/home/install.sh"
+		"$REPO_ROOT/home/install.sh"
 
 	[ "$status" -ne 0 ]
 	printf '%s' "$output" | grep -qF "No supported package manager can provide chezmoi ${REQUIRED_VERSION} or later."
