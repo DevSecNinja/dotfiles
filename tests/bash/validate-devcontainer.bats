@@ -50,7 +50,16 @@ setup() {
 	run grep -F 'continue-on-error: true' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F "if: \${{ !cancelled() && steps.prebuild-attempt-1.outcome == 'failure' }}" "$workflow"
+	run grep -F 'id: prebuild-attempt-2' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F "if: \${{ !cancelled() && steps.prebuild-attempt-1.outcome != 'success' }}" "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'Verify prebuild succeeded' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'Devcontainer prebuild failed after retry' "$workflow"
 	[ "$status" -eq 0 ]
 }
 

@@ -156,7 +156,9 @@ jobs:
             schedule
 
       - name: Retry pre-build dev container image
-        if: ${{ !cancelled() && steps.prebuild-attempt-1.outcome == 'failure' }}
+        id: prebuild-attempt-2
+        if: ${{ !cancelled() && steps.prebuild-attempt-1.outcome != 'success' }}
+        continue-on-error: true
         uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
         env:
           DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
@@ -176,6 +178,21 @@ jobs:
             push
             workflow_dispatch
             schedule
+
+      - name: Verify prebuild succeeded
+        if: ${{ always() && !cancelled() }}
+        env:
+          ATTEMPT_1_OUTCOME: ${{ steps.prebuild-attempt-1.outcome }}
+          ATTEMPT_2_OUTCOME: ${{ steps.prebuild-attempt-2.outcome }}
+        run: |
+          set -euo pipefail
+
+          if [ "$ATTEMPT_1_OUTCOME" = "success" ] || [ "$ATTEMPT_2_OUTCOME" = "success" ]; then
+            exit 0
+          fi
+
+          echo "::error::Devcontainer prebuild failed after retry"
+          exit 1
 
   merge:
     name: Create Multi-Platform Manifest
