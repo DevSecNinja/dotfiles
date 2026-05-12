@@ -84,13 +84,47 @@ Describe "home/install.ps1" -Tag "Unit" {
         $script:Content | Should -Match 'Get-Command\s+chezmoi'
     }
 
+    It "Should read the repository minimum chezmoi version" {
+        $script:Content | Should -Match '\.chezmoiversion'
+        $script:Content | Should -Match 'Get-RequiredChezmoiVersion'
+    }
+
+    It "Should install required chezmoi version with winget" {
+        $script:Content | Should -Match 'Install-ChezmoiWithWinget'
+        $script:Content | Should -Match '--version'
+        $script:Content | Should -Match 'Get-WingetChezmoiVersion'
+        $script:Content | Should -Not -Match 'https://get\.chezmoi\.io/ps1'
+    }
+
+    It "Should compare installed chezmoi against the required version" {
+        $script:Content | Should -Match 'Test-VersionAtLeast'
+        $script:Content | Should -Match 'Get-ChezmoiVersion'
+    }
+
     It "Should install chezmoi via winget" {
-        $script:Content | Should -Match 'winget\s+install'
+        $script:Content | Should -Match '\$wingetArgs\s*=\s*@\('
+        $script:Content | Should -Match 'winget\s+@wingetArgs'
+        $script:Content | Should -Match 'install'
         $script:Content | Should -Match 'twpayne\.chezmoi'
     }
 
     It "Should pin winget installs to the community source" {
-        $script:Content | Should -Match '--source\s+winget'
+        $script:Content | Should -Match '"--source", "winget"'
+    }
+
+    It "Should refresh winget sources before installing" {
+        $script:Content | Should -Match 'Update-WingetSource'
+        $script:Content | Should -Match 'Updating winget sources'
+        $script:Content | Should -Match 'winget source update'
+        $script:Content | Should -Match 'winget source reset --force'
+    }
+
+    It "Should capture winget output without suppressing stderr" {
+        $script:Content | Should -Match 'winget search --id twpayne\.chezmoi --exact'
+        $script:Content | Should -Match 'Captured stdout/stderr:'
+        $script:Content | Should -Match 'Format-CommandOutput'
+        $script:Content | Should -Match 'twpayne\\\.chezmoi\\s\+'
+        $script:Content | Should -Not -Match 'winget search[^\r\n]+2>\$null'
     }
 
     It "Should accept package and source agreements unattended" {

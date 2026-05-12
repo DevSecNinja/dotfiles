@@ -37,13 +37,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fish zsh
 
-      - name: Install Chezmoi
+      - name: Install pinned Chezmoi
         # Chezmoi is required so the validation BATS tests can verify
         # the chezmoi configuration and dry-run apply rather than skipping.
         # See: tests/bash/validate-chezmoi.bats, tests/bash/test-chezmoi-apply.bats
         run: |
-          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          mise install chezmoi
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
 
       - name: Run lefthook checks (pull request changes)
         if: github.event_name == 'pull_request'
@@ -147,16 +147,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+
       - name: Run install script
         run: ./home/install.sh
 
       - name: Verify Chezmoi installation
         run: |
-          if ! command -v "$HOME/.local/bin/chezmoi" >/dev/null 2>&1; then
+          if ! command -v chezmoi >/dev/null 2>&1; then
             echo "❌ Chezmoi not found"
             exit 1
           fi
-          echo "✅ Chezmoi installed successfully"
+          required_chezmoi_version="$(tr -d '[:space:]' < home/.chezmoiversion)"
+          installed_chezmoi_version="$(chezmoi --version 2>/dev/null | head -n 1)"
+          if ! printf '%s\n' "$installed_chezmoi_version" | grep -qF "$required_chezmoi_version"; then
+            echo "❌ Expected chezmoi ${required_chezmoi_version}, got: ${installed_chezmoi_version}"
+            exit 1
+          fi
+          echo "✅ Chezmoi ${required_chezmoi_version} installed successfully"
 
       - name: Verify dotfiles were applied
         run: |
@@ -165,16 +174,16 @@ jobs:
 
       - name: Run chezmoi verify
         run: |
-          "$HOME/.local/bin/chezmoi" verify
+          chezmoi verify
           echo "✅ All managed files verified successfully"
 
       - name: Display chezmoi status
         run: |
           echo "📊 Chezmoi status:"
-          "$HOME/.local/bin/chezmoi" managed
+          chezmoi managed
           echo ""
           echo "📋 Chezmoi data:"
-          "$HOME/.local/bin/chezmoi" data
+          chezmoi data
 
       - name: Test Fish configuration
         run: |
@@ -195,16 +204,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+
       - name: Run root install script (Coder support)
         run: ./install.sh
 
       - name: Verify Chezmoi installation
         run: |
-          if ! command -v "$HOME/.local/bin/chezmoi" >/dev/null 2>&1; then
+          if ! command -v chezmoi >/dev/null 2>&1; then
             echo "❌ Chezmoi not found"
             exit 1
           fi
-          echo "✅ Chezmoi installed successfully via root install.sh"
+          required_chezmoi_version="$(tr -d '[:space:]' < home/.chezmoiversion)"
+          installed_chezmoi_version="$(chezmoi --version 2>/dev/null | head -n 1)"
+          if ! printf '%s\n' "$installed_chezmoi_version" | grep -qF "$required_chezmoi_version"; then
+            echo "❌ Expected chezmoi ${required_chezmoi_version}, got: ${installed_chezmoi_version}"
+            exit 1
+          fi
+          echo "✅ Chezmoi ${required_chezmoi_version} installed successfully via root install.sh"
 
       - name: Verify dotfiles were applied
         run: |
@@ -214,10 +232,10 @@ jobs:
       - name: Display chezmoi status
         run: |
           echo "📊 Chezmoi status:"
-          "$HOME/.local/bin/chezmoi" managed
+          chezmoi managed
           echo ""
           echo "📋 Chezmoi data:"
-          "$HOME/.local/bin/chezmoi" data
+          chezmoi data
 
   test-light-server:
     name: Test Light Server Installation
@@ -233,6 +251,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
 
       - name: Test light server installation
         run: ./.github/scripts/test-light-server.sh
@@ -251,6 +272,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
 
       - name: Test dev server installation
         run: ./.github/scripts/test-dev-server.sh
@@ -443,7 +467,7 @@ jobs:
     uses: ./.github/workflows/bats.yml
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.4.20"
+      mise-version: "2026.5.3"
       test-dirs: "tests/bash/"
       check-name: "Bash Test Results (Bats)"
 

@@ -14,6 +14,7 @@ LABEL org.opencontainers.image.source="https://github.com/DevSecNinja/dotfiles" 
 
 # Copy dotfiles source into the image for chezmoi to install tools during build
 COPY --chown=vscode:vscode home/ /tmp/dotfiles-src/
+COPY --chown=vscode:vscode .mise.toml /tmp/dotfiles-src/.mise.toml
 COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcontainer-software-manifest.sh
 
 # Pre-install dotfiles and all tools as vscode user (non-interactive)
@@ -23,7 +24,9 @@ COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcont
 #   re-initializes with correct env detection (CI, Codespaces, etc.)
 #   The state DB is preserved so unchanged run_once scripts won't re-run
 USER vscode
-RUN REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
+RUN curl https://mise.run | sh \
+    && export PATH="${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}" \
+    && REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
     && /tmp/devcontainer-software-manifest.sh /tmp/dotfiles-devcontainer \
     && manifest_dir=/usr/local/share/dotfiles-devcontainer \
     && sudo mkdir -p "${manifest_dir}" \
