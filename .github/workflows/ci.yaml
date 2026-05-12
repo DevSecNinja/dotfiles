@@ -159,7 +159,13 @@ jobs:
             echo "❌ Chezmoi not found"
             exit 1
           fi
-          echo "✅ Chezmoi installed successfully"
+          required_chezmoi_version="$(tr -d '[:space:]' < home/.chezmoiversion)"
+          installed_chezmoi_version="$(chezmoi --version 2>/dev/null | head -n 1)"
+          if ! printf '%s\n' "$installed_chezmoi_version" | grep -qF "$required_chezmoi_version"; then
+            echo "❌ Expected chezmoi ${required_chezmoi_version}, got: ${installed_chezmoi_version}"
+            exit 1
+          fi
+          echo "✅ Chezmoi ${required_chezmoi_version} installed successfully"
 
       - name: Verify dotfiles were applied
         run: |
@@ -210,7 +216,13 @@ jobs:
             echo "❌ Chezmoi not found"
             exit 1
           fi
-          echo "✅ Chezmoi installed successfully via root install.sh"
+          required_chezmoi_version="$(tr -d '[:space:]' < home/.chezmoiversion)"
+          installed_chezmoi_version="$(chezmoi --version 2>/dev/null | head -n 1)"
+          if ! printf '%s\n' "$installed_chezmoi_version" | grep -qF "$required_chezmoi_version"; then
+            echo "❌ Expected chezmoi ${required_chezmoi_version}, got: ${installed_chezmoi_version}"
+            exit 1
+          fi
+          echo "✅ Chezmoi ${required_chezmoi_version} installed successfully via root install.sh"
 
       - name: Verify dotfiles were applied
         run: |
