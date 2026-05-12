@@ -30,7 +30,7 @@ read_required_chezmoi_version() {
 
 chezmoi_version() {
 	# Handle both "chezmoi version X.Y.Z" and "chezmoi X.Y.Z" output formats.
-	"$1" --version 2>/dev/null | sed -n 's/^chezmoi version \([0-9][^ ]*\).*/\1/p; s/^chezmoi \([0-9][^ ]*\).*/\1/p' | head -n 1
+	"$1" --version 2>/dev/null | sed -n 's/^chezmoi version v\{0,1\}\([0-9][^ ]*\).*/\1/p; s/^chezmoi v\{0,1\}\([0-9][^ ]*\).*/\1/p' | head -n 1
 }
 
 version_at_least() {

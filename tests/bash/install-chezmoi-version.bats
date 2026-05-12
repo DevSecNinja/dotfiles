@@ -87,6 +87,21 @@ EOF
 	grep -q "version=${REQUIRED_VERSION}" "$CHEZMOI_RUN_LOG"
 }
 
+@test "install.sh accepts v-prefixed chezmoi version output" {
+	run env \
+		HOME="$FAKE_HOME" \
+		PATH="${FAKE_BIN}:/usr/bin:/bin" \
+		CHEZMOI_FAKE_VERSION="v${REQUIRED_VERSION}" \
+		CHEZMOI_RUN_LOG="$CHEZMOI_RUN_LOG" \
+		MISE_LOG="$MISE_LOG" \
+		REQUIRED_VERSION="$REQUIRED_VERSION" \
+		"$REPO_ROOT/home/install.sh"
+
+	[ "$status" -eq 0 ]
+	[ ! -f "$MISE_LOG" ]
+	grep -q "source=path" "$CHEZMOI_RUN_LOG"
+}
+
 @test ".mise.toml chezmoi pin matches .chezmoiversion" {
 	run awk -F\" '/^chezmoi = / { print $2 }' "${REPO_ROOT}/.mise.toml"
 
@@ -94,14 +109,22 @@ EOF
 	[ "$output" = "$REQUIRED_VERSION" ]
 }
 
-@test "renovate tracks both chezmoi version pins" {
+@test "renovate tracks .chezmoiversion with a custom manager" {
 	renovate_config="$(cat "${REPO_ROOT}/renovate.json5")"
 
 	printf '%s\n' "$renovate_config" | grep -qF "managerFilePatterns"
 	printf '%s\n' "$renovate_config" | grep -qF ".chezmoiversion"
-	printf '%s\n' "$renovate_config" | grep -qF ".mise"
 	printf '%s\n' "$renovate_config" | grep -qF "currentValue"
 	printf '%s\n' "$renovate_config" | grep -qF "twpayne/chezmoi"
+}
+
+@test "renovate tracks .mise.toml chezmoi pin with an inline comment" {
+	run grep -B1 -F 'chezmoi = "' "${REPO_ROOT}/.mise.toml"
+
+	[ "$status" -eq 0 ]
+	printf '%s\n' "$output" | grep -qF "renovate: datasource=github-releases depName=twpayne/chezmoi"
+	printf '%s\n' "$output" | grep -qF "extractVersion=^v(?<version>.+)$"
+	printf '%s\n' "$output" | grep -qF "chezmoi = \"${REQUIRED_VERSION}\""
 }
 
 @test "install.sh does not use unpinned chezmoi installer paths" {
