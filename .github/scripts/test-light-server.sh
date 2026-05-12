@@ -14,8 +14,8 @@ fi
 echo "🧪 Testing light server installation scenario..."
 echo "🖥️  Hostname: $(hostname)"
 
-# Ensure .local/bin is in PATH
-export PATH="${HOME}/.local/bin:${PATH}"
+# Ensure local package-manager bins are in PATH
+export PATH="${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}"
 
 # Get the source directory (parent of .github)
 SOURCE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -25,8 +25,9 @@ echo ""
 
 # Install chezmoi if not present
 if ! command -v chezmoi >/dev/null 2>&1; then
-	echo "Installing chezmoi..."
-	sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "${HOME}/.local/bin"
+	REQUIRED_CHEZMOI_VERSION="$(tr -d '[:space:]' <"${SOURCE_DIR}/home/.chezmoiversion")"
+	echo "Installing chezmoi ${REQUIRED_CHEZMOI_VERSION} with mise..."
+	MISE_YES=1 mise use --global "chezmoi@${REQUIRED_CHEZMOI_VERSION}"
 fi
 
 # Run chezmoi init and apply
