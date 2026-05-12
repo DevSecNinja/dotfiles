@@ -66,7 +66,15 @@ jobs:
           workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"
           workflow_file="${workflow_file%@*}"
           # The workflow API accepts a workflow file basename, not a path.
-          if [ -z "$workflow_file" ] || [ "$workflow_file" = "$GITHUB_WORKFLOW_REF" ] || [ "$workflow_file" != "${workflow_file##*/}" ]; then
+          if [ -z "$workflow_file" ]; then
+            echo "::warning::Could not derive workflow file name from GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}; running prebuild."
+            exit 0
+          fi
+          if [ "$workflow_file" = "$GITHUB_WORKFLOW_REF" ]; then
+            echo "::warning::Could not derive workflow file name from GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}; running prebuild."
+            exit 0
+          fi
+          if [ "$workflow_file" != "${workflow_file##*/}" ]; then
             echo "::warning::Could not derive workflow file name from GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}; running prebuild."
             exit 0
           fi
@@ -210,7 +218,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Attempt 2 is skipped when attempt 1 succeeds; any success is enough.
+          # Attempt 2 is expected to be skipped when attempt 1 succeeds; any success is enough.
           if [ "$ATTEMPT_1_OUTCOME" = "success" ] || [ "$ATTEMPT_2_OUTCOME" = "success" ]; then
             exit 0
           fi
@@ -223,6 +231,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: prebuild
     # Merge when images were actually pushed: main, schedule, dispatch, or v* tag.
+    # The prebuild job fails unless its verification step saw a successful build attempt.
     if: |
       needs.prebuild.result == 'success'
       && (
