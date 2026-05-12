@@ -26,7 +26,7 @@ COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcont
 #   The state DB is preserved so unchanged run_once scripts won't re-run
 USER vscode
 RUN --mount=type=secret,id=GITHUB_TOKEN \
-    if [ -s /run/secrets/GITHUB_TOKEN ]; then \
+    if [ -f /run/secrets/GITHUB_TOKEN ] && [ -s /run/secrets/GITHUB_TOKEN ]; then \
         export GITHUB_TOKEN="$(cat /run/secrets/GITHUB_TOKEN)"; \
     fi \
     && curl https://mise.run | sh \
