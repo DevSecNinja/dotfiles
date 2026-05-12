@@ -95,15 +95,16 @@ EOF
 }
 
 @test "renovate tracks both chezmoi version pins" {
-	run grep -E "chezmoiversion|mise" "${REPO_ROOT}/renovate.json5"
+	renovate_config="$(cat "${REPO_ROOT}/renovate.json5")"
 
-	[ "$status" -eq 0 ]
-	printf '%s\n' "$output" | grep -qF ".chezmoiversion"
-	printf '%s\n' "$output" | grep -qF ".mise"
+	printf '%s\n' "$renovate_config" | grep -qF 'managerFilePatterns: ["/(^|/)\\.chezmoiversion$/"]'
+	printf '%s\n' "$renovate_config" | grep -qF 'matchStrings: ["^(?<currentValue>\\S+)\\s*$"]'
+	printf '%s\n' "$renovate_config" | grep -qF 'managerFilePatterns: ["/(^|/)\\.mise\\.toml$/"]'
+	printf '%s\n' "$renovate_config" | grep -qF 'matchStrings: ["chezmoi\\s*=\\s*\"(?<currentValue>[^\"]+)\""]'
 }
 
 @test "install.sh does not use unpinned chezmoi installer paths" {
-	run grep -E "chezmoi@latest|get\\.chezmoi\\.io" "${REPO_ROOT}/home/install.sh"
+	run grep -E "chezmoi@latest|get\\.chezmoi\\.io|mise use --global chezmoi([[:space:]]|$)" "${REPO_ROOT}/home/install.sh"
 
 	[ "$status" -ne 0 ]
 }
