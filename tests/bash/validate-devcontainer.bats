@@ -26,7 +26,7 @@ setup() {
 	[ -f "$prebuild_config" ]
 	[ -f "$workflow" ]
 
-	run grep -F '# syntax=docker/dockerfile:' "$dockerfile"
+	run grep -F '# syntax=docker/dockerfile:1.7' "$dockerfile"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'RUN --mount=type=secret,id=GITHUB_TOKEN' "$dockerfile"
