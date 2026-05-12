@@ -231,7 +231,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: prebuild
     # Merge when images were actually pushed: main, schedule, dispatch, or v* tag.
-    # The prebuild job fails unless its verification step saw a successful build attempt.
+    # The prebuild job only succeeds if at least one build attempt succeeds, verified by the final step.
     if: |
       needs.prebuild.result == 'success'
       && (
