@@ -82,6 +82,7 @@ jobs:
         env:
           DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}

@@ -17,6 +17,31 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
+@test "validate-devcontainer: prebuild forwards GitHub token as BuildKit secret" {
+	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
+	prebuild_config="$REPO_ROOT/.devcontainer/devcontainer-prebuild.json"
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+
+	[ -f "$dockerfile" ]
+	[ -f "$prebuild_config" ]
+	[ -f "$workflow" ]
+
+	run grep -F '# syntax=docker/dockerfile:' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'RUN --mount=type=secret,id=GITHUB_TOKEN' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'export GITHUB_TOKEN="$(cat /run/secrets/GITHUB_TOKEN)"' "$dockerfile"
+	[ "$status" -eq 0 ]
+
+	run grep -F '"id=GITHUB_TOKEN,env=GITHUB_TOKEN"' "$prebuild_config"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}' "$workflow"
+	[ "$status" -eq 0 ]
+}
+
 @test "validate-devcontainer: prebuild image includes release-specific OCI metadata" {
 	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
 	prebuild_config="$REPO_ROOT/.devcontainer/devcontainer-prebuild.json"
