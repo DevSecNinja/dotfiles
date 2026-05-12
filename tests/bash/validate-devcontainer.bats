@@ -38,6 +38,9 @@ setup() {
 	run grep -F 'workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"' "$workflow"
 	[ "$status" -eq 0 ]
 
+	run grep -F 'The workflow API accepts a workflow file basename, not a path.' "$workflow"
+	[ "$status" -eq 0 ]
+
 	run grep -F 'Could not derive workflow file name from GITHUB_WORKFLOW_REF' "$workflow"
 	[ "$status" -eq 0 ]
 
@@ -48,6 +51,9 @@ setup() {
 	[ "$status" -eq 0 ]
 
 	run grep -F 'datetime.now(timezone.utc)' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'error_detail="$(cat "$cooldown_error")"' "$workflow"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'if [ "$within_cooldown" = "true" ]; then' "$workflow"

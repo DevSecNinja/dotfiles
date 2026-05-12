@@ -65,6 +65,7 @@ jobs:
 
           workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"
           workflow_file="${workflow_file%@*}"
+          # The workflow API accepts a workflow file basename, not a path.
           if [ -z "$workflow_file" ] || [ "$workflow_file" = "$GITHUB_WORKFLOW_REF" ] || [ "$workflow_file" != "${workflow_file##*/}" ]; then
             echo "::warning::Could not derive workflow file name from GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}; running prebuild."
             exit 0
@@ -85,7 +86,8 @@ jobs:
             exit 0
           fi
 
-          if ! within_cooldown="$(python3 - "$latest_created" "$COOLDOWN_HOURS" <<'PY'
+          cooldown_error="$(mktemp)"
+          if ! within_cooldown="$(python3 - "$latest_created" "$COOLDOWN_HOURS" 2>"$cooldown_error" <<'PY'
           from datetime import datetime, timedelta, timezone
           import sys
 
@@ -95,9 +97,12 @@ jobs:
           print("true" if datetime.now(timezone.utc) - created < timedelta(hours=cooldown_hours) else "false")
           PY
           )"; then
-            echo "::warning::Could not evaluate prebuild cooldown; running prebuild."
+            error_detail="$(cat "$cooldown_error")"
+            rm -f "$cooldown_error"
+            echo "::warning::Could not evaluate prebuild cooldown: ${error_detail:-unknown error}; running prebuild."
             exit 0
           fi
+          rm -f "$cooldown_error"
 
           if [ "$within_cooldown" = "true" ]; then
             echo "should-run=false" >> "$GITHUB_OUTPUT"
