@@ -112,6 +112,7 @@ jobs:
           fi
           rm -f "$cooldown_error"
 
+          # The Python helper emits literal "true" or "false" strings for this check.
           if [ "$within_cooldown" = "true" ]; then
             echo "should-run=false" >> "$GITHUB_OUTPUT"
             echo "Skipping prebuild: successful run at ${latest_created} is within ${COOLDOWN_HOURS} hours."
@@ -218,7 +219,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Attempt 2 is expected to be skipped when attempt 1 succeeds; any success is enough.
+          # Attempt 2 is expected to be skipped when attempt 1 succeeds; either success is sufficient.
           if [ "$ATTEMPT_1_OUTCOME" = "success" ] || [ "$ATTEMPT_2_OUTCOME" = "success" ]; then
             exit 0
           fi
