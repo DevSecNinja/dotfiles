@@ -65,23 +65,41 @@ jobs:
 
           workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"
           workflow_file="${workflow_file%@*}"
+          if [ -z "$workflow_file" ] || [ "$workflow_file" = "$GITHUB_WORKFLOW_REF" ] || [ "$workflow_file" != "${workflow_file##*/}" ]; then
+            echo "::warning::Could not derive workflow file name from GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF}; running prebuild."
+            exit 0
+          fi
 
-          latest_created="$(
+          if ! latest_created="$(
             gh api \
               -H "Accept: application/vnd.github+json" \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1" \
               --jq '.workflow_runs[0].created_at // ""'
-          )"
+          )"; then
+            echo "::warning::Could not query previous prebuild runs; running prebuild."
+            exit 0
+          fi
 
           if [ -z "$latest_created" ]; then
             echo "No previous successful main-branch prebuild found."
             exit 0
           fi
 
-          latest_epoch="$(date -u -d "$latest_created" +%s)"
-          cooldown_epoch="$(date -u -d "${COOLDOWN_HOURS} hours ago" +%s)"
+          if ! within_cooldown="$(python3 - "$latest_created" "$COOLDOWN_HOURS" <<'PY'
+          from datetime import datetime, timedelta, timezone
+          import sys
 
-          if [ "$latest_epoch" -gt "$cooldown_epoch" ]; then
+          created_at = sys.argv[1]
+          cooldown_hours = float(sys.argv[2])
+          created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+          print("true" if datetime.now(timezone.utc) - created < timedelta(hours=cooldown_hours) else "false")
+          PY
+          )"; then
+            echo "::warning::Could not evaluate prebuild cooldown; running prebuild."
+            exit 0
+          fi
+
+          if [ "$within_cooldown" = "true" ]; then
             echo "should-run=false" >> "$GITHUB_OUTPUT"
             echo "Skipping prebuild: successful run at ${latest_created} is within ${COOLDOWN_HOURS} hours."
           else
@@ -187,6 +205,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Attempt 2 is skipped when attempt 1 succeeds; any success is enough.
           if [ "$ATTEMPT_1_OUTCOME" = "success" ] || [ "$ATTEMPT_2_OUTCOME" = "success" ]; then
             exit 0
           fi

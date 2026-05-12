@@ -38,10 +38,19 @@ setup() {
 	run grep -F 'workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"' "$workflow"
 	[ "$status" -eq 0 ]
 
+	run grep -F 'Could not derive workflow file name from GITHUB_WORKFLOW_REF' "$workflow"
+	[ "$status" -eq 0 ]
+
 	run grep -F 'repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'if [ "$latest_epoch" -gt "$cooldown_epoch" ]; then' "$workflow"
+	run grep -F 'Could not query previous prebuild runs' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'datetime.now(timezone.utc)' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'if [ "$within_cooldown" = "true" ]; then' "$workflow"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'id: prebuild-attempt-1' "$workflow"
