@@ -35,7 +35,10 @@ setup() {
 	run grep -F 'PREBUILD_COOLDOWN_HOURS: 6' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'repos/${GITHUB_REPOSITORY}/actions/workflows/devcontainer-prebuild.yaml/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1' "$workflow"
+	run grep -F 'workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1' "$workflow"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'if [ "$latest_epoch" -gt "$cooldown_epoch" ]; then' "$workflow"
@@ -47,7 +50,7 @@ setup() {
 	run grep -F 'continue-on-error: true' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F "if: steps.prebuild-attempt-1.outcome == 'failure'" "$workflow"
+	run grep -F "if: \${{ !cancelled() && steps.prebuild-attempt-1.outcome == 'failure' }}" "$workflow"
 	[ "$status" -eq 0 ]
 }
 

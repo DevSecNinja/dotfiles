@@ -63,10 +63,13 @@ jobs:
             exit 0
           fi
 
+          workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"
+          workflow_file="${workflow_file%@*}"
+
           latest_created="$(
             gh api \
               -H "Accept: application/vnd.github+json" \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/devcontainer-prebuild.yaml/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1" \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1" \
               --jq '.workflow_runs[0].created_at // ""'
           )"
 
@@ -153,7 +156,7 @@ jobs:
             schedule
 
       - name: Retry pre-build dev container image
-        if: steps.prebuild-attempt-1.outcome == 'failure'
+        if: ${{ !cancelled() && steps.prebuild-attempt-1.outcome == 'failure' }}
         uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
         env:
           DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
