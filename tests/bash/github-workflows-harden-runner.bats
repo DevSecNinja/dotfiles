@@ -29,7 +29,7 @@ setup() {
 @test "github workflows: eligible linux jobs include harden-runner" {
 	assert_harden_count ".github/workflows/bats.yml" 1
 	assert_harden_count ".github/workflows/ci.yaml" 2
-	assert_harden_count ".github/workflows/devcontainer-prebuild.yaml" 3
+	assert_harden_count ".github/workflows/devcontainer-prebuild.yaml" 4
 	assert_harden_count ".github/workflows/docs.yml" 3
 	assert_harden_count ".github/workflows/release-please.yml" 1
 	assert_harden_count ".github/workflows/release.yml" 2

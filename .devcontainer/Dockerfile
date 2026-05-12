@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # Devcontainer image with dotfiles and tools pre-installed
 # Built and pushed by .github/workflows/devcontainer-prebuild.yaml
 #
@@ -25,12 +24,7 @@ COPY --chown=vscode:vscode script/devcontainer-software-manifest.sh /tmp/devcont
 #   re-initializes with correct env detection (CI, Codespaces, etc.)
 #   The state DB is preserved so unchanged run_once scripts won't re-run
 USER vscode
-RUN --mount=type=secret,id=GITHUB_TOKEN \
-    token_file=/run/secrets/GITHUB_TOKEN; \
-    if [ -f "$token_file" ] && [ -s "$token_file" ]; then \
-        export GITHUB_TOKEN="$(cat "$token_file")"; \
-    fi; \
-    curl https://mise.run | sh \
+RUN curl https://mise.run | sh \
     && export PATH="${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}" \
     && REMOTE_CONTAINERS=true /tmp/dotfiles-src/install.sh \
     && /tmp/devcontainer-software-manifest.sh /tmp/dotfiles-devcontainer \

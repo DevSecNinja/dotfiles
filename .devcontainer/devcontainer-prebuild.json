@@ -10,11 +10,7 @@
         "args": {
             "DOTFILES_DEVCONTAINER_VERSION": "${localEnv:DOTFILES_DEVCONTAINER_VERSION}",
             "DOTFILES_DEVCONTAINER_REVISION": "${localEnv:DOTFILES_DEVCONTAINER_REVISION}"
-        },
-        "options": [
-            "--secret",
-            "id=GITHUB_TOKEN,env=GITHUB_TOKEN"
-        ]
+        }
     },
     "features": {
         "ghcr.io/devcontainers/features/git-lfs:1": {

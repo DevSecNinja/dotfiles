@@ -29,14 +29,66 @@ on:
 
 permissions:
   contents: read
+  actions: read
   packages: write
 
 env:
   IMAGE_BASENAME: dotfiles-devcontainer
+  PREBUILD_COOLDOWN_HOURS: 6
 
 jobs:
+  cooldown:
+    name: Check cooldown
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      should-run: ${{ steps.decision.outputs.should-run }}
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
+      - name: Check recent successful prebuild
+        id: decision
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COOLDOWN_HOURS: ${{ env.PREBUILD_COOLDOWN_HOURS }}
+        run: |
+          set -euo pipefail
+
+          echo "should-run=true" >> "$GITHUB_OUTPUT"
+
+          if [ "$GITHUB_EVENT_NAME" != "push" ] || [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Cooldown applies only to main-branch push events."
+            exit 0
+          fi
+
+          latest_created="$(
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/devcontainer-prebuild.yaml/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0].created_at // ""'
+          )"
+
+          if [ -z "$latest_created" ]; then
+            echo "No previous successful main-branch prebuild found."
+            exit 0
+          fi
+
+          latest_epoch="$(date -u -d "$latest_created" +%s)"
+          cooldown_epoch="$(date -u -d "${COOLDOWN_HOURS} hours ago" +%s)"
+
+          if [ "$latest_epoch" -gt "$cooldown_epoch" ]; then
+            echo "should-run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping prebuild: successful run at ${latest_created} is within ${COOLDOWN_HOURS} hours."
+          else
+            echo "Latest successful run at ${latest_created} is outside the ${COOLDOWN_HOURS}-hour cooldown."
+          fi
+
   prebuild:
     name: Build (${{ matrix.arch }})
+    needs: cooldown
+    if: needs.cooldown.outputs.should-run == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -73,6 +125,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pre-build dev container image
+        id: prebuild-attempt-1
+        continue-on-error: true
         # Always push only the rolling per-arch tag. On v* tag pushes the
         # merge job derives the immutable release manifest list from these
         # very digests — docker manifest create resolves a tag to its
@@ -82,7 +136,28 @@ jobs:
         env:
           DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          configFile: .devcontainer/devcontainer-prebuild.json
+          imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
+          imageTag: ${{ matrix.arch }}
+          cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}:${{ matrix.arch }}
+          platform: ${{ matrix.platform }}
+          # Push on main branch and on v* tags. PRs build for validation only.
+          push: filter
+          refFilterForPush: |
+            refs/heads/main
+            refs/tags/v*
+          eventFilterForPush: |
+            push
+            workflow_dispatch
+            schedule
+
+      - name: Retry pre-build dev container image
+        if: steps.prebuild-attempt-1.outcome == 'failure'
+        uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
+        env:
+          DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
         with:
           configFile: .devcontainer/devcontainer-prebuild.json
           imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
@@ -105,10 +180,13 @@ jobs:
     needs: prebuild
     # Merge when images were actually pushed: main, schedule, dispatch, or v* tag.
     if: |
-      github.ref == 'refs/heads/main'
-      || startsWith(github.ref, 'refs/tags/v')
-      || github.event_name == 'workflow_dispatch'
-      || github.event_name == 'schedule'
+      needs.prebuild.result == 'success'
+      && (
+        github.ref == 'refs/heads/main'
+        || startsWith(github.ref, 'refs/tags/v')
+        || github.event_name == 'workflow_dispatch'
+        || github.event_name == 'schedule'
+      )
     timeout-minutes: 10
     permissions:
       contents: read

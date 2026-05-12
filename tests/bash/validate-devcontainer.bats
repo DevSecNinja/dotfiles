@@ -17,7 +17,7 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
-@test "validate-devcontainer: prebuild forwards GitHub token as BuildKit secret" {
+@test "validate-devcontainer: prebuild uses cooldown and retry instead of build secrets" {
 	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
 	prebuild_config="$REPO_ROOT/.devcontainer/devcontainer-prebuild.json"
 	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
@@ -26,22 +26,28 @@ setup() {
 	[ -f "$prebuild_config" ]
 	[ -f "$workflow" ]
 
-	run grep -F '# syntax=docker/dockerfile:1.7' "$dockerfile"
-	[ "$status" -eq 0 ]
-
 	run grep -F 'RUN --mount=type=secret,id=GITHUB_TOKEN' "$dockerfile"
+	[ "$status" -ne 0 ]
+
+	run grep -F 'id=GITHUB_TOKEN,env=GITHUB_TOKEN' "$prebuild_config"
+	[ "$status" -ne 0 ]
+
+	run grep -F 'PREBUILD_COOLDOWN_HOURS: 6' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'token_file=/run/secrets/GITHUB_TOKEN' "$dockerfile"
+	run grep -F 'repos/${GITHUB_REPOSITORY}/actions/workflows/devcontainer-prebuild.yaml/runs?branch=${GITHUB_REF_NAME}&event=push&status=success&per_page=1' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'export GITHUB_TOKEN="$(cat "$token_file")"' "$dockerfile"
+	run grep -F 'if [ "$latest_epoch" -gt "$cooldown_epoch" ]; then' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F '"id=GITHUB_TOKEN,env=GITHUB_TOKEN"' "$prebuild_config"
+	run grep -F 'id: prebuild-attempt-1' "$workflow"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}' "$workflow"
+	run grep -F 'continue-on-error: true' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F "if: steps.prebuild-attempt-1.outcome == 'failure'" "$workflow"
 	[ "$status" -eq 0 ]
 }
 
