@@ -32,10 +32,10 @@ setup() {
 	run grep -F 'RUN --mount=type=secret,id=GITHUB_TOKEN' "$dockerfile"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'if [ -f /run/secrets/GITHUB_TOKEN ] && [ -s /run/secrets/GITHUB_TOKEN ]; then' "$dockerfile"
+	run grep -F 'token_file=/run/secrets/GITHUB_TOKEN' "$dockerfile"
 	[ "$status" -eq 0 ]
 
-	run grep -F 'export GITHUB_TOKEN="$(cat /run/secrets/GITHUB_TOKEN)"' "$dockerfile"
+	run grep -F 'export GITHUB_TOKEN="$(cat "$token_file")"' "$dockerfile"
 	[ "$status" -eq 0 ]
 
 	run grep -F '"id=GITHUB_TOKEN,env=GITHUB_TOKEN"' "$prebuild_config"
