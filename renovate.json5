@@ -30,7 +30,7 @@
       // Keep the mise-managed chezmoi tool pin in sync with .chezmoiversion.
       customType: "regex",
       description: "Update mise chezmoi version pin",
-      managerFilePatterns: ["/(^|/)\\.mise\\.toml$/"],
+      managerFilePatterns: ["/\\.mise\\.toml$/"],
       matchStrings: ["chezmoi\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
       depNameTemplate: "twpayne/chezmoi",
       datasourceTemplate: "github-releases",

@@ -105,8 +105,13 @@ EOF
 }
 
 @test "install.sh does not use unpinned chezmoi installer paths" {
-	run grep -E "chezmoi@latest|get\\.chezmoi\\.io|mise use --global ['\"]?chezmoi['\"]?([[:space:]]|$)" "${REPO_ROOT}/home/install.sh"
+	run grep -F "chezmoi@latest" "${REPO_ROOT}/home/install.sh"
+	[ "$status" -ne 0 ]
 
+	run grep -F "get.chezmoi.io" "${REPO_ROOT}/home/install.sh"
+	[ "$status" -ne 0 ]
+
+	run grep -E "mise use --global ['\"]?chezmoi['\"]?([[:space:]]|$)" "${REPO_ROOT}/home/install.sh"
 	[ "$status" -ne 0 ]
 }
 
