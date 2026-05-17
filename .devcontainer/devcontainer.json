@@ -4,7 +4,7 @@
   // Built by .github/workflows/devcontainer-prebuild.yaml from Dockerfile
   // chezmoi config is removed after prebuild so postCreateCommand re-initializes
   // fresh, correctly detecting the runtime environment (CI, Codespaces, etc.)
-  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest@sha256:c0270da1bc6cc7d0143caee7a5966a2a435d1b41f0a0358739552ca3b80a4882",
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest@sha256:1022461262f7c4175a1ded2abbf36986fbae72cbfb0f7902356c80de4b3a8d5b",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "version": "latest"
