@@ -4,18 +4,28 @@
 
 # Initialize mise if available
 if type -q mise
-    function __dotfiles_mise_self_update
+    function __dotfiles_mise_update
         set -l previous_pwd (pwd)
 
         if test -n "$HOME"; and test -d "$HOME"
             cd "$HOME"; or return 1
         end
 
-        command mise self-update -y >/dev/null 2>&1
-        set -l update_status $status
+        if command mise self-update -y >/dev/null 2>&1
+            cd "$previous_pwd"
+            return 0
+        end
+
+        if type -q brew
+            command brew upgrade mise >/dev/null 2>&1
+            set -l update_status $status
+
+            cd "$previous_pwd"
+            return $update_status
+        end
 
         cd "$previous_pwd"
-        return $update_status
+        return 1
     end
 
     function __dotfiles_mise_activate
@@ -30,7 +40,7 @@ if type -q mise
         if string match -qr 'mise version .* is required' -- $activation_output
             echo "mise is older than this project's required version; updating mise..." >&2
 
-            if __dotfiles_mise_self_update
+            if __dotfiles_mise_update
                 set activation_output (command mise activate fish 2>&1)
                 set activation_status $status
 
@@ -39,7 +49,7 @@ if type -q mise
                     return 0
                 end
             else
-                echo "mise self-update failed; continuing without mise activation" >&2
+                echo "mise update failed; continuing without mise activation" >&2
             end
         end
 
@@ -52,5 +62,5 @@ if type -q mise
         echo "✅ mise initialized"
     end
 
-    functions -e __dotfiles_mise_activate __dotfiles_mise_self_update
+    functions -e __dotfiles_mise_activate __dotfiles_mise_update
 end

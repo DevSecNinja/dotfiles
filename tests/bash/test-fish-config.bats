@@ -176,3 +176,62 @@ EOF
 	[ -f "$MISE_FAKE_MARKER" ]
 	[[ "$output" =~ "updating mise" ]]
 }
+
+@test "test-fish-config: package-managed mise upgrades with brew before activation" {
+	if ! command -v fish >/dev/null 2>&1; then
+		skip "Fish not installed"
+	fi
+
+	mkdir -p "$TEST_FISH_DIR/fish/conf.d" "$BATS_TEST_TMPDIR/bin" "$BATS_TEST_TMPDIR/home"
+	cp "$REPO_ROOT/home/dot_config/fish/conf.d/mise.fish" "$TEST_FISH_DIR/fish/conf.d/mise.fish"
+
+	cat >"$BATS_TEST_TMPDIR/bin/mise" <<'EOF'
+#!/bin/sh
+marker="${MISE_FAKE_MARKER:?}"
+
+case "$1 $2" in
+	"activate fish")
+		if [ -f "$marker" ]; then
+			printf '%s\n' 'set -gx MISE_FAKE_ACTIVATED 1'
+			exit 0
+		fi
+
+		printf '%s\n' 'mise ERROR mise version 2026.5.0 is required, but you are using 2026.4.28' >&2
+		exit 1
+		;;
+	"self-update -y")
+		printf '%s\n' 'mise ERROR mise is installed via a package manager, cannot update' >&2
+		exit 1
+		;;
+	"completion fish")
+		exit 0
+		;;
+esac
+
+exit 1
+EOF
+	chmod +x "$BATS_TEST_TMPDIR/bin/mise"
+
+	cat >"$BATS_TEST_TMPDIR/bin/brew" <<'EOF'
+#!/bin/sh
+marker="${MISE_FAKE_MARKER:?}"
+
+if [ "$1 $2" = "upgrade mise" ]; then
+	: >"$marker"
+	exit 0
+fi
+
+exit 1
+EOF
+	chmod +x "$BATS_TEST_TMPDIR/bin/brew"
+
+	export PATH="$BATS_TEST_TMPDIR/bin:$PATH"
+	export HOME="$BATS_TEST_TMPDIR/home"
+	export TERM_PROGRAM="vscode"
+	export MISE_FAKE_MARKER="$BATS_TEST_TMPDIR/mise-updated-by-brew"
+
+	run fish -c 'test "$MISE_FAKE_ACTIVATED" = 1'
+	[ "$status" -eq 0 ]
+	[ -f "$MISE_FAKE_MARKER" ]
+	[[ "$output" =~ "updating mise" ]]
+}
