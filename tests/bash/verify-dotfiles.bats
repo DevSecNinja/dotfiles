@@ -81,6 +81,7 @@ setup() {
 		"private.pem"
 		"tls-private.pem"
 		"private-key.pem"
+		"tls-private-key.pem"
 		"server.key"
 		"client.key"
 		"secret.p12"
@@ -121,6 +122,7 @@ setup() {
 		".env.template"
 		"public-cert.pem"
 		"public-key.pem"
+		"public-private-comparison.pem"
 		"public.key"
 	)
 	touch "${allowed_files[@]}"

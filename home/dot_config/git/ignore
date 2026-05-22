@@ -18,6 +18,7 @@ Desktop.ini
 node_modules/
 .env
 .env.*
+# Allow template env files to be committed despite .env.* above
 !.env.example
 !.env.sample
 !.env.template
@@ -27,8 +28,14 @@ node_modules/
 .netrc
 .aws/credentials
 .kube/config
-*private*.pem
-*private.key
+private.pem
+*[-_]private.pem
+private[-_]key.pem
+*[-_]private[-_]key.pem
+private.key.pem
+*[-_]private.key.pem
+private.key
+*[-_]private.key
 server.key
 client.key
 *.p12
