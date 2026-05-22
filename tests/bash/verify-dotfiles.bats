@@ -78,8 +78,10 @@ setup() {
 		".netrc"
 		".aws/credentials"
 		".kube/config"
-		"secret.pem"
-		"secret.key"
+		"private.pem"
+		"tls-private.pem"
+		"server.key"
+		"client.key"
 		"secret.p12"
 		"secret.pfx"
 		"id_rsa"
@@ -102,15 +104,15 @@ setup() {
 	done
 }
 
-@test "verify-dotfiles: global gitignore allows env templates" {
+@test "verify-dotfiles: global gitignore allows templates and public keys" {
 	GIT_IGNORE="$REPO_ROOT/home/dot_config/git/ignore"
 	TEST_DIR="$BATS_TEST_TMPDIR/git-ignore-templates"
 	mkdir -p "$TEST_DIR"
 	cd "$TEST_DIR"
 	git init --quiet
-	touch .env.example .env.sample .env.template
+	touch .env.example .env.sample .env.template public-cert.pem public.key
 
-	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore .env.example .env.sample .env.template
+	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore .env.example .env.sample .env.template public-cert.pem public.key
 	[ "$status" -eq 1 ]
 	[ -z "$output" ]
 }
