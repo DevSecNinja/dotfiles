@@ -64,6 +64,74 @@ setup() {
 	[ -f "$HOME/.config/git/ignore" ]
 }
 
+@test "verify-dotfiles: global gitignore blocks security-sensitive files" {
+	GIT_IGNORE="$REPO_ROOT/home/dot_config/git/ignore"
+	TEST_DIR="$BATS_TEST_TMPDIR/git-ignore"
+	mkdir -p "$TEST_DIR/.aws" "$TEST_DIR/.kube"
+	cd "$TEST_DIR"
+	git init --quiet
+
+	ignored_files=(
+		".env"
+		".env.local"
+		".env.production"
+		".netrc"
+		".aws/credentials"
+		".kube/config"
+		"private.pem"
+		"tls-private.pem"
+		"private-key.pem"
+		"tls-private-key.pem"
+		"server.key"
+		"client.key"
+		"secret.p12"
+		"secret.pfx"
+		"id_rsa"
+		"id_dsa"
+		"id_ecdsa"
+		"id_ed25519"
+		"terraform.tfstate"
+		"terraform.tfstate.backup"
+		"core.1234"
+		"core_dump"
+		"core_12345"
+	)
+	touch "${ignored_files[@]}"
+
+	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore "${ignored_files[@]}"
+	[ "$status" -eq 0 ]
+
+	for ignored_file in "${ignored_files[@]}"; do
+		printf '%s\n' "${lines[@]}" | grep -Fx -- "$ignored_file" >/dev/null || {
+			echo "Missing ignored file: $ignored_file"
+			return 1
+		}
+	done
+}
+
+@test "verify-dotfiles: global gitignore allows templates and public keys" {
+	GIT_IGNORE="$REPO_ROOT/home/dot_config/git/ignore"
+	TEST_DIR="$BATS_TEST_TMPDIR/git-ignore-templates"
+	mkdir -p "$TEST_DIR"
+	cd "$TEST_DIR"
+	git init --quiet
+
+	allowed_files=(
+		".env.example"
+		".env.sample"
+		".env.template"
+		"public-cert.pem"
+		"public-key.pem"
+		"public-private-comparison.pem"
+		"public.key"
+	)
+	touch "${allowed_files[@]}"
+
+	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore "${allowed_files[@]}"
+	[ "$status" -eq 1 ]
+	[ -z "$output" ]
+}
+
 @test "verify-dotfiles: source files exist in repository" {
 	# These should always exist in the repository
 	[ -f "$REPO_ROOT/home/dot_vimrc" ]
