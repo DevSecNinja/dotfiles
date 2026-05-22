@@ -18,7 +18,26 @@ Desktop.ini
 node_modules/
 .env
 .env.local
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 *.log
+
+# Secrets and credentials
+.netrc
+.aws/credentials
+.kube/config
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.tfstate
+*.tfstate.*
 
 # SOPS Decrypted Secrets
 .decrypted~*
@@ -28,3 +47,4 @@ node_modules/
 
 # Core dumps
 core.*
+core_*
