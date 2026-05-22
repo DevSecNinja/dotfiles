@@ -27,12 +27,9 @@ node_modules/
 .netrc
 .aws/credentials
 .kube/config
-private.pem
-*[_-]private.pem
-*[_-]key.pem
-*.key.pem
-private.key
-*[_-]private.key
+*private.pem
+*[._-]key.pem
+*private.key
 server.key
 client.key
 *.p12
