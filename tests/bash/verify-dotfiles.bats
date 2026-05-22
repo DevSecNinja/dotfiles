@@ -100,7 +100,10 @@ setup() {
 	[ "$status" -eq 0 ]
 
 	for ignored_file in "${ignored_files[@]}"; do
-		printf '%s\n' "${lines[@]}" | grep -Fx -- "$ignored_file" >/dev/null
+		printf '%s\n' "${lines[@]}" | grep -Fx -- "$ignored_file" >/dev/null || {
+			echo "Missing ignored file: $ignored_file"
+			return 1
+		}
 	done
 }
 
