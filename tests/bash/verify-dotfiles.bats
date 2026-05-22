@@ -80,6 +80,7 @@ setup() {
 		".kube/config"
 		"private.pem"
 		"tls-private.pem"
+		"private-key.pem"
 		"server.key"
 		"client.key"
 		"secret.p12"
@@ -113,9 +114,18 @@ setup() {
 	mkdir -p "$TEST_DIR"
 	cd "$TEST_DIR"
 	git init --quiet
-	touch .env.example .env.sample .env.template public-cert.pem public.key
 
-	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore .env.example .env.sample .env.template public-cert.pem public.key
+	allowed_files=(
+		".env.example"
+		".env.sample"
+		".env.template"
+		"public-cert.pem"
+		"public-key.pem"
+		"public.key"
+	)
+	touch "${allowed_files[@]}"
+
+	run git -c "core.excludesFile=$GIT_IGNORE" check-ignore "${allowed_files[@]}"
 	[ "$status" -eq 1 ]
 	[ -z "$output" ]
 }

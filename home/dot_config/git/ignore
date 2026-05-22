@@ -28,7 +28,7 @@ node_modules/
 .aws/credentials
 .kube/config
 *private.pem
-*[._-]key.pem
+*private[._-]key.pem
 *private.key
 server.key
 client.key
