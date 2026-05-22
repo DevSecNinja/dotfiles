@@ -90,6 +90,7 @@ setup() {
 		"terraform.tfstate.backup"
 		"core.1234"
 		"core_dump"
+		"core_12345"
 	)
 	touch "${ignored_files[@]}"
 
