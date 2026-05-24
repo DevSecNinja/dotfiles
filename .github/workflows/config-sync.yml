@@ -1,0 +1,110 @@
+---
+name: Reusable — Config Sync
+
+# Pull-based config sync: each repo calls this workflow to pull the latest
+# config files from the public DevSecNinja/.github repo and open a PR if
+# anything changed. Only requires the default GITHUB_TOKEN (no PAT needed).
+
+on:
+  workflow_call:
+    inputs:
+      sync-templates:
+        description: "Also sync template files (only copies if file does not exist locally — will not overwrite customized files)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync config from central repo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pull config files from central repo
+        id: pull
+        env:
+          SYNC_TEMPLATES: ${{ inputs.sync-templates }}
+        run: |-
+          REPO_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main"
+          API_URL="https://api.github.com/repos/DevSecNinja/.github/contents"
+          updated=0
+
+          # --- Sync files (always overwrite to match central repo) ---
+          echo "=== Syncing config files ==="
+          files=$(curl -sf "${API_URL}/config-sync/files" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/')
+
+          for file in ${files}; do
+            echo "Fetching ${file}..."
+            if curl -sf "${REPO_URL}/config-sync/files/${file}" -o "/tmp/${file}"; then
+              if [ -f "${file}" ]; then
+                if ! diff -q "${file}" "/tmp/${file}" > /dev/null 2>&1; then
+                  cp "/tmp/${file}" "${file}"
+                  echo "  ⬆ Updated ${file}"
+                  updated=1
+                else
+                  echo "  ✓ ${file} is up to date"
+                fi
+              else
+                cp "/tmp/${file}" "${file}"
+                echo "  ➕ Added ${file}"
+                updated=1
+              fi
+            else
+              echo "  ⚠ Failed to fetch ${file} (skipping)"
+            fi
+          done
+
+          # --- Sync templates (only if enabled; never overwrite existing) ---
+          if [ "${SYNC_TEMPLATES}" = "true" ]; then
+            echo ""
+            echo "=== Syncing template files (new files only) ==="
+            templates=$(curl -sf "${API_URL}/config-sync/templates" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/' | grep -v '^README\.md$')
+
+            for tpl in ${templates}; do
+              if [ -f "${tpl}" ]; then
+                echo "  ✔ ${tpl} already exists locally (skipping — templates are not overwritten)"
+              else
+                echo "  Fetching template ${tpl}..."
+                if curl -sf "${REPO_URL}/config-sync/templates/${tpl}" -o "${tpl}"; then
+                  echo "  ➕ Added ${tpl} from template"
+                  updated=1
+                else
+                  echo "  ⚠ Failed to fetch template ${tpl} (skipping)"
+                fi
+              fi
+            done
+          fi
+
+          echo "updated=${updated}" >> "${GITHUB_OUTPUT}"
+
+      - name: Ensure config-sync label exists
+        if: steps.pull.outputs.updated == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          gh label create "config-sync" \
+            --color "0075ca" \
+            --description "Automated config sync PR" \
+            --force
+
+      - name: Create PR if configs changed
+        if: steps.pull.outputs.updated == '1'
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@d5381d4da98c75b3c86c6b4699616d176090824f # v1.2.0
+        with:
+          branch: chore/config-sync
+          title: 'chore: sync config files from central repo'
+          commit-message: 'chore: sync config files from DevSecNinja/.github'
+          labels: config-sync
+          body: |-
+            Automated PR — config files pulled from
+            [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync).
+
+            Triggered by `${{ github.workflow }}` on `${{ github.ref_name }}`
+            at commit `${{ github.sha }}`.

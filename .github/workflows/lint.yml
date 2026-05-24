@@ -1,0 +1,372 @@
+---
+name: Reusable — Lint
+
+on:
+  workflow_call:
+    inputs:
+      mise-version:
+        description: "mise version to install"
+        required: true
+        type: string
+      lint-dprint:
+        description: "Run dprint (Markdown formatting)"
+        required: false
+        type: boolean
+        default: true
+      lint-yamlfmt:
+        description: "Run yamlfmt (YAML formatting)"
+        required: false
+        type: boolean
+        default: true
+      lint-yamllint:
+        description: "Run yamllint (YAML linting)"
+        required: false
+        type: boolean
+        default: true
+      lint-actionlint:
+        description: "Run actionlint (GitHub Actions linting)"
+        required: false
+        type: boolean
+        default: true
+      lint-gitleaks:
+        description: "Run gitleaks (secret scanning)"
+        required: false
+        type: boolean
+        default: true
+      lint-shellcheck:
+        description: "Run shellcheck (shell linting)"
+        required: false
+        type: boolean
+        default: true
+      lint-shellcheck-exclude:
+        description: "Glob pattern for paths to exclude from shellcheck (passed to find -not -path)"
+        required: false
+        type: string
+        default: ""
+      lint-shfmt:
+        description: "Run shfmt (shell formatting)"
+        required: false
+        type: boolean
+        default: true
+      lint-shfmt-exclude:
+        description: "Glob pattern for paths to exclude from shfmt (passed to find -not -path)"
+        required: false
+        type: string
+        default: ""
+      lint-checkov:
+        description: "Run checkov (IaC security) — uploads SARIF"
+        required: false
+        type: boolean
+        default: true
+      lint-trivy:
+        description: "Run trivy fs (misconfig + secrets) — uploads SARIF"
+        required: false
+        type: boolean
+        default: true
+      lint-zizmor:
+        description: "Run zizmor (Actions security) — uploads SARIF"
+        required: false
+        type: boolean
+        default: true
+      lint-config-drift:
+        description: "Check local config files match central DevSecNinja/.github repo"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  dprint:
+    name: dprint
+    if: ${{ inputs.lint-dprint }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Check formatting with dprint
+        run: mise exec -- dprint check
+
+  yamlfmt:
+    name: yamlfmt
+    if: ${{ inputs.lint-yamlfmt }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Check YAML formatting
+        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamlfmt -lint
+
+  yamllint:
+    name: yamllint
+    if: ${{ inputs.lint-yamllint }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run yamllint
+        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamllint
+
+  actionlint:
+    name: actionlint
+    if: ${{ inputs.lint-actionlint }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run actionlint
+        run: mise exec -- actionlint
+
+  gitleaks:
+    name: gitleaks
+    if: ${{ inputs.lint-gitleaks }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run gitleaks
+        run: mise exec -- gitleaks detect --redact
+
+  shellcheck:
+    name: shellcheck
+    if: ${{ inputs.lint-shellcheck }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run shellcheck
+        env:
+          EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
+        run: |
+          if [ -n "${EXCLUDE_PATTERN}" ]; then
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 mise exec -- shellcheck
+          else
+            find . -name '*.sh' -print0 | xargs -0 mise exec -- shellcheck
+          fi
+
+  shfmt:
+    name: shfmt
+    if: ${{ inputs.lint-shfmt }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run shfmt
+        env:
+          EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
+        run: |
+          if [ -n "${EXCLUDE_PATTERN}" ]; then
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 mise exec -- shfmt --diff
+          else
+            find . -name '*.sh' -print0 | xargs -0 mise exec -- shfmt --diff
+          fi
+
+  checkov:
+    name: checkov
+    if: ${{ inputs.lint-checkov }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run checkov
+        run: mise exec -- checkov -d . --output sarif --output-file-path . || true
+
+      - name: Filter skipped checks from SARIF
+        if: always()
+        run: |-
+          if [ -f results_sarif.sarif ]; then
+            jq '
+              .runs |= [
+                .[] | .results |= [
+                  .[] | select(.level != "none")
+                ]
+              ]
+            ' results_sarif.sarif > results_sarif_filtered.sarif
+            mv results_sarif_filtered.sarif results_sarif.sarif
+          fi
+
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        if: always()
+        with:
+          sarif_file: results_sarif.sarif
+          category: checkov
+
+  trivy:
+    name: trivy
+    if: ${{ inputs.lint-trivy }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run trivy
+        run: mise exec -- trivy fs --scanners misconfig,secret --format sarif --output trivy.sarif . || true
+
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+  zizmor:
+    name: zizmor
+    if: ${{ inputs.lint-zizmor }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run zizmor
+        run: mise exec -- zizmor --format sarif . > zizmor.sarif
+
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        if: always()
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
+
+  config-drift:
+    name: config drift
+    if: ${{ inputs.lint-config-drift }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Check config drift against central repo
+        run: |-
+          BASE_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main/config-sync/files"
+          API_URL="https://api.github.com/repos/DevSecNinja/.github/contents/config-sync/files"
+          drifted=0
+
+          # Dynamically discover files from the central repo
+          files=$(curl -sf "${API_URL}" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/')
+
+          for file in ${files}; do
+            if [ ! -f "${file}" ]; then
+              echo "::warning::${file} exists in central repo but not locally (skipping)"
+              continue
+            fi
+
+            echo "Checking ${file}..."
+            if ! curl -sf "${BASE_URL}/${file}" | diff -u "${file}" - > /tmp/diff_output 2>&1; then
+              echo "::error::${file} has drifted from central config"
+              cat /tmp/diff_output
+              drifted=1
+            else
+              echo "  ✓ ${file} matches"
+            fi
+          done
+
+          if [ "${drifted}" -eq 1 ]; then
+            echo ""
+            echo "Config files have drifted from DevSecNinja/.github/config-sync/files/"
+            echo "Run the config-sync workflow or manually update the files."
+            exit 1
+          fi
+
+          echo ""
+          echo "All config files match the central repository."

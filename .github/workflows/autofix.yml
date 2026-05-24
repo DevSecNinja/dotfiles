@@ -1,0 +1,73 @@
+---
+name: Reusable — Auto-fix formatting
+
+on:
+  workflow_call:
+    inputs:
+      mise-version:
+        description: "mise version to install"
+        required: true
+        type: string
+      autofix-dprint:
+        description: "Run dprint fmt (Markdown auto-format)"
+        required: false
+        type: boolean
+        default: true
+      autofix-yamlfmt:
+        description: "Run yamlfmt (YAML auto-format)"
+        required: false
+        type: boolean
+        default: true
+      autofix-shfmt:
+        description: "Run shfmt --write (shell auto-format)"
+        required: false
+        type: boolean
+        default: true
+      commit-message:
+        description: "Commit message for auto-fix changes"
+        required: false
+        type: string
+        default: "style: auto-fix formatting"
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    name: auto-fix formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Auto-fix with dprint
+        if: ${{ inputs.autofix-dprint }}
+        run: mise exec -- dprint fmt
+
+      - name: Auto-fix with yamlfmt
+        if: ${{ inputs.autofix-yamlfmt }}
+        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamlfmt
+
+      - name: Auto-fix with shfmt
+        if: ${{ inputs.autofix-shfmt }}
+        run: find . -name '*.sh' -print0 | xargs -0 mise exec -- shfmt --write
+
+      - name: Commit and push auto-fix changes
+        env:
+          COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        run: |-
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No formatting changes to commit."
+          else
+            git add .
+            git commit -m "${COMMIT_MESSAGE}"
+            git push
+          fi
