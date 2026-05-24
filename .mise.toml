@@ -4,7 +4,7 @@
 # Global tool versions used in this project
 [tools]
 # Python for validation scripts and tooling
-python = "3.14.4"
+python = "3.14.5"
 
 # Go Task for task runner
 task = "latest"
