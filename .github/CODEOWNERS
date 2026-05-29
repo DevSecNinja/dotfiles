@@ -9,4 +9,5 @@
 
 # Exclude ownership for the following files to prevent Renovate PRs to be assigned
 /.github/workflows/*.yaml
+/.github/workflows/*.yml
 /.mise.toml
