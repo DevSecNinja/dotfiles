@@ -3,3 +3,10 @@
 # below will be requested for review when someone opens
 # a pull request.
 *       @DevSecNinja
+
+# To protect a repository fully against unauthorized changes
+/.github/CODEOWNERS @DevSecNinja
+
+# Exclude ownership for the following files to prevent Renovate PRs to be assigned
+/.github/workflows/*.yaml
+/.mise.toml
