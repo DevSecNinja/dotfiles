@@ -31,5 +31,10 @@
     }
   },
   "postCreateCommand": "./home/install.sh",
+  // Re-point chezmoi at this workspace. The shared prebuilt image and the
+  // user-level VS Code "dotfiles" feature both leave chezmoi sourced from
+  // ~/.dotfiles; this runs after the dotfiles install on every start so edits
+  // in /workspaces/dotfiles are the chezmoi source of truth.
+  "postStartCommand": "bash .devcontainer/postStart.sh ${containerWorkspaceFolder}/home",
   "remoteUser": "vscode"
 }
