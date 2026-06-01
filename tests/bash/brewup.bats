@@ -38,6 +38,7 @@ teardown() {
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "Usage: brewup" ]]
 	[[ "$output" =~ "--dry-run" ]]
+	[[ "$output" =~ "--greedy" ]]
 	[[ "$output" =~ "Update Homebrew and all installed packages" ]]
 }
 
@@ -292,4 +293,78 @@ EOF
 	[[ "$output" =~ "Installed packages:" ]]
 	[[ "$output" =~ "Installed casks:" ]]
 	[[ "$output" =~ "Homebrew update complete" ]]
+}
+
+# Mock that reports an auto-updating cask (e.g. copilot-cli) as outdated only
+# under --greedy-auto-updates, mirroring how Homebrew hides such casks from the
+# normal `brew outdated`/`brew outdated --cask` output.
+_make_greedy_brew_mock() {
+	cat >"$TEST_DIR/brew" <<'EOF'
+#!/bin/bash
+case "$1" in
+	outdated)
+		if [[ "$2" == "--cask" && "$3" == "--greedy-auto-updates" ]]; then
+			echo "copilot-cli"
+		fi
+		# plain `brew outdated` and `brew outdated --cask` report nothing
+		;;
+	update | upgrade | cleanup)
+		exit 0
+		;;
+	--version)
+		echo "Homebrew 4.0.0"
+		;;
+	list)
+		if [[ "$2" == "--formula" ]]; then
+			echo "package1"
+		elif [[ "$2" == "--cask" ]]; then
+			echo "copilot-cli"
+		fi
+		;;
+esac
+exit 0
+EOF
+	chmod +x "$TEST_DIR/brew"
+	PATH="$TEST_DIR:$ORIGINAL_PATH"
+}
+
+@test "brewup: lists auto-updating casks and skips them in non-interactive shell" {
+	_make_greedy_brew_mock
+
+	# Redirect stdin from /dev/null so the function treats this as a
+	# non-interactive shell and does not block on the confirmation prompt.
+	run brewup </dev/null
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "auto-updating capabilities" ]]
+	[[ "$output" =~ "copilot-cli" ]]
+	[[ "$output" =~ "Non-interactive shell" ]]
+}
+
+@test "brewup: --greedy upgrades auto-updating casks without prompting" {
+	_make_greedy_brew_mock
+
+	run brewup --greedy
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "auto-updating capabilities" ]]
+	[[ "$output" =~ "copilot-cli" ]]
+	[[ "$output" =~ "Upgrading auto-updating casks" ]]
+	[[ ! "$output" =~ "Non-interactive shell" ]]
+}
+
+@test "brewup: -g short option upgrades auto-updating casks" {
+	_make_greedy_brew_mock
+
+	run brewup -g
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "Upgrading auto-updating casks" ]]
+}
+
+@test "brewup: dry-run lists excluded auto-updating casks" {
+	_make_greedy_brew_mock
+
+	run brewup --dry-run
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "DRY RUN MODE" ]]
+	[[ "$output" =~ "auto-updating capabilities" ]]
+	[[ "$output" =~ "copilot-cli" ]]
 }
