@@ -2,15 +2,18 @@
 # https://github.com/evilmartians/lefthook
 #
 # Replaces pre-commit (https://pre-commit.com/) for managing git hooks.
-# Tools are managed via mise (.mise.toml) so contributors only need
-# `mise install && lefthook install` to get a working hook environment.
+# Tools are managed via mise (.mise.toml) and exposed through the mise shims
+# directory (~/.local/share/mise/shims), which is on PATH in the terminal, in
+# CI, and in the VS Code server (see .devcontainer/devcontainer.json). The
+# shims are self-contained, so commands call the tools directly without a
+# `mise exec --` prefix.
 
 [pre-commit]
 parallel = true
 
 # Lint shell scripts (excluding zsh, bats and chezmoi templates)
 [pre-commit.commands.shellcheck]
-run = "mise exec -- shellcheck -x {staged_files} && echo \"[OK] shellcheck checked matching shell scripts\""
+run = "shellcheck -x {staged_files} && echo \"[OK] shellcheck checked matching shell scripts\""
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 
@@ -18,7 +21,7 @@ exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 # stage_fixed automatically re-stages files that shfmt rewrote so the
 # commit picks up the formatted content.
 [pre-commit.commands.shfmt]
-run = "mise exec -- shfmt --write {staged_files} && echo \"[OK] shfmt checked/formatted matching shell scripts\""
+run = "shfmt --write {staged_files} && echo \"[OK] shfmt checked/formatted matching shell scripts\""
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 stage_fixed = true
@@ -34,4 +37,4 @@ glob = ["**/*.sh", "**/*.bash"]
 [commit-msg]
 
 [commit-msg.commands.cog-verify]
-run = "mise exec -- cog verify --file {1}"
+run = "cog verify --file {1}"

@@ -36,5 +36,13 @@
   // ~/.dotfiles; this runs after the dotfiles install on every start so edits
   // in /workspaces/dotfiles are the chezmoi source of truth.
   "postStartCommand": "bash .devcontainer/postStart.sh ${containerWorkspaceFolder}/home",
+  // Put the mise shims dir on PATH for the whole VS Code server so git hooks
+  // launched from the Source Control panel (which inherit this environment)
+  // resolve shellcheck/shfmt/cog/lefthook the same way the terminal does. The
+  // shims are self-contained (symlinks to the mise binary), so no separate
+  // `mise` entry is required.
+  "remoteEnv": {
+    "PATH": "${containerEnv:HOME}/.local/share/mise/shims:${containerEnv:PATH}"
+  },
   "remoteUser": "vscode"
 }
