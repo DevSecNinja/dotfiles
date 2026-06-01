@@ -38,17 +38,24 @@
         'Install-PowerShellModule'
         'Install-GitPowerShellModule'
         'Add-ToPSModulePath'
+
+        # Office 365 mail aliases
+        'New-MailAlias'
+        'Select-MailAlias'
+        'Get-UsedMailAlias'
+        'Get-UnusedMailAlias'
+        'Set-MailAliasToArchived'
     )
 
     # No cmdlets, variables, or aliases exported from this module
     CmdletsToExport   = @()
-    VariablesToExport  = @()
-    AliasesToExport    = @()
+    VariablesToExport = @()
+    AliasesToExport   = @()
 
     # Private data
     PrivateData       = @{
         PSData = @{
-            Tags       = @('dotfiles', 'profile', 'chezmoi', 'winget')
+            Tags       = @('dotfiles', 'profile', 'chezmoi', 'winget', 'office365')
             ProjectUri = 'https://github.com/DevSecNinja/dotfiles'
         }
     }
