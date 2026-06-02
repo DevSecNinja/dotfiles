@@ -204,6 +204,7 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - 📋 Package release notes are available inside the container at `/usr/local/share/dotfiles-devcontainer/release-notes.md`
 - 📄 The full package manifest is available at `/usr/local/share/dotfiles-devcontainer/manifest.md`
 - 📦 Available at: `ghcr.io/devsecninja/dotfiles-devcontainer:latest`
+- 📐 The compressed image storage size per platform is published in the exported release notes (`## Image size` section) and the build job summary for every prebuild run
 - Current `latest` size is ~884 MB compressed for `linux/amd64` and ~942 MB for `linux/arm64` (`docker buildx imagetools inspect`), with ~2.0 GB local unpacked size for `linux/amd64`.
 
 **Using the DevContainer:**

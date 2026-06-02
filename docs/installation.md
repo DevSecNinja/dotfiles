@@ -60,7 +60,10 @@ pre-installed. Prebuilt images are published at
 
 Prebuilt images include package release notes at
 `/usr/local/share/dotfiles-devcontainer/release-notes.md` and a full package
-inventory at `/usr/local/share/dotfiles-devcontainer/manifest.md`.
+inventory at `/usr/local/share/dotfiles-devcontainer/manifest.md`. The exported
+release notes (uploaded as a workflow artifact and shown in the build job
+summary) also include the compressed image storage size per platform under an
+`## Image size` section.
 
 ### Using the DevContainer
 
