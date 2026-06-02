@@ -17,6 +17,22 @@ setup() {
 	[ "$status" -eq 0 ]
 }
 
+@test "validate-devcontainer: devcontainer image is pinned by digest without a tag" {
+	# The devcontainers CLI cannot parse a combined `:tag@sha256:...` reference
+	# (it leaves the tag in the path and fails path validation), which breaks
+	# `devcontainer up` and Feature resolution. Pin by digest only.
+	config="$REPO_ROOT/.devcontainer/devcontainer.json"
+
+	[ -f "$config" ]
+
+	run grep -E '"image":[[:space:]]*"ghcr.io/devsecninja/dotfiles-devcontainer@sha256:[0-9a-f]+"' "$config"
+	[ "$status" -eq 0 ]
+
+	# Guard against reintroducing the unparseable `:tag@digest` form.
+	run grep -E '"image":[^"]*:[^"@]*@sha256:' "$config"
+	[ "$status" -ne 0 ]
+}
+
 @test "validate-devcontainer: prebuild image includes release-specific OCI metadata" {
 	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
 	prebuild_config="$REPO_ROOT/.devcontainer/devcontainer-prebuild.json"
