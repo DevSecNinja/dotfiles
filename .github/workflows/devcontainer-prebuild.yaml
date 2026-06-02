@@ -14,6 +14,7 @@ on:
       - '.devcontainer/**'
       - 'home/**'
       - 'script/devcontainer-software-manifest.sh'
+      - 'script/devcontainer-image-size.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   pull_request:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - '.devcontainer/**'
       - 'home/**'
       - 'script/devcontainer-software-manifest.sh'
+      - 'script/devcontainer-image-size.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   schedule:
     # Weekly on Mondays at 00:00
@@ -183,6 +185,9 @@ jobs:
         # renovate: datasource=github-tags depName=DevSecNinja/.github
         uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
 
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
@@ -284,6 +289,11 @@ jobs:
             "${outdir}/devcontainer-${VERSION}-manifest.md"
           docker cp "${container}:/usr/local/share/dotfiles-devcontainer/release-notes.md" \
             "${outdir}/devcontainer-${VERSION}-release-notes.md"
+          # Append published image storage sizes (compressed, per platform) so
+          # the release notes, uploaded artifact and step summary surface them.
+          printf '\n' >> "${outdir}/devcontainer-${VERSION}-release-notes.md"
+          script/devcontainer-image-size.sh "${IMAGE}:${VERSION}" \
+            >> "${outdir}/devcontainer-${VERSION}-release-notes.md"
           {
             printf '## Devcontainer prebuild\n\n'
             cat "${outdir}/devcontainer-${VERSION}-release-notes.md"
