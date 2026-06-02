@@ -101,3 +101,60 @@ setup() {
 	run grep -F '## APT packages' "$outdir/manifest.md"
 	[ "$status" -eq 0 ]
 }
+
+@test "validate-devcontainer: release notes export includes published image size" {
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+	script="$REPO_ROOT/script/devcontainer-image-size.sh"
+
+	[ -f "$workflow" ]
+	[ -x "$script" ]
+
+	# Merge job must check out the repo so the size script is available.
+	run grep -F 'script/devcontainer-image-size.sh' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run grep -F "script/devcontainer-image-size.sh \"\${IMAGE}:\${VERSION}\"" "$workflow"
+	[ "$status" -eq 0 ]
+}
+
+@test "validate-devcontainer: image-size script emits per-platform compressed sizes" {
+	script="$REPO_ROOT/script/devcontainer-image-size.sh"
+	[ -x "$script" ]
+
+	bindir="${BATS_TEST_TMPDIR}/bin"
+	mkdir -p "$bindir"
+	cat >"${bindir}/docker" <<'EOF'
+#!/usr/bin/env bash
+if [ "$1" = "manifest" ] && [ "$2" = "inspect" ]; then
+	case "$3" in
+	*@sha256:amd*) printf '%s' '{"config":{"size":2000},"layers":[{"size":1048576},{"size":2097152}]}' ;;
+	*@sha256:arm*) printf '%s' '{"config":{"size":2000},"layers":[{"size":3145728}]}' ;;
+	*) printf '%s' '{"manifests":[{"digest":"sha256:amd","platform":{"os":"linux","architecture":"amd64"}},{"digest":"sha256:arm","platform":{"os":"linux","architecture":"arm64"}}]}' ;;
+	esac
+fi
+EOF
+	chmod +x "${bindir}/docker"
+
+	PATH="${bindir}:$PATH"
+	run "$script" ghcr.io/devsecninja/dotfiles-devcontainer:latest
+	[ "$status" -eq 0 ]
+
+	size_output="$output"
+
+	run grep -F '## Image size' <<<"$size_output"
+	[ "$status" -eq 0 ]
+
+	run grep -F -- '- `linux/amd64`: 3.0 MB compressed (2 layers)' <<<"$size_output"
+	[ "$status" -eq 0 ]
+
+	run grep -F -- '- `linux/arm64`: 3.0 MB compressed (1 layers)' <<<"$size_output"
+	[ "$status" -eq 0 ]
+}
+
+@test "validate-devcontainer: image-size script requires an image reference" {
+	script="$REPO_ROOT/script/devcontainer-image-size.sh"
+	[ -x "$script" ]
+
+	run "$script"
+	[ "$status" -ne 0 ]
+}
