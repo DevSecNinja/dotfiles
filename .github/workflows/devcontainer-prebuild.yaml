@@ -262,11 +262,11 @@ jobs:
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
           digest="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')"
-          echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
           if [ -z "${digest}" ]; then
             echo "::error::Failed to capture manifest digest for ${VERSION}"
             exit 1
           fi
+          echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
