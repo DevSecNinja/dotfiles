@@ -147,7 +147,7 @@ EOF
 	run grep -F -- '- `linux/amd64`: 3.0 MB compressed (2 layers)' <<<"$size_output"
 	[ "$status" -eq 0 ]
 
-	run grep -F -- '- `linux/arm64`: 3.0 MB compressed (1 layers)' <<<"$size_output"
+	run grep -F -- '- `linux/arm64`: 3.0 MB compressed (1 layer)' <<<"$size_output"
 	[ "$status" -eq 0 ]
 }
 

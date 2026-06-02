@@ -38,8 +38,10 @@ manifest_layers() {
 
 emit_line() {
 	local platform="$1" bytes="$2" layers="$3"
-	printf -- "- \`%s\`: %s compressed (%s layers)\n" \
-		"$platform" "$(human_size "$bytes")" "$layers"
+	local noun="layers"
+	[ "$layers" = "1" ] && noun="layer"
+	printf -- "- \`%s\`: %s compressed (%s %s)\n" \
+		"$platform" "$(human_size "$bytes")" "$layers" "$noun"
 }
 
 printf '## Image size\n\n'
