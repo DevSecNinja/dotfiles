@@ -59,13 +59,31 @@ setup() {
 	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
 
 	[ -f "$workflow" ]
-	run grep -F 'docker manifest create "${IMAGE}:${VERSION}"' "$workflow"
+	run grep -F 'docker buildx imagetools create --tag "${IMAGE}:${VERSION}"' "$workflow"
 	[ "$status" -eq 0 ]
 
 	run grep -F 'version-no-v' "$workflow"
 	[ "$status" -ne 0 ]
 
 	run grep -F 'VERSION_NO_V' "$workflow"
+	[ "$status" -ne 0 ]
+}
+
+@test "validate-devcontainer: prebuild pushes per-arch images by digest without arch tags" {
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+
+	[ -f "$workflow" ]
+
+	# Per-arch images are pushed by digest only (no :amd64 / :arm64 tags).
+	run grep -F 'push-by-digest=true' "$workflow"
+	[ "$status" -eq 0 ]
+
+	# The multi-arch tags are composed from the per-arch digests of this run.
+	run grep -F 'docker buildx imagetools create --tag "${IMAGE}:latest"' "$workflow"
+	[ "$status" -eq 0 ]
+
+	# No rolling per-arch tags should be published.
+	run grep -E 'imageTag: \$\{\{ matrix\.arch \}\}' "$workflow"
 	[ "$status" -ne 0 ]
 }
 

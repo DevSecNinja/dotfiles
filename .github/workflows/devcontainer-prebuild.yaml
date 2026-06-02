@@ -74,31 +74,92 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install Dev Container CLI
+        # renovate: datasource=npm depName=@devcontainers/cli
+        run: npm install -g @devcontainers/cli@0.87.0
+
+      - name: Decide whether to push
+        id: push
+        # Push on main branch and on v* tags for push/dispatch/schedule events.
+        # PRs (and any other ref) build for validation only.
+        run: |
+          enabled=false
+          case "${{ github.event_name }}" in
+            push|workflow_dispatch|schedule)
+              case "${{ github.ref }}" in
+                refs/heads/main|refs/tags/v*) enabled=true ;;
+              esac
+              ;;
+          esac
+          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
+
       - name: Pre-build dev container image
-        # Always push only the rolling per-arch tag. On v* tag pushes the
-        # merge job derives the immutable release manifest list from these
-        # very digests — docker manifest create resolves a tag to its
-        # current digest and freezes it in the manifest list, so :vX.Y.Z
-        # remains pinned even if :amd64 / :arm64 are later overwritten.
-        uses: devcontainers/ci@b63b30de439b47a52267f241112c5b453b673db5 # v0.3
+        id: build
+        # Each architecture is built on its native runner and pushed BY DIGEST
+        # only — no per-arch :amd64 / :arm64 tags are created. The merge job
+        # composes the multi-arch :latest / :vX.Y.Z manifests from the exact
+        # per-arch digests produced in this same run, so the published tags
+        # always reference matching, in-sync platform images (no stray
+        # architecture tags, mirroring how upstream projects publish).
         env:
           DOTFILES_DEVCONTAINER_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           DOTFILES_DEVCONTAINER_REVISION: ${{ github.sha }}
+          IMAGE: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
+          PLATFORM: ${{ matrix.platform }}
+          PUSH_ENABLED: ${{ steps.push.outputs.enabled }}
+        run: |
+          set -euo pipefail
+          # Reuse the previously published multi-arch image as a layer cache
+          # source. Buildkit selects the cache entry matching the build
+          # platform and treats a missing reference as a no-op, so this is
+          # safe on the very first build too. Inline cache metadata (enabled
+          # by the Dev Container CLI) is embedded into the pushed image.
+          if [ "${PUSH_ENABLED}" = "true" ]; then
+            devcontainer build \
+              --workspace-folder . \
+              --config .devcontainer/devcontainer-prebuild.json \
+              --platform "${PLATFORM}" \
+              --image-name "${IMAGE}" \
+              --cache-from "type=registry,ref=${IMAGE}:latest" \
+              --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true" \
+              2>&1 | tee build.log
+            digest="$(grep -oE 'exporting manifest list sha256:[0-9a-f]{64}' build.log | tail -n1 | sed 's/.*sha256:/sha256:/' || true)"
+            if [ -z "${digest}" ]; then
+              digest="$(grep -oE 'exporting manifest sha256:[0-9a-f]{64}' build.log | tail -n1 | sed 's/.*sha256:/sha256:/' || true)"
+            fi
+            if [ -z "${digest}" ]; then
+              echo "::error::Could not determine the pushed image digest for ${{ matrix.arch }}"
+              exit 1
+            fi
+            echo "Pushed ${IMAGE}@${digest} (${PLATFORM})"
+            echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          else
+            # Validation-only build for pull requests (no registry push).
+            devcontainer build \
+              --workspace-folder . \
+              --config .devcontainer/devcontainer-prebuild.json \
+              --platform "${PLATFORM}" \
+              --image-name "${IMAGE}" \
+              --cache-from "type=registry,ref=${IMAGE}:latest"
+          fi
+
+      - name: Export image digest
+        if: steps.push.outputs.enabled == 'true'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p digests
+          printf '%s' "${DIGEST}" > "digests/${{ matrix.arch }}"
+
+      - name: Upload image digest
+        if: steps.push.outputs.enabled == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          configFile: .devcontainer/devcontainer-prebuild.json
-          imageName: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
-          imageTag: ${{ matrix.arch }}
-          cacheFrom: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}:${{ matrix.arch }}
-          platform: ${{ matrix.platform }}
-          # Push on main branch and on v* tags. PRs build for validation only.
-          push: filter
-          refFilterForPush: |
-            refs/heads/main
-            refs/tags/v*
-          eventFilterForPush: |
-            push
-            workflow_dispatch
-            schedule
+          name: digest-${{ matrix.arch }}
+          path: digests/${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 1
 
   merge:
     name: Create Multi-Platform Manifest
@@ -127,6 +188,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+
       - name: Set lowercase repository owner
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
@@ -151,43 +215,63 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push :latest manifest
-        # :latest is always refreshed. docker manifest create resolves
-        # :amd64 / :arm64 to their current digests and freezes them in
-        # the manifest list.
+      - name: Download image digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Collect per-arch digests
+        id: digests
         run: |
-          IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
-          docker manifest create "${IMAGE}:latest" \
-            "${IMAGE}:amd64" \
-            "${IMAGE}:arm64"
-          docker manifest annotate "${IMAGE}:latest" "${IMAGE}:amd64" --os linux --arch amd64
-          docker manifest annotate "${IMAGE}:latest" "${IMAGE}:arm64" --os linux --arch arm64
-          docker manifest push "${IMAGE}:latest"
+          set -euo pipefail
+          amd64="$(cat digests/amd64)"
+          arm64="$(cat digests/arm64)"
+          if [ -z "${amd64}" ] || [ -z "${arm64}" ]; then
+            echo "::error::Missing per-arch digest (amd64='${amd64}' arm64='${arm64}')"
+            exit 1
+          fi
+          echo "amd64=${amd64}" >> "$GITHUB_OUTPUT"
+          echo "arm64=${arm64}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push :latest manifest
+        # :latest is always refreshed from the per-arch images built in THIS
+        # run, referenced by their immutable digests. No separate :amd64 /
+        # :arm64 tags exist — the per-arch images are stored untagged and are
+        # reachable only through this multi-arch manifest list.
+        env:
+          IMAGE: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
+          AMD64_DIGEST: ${{ steps.digests.outputs.amd64 }}
+          ARM64_DIGEST: ${{ steps.digests.outputs.arm64 }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create --tag "${IMAGE}:latest" \
+            "${IMAGE}@${AMD64_DIGEST}" \
+            "${IMAGE}@${ARM64_DIGEST}"
 
       - name: Create and push release manifest tags
         if: steps.release.outputs.is-release == 'true'
         id: release-manifest
-        # Build :vX.Y.Z from the SAME per-arch :amd64 / :arm64 digests pushed
-        # in this run. docker resolves tag→digest at create time and the
-        # manifest list stores the digest, so the release tag remains pinned
-        # even if the rolling :amd64 / :arm64 tags are overwritten by a future
-        # main build.
+        # Build :vX.Y.Z from the SAME per-arch digests built in this run. The
+        # manifest list stores those digests directly, so the release tag is
+        # immutable and stays pinned regardless of future main builds.
         env:
+          IMAGE: ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}
           VERSION: ${{ steps.release.outputs.version }}
+          AMD64_DIGEST: ${{ steps.digests.outputs.amd64 }}
+          ARM64_DIGEST: ${{ steps.digests.outputs.arm64 }}
         run: |
-          IMAGE="ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ env.IMAGE_BASENAME }}"
-          docker manifest create "${IMAGE}:${VERSION}" \
-            "${IMAGE}:amd64" \
-            "${IMAGE}:arm64"
-          docker manifest annotate "${IMAGE}:${VERSION}" "${IMAGE}:amd64" --os linux --arch amd64
-          docker manifest annotate "${IMAGE}:${VERSION}" "${IMAGE}:arm64" --os linux --arch arm64
-          # docker manifest push prints the manifest list digest on stdout.
-          digest="$(docker manifest push "${IMAGE}:${VERSION}")"
-          echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
+          set -euo pipefail
+          docker buildx imagetools create --tag "${IMAGE}:${VERSION}" \
+            "${IMAGE}@${AMD64_DIGEST}" \
+            "${IMAGE}@${ARM64_DIGEST}"
+          digest="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')"
           if [ -z "${digest}" ]; then
             echo "::error::Failed to capture manifest digest for ${VERSION}"
             exit 1
           fi
+          echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
