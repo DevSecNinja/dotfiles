@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0](https://github.com/DevSecNinja/dotfiles/compare/v0.3.1...v0.4.0) (2026-06-02)
+
+
+### Features
+
+* add core dumps to git ignore ([b4bd6a8](https://github.com/DevSecNinja/dotfiles/commit/b4bd6a804d925bcada27aa236527206f53b9a4ae))
+* **brewup:** optionally upgrade auto-updating casks ([a1a46aa](https://github.com/DevSecNinja/dotfiles/commit/a1a46aa5ff01bc30bc1c4ea49169269b256e3a9c))
+* **devcontainer:** add mise shims to PATH for VS Code server environment ([1b59e16](https://github.com/DevSecNinja/dotfiles/commit/1b59e16e6ee0ec833211c592cb715e2e81256fa7))
+* **fish:** add miles_deal function to compare award flights vs cash ([84b6ebc](https://github.com/DevSecNinja/dotfiles/commit/84b6ebc8ed1d736c423455f542b7bc6b04dc1024))
+* **github-release:** update release jdx/mise ( v2026.4.20 ➔ v2026.5.3 ) ([#319](https://github.com/DevSecNinja/dotfiles/issues/319)) ([e1fe40a](https://github.com/DevSecNinja/dotfiles/commit/e1fe40a2b468a5abd8ef55ccdb3b1d1e7b1627c0))
+* **index-fund-rebalance:** add fish function for rebalancing index funds with tests ([c57bec3](https://github.com/DevSecNinja/dotfiles/commit/c57bec376287b98d6d59f86a0469d0e6ef3f9754))
+* **powershell:** add Office 365 mail alias helpers to DotfilesHelpers ([5f41678](https://github.com/DevSecNinja/dotfiles/commit/5f416789695b681b422949be1a50d48df71dc710))
+* update CODEOWNERS to exclude .yml files ([a401f48](https://github.com/DevSecNinja/dotfiles/commit/a401f4876d4cdd21d5a717dd10196bad26dc8bbf))
+* update CODEOWNERS to protect and exclude files ([15ef910](https://github.com/DevSecNinja/dotfiles/commit/15ef910c0d97bb7574af4ef2f94efffde5333188))
+
+
+### Bug Fixes
+
+* **devcontainer:** publish only multi-arch tags, push per-arch by digest ([#384](https://github.com/DevSecNinja/dotfiles/issues/384)) ([f30f76e](https://github.com/DevSecNinja/dotfiles/commit/f30f76ee762d13612d67115c072142a2195b3919))
+* **github-release:** update release jdx/mise ( v2026.5.3 ➔ v2026.5.4 ) ([#357](https://github.com/DevSecNinja/dotfiles/issues/357)) ([ebc7391](https://github.com/DevSecNinja/dotfiles/commit/ebc73917ba6b8c958bcb531a2ad81edf0c0cfdd3))
+* **github-release:** update release jdx/mise ( v2026.5.4 ➔ v2026.5.5 ) ([#358](https://github.com/DevSecNinja/dotfiles/issues/358)) ([9c3ebb5](https://github.com/DevSecNinja/dotfiles/commit/9c3ebb589fb8d50abceb4cf96aed735b5b0b2b02))
+* **github-release:** update release jdx/mise ( v2026.5.5 ➔ v2026.5.8 ) ([#361](https://github.com/DevSecNinja/dotfiles/issues/361)) ([b79361e](https://github.com/DevSecNinja/dotfiles/commit/b79361e866056ea04bfcc2202e13664d90ac336e))
+* **github-release:** update release jdx/mise ( v2026.5.8 ➔ v2026.5.9 ) ([#366](https://github.com/DevSecNinja/dotfiles/issues/366)) ([41e7b94](https://github.com/DevSecNinja/dotfiles/commit/41e7b944e387aabbe490e2f7dd232e1062b340eb))
+* **github-release:** update release jdx/mise ( v2026.5.9 ➔ v2026.5.10 ) [automerge] ([#372](https://github.com/DevSecNinja/dotfiles/issues/372)) ([ef0626f](https://github.com/DevSecNinja/dotfiles/commit/ef0626f1b410679796c5273b27f89c4da5322a95))
+* **github-release:** update release twpayne/chezmoi ( 2.70.2 ➔ 2.70.3 ) ([#318](https://github.com/DevSecNinja/dotfiles/issues/318)) ([b3f288b](https://github.com/DevSecNinja/dotfiles/commit/b3f288b15c8aee5b3dc5f5bff0098da10750936c))
+* **mise:** self-update stale mise during fish startup ([ddd8ef3](https://github.com/DevSecNinja/dotfiles/commit/ddd8ef355eacf2668c2397cfe4841a350d8ef604))
+* **mise:** update package-managed mise during fish startup ([c377c0a](https://github.com/DevSecNinja/dotfiles/commit/c377c0a008db8dbc46f845f7b5e65ba829703e8b))
+* **mise:** update tool python ( 3.14.4 ➔ 3.14.5 ) ([#359](https://github.com/DevSecNinja/dotfiles/issues/359)) ([c934967](https://github.com/DevSecNinja/dotfiles/commit/c934967ceadf374086069f28136093dfeaf4d235))
+
 ## [0.3.1](https://github.com/DevSecNinja/dotfiles/compare/v0.3.0...v0.3.1) (2026-05-08)
 
 
