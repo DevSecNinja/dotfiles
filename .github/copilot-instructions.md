@@ -322,6 +322,22 @@ over raw `echo` / `printf`. Full reference: [`docs/logging.md`](../docs/logging.
    `tests/bash/log-*.bats` (one file per concern: format / kinds / banner /
    injection / structured / shells).
 
+### 8. Never sign PowerShell scripts manually
+
+**Do not add, update, or worry about Authenticode signatures on `.ps1` files.**
+Signing is fully automated by the
+[`sign-powershell.yml`](../.github/workflows/sign-powershell.yml) workflow,
+which runs on every push to `main`, re-signs all `.ps1` files (excluding
+`*.ps1.tmpl`), and opens a follow-up PR with the signed files.
+
+- Add new `.ps1` files (including `DotfilesHelpers` module `Public/*.ps1`)
+  **unsigned** — the workflow signs them after merge.
+- Editing an already-signed `.ps1` invalidates its existing signature block;
+  that is expected and fine. Leave the old block in place (the workflow
+  replaces it) — do **not** hand-edit or strip signature blocks.
+- `*.ps1.tmpl` files are intentionally never signed (they change after chezmoi
+  renders them), so no action is needed there either.
+
 ## Common Issues & Solutions
 
 ### Issue: Validation scripts fail with "command not found"
