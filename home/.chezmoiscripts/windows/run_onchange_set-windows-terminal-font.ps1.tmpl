@@ -1,0 +1,31 @@
+# {{ if eq .chezmoi.os "windows" }}
+# Set the Windows Terminal default font face WITHOUT managing the whole config.
+# Windows Terminal owns settings.json (it rewrites it at runtime), so we only
+# patch profiles.defaults.font.face. This keeps the font in sync via git without
+# the conflicts that come from chezmoi managing the entire settings.json.
+#
+# This complements run_once_setup-windows-terminal.ps1 (which creates the file
+# only if it is missing): the run_once handles brand-new machines, while this
+# run_onchange fixes the font on machines that already had Windows Terminal
+# settings. The font face is embedded literally below so chezmoi's run-onchange
+# content hash changes (and this re-runs) whenever the desired font changes.
+#
+# Windows Terminal font face: FiraCode Nerd Font
+$ErrorActionPreference = "Stop"
+
+$modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
+if (Test-Path $modulePath) {
+    Import-Module $modulePath -Force -DisableNameChecking
+}
+else {
+    Write-Error "DotfilesHelpers module not found at: $modulePath"
+    exit 1
+}
+
+Write-Host "Setting Windows Terminal default font..." -ForegroundColor Cyan
+$results = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font"
+
+if (-not $results) {
+    Write-Host "[SKIP] No Windows Terminal settings found to update" -ForegroundColor Yellow
+}
+# {{ end }}

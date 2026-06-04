@@ -53,7 +53,7 @@ if (-not (Test-Path $settingsFile)) {
             {
                 "face": "FiraCode Nerd Font"
             }
-        }
+        },
         "list":
         [
             {

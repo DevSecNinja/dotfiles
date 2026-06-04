@@ -39,6 +39,11 @@
         'Install-GitPowerShellModule'
         'Add-ToPSModulePath'
 
+        # Font management
+        'Test-NerdFontInstalled'
+        'Install-DotfilesNerdFont'
+        'Set-WindowsTerminalFont'
+
         # Office 365 mail aliases
         'New-MailAlias'
         'Select-MailAlias'
