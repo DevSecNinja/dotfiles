@@ -227,6 +227,23 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
    .github/scripts/test-devcontainer.sh
    ```
 
+**Reusing the prebuilt image in another project:**
+
+Point a consuming repository's `devcontainer.json` at the prebuilt image and add
+a `postCreateCommand` that trusts and installs that project's own mise tools:
+
+```json
+{
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest",
+  "postCreateCommand": "mise trust --all --yes && mise install",
+  "remoteUser": "vscode"
+}
+```
+
+`mise trust --all --yes` non-interactively trusts the workspace's mise config
+(untrusted by default in a fresh container) so `mise install` picks up the
+project's pinned tools. See [docs/installation.md](docs/installation.md#using-the-prebuilt-image-in-another-project) for details.
+
 The CI pipeline automatically tests the complete devcontainer deployment, including feature installation, dotfiles setup, and postCreateCommand execution.
 
 ## 🔧 Customization

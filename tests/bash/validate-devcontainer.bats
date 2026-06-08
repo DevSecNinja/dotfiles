@@ -221,3 +221,20 @@ EOF
     run grep -E '^ENV PATH="[^"]*\$\{PATH\}"' "$dockerfile"
     [ "$status" -eq 0 ]
 }
+
+@test "validate-devcontainer: docs show a consumer postCreateCommand that trusts mise" {
+	# Projects that reuse the prebuilt image need an example postCreateCommand
+	# that trusts the workspace mise config (untrusted by default) so their
+	# pinned tools install. Keep the documented example in sync.
+	docs="$REPO_ROOT/docs/installation.md"
+	readme="$REPO_ROOT/README.md"
+
+	[ -f "$docs" ]
+	[ -f "$readme" ]
+
+	run grep -F 'mise trust --all --yes && mise install' "$docs"
+	[ "$status" -eq 0 ]
+
+	run grep -F 'mise trust --all --yes && mise install' "$readme"
+	[ "$status" -eq 0 ]
+}
