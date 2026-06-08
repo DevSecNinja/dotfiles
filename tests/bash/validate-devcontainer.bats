@@ -192,3 +192,32 @@ EOF
 	run "$script"
 	[ "$status" -ne 0 ]
 }
+
+@test "validate-devcontainer: Dockerfile bakes mise + Homebrew bins onto PATH via ENV" {
+    # The PATH export inside the install RUN is layer-local and does NOT persist
+    # into the image. A consuming project's postCreateCommand runs in a bare
+    # /bin/sh BEFORE the VS Code server (and its remoteEnv) attaches, so without
+    # a baked ENV PATH those lifecycle hooks hit `mise: not found`. Guard the
+    # ENV so the image keeps exposing mise (and brew) to every process.
+    dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
+
+    [ -f "$dockerfile" ]
+
+    # An ENV PATH instruction must exist (baked, unlike the RUN-local export).
+    run grep -E '^ENV PATH=' "$dockerfile"
+    [ "$status" -eq 0 ]
+
+    # It must include the mise bin dir, the mise shims dir, and Homebrew bins,
+    # and preserve the inherited PATH.
+    run grep -E '^ENV PATH="[^"]*/home/vscode/\.local/bin[^"]*"' "$dockerfile"
+    [ "$status" -eq 0 ]
+
+    run grep -E '^ENV PATH="[^"]*/home/vscode/\.local/share/mise/shims[^"]*"' "$dockerfile"
+    [ "$status" -eq 0 ]
+
+    run grep -E '^ENV PATH="[^"]*/home/linuxbrew/\.linuxbrew/bin[^"]*"' "$dockerfile"
+    [ "$status" -eq 0 ]
+
+    run grep -E '^ENV PATH="[^"]*\$\{PATH\}"' "$dockerfile"
+    [ "$status" -eq 0 ]
+}
