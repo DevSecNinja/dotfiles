@@ -80,6 +80,30 @@ summary) also include the compressed image storage size per platform under an
     - Click **Code → Codespaces → Create codespace on main**.
     - The devcontainer will build and configure automatically.
 
+### Using the prebuilt image in another project
+
+The prebuilt image (`ghcr.io/devsecninja/dotfiles-devcontainer:latest`) can be
+reused by any other repository. Point its `devcontainer.json` at the image and
+add a `postCreateCommand` that trusts and installs the consuming project's own
+mise tools:
+
+```json
+{
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest",
+  // Trust this workspace's mise config (untrusted by default in a fresh
+  // container) and install its pinned tools so the project's mise.toml /
+  // .tool-versions take effect.
+  "postCreateCommand": "mise trust --all --yes && mise install",
+  "remoteUser": "vscode"
+}
+```
+
+`mise trust --all --yes` trusts every `mise.toml` / `.mise.toml` /
+`.tool-versions` in the workspace non-interactively — mise ignores untrusted
+config files, so without this step `mise install` would skip the project's
+pinned tools. The baked image already exposes `mise` on `PATH`, so the hook
+works even though it runs in a bare shell before the VS Code server attaches.
+
 ### Testing the DevContainer
 
 ```bash
