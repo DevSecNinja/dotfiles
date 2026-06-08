@@ -42,3 +42,11 @@ RUN curl https://mise.run | sh \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 USER root
+
+# Persist the mise + Homebrew tool locations on PATH for ALL processes in any
+# container built from this image — including the bare /bin/sh that runs a
+# consuming project's postCreateCommand BEFORE the VS Code server (and its
+# remoteEnv) is attached. Without this, downstream devcontainers hit
+# `mise: not found` in their lifecycle hooks. ENV is baked into the image,
+# unlike the PATH export inside the install RUN above (which is layer-local).
+ENV PATH="/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
