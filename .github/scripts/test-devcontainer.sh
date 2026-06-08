@@ -55,6 +55,18 @@ check_directory() {
 	fi
 }
 
+echo "🔧 Step 0: Verifying mise is on the image-baked PATH (no manual export)..."
+echo ""
+# postCreateCommand runs in a non-login, non-interactive shell with no profile
+# sourcing. Simulate that to ensure the image ENV PATH (not a shell rc) exposes
+# mise — this is the exact condition that previously failed with `mise: not found`.
+if env -i PATH="$PATH" HOME="$HOME" sh -c 'command -v mise >/dev/null 2>&1'; then
+    echo "  ✅ mise resolves via image-baked PATH"
+else
+    echo "  ❌ mise NOT on baked PATH (postCreateCommand would fail)"
+    FAILURES=$((FAILURES + 1))
+fi
+
 echo "📦 Step 1: Verifying devcontainer features..."
 echo ""
 
