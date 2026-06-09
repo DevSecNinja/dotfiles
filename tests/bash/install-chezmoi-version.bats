@@ -118,6 +118,16 @@ EOF
 	printf '%s\n' "$renovate_config" | grep -qF "twpayne/chezmoi"
 }
 
+@test "renovate groups chezmoi updates into a single PR" {
+	renovate_config="$(cat "${REPO_ROOT}/renovate.json5")"
+
+	printf '%s\n' "$renovate_config" | grep -qF "packageRules"
+	printf '%s\n' "$renovate_config" | grep -qF "groupName"
+	printf '%s\n' "$renovate_config" | grep -qF "chezmoi"
+	printf '%s\n' "$renovate_config" | grep -qF "matchDepNames"
+	printf '%s\n' "$renovate_config" | grep -qF "twpayne/chezmoi"
+}
+
 @test "renovate tracks .mise.toml chezmoi pin with an inline comment" {
 	run grep -B1 -F 'chezmoi = "' "${REPO_ROOT}/.mise.toml"
 

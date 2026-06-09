@@ -27,4 +27,12 @@
       extractVersionTemplate: "^v(?<version>.+)$",
     },
   ],
+  packageRules: [
+    {
+      // Group .chezmoiversion and .mise.toml chezmoi pin updates into one PR
+      // so both files are always updated atomically and CI stays green.
+      groupName: "chezmoi",
+      matchDepNames: ["twpayne/chezmoi"],
+    },
+  ],
 }
