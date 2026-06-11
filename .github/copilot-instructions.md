@@ -13,7 +13,7 @@
 - Fish shell configuration (Linux/macOS/WSL)
 - PowerShell profiles (Windows)
 - Vim, Tmux, Git configurations
-- Smart installation modes: **light** (servers: SVL\*) vs **full** (dev servers: SVLDEV\* and workstations)
+- Smart installation modes: **light** (servers: SVL\*) vs **full** (dev servers: SVL\*DEV\* and workstations)
 - Automated setup scripts for tools/packages
 - Cross-platform support with OS-specific file handling
 
@@ -124,7 +124,7 @@ chezmoi init --apply --dry-run --source=.
 1. **validate**: Pre-commit hooks + all validation scripts
 2. **test-install**: Full installation test (Ubuntu container)
 3. **test-light-server**: Light mode test (hostname: SVLPROD\*)
-4. **test-dev-server**: Full mode test (hostname: SVLDEV\*)
+4. **test-dev-server**: Full mode test (hostname: SVL\*DEV\*)
 5. **test-windows**: Windows installation test
 
 **All checks must pass before merge.**
@@ -219,11 +219,11 @@ Available in `*.tmpl` files:
 
 ### 2. Installation Mode Detection
 
-**Light mode** (hostname starts with `SVL` but not `SVLDEV`):
+**Light mode** (hostname starts with `SVL` but not matching `SVL*DEV`):
 
 - Installs: git, vim, tmux, curl, wget, fish (essentials only)
 
-**Full mode** (hostname starts with `SVLDEV` or others):
+**Full mode** (hostname matching `SVL*DEV` or others):
 
 - Installs: git, vim, tmux, tree, htop, python3-venv, fish (full dev tools)
 

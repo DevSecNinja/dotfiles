@@ -35,7 +35,12 @@ Include ~/.ssh/1Password/config
 {{- end }}
 {{ if and .privateDomain (not .isWork) -}}
 
-# Development Server
+# Development Servers
+Host svlazdev.{{ .privateDomain }}
+    HostName svlazdev.{{ .privateDomain }}
+    # Required for pulling Git repos with SSH password manager feature
+    ForwardAgent yes
+
 Host svldev.{{ .privateDomain }}
     HostName svldev.{{ .privateDomain }}
     # Required for pulling Git repos with SSH password manager feature

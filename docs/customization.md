@@ -23,7 +23,7 @@ The repository supports two installation modes:
 
 The mode is auto-detected based on:
 
-- Hostname patterns (`SVLDEV*` = full, `SVL*` = light).
+- Hostname patterns (`SVL*DEV*` = full, `SVL*` = light).
 - Environment (Codespaces, devcontainer, CI = light).
 - Default = full mode.
 

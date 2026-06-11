@@ -154,7 +154,7 @@
 {{- /* Determine installation type based on hostname */ -}}
 {{- $installType := "full" -}}
 {{- if $hostname | hasPrefix "SVL" -}}
-{{-   if $hostname | hasPrefix "SVLDEV" -}}
+{{-   if regexMatch "^SVL.*DEV" $hostname -}}
 {{-     $installType = "full" -}}
 {{-     if $interactive -}}
 {{-       writeToStdout "🖥️  Dev server detected - installing full dotfiles\n" -}}

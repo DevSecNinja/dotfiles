@@ -37,7 +37,7 @@ detect_dotfiles_install_type() {
 	hostname_value="$(hostname 2>/dev/null || echo "")"
 
 	case "$hostname_value" in
-	SVLDEV*)
+	SVL*DEV*)
 		echo "full"
 		;;
 	SVL*)
