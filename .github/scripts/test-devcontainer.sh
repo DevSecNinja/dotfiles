@@ -61,10 +61,10 @@ echo ""
 # sourcing. Simulate that to ensure the image ENV PATH (not a shell rc) exposes
 # mise — this is the exact condition that previously failed with `mise: not found`.
 if env -i PATH="$PATH" HOME="$HOME" sh -c 'command -v mise >/dev/null 2>&1'; then
-    echo "  ✅ mise resolves via image-baked PATH"
+	echo "  ✅ mise resolves via image-baked PATH"
 else
-    echo "  ❌ mise NOT on baked PATH (postCreateCommand would fail)"
-    FAILURES=$((FAILURES + 1))
+	echo "  ❌ mise NOT on baked PATH (postCreateCommand would fail)"
+	FAILURES=$((FAILURES + 1))
 fi
 
 echo "📦 Step 1: Verifying devcontainer features..."

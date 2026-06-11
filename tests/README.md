@@ -81,6 +81,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 
 **Test Files** (utility functions):
 - `brewup.bats` - Tests Homebrew update/upgrade wrapper
+- `macup.bats` - Tests macOS update wrapper (brewup + softwareupdate)
 - `file-set-execution-bit.bats` - Tests shell script executable bit management
 - `find-broken-symlinks.bats` - Tests broken symlink detection and cleanup
 - `get-external-ip.bats` - Tests external IP detection function ✨
