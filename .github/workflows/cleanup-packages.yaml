@@ -35,7 +35,7 @@ on:
       dry-run:
         description: 'Preview deletions without removing anything'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
