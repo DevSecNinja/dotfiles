@@ -1,0 +1,134 @@
+---
+name: Mirror Base Image
+
+# Mirror the upstream devcontainer base image (Microsoft Container Registry)
+# into GHCR so the CI container-based test jobs can pull it without ever
+# touching MCR.
+#
+# WHY THIS EXISTS:
+#   mcr.microsoft.com intermittently WAF-blocks GitHub runner egress IPs,
+#   returning an HTML "The request is blocked." page instead of the manifest.
+#   That pull happens during the runner's container-init step (before any of
+#   our steps run), so it cannot be retried or authenticated from within the
+#   job and fails the whole run. Keeping a GHCR copy removes MCR from CI's
+#   critical path entirely.
+#
+# WHY IT'S A SEPARATE SCHEDULED WORKFLOW:
+#   The base image changes rarely, so mirroring on every PR/CI run is wasted
+#   work. This runs weekly (and on demand) and re-copies only when the pinned
+#   upstream digest is not already mirrored.
+#
+# REPRODUCIBILITY:
+#   `docker buildx imagetools create` copies the manifest verbatim, so the
+#   GHCR copy has the SAME digest as the upstream MCR image. CI pins the GHCR
+#   reference by that identical digest (see BASE_IMAGE in ci.yaml). Renovate
+#   keeps both the upstream pin here and the CI pin patched in lock-step
+#   (grouped, since both track the same MCR image).
+
+on:
+  schedule:
+    # Weekly on Mondays at 01:00 UTC.
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+  # Re-mirror immediately whenever Renovate bumps the pinned upstream digest.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mirror-base-image.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Mirror ${{ matrix.name }} to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # Mirror every image even if one upstream registry is having a bad day.
+      fail-fast: false
+      matrix:
+        include:
+          # Add future images here: one entry per upstream image.
+          #   source: upstream reference, pinned by digest (Renovate-managed)
+          #   mirror-repo: GHCR repo name (under this repo's owner)
+          #   tag: human-friendly tag applied to the GHCR copy
+          - name: devcontainers-base
+            # renovate: datasource=docker depName=mcr.microsoft.com/devcontainers/base
+            source: "mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0"
+            mirror-repo: devcontainers-base
+            tag: debian-12
+
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Set lowercase repository owner
+        id: lowercase
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror image
+        env:
+          OWNER: ${{ steps.lowercase.outputs.owner }}
+          SOURCE: ${{ matrix.source }}
+          MIRROR_REPO: ${{ matrix.mirror-repo }}
+          TAG: ${{ matrix.tag }}
+        run: |
+          set -euo pipefail
+
+          mirror="ghcr.io/${OWNER}/${MIRROR_REPO}"
+          src_digest="${SOURCE##*@}"
+          if [ "${src_digest}" = "${SOURCE}" ]; then
+            echo "::error::source must be pinned by digest (got '${SOURCE}')"
+            exit 1
+          fi
+
+          # Skip the upstream copy entirely if this exact digest is already
+          # mirrored (GHCR-only lookup). imagetools preserves the manifest
+          # digest, so the GHCR copy's digest equals the upstream digest.
+          if docker buildx imagetools inspect "${mirror}@${src_digest}" >/dev/null 2>&1; then
+            echo "Already mirrored ${SOURCE} -> ${mirror}@${src_digest}"
+            exit 0
+          fi
+
+          # Copy upstream -> GHCR, retrying transient upstream edge (WAF)
+          # failures. Blobs already present in GHCR are skipped, so repeat
+          # copies are cheap.
+          attempt=1
+          max=5
+          until docker buildx imagetools create \
+            --tag "${mirror}:${TAG}" \
+            "${SOURCE}"; do
+            if [ "${attempt}" -ge "${max}" ]; then
+              echo "::error::Failed to mirror ${SOURCE} after ${max} attempts"
+              exit 1
+            fi
+            backoff=$((attempt * 10))
+            echo "::warning::Mirror attempt ${attempt}/${max} failed; retrying in ${backoff}s"
+            sleep "${backoff}"
+            attempt=$((attempt + 1))
+          done
+
+          ghcr_digest="$(docker buildx imagetools inspect "${mirror}:${TAG}" --format '{{.Manifest.Digest}}')"
+          echo "Mirrored ${SOURCE} -> ${mirror}:${TAG} (${ghcr_digest})"
+          {
+            echo "## Mirror: ${MIRROR_REPO}"
+            echo ""
+            echo "- Source: \`${SOURCE}\`"
+            echo "- Mirror: \`${mirror}:${TAG}@${ghcr_digest}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+

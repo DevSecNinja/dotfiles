@@ -17,6 +17,15 @@ env:
   # (including the bats.yml caller input below). Renovate keeps it patched.
   # renovate: datasource=github-releases depName=jdx/mise
   MISE_VERSION: "2026.5.15"
+  # Devcontainer base image consumed by the container-based test jobs. This is
+  # the GHCR MIRROR of mcr.microsoft.com/devcontainers/base, kept current by
+  # the scheduled mirror-base-image.yaml workflow. CI never pulls from MCR
+  # directly because MCR intermittently WAF-blocks GitHub runner egress IPs
+  # ("The request is blocked." HTML), which fails the uncontrollable
+  # container-init pull. Referenced by tag (not digest): the mirror tag tracks
+  # the upstream image, and the digest pin lives at the mirror workflow's
+  # `source:` (Renovate-managed) so there is a single supply-chain pin.
+  BASE_IMAGE: "ghcr.io/devsecninja/devcontainers-base:debian-12"
 
 jobs:
   validate:
@@ -146,8 +155,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
+      image: ${{ env.BASE_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       env:
         CODESPACES: true
 
@@ -205,8 +220,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
+      image: ${{ env.BASE_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       env:
         CODESPACES: true
 
@@ -254,8 +275,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, test-install, test-coder-install]
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
+      image: ${{ env.BASE_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       options: --hostname SVLPROD01
       env:
         CODESPACES: true
@@ -277,8 +304,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, test-install, test-coder-install]
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     container:
-      image: mcr.microsoft.com/devcontainers/base:debian-12@sha256:23fa69fed758b7927c60061317d73baf7d66b9fca5c344e80bce3a940b229af0
+      image: ${{ env.BASE_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       options: --hostname SVLDEV01
       env:
         CODESPACES: true

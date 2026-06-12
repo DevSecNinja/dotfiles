@@ -31,6 +31,7 @@ setup() {
 	assert_harden_count ".github/workflows/ci.yaml" 2
 	assert_harden_count ".github/workflows/devcontainer-prebuild.yaml" 3
 	assert_harden_count ".github/workflows/docs.yml" 3
+	assert_harden_count ".github/workflows/mirror-base-image.yaml" 1
 	assert_harden_count ".github/workflows/release-please.yml" 1
 	assert_harden_count ".github/workflows/release.yml" 2
 	assert_harden_count ".github/workflows/sync-develop.yaml" 1
