@@ -32,6 +32,12 @@ jobs:
     name: Validate Dotfiles
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Re-export the workflow-level BASE_IMAGE as a job output. The `env`
+    # context is not available in `jobs.<id>.container.image`, but `needs`
+    # is, so the container jobs reference needs.validate.outputs.base_image
+    # to keep a single source of truth.
+    outputs:
+      base_image: ${{ env.BASE_IMAGE }}
 
     steps:
       - name: Harden runner
@@ -159,7 +165,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ${{ env.BASE_IMAGE }}
+      image: ${{ needs.validate.outputs.base_image }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -224,7 +230,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ${{ env.BASE_IMAGE }}
+      image: ${{ needs.validate.outputs.base_image }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -279,7 +285,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ${{ env.BASE_IMAGE }}
+      image: ${{ needs.validate.outputs.base_image }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -308,7 +314,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ${{ env.BASE_IMAGE }}
+      image: ${{ needs.validate.outputs.base_image }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
