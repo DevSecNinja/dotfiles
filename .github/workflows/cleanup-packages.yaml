@@ -1,0 +1,71 @@
+---
+name: Cleanup Devcontainer Packages
+
+# Prune stale, untagged devcontainer image versions from GHCR so the package
+# does not grow unbounded.
+#
+# WHY THIS IS NEEDED:
+#   Every main-branch / scheduled prebuild pushes two per-arch images BY DIGEST
+#   and re-points :latest at the new pair (see devcontainer-prebuild.yaml). The
+#   PREVIOUS per-arch digests are left behind as untagged versions and would
+#   otherwise accumulate forever.
+#
+# WHY THIS IS SAFE:
+#   snok/container-retention-policy (>= v3.1.0) automatically protects the
+#   per-arch CHILD manifests of every retained tag (:latest, :vX.Y.Z) and is
+#   fail-closed: if it cannot fetch a manifest it skips deletion entirely
+#   rather than risk orphaning a live multi-arch image. We additionally:
+#     * only ever select `untagged` versions (tagged releases are never touched)
+#     * apply a `cut-off` time buffer so in-flight builds/pulls are never pruned
+#   GHCR also keeps deleted versions restorable for 30 days.
+#
+# TOKEN NOTE:
+#   We authenticate with the built-in GITHUB_TOKEN ("temporal token"). This
+#   means image-names must be an EXACT name (no `*`/`!` operators) and the
+#   repository must hold the `Admin` role on the package
+#   (Package settings -> Manage Actions access).
+
+on:
+  schedule:
+    # Weekly on Mondays at 02:00 UTC — after the 00:00 prebuild refresh so the
+    # newest per-arch digests are already tagged into :latest before we prune.
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Preview deletions without removing anything'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Prune untagged devcontainer digests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
+      - name: Prune untagged versions (multi-arch aware)
+        # renovate: datasource=github-tags depName=snok/container-retention-policy
+        uses: snok/container-retention-policy@d3bdcf5ce9b05f685154e4a16c39233b245e3d53 # v3.1.0
+        with:
+          account: user
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Exact image name is required for the built-in GITHUB_TOKEN.
+          image-names: dotfiles-devcontainer
+          # Only ever target untagged versions; :latest and :vX.Y.Z are never
+          # selected, and their per-arch children are auto-protected.
+          tag-selection: untagged
+          # Time buffer so a just-pushed (still in-flight) digest is never
+          # pruned before its multi-arch manifest is published.
+          cut-off: 1w
+          dry-run: ${{ inputs.dry-run || false }}
