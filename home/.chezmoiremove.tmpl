@@ -6,3 +6,10 @@
 {{- /* config glob and IdentitiesOnly yes from PR #302). On Unix:             */ -}}
 .config/shell/functions/yk-ssh-load.sh
 .config/fish/functions/yk_ssh_load.fish
+{{ if eq .chezmoi.os "windows" -}}
+{{- /* DevSecNinja/PowerShell private module was retired (issue #446),         */ -}}
+{{- /* superseded by the in-repo DotfilesHelpers PowerShell functions. Remove  */ -}}
+{{- /* any stale git-cloned copy so it no longer lingers / loads.              */ -}}
+Documents/PowerShell/Modules/DevSecNinja.PowerShell
+{{ end -}}
+
