@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://github.com/DevSecNinja/dotfiles/compare/v0.4.0...v0.5.0) (2026-06-13)
+
+
+### Features
+
+* **devcontainer:** Update Dockerfile to persist Homebrew PATH ([6094a16](https://github.com/DevSecNinja/dotfiles/commit/6094a16064c8f69a0aca58c259406d73d3568ba1))
+* **github-release:** update mise ( v2026.5.15 ➔ v2026.6.1 ) [automerge] ([#424](https://github.com/DevSecNinja/dotfiles/issues/424)) ([c07b794](https://github.com/DevSecNinja/dotfiles/commit/c07b79461dd3806e15a54d3de3439bf86eac0db7))
+* **macup:** add macOS update wrapper and tests ([643c289](https://github.com/DevSecNinja/dotfiles/commit/643c28957aeecf8906c494eb11d8d2c4143abc74))
+* **pwsh:** testable Nerd Font install + Windows Terminal font + Copilot CLI MCP config ([#385](https://github.com/DevSecNinja/dotfiles/issues/385)) ([d1fc7fc](https://github.com/DevSecNinja/dotfiles/commit/d1fc7fcc38ed662807478395a2cfea4914c69c9e))
+* **renovate:** Add 'chezmoi' to matchDepNames in renovate.json5 ([fcbbe06](https://github.com/DevSecNinja/dotfiles/commit/fcbbe06dd9d0510a209f9dcbdd3968330b245c0c))
+* **renovate:** group Chezmoi updates into a single PR ([#418](https://github.com/DevSecNinja/dotfiles/issues/418)) ([adbedae](https://github.com/DevSecNinja/dotfiles/commit/adbedae39e2e6a40177d1fee2b5963f82bf87cf0))
+
+
+### Bug Fixes
+
+* Add test for Dockerfile PATH environment variable ([38802d0](https://github.com/DevSecNinja/dotfiles/commit/38802d0c9ec16db2fb496773e760eb21916bda1b))
+* change default dry-run option to false in cleanup workflow ([f171dda](https://github.com/DevSecNinja/dotfiles/commit/f171dda5ac6a71d75c4c17e5eda5ab0b75dbc4c2))
+* **ci:** pass base image via job output (env unavailable in container.image) ([3cc99df](https://github.com/DevSecNinja/dotfiles/commit/3cc99df6dd59ded31a76231b9483c0f2e1d05083))
+* **github-release:** update chezmoi ( 2.70.3 ➔ 2.70.4 ) [automerge] ([#422](https://github.com/DevSecNinja/dotfiles/issues/422)) ([a1f622d](https://github.com/DevSecNinja/dotfiles/commit/a1f622d589d4f0876f294bec8ab7a36a8995850a))
+* **github-release:** update mise ( v2026.5.10 ➔ v2026.5.13 ) [automerge] ([#390](https://github.com/DevSecNinja/dotfiles/issues/390)) ([54b59a4](https://github.com/DevSecNinja/dotfiles/commit/54b59a43274e1c3c0807c528416ae9a902aca7e2))
+* **github-release:** update mise ( v2026.5.13 ➔ v2026.5.14 ) [automerge] ([#397](https://github.com/DevSecNinja/dotfiles/issues/397)) ([173aaaa](https://github.com/DevSecNinja/dotfiles/commit/173aaaa37c62c39f367e617b0b9dd5dbd9460fba))
+* **github-release:** update mise ( v2026.5.14 ➔ v2026.5.15 ) [automerge] ([#399](https://github.com/DevSecNinja/dotfiles/issues/399)) ([7659422](https://github.com/DevSecNinja/dotfiles/commit/7659422e53205a21c4a92d1f9c5cf025cff8c183))
+* update hostname patterns for installation modes and scripts ([4c74c8e](https://github.com/DevSecNinja/dotfiles/commit/4c74c8e5a182faf99df250fabe21945d9bdf2e27))
+* Verify 'mise' availability in devcontainer script ([8987599](https://github.com/DevSecNinja/dotfiles/commit/8987599f4f0acb8e33f7fcb9294a8343796eb0bc))
+
 ## [0.4.0](https://github.com/DevSecNinja/dotfiles/compare/v0.3.1...v0.4.0) (2026-06-02)
 
 
