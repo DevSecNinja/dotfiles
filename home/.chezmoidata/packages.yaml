@@ -138,10 +138,7 @@ packages:
     powershell_git_modules:
       light: []
       full:
-        - name: "PowerShell"
-          url: "https://github.com/DevSecNinja/PowerShell.git"
-          # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
-          destination: "DevSecNinja.PowerShell"
+        # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
         - name: "Office 365 Mail Alias"
           url: "https://github.com/DevSecNinja/Office365AliasModule.git"
           destination: "DevSecNinja.Office365AliasModule"
