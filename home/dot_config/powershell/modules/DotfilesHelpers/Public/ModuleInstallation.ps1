@@ -90,7 +90,7 @@ function Install-GitPowerShellModule {
     Must be a simple folder name without path separators or traversal characters.
 
     .EXAMPLE
-    Install-GitPowerShellModule -Name "PowerShell-Modules" -Url "https://github.com/DevSecNinja/PowerShell-Modules.git" -Destination "DevSecNinja.PowerShell"
+    Install-GitPowerShellModule -Name "Office 365 Mail Alias" -Url "https://github.com/DevSecNinja/Office365AliasModule.git" -Destination "DevSecNinja.Office365AliasModule"
 
     .NOTES
     - Only GitHub HTTPS URLs are supported for security
