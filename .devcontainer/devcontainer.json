@@ -21,8 +21,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "GitHub.copilot",
-        "GitHub.copilot-chat",
         "pspester.pester-test"
       ],
       "settings": {
