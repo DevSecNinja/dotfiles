@@ -11,7 +11,7 @@ task = "latest"
 
 # Chezmoi for dotfile management
 # renovate: datasource=github-releases depName=twpayne/chezmoi extractVersion=^v(?<version>.+)$
-chezmoi = "2.70.4"
+chezmoi = "2.70.5"
 
 # Bats for bash testing
 bats = "1.13.0"
