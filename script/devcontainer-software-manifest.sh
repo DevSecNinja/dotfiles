@@ -56,6 +56,7 @@ write_key_tools() {
 	tool_version "npm" npm npm --version
 	tool_version "Task" task task --version
 	tool_version "ShellCheck" shellcheck shellcheck --version
+	tool_version "APM" apm apm --version
 }
 
 write_apt_packages() {
