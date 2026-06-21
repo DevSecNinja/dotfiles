@@ -87,6 +87,18 @@ setup() {
 	[ "$status" -ne 0 ]
 }
 
+@test "validate-devcontainer: workflow does not bootstrap a containerized Buildx builder" {
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+
+	[ -f "$workflow" ]
+
+	# The GitHub runners already ship docker buildx with the built-in docker
+	# driver, so avoid setup-buildx-action here: its default docker-container
+	# bootstrap pulls moby/buildkit from Docker Hub and has been flaky.
+	run grep -F 'docker/setup-buildx-action' "$workflow"
+	[ "$status" -ne 0 ]
+}
+
 @test "validate-devcontainer: prebuild image includes generated package manifest" {
 	dockerfile="$REPO_ROOT/.devcontainer/Dockerfile"
 	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
