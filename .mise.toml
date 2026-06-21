@@ -28,6 +28,11 @@ shfmt = "latest"
 cocogitto = "latest"
 git-cliff = "latest"
 
+# uv powers the pipx backend used for apm-cli below (mise shells out to
+# `uv tool install`). Without uv declared, `mise install` fails with
+# "No version is set for shim: uv".
+uv = "latest"
+
 # Agent Package Manager (APM): installs & updates AI agent primitives (prompts,
 # instructions, skills) from APM packages such as DevSecNinja/ai-toolkit.
 # Installed via the pipx backend (PyPI package `apm-cli`); the GitHub binary
