@@ -75,6 +75,14 @@ jobs:
         # renovate: datasource=npm depName=@devcontainers/cli
         run: npm install -g @devcontainers/cli@0.87.0
 
+      - name: Set up Docker Buildx
+        # push-by-digest=true (used in the pre-build step) requires the
+        # docker-container driver; the runner default docker driver does not
+        # support it.  Create the builder manually rather than using the
+        # setup-buildx action from docker/ to avoid a separate Docker Hub
+        # authentication round-trip introduced by that action.
+        run: docker buildx create --use --driver docker-container --name devcontainer-builder --bootstrap
+
       - name: Decide whether to push
         id: push
         # Push on main branch and on v* tags for push/dispatch/schedule events.
