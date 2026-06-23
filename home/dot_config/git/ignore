@@ -24,6 +24,9 @@ node_modules/
 !.env.template
 *.log
 
+# AI coding agent artifacts (e.g. tool-guardian hook audit logs)
+.github/logs/
+
 # Secrets and credentials
 .netrc
 .aws/credentials
