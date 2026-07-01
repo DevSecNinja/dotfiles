@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0](https://github.com/DevSecNinja/dotfiles/compare/v0.5.0...v0.6.0) (2026-07-01)
+
+
+### Features
+
+* **mise:** add APM CLI to the devcontainer ([#488](https://github.com/DevSecNinja/dotfiles/issues/488)) ([2db6e4a](https://github.com/DevSecNinja/dotfiles/commit/2db6e4af6c0749a37f32abeb08c5893664986e4c))
+
+
+### Bug Fixes
+
+* add docker-container buildx builder to resolve push-by-digest failures ([#495](https://github.com/DevSecNinja/dotfiles/issues/495)) ([c95f3e2](https://github.com/DevSecNinja/dotfiles/commit/c95f3e2c5c209b93dbfc5a5643896519816b2f39))
+* **ci:** Remove chezmoi related tests from install script ([df6e1a7](https://github.com/DevSecNinja/dotfiles/commit/df6e1a773fcbb2592b76c4cbd046de633712abc1))
+* **github-release:** update release jdx/mise ( v2026.6.1 ➔ v2026.6.3 ) [automerge] ([#500](https://github.com/DevSecNinja/dotfiles/issues/500)) ([2dfb589](https://github.com/DevSecNinja/dotfiles/commit/2dfb5891f4adc21ee53705e8d2b82aee6858bb80))
+* **github-release:** update release jdx/mise ( v2026.6.3 ➔ v2026.6.4 ) [automerge] ([#505](https://github.com/DevSecNinja/dotfiles/issues/505)) ([1e0a4ff](https://github.com/DevSecNinja/dotfiles/commit/1e0a4ffd67481968e4e560c9c6265544b1560a10))
+* **github-release:** update release jdx/mise ( v2026.6.4 ➔ v2026.6.5 ) [automerge] ([#509](https://github.com/DevSecNinja/dotfiles/issues/509)) ([26c191e](https://github.com/DevSecNinja/dotfiles/commit/26c191eee8a099d14503506b15acad7048791a22))
+* **github-release:** update release jdx/mise ( v2026.6.5 ➔ v2026.6.6 ) [automerge] ([#514](https://github.com/DevSecNinja/dotfiles/issues/514)) ([6aa1e25](https://github.com/DevSecNinja/dotfiles/commit/6aa1e25b6b1c5b7a51ce78add4a1cb7cf4e7256d))
+* **github-release:** update release jdx/mise ( v2026.6.6 ➔ v2026.6.7 ) [automerge] ([#519](https://github.com/DevSecNinja/dotfiles/issues/519)) ([2b135d9](https://github.com/DevSecNinja/dotfiles/commit/2b135d927bc8475085e9ff50b2885ebf27a77a2c))
+* **github-release:** update release jdx/mise ( v2026.6.7 ➔ v2026.6.9 ) [automerge] ([#522](https://github.com/DevSecNinja/dotfiles/issues/522)) ([b4e73b1](https://github.com/DevSecNinja/dotfiles/commit/b4e73b18fcc99804a9151f74fe7bfcc423dcf31d))
+* **mise:** update chezmoi ( 2.70.4 ➔ 2.70.5 ) [automerge] ([#466](https://github.com/DevSecNinja/dotfiles/issues/466)) ([6337497](https://github.com/DevSecNinja/dotfiles/commit/63374976cc7c9a3f3caddea8361a7e37394c9012))
+* **mise:** update tool python ( 3.14.5 ➔ 3.14.6 ) [automerge] ([#502](https://github.com/DevSecNinja/dotfiles/issues/502)) ([b642813](https://github.com/DevSecNinja/dotfiles/commit/b6428139a511d7cab9f7c38d68b886f000b43a7e))
+
 ## [0.5.0](https://github.com/DevSecNinja/dotfiles/compare/v0.4.0...v0.5.0) (2026-06-13)
 
 
