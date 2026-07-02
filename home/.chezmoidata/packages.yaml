@@ -34,6 +34,7 @@ packages:
     brew:
       light: []
       full:
+        - copilot-cli # GitHub Copilot CLI
         - go-task
         - microsoft/apm/apm
         - mise
@@ -61,6 +62,7 @@ packages:
         - wget
       full:
         - azure-cli
+        - copilot-cli # GitHub Copilot CLI
         - go-task
         - microsoft/apm/apm
         - mise
@@ -117,6 +119,7 @@ packages:
         - twpayne.chezmoi
       full:
         - Docker.DockerDesktop
+        - GitHub.Copilot
         - jdx.mise
         - Microsoft.APM
         - Microsoft.VisualStudioCode
