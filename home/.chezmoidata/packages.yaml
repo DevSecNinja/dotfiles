@@ -51,63 +51,70 @@ packages:
 
   # macOS packages
   darwin:
-    # Homebrew formulas
+    # Homebrew installs are grouped by kind:
+    #   brew.formulas  -> Homebrew formulas (CLI tools)
+    #   brew.cask      -> Homebrew casks (GUI applications)
+    #   brew.app-store -> Mac App Store apps (installed via `mas`)
     brew:
-      light:
-        - fastfetch
-        - fish
-        - git
-        - jq
-        - vim
-        - wget
-      full:
-        - azure-cli
-        - copilot-cli # GitHub Copilot CLI
-        - go-task
-        - microsoft/apm/apm
-        - mise
-        - python@3
-      # Installed only when useYubiKey is true.
-      yubikey:
-        - ykman
-        - openssh # macOS bundled OpenSSH lacks FIDO2 / SecurityKeyProvider
-      # TODO: Homebrew: add support for casks * app store apps
-      # Move them under brew (brew.brew and brew.cask and brew.app-store)
-      # casks:
-      #   light: []
-      #   full:
-      #   - 1password
-      #   - 1password-cli
-      #   - chatgpt
-      #   - iterm2
-      #   - microsoft-edge
-      #   - rekordbox
-      #   - signal
-      #   - spotify
-      #   - visual-studio-code
-      #   - vlc
-      #   - vmware-fusion
-      # app-store:
-      #   light: []
-      #   full:
-      #     - name: "1Password for Safari"
-      #       id: 1569813296
-      #     - name: "Home Assistant"
-      #       id: 1099568401
-      #     - name: "Kindle"
-      #       id: 302584613
-      #     - name: "Mela"
-      #       id: 1568924476
-      #     - name: "Microsoft 365"
-      #       id: 1450038993
-      #     - name: "Notability"
-      #       id: 360593530
-      #     - name: "Windows"
-      #       id: 1295203466
-      #     - name: "WireGuard"
-      #       id: 1451685025
-      #     - name: "Xcode"
-      #       id: 497799835
+      # Homebrew formulas (CLI tools)
+      formulas:
+        light:
+          - fastfetch
+          - fish
+          - git
+          - jq
+          - vim
+          - wget
+        full:
+          - azure-cli
+          - copilot-cli # GitHub Copilot CLI
+          - go-task
+          - mas # Mac App Store CLI (required for brew.app-store installs)
+          - microsoft/apm/apm
+          - mise
+          - python@3
+        # Installed only when useYubiKey is true.
+        yubikey:
+          - ykman
+          - openssh # macOS bundled OpenSSH lacks FIDO2 / SecurityKeyProvider
+      # Homebrew casks (GUI applications)
+      cask:
+        light: []
+        full:
+          - 1password
+          - 1password-cli
+          - chatgpt
+          - iterm2
+          - microsoft-edge
+          - rekordbox
+          - signal
+          - spotify
+          - visual-studio-code
+          - vlc
+          - vmware-fusion
+      # Mac App Store apps (installed via `mas`, which is provided by the
+      # `mas` formula listed under brew.formulas.full).
+      app-store:
+        light: []
+        full:
+          - name: "1Password for Safari"
+            id: 1569813296
+          - name: "Home Assistant"
+            id: 1099568401
+          - name: "Kindle"
+            id: 302584613
+          - name: "Mela"
+            id: 1568924476
+          - name: "Microsoft 365"
+            id: 1450038993
+          - name: "Notability"
+            id: 360593530
+          - name: "Windows"
+            id: 1295203466
+          - name: "WireGuard"
+            id: 1451685025
+          - name: "Xcode"
+            id: 497799835
 
   # Windows packages
   windows:

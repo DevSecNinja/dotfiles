@@ -373,23 +373,57 @@ Describe "macOS Package Configuration" {
         $script:ChezmoiData.packages.darwin.brew | Should -Not -BeNullOrEmpty
     }
 
-    It "Should have Homebrew light mode packages" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.light
+    It "Should have Homebrew formula light mode packages" {
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
         $lightPackages | Should -Not -BeNullOrEmpty
         $lightPackages.Count | Should -BeGreaterThan 0
     }
 
-    It "Should have Homebrew full mode packages" {
-        $fullPackages = $script:ChezmoiData.packages.darwin.brew.full
+    It "Should have Homebrew formula full mode packages" {
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
         $fullPackages | Should -Not -BeNullOrEmpty
         $fullPackages.Count | Should -BeGreaterThan 0
     }
 
     It "macOS light mode should include essential tools (git, vim, fish)" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.light
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
         $lightPackages | Should -Contain "git"
         $lightPackages | Should -Contain "vim"
         $lightPackages | Should -Contain "fish"
+    }
+
+    It "Should have Homebrew cask section with light and full lists" {
+        $script:ChezmoiData.packages.darwin.brew.cask | Should -Not -BeNullOrEmpty
+        $script:ChezmoiData.packages.darwin.brew.cask.PSObject.Properties.Name | Should -Contain 'light'
+        $script:ChezmoiData.packages.darwin.brew.cask.PSObject.Properties.Name | Should -Contain 'full'
+    }
+
+    It "Should have Homebrew cask full mode applications" {
+        $fullCasks = $script:ChezmoiData.packages.darwin.brew.cask.full
+        $fullCasks | Should -Not -BeNullOrEmpty
+        $fullCasks.Count | Should -BeGreaterThan 0
+    }
+
+    It "Should require the 'mas' formula for Mac App Store installs" {
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
+        $fullPackages | Should -Contain "mas"
+    }
+
+    It "Should have Mac App Store section with light and full lists" {
+        $appStore = $script:ChezmoiData.packages.darwin.brew."app-store"
+        $appStore | Should -Not -BeNullOrEmpty
+        $appStore.PSObject.Properties.Name | Should -Contain 'light'
+        $appStore.PSObject.Properties.Name | Should -Contain 'full'
+    }
+
+    It "Mac App Store apps should define both name and numeric id" {
+        $fullApps = $script:ChezmoiData.packages.darwin.brew."app-store".full
+        $fullApps | Should -Not -BeNullOrEmpty
+        foreach ($app in $fullApps) {
+            $app.name | Should -Not -BeNullOrEmpty
+            $app.id | Should -Not -BeNullOrEmpty
+            "$($app.id)" | Should -Match '^\d+$'
+        }
     }
 }
 
@@ -555,8 +589,8 @@ Describe "Package Consistency" {
     }
 
     It "Should not have duplicate packages in light and full lists (macOS Brew)" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.light
-        $fullPackages = $script:ChezmoiData.packages.darwin.brew.full
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
 
         foreach ($pkg in $fullPackages) {
             $lightPackages | Should -Not -Contain $pkg
