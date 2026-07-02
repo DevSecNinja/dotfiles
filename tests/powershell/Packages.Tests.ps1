@@ -374,19 +374,19 @@ Describe "macOS Package Configuration" {
     }
 
     It "Should have Homebrew formula light mode packages" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.brew.light
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
         $lightPackages | Should -Not -BeNullOrEmpty
         $lightPackages.Count | Should -BeGreaterThan 0
     }
 
     It "Should have Homebrew formula full mode packages" {
-        $fullPackages = $script:ChezmoiData.packages.darwin.brew.brew.full
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
         $fullPackages | Should -Not -BeNullOrEmpty
         $fullPackages.Count | Should -BeGreaterThan 0
     }
 
     It "macOS light mode should include essential tools (git, vim, fish)" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.brew.light
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
         $lightPackages | Should -Contain "git"
         $lightPackages | Should -Contain "vim"
         $lightPackages | Should -Contain "fish"
@@ -405,7 +405,7 @@ Describe "macOS Package Configuration" {
     }
 
     It "Should require the 'mas' formula for Mac App Store installs" {
-        $fullPackages = $script:ChezmoiData.packages.darwin.brew.brew.full
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
         $fullPackages | Should -Contain "mas"
     }
 
@@ -589,8 +589,8 @@ Describe "Package Consistency" {
     }
 
     It "Should not have duplicate packages in light and full lists (macOS Brew)" {
-        $lightPackages = $script:ChezmoiData.packages.darwin.brew.brew.light
-        $fullPackages = $script:ChezmoiData.packages.darwin.brew.brew.full
+        $lightPackages = $script:ChezmoiData.packages.darwin.brew.formulas.light
+        $fullPackages = $script:ChezmoiData.packages.darwin.brew.formulas.full
 
         foreach ($pkg in $fullPackages) {
             $lightPackages | Should -Not -Contain $pkg

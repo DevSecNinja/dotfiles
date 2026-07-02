@@ -234,20 +234,20 @@ fi
 
 log_step "Installing packages with Homebrew"
 # Install light mode formulas (always)
-# {{ range .packages.darwin.brew.brew.light }}
+# {{ range .packages.darwin.brew.formulas.light }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 
 # {{ if eq .installType "full" }}
 # Install full mode formulas (additional)
-# {{ range .packages.darwin.brew.brew.full }}
+# {{ range .packages.darwin.brew.formulas.full }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 # {{ end }}
 
 # {{ if .useYubiKey }}
 # YubiKey extras (darwin brew) — installed when useYubiKey is true
-# {{ range .packages.darwin.brew.brew.yubikey }}
+# {{ range .packages.darwin.brew.formulas.yubikey }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 # {{ end }}

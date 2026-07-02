@@ -178,9 +178,11 @@ strip_template() {
 
 @test "chezmoi-scripts: install-packages references nested darwin brew formulas" {
 	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
-	grep -q '\.packages\.darwin\.brew\.brew\.' "$script"
+	grep -q '\.packages\.darwin\.brew\.formulas\.' "$script"
 	# The old flat darwin.brew.light/full structure must no longer be used.
 	! grep -qE '\.packages\.darwin\.brew\.(light|full|yubikey)\b' "$script"
+	# The intermediate darwin.brew.brew.* naming has been renamed to formulas.
+	! grep -qE '\.packages\.darwin\.brew\.brew\.' "$script"
 }
 
 @test "chezmoi-scripts: darwin run_once_before_10-setup-fish-default-shell.sh.tmpl exists" {
