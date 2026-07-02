@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/DevSecNinja/dotfiles/compare/v0.6.0...v0.7.0) (2026-07-02)
+
+
+### Features
+
+* add GitHub Copilot CLI to packages.yaml ([ae73555](https://github.com/DevSecNinja/dotfiles/commit/ae73555324994b1f6e3fa6f5bf2cf27bff9ffabb))
+* add Microsoft APM to package configurations ([d50a7b9](https://github.com/DevSecNinja/dotfiles/commit/d50a7b993adf15c30cac725fe99dee093e61d973))
+* **copilot:** cli token forwarding ([#540](https://github.com/DevSecNinja/dotfiles/issues/540)) ([b987dbe](https://github.com/DevSecNinja/dotfiles/commit/b987dbe5da9a99a182a381ee7d5b591a6a15dcf7))
+
 ## [0.6.0](https://github.com/DevSecNinja/dotfiles/compare/v0.5.0...v0.6.0) (2026-07-01)
 
 
