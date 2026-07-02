@@ -43,6 +43,13 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN f
     # GitHub tokens never contain a tab.
     set -l tab (printf '\t')
     set -l creds (op run --environment "$OP_COPILOT_ENVIRONMENT_ID" --no-masking -- sh -c 'printf "%s\t%s" "${COPILOT_GITHUB_TOKEN:-}" "${GH_TOKEN:-}"' 2>/dev/null)
+    set -l op_status $status
+    if test $op_status -ne 0
+        echo "copilot_ssh: failed to read tokens from 1Password Environment '$OP_COPILOT_ENVIRONMENT_ID'." >&2
+        echo "            Ensure 'op' >= 2.33.0-beta.02, the desktop-app integration is enabled, and the Environment ID is correct." >&2
+        return 1
+    end
+
     set -l parts (string split -- $tab $creds)
     set -l copilot_token $parts[1]
     set -l gh_token ""
@@ -52,7 +59,6 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN f
 
     if test -z "$copilot_token"
         echo "copilot_ssh: COPILOT_GITHUB_TOKEN not found in Environment '$OP_COPILOT_ENVIRONMENT_ID'." >&2
-        echo "            Ensure 'op' >= 2.33.0-beta.02, the desktop-app integration is enabled, and the variable exists." >&2
         return 1
     end
 
@@ -62,7 +68,12 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN f
         set -a ssh_env_opts -o SendEnv=GH_TOKEN
     end
 
-    env COPILOT_GITHUB_TOKEN="$copilot_token" GH_TOKEN="$gh_token" ssh $ssh_env_opts $argv
+    # Export the tokens locally (function-scoped) for the ssh child, and use
+    # `command ssh` to avoid any alias/function shadowing (matches the fallback
+    # branches above).
+    set -lx COPILOT_GITHUB_TOKEN $copilot_token
+    set -lx GH_TOKEN $gh_token
+    command ssh $ssh_env_opts $argv
 end
 
 # Completions: delegate to ssh's own completions for host/option arguments.
