@@ -19,3 +19,8 @@ export CHEZMOI_ENTRA_ID_TENANT_NAME="{{ .entraIDTenantName }}"
 export CHEZMOI_ENTRA_ID_TENANT_ID="{{ .entraIDTenantId }}"
 # {{ end }}
 export CHEZMOI_IS_WORK="{{ .isWork }}"
+
+# {{ if .opCopilotEnvironmentId }}
+# 1Password Environment ID for the `copilot-ssh` helper (see docs/copilot-cli.md).
+export OP_COPILOT_ENVIRONMENT_ID="{{ .opCopilotEnvironmentId }}"
+# {{ end }}

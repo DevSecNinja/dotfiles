@@ -19,5 +19,10 @@ $env:CHEZMOI_ENTRA_ID_TENANT_ID = "{{ .entraIDTenantId }}"
 # {{ end }}
 $env:CHEZMOI_IS_WORK = "{{ .isWork }}"
 
+# {{ if .opCopilotEnvironmentId }}
+# 1Password Environment ID for the copilot-ssh helper (see docs/copilot-cli.md).
+$env:OP_COPILOT_ENVIRONMENT_ID = "{{ .opCopilotEnvironmentId }}"
+# {{ end }}
+
 # GitHub CLI - disable telemetry
 $env:GH_NO_TELEMETRY = "1"

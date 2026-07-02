@@ -19,5 +19,10 @@ set -gx CHEZMOI_ENTRA_ID_TENANT_ID "{{ .entraIDTenantId }}"
 # {{ end }}
 set -gx CHEZMOI_IS_WORK "{{ .isWork }}"
 
+# {{ if .opCopilotEnvironmentId }}
+# 1Password Environment ID for the `copilot_ssh` helper (see docs/copilot-cli.md).
+set -gx OP_COPILOT_ENVIRONMENT_ID "{{ .opCopilotEnvironmentId }}"
+# {{ end }}
+
 # GitHub CLI - disable telemetry
 set -gx GH_NO_TELEMETRY 1

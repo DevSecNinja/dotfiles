@@ -26,6 +26,19 @@ templates and scripts.
   skipped. Defaults to `false` to preserve the existing 1Password flow.
   See [yubikey.md](yubikey.md) for the provisioning workflow.
 
+## GitHub Copilot CLI
+
+- `opCopilotEnvironmentId` — The [1Password Environment][openv] ID that holds the
+  `COPILOT_GITHUB_TOKEN` (and optional `GH_TOKEN`) variables. Used by the
+  `copilot-ssh` / `copilot_ssh` helper to forward the tokens to headless servers
+  over SSH. This is a **non-secret** identifier (useless without authenticating
+  to 1Password), so a shared default is hardcoded in `.chezmoi.yaml.tmpl`.
+  Override it per-machine by setting `opCopilotEnvironmentId` in your local
+  chezmoi config or at the interactive init prompt. Exported to your shell as
+  `OP_COPILOT_ENVIRONMENT_ID`. See [copilot-cli.md](copilot-cli.md).
+
+[openv]: https://www.1password.dev/environments
+
 ## Windows Enterprise (Windows and WSL)
 
 - `isEntraIDJoined` — Device is Entra ID (Azure AD) joined.
@@ -49,3 +62,6 @@ These variables are also exposed as environment variables in your shell:
 - **Fish**: `$CHEZMOI_*`
   (for example, `$CHEZMOI_IS_ENTRA_ID_JOINED`,
   `$CHEZMOI_ENTRA_ID_TENANT_NAME`).
+
+Additionally, when set, `opCopilotEnvironmentId` is exported as
+`OP_COPILOT_ENVIRONMENT_ID` (PowerShell: `$env:OP_COPILOT_ENVIRONMENT_ID`).
