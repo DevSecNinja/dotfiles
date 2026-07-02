@@ -7,9 +7,9 @@ session to unlock such a vault, so Copilot falls back to either storing the
 token in a plaintext config file or keeping it in memory (re-login every start).
 
 Instead, we authenticate non-interactively with the `COPILOT_GITHUB_TOKEN`
-environment variable, sourced from **1Password** on your workstation and
-**forwarded over SSH** to the server. No secret is ever written to the server or
-committed to a repository.
+environment variable (and `GH_TOKEN` for the [`gh` CLI](https://cli.github.com/)),
+sourced from **1Password** on your workstation and **forwarded over SSH** to the
+server. No secret is ever written to the server or committed to a repository.
 
 > macOS and other workstations are unaffected — Copilot uses the native Keychain
 > automatically. This flow only matters for the headless Linux dev servers.
@@ -21,39 +21,49 @@ workstation                                   headless server (svldev, …)
 ───────────                                   ───────────────────────────
 1Password Environment
   COPILOT_GITHUB_TOKEN
+  GH_TOKEN (optional)
         │  op run --environment <ID>
         ▼
   copilot-ssh svldev
-        │  ssh -o SendEnv=COPILOT_GITHUB_TOKEN
+        │  ssh -o SendEnv=COPILOT_GITHUB_TOKEN -o SendEnv=GH_TOKEN
         ▼  (encrypted channel)
-                                      sshd AcceptEnv COPILOT_GITHUB_TOKEN
+                              sshd AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN
                                               │
                                               ▼
-                                      session env: COPILOT_GITHUB_TOKEN
+                                      session env: COPILOT_GITHUB_TOKEN, GH_TOKEN
                                               │
                                               ▼
-                                      copilot  ← authenticates
+                                      copilot ← COPILOT_GITHUB_TOKEN
+                                      gh      ← GH_TOKEN
 ```
 
-- **Token source:** a 1Password [Environment][openv] variable named exactly
-  `COPILOT_GITHUB_TOKEN`. Same name end-to-end, so nothing is remapped.
+- **Token source:** a 1Password [Environment][openv] with a variable named
+  exactly `COPILOT_GITHUB_TOKEN` (required) and, optionally, `GH_TOKEN` for the
+  `gh` CLI. Same names end-to-end, so nothing is remapped. Keeping them separate
+  lets each tool's token be scoped and rotated independently.
 - **Workstation:** the `copilot-ssh` (bash/zsh) / `copilot_ssh` (fish) helper
-  reads the token via `op run` and forwards it with SSH `SendEnv`.
-- **Server:** `sshd` opts in with `AcceptEnv COPILOT_GITHUB_TOKEN`. SSH's secure
-  default is to drop all client-sent env vars, so this server-side allow-list is
-  required — it is managed by the `system_setup` role in the `docker` repo.
-- **Copilot:** reads `COPILOT_GITHUB_TOKEN` natively (it takes precedence over
-  `GH_TOKEN` and does **not** collide with the `gh` CLI).
+  reads the token(s) via `op run` and forwards them with SSH `SendEnv`.
+- **Server:** `sshd` opts in with `AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN`.
+  SSH's secure default is to drop all client-sent env vars, so this server-side
+  allow-list is required — it is managed by the `system_setup` role in the
+  `docker` repo.
+- **Tools:** Copilot CLI reads `COPILOT_GITHUB_TOKEN` (it takes precedence over
+  `GH_TOKEN`); the `gh` CLI reads `GH_TOKEN`. They do not interfere with each
+  other.
 
 ## One-time setup
 
-1. **Create a token.** A fine-grained
+1. **Create the token(s).** A fine-grained
    [Personal Access Token](https://github.com/settings/personal-access-tokens/new)
-   with the **"Copilot Requests"** permission. Give it an expiry and rotate it
-   periodically.
-2. **Store it in 1Password.** In the desktop app: **Developer → View
+   with the **"Copilot Requests"** permission for Copilot. Optionally create a
+   **second** fine-grained PAT scoped to what you need `gh` to do on the servers
+   (e.g. repository contents, pull requests). Give them an expiry and rotate
+   periodically. Keeping them separate keeps each token least-privilege.
+2. **Store them in 1Password.** In the desktop app: **Developer → View
    Environments → New environment** (e.g. "Development Machine"), then add a
-   variable named `COPILOT_GITHUB_TOKEN` with the PAT as its value.
+   variable named `COPILOT_GITHUB_TOKEN` with the Copilot PAT as its value. To
+   also authenticate `gh`, add a second variable named `GH_TOKEN` with the `gh`
+   PAT (optional — omit it if you only want Copilot).
 3. **Get the Environment ID.** Open the Environment → **Manage environment →
    Copy environment ID**. This ID is not a secret.
 4. **Tell chezmoi.** Set the `opCopilotEnvironmentId` variable (prompted on
@@ -64,7 +74,7 @@ workstation                                   headless server (svldev, …)
    biometrics — no service-account token needed). Environment support is beta.
 
 The server side needs no manual steps — the `docker` repo's Ansible pull adds
-`AcceptEnv COPILOT_GITHUB_TOKEN` to `sshd` automatically.
+`AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN` to `sshd` automatically.
 
 ## Usage
 
@@ -73,23 +83,25 @@ copilot-ssh svldev        # bash / zsh
 copilot_ssh svldev        # fish
 ```
 
-Then run `copilot` on the server as usual — it picks up the forwarded token.
-Any extra `ssh` arguments are passed through (e.g. `copilot-ssh -A svldev`).
+Then run `copilot` (and `gh`, if you added `GH_TOKEN`) on the server as usual —
+they pick up the forwarded tokens. Any extra `ssh` arguments are passed through
+(e.g. `copilot-ssh -A svldev`).
 
 If `op` or `OP_COPILOT_ENVIRONMENT_ID` is unavailable, the helper falls back to
-a plain `ssh` (you connect, but Copilot won't receive a token).
+a plain `ssh` (you connect, but the tools won't receive a token).
 
 ## Security notes
 
-- The token lives only in 1Password (at rest), transiently in the helper's
+- The tokens live only in 1Password (at rest), transiently in the helper's
   memory, the encrypted SSH channel, and the server **session's** environment
   for that session's lifetime. Nothing is persisted on the server.
-- `AcceptEnv` is scoped to the single variable `COPILOT_GITHUB_TOKEN` — never a
-  wildcard, which the OpenSSH docs warn can be used to bypass restricted
-  environments.
-- During a live session the token is readable via `/proc/<pid>/environ` by
+- `AcceptEnv` is scoped to the specific variables `COPILOT_GITHUB_TOKEN` and
+  `GH_TOKEN` — never a wildcard, which the OpenSSH docs warn can be used to
+  bypass restricted environments.
+- During a live session the tokens are readable via `/proc/<pid>/environ` by
   same-user processes and root on that server — the same trust boundary as the
-  logged-in user. Use a least-privilege, expiring PAT to limit blast radius.
+  logged-in user. Use least-privilege, expiring PATs (separate ones for Copilot
+  and `gh`) to limit blast radius.
 
 [openv]: https://www.1password.dev/environments
 [opcli]: https://developer.1password.com/docs/cli/

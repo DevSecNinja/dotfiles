@@ -1,31 +1,32 @@
-function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN forwarded from a 1Password Environment"
-    # copilot_ssh - SSH into a host with the GitHub Copilot CLI token forwarded.
+function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN forwarded from a 1Password Environment"
+    # copilot_ssh - SSH into a host with GitHub tokens forwarded from 1Password.
     #
-    # Reads COPILOT_GITHUB_TOKEN from a 1Password Environment on this
-    # (workstation) machine via `op run`, then forwards it to the remote session
-    # using SSH SendEnv, so GitHub Copilot CLI can authenticate on headless
-    # servers that have no secure vault. The token is never written to disk.
+    # Reads COPILOT_GITHUB_TOKEN (for GitHub Copilot CLI) and, if present,
+    # GH_TOKEN (for the GitHub CLI) from a 1Password Environment on this
+    # (workstation) machine via `op run`, then forwards them to the remote
+    # session using SSH SendEnv, so both tools can authenticate on headless
+    # servers that have no secure vault. The tokens are never written to disk.
     #
-    # The remote sshd must `AcceptEnv COPILOT_GITHUB_TOKEN` (handled by the
-    # docker repo's system_setup Ansible role). Copilot CLI reads
-    # COPILOT_GITHUB_TOKEN natively (precedence over GH_TOKEN; no `gh` clash).
+    # The remote sshd must `AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN` (handled by
+    # the docker repo's system_setup Ansible role). Copilot CLI reads
+    # COPILOT_GITHUB_TOKEN (precedence over GH_TOKEN); `gh` reads GH_TOKEN.
     #
     # Requirements:
     #   - 1Password CLI (`op`) >= 2.33.0-beta.02 with the desktop-app integration.
     #   - OP_COPILOT_ENVIRONMENT_ID set to your 1Password Environment ID (from the
     #     chezmoi `opCopilotEnvironmentId` variable). The Environment must contain
-    #     a variable named COPILOT_GITHUB_TOKEN.
+    #     COPILOT_GITHUB_TOKEN; GH_TOKEN is optional (forwarded if present).
     #
     # Usage: copilot_ssh [ssh options...] <host>   (e.g. copilot_ssh svldev)
 
     if contains -- -h $argv; or contains -- --help $argv
         echo "Usage: copilot_ssh [ssh options...] <host>"
-        echo "SSH with COPILOT_GITHUB_TOKEN forwarded from a 1Password Environment."
+        echo "SSH with COPILOT_GITHUB_TOKEN (and GH_TOKEN) forwarded from a 1Password Environment."
         return 0
     end
 
     if not command -q op
-        echo "copilot_ssh: 'op' (1Password CLI) not found; using plain ssh (Copilot won't get a token)." >&2
+        echo "copilot_ssh: 'op' (1Password CLI) not found; using plain ssh (no token forwarded)." >&2
         command ssh $argv
         return
     end
@@ -36,17 +37,32 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN forwarded from
         return
     end
 
-    # Extract the token first so the interactive ssh below is not wrapped by
-    # `op run`. `--no-masking` is required because Environment values are hidden
-    # by default and would otherwise be returned as "<concealed>".
-    set -l token (op run --environment "$OP_COPILOT_ENVIRONMENT_ID" --no-masking -- printenv COPILOT_GITHUB_TOKEN 2>/dev/null)
-    if test -z "$token"
-        echo "copilot_ssh: failed to read COPILOT_GITHUB_TOKEN from 1Password Environment '$OP_COPILOT_ENVIRONMENT_ID'." >&2
+    # Read both tokens in a single `op run` (one 1Password unlock) so the
+    # interactive ssh below is not wrapped by op run. `--no-masking` is required
+    # because Environment values are hidden by default. Tab-separated because
+    # GitHub tokens never contain a tab.
+    set -l tab (printf '\t')
+    set -l creds (op run --environment "$OP_COPILOT_ENVIRONMENT_ID" --no-masking -- sh -c 'printf "%s\t%s" "${COPILOT_GITHUB_TOKEN:-}" "${GH_TOKEN:-}"' 2>/dev/null)
+    set -l parts (string split -- $tab $creds)
+    set -l copilot_token $parts[1]
+    set -l gh_token ""
+    if test (count $parts) -ge 2
+        set gh_token $parts[2]
+    end
+
+    if test -z "$copilot_token"
+        echo "copilot_ssh: COPILOT_GITHUB_TOKEN not found in Environment '$OP_COPILOT_ENVIRONMENT_ID'." >&2
         echo "            Ensure 'op' >= 2.33.0-beta.02, the desktop-app integration is enabled, and the variable exists." >&2
         return 1
     end
 
-    env COPILOT_GITHUB_TOKEN="$token" ssh -o SendEnv=COPILOT_GITHUB_TOKEN $argv
+    # Forward COPILOT_GITHUB_TOKEN always; GH_TOKEN only when it is set.
+    set -l ssh_env_opts -o SendEnv=COPILOT_GITHUB_TOKEN
+    if test -n "$gh_token"
+        set -a ssh_env_opts -o SendEnv=GH_TOKEN
+    end
+
+    env COPILOT_GITHUB_TOKEN="$copilot_token" GH_TOKEN="$gh_token" ssh $ssh_env_opts $argv
 end
 
 # Completions: delegate to ssh's own completions for host/option arguments.
