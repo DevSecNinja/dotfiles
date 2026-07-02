@@ -20,7 +20,7 @@ TESTS_BASH_DIR="${REPO_ROOT}/tests/bash"
 
 # Auto-install BATS helper libraries if missing
 if [ ! -f "${TESTS_BASH_DIR}/libs/bats-support/load.bash" ]; then
-	bash "${TESTS_BASH_DIR}/setup_libs.sh"
+  bash "${TESTS_BASH_DIR}/setup_libs.sh"
 fi
 
 # shellcheck disable=SC1091
@@ -31,15 +31,15 @@ load "${TESTS_BASH_DIR}/libs/bats-assert/load"
 load "${TESTS_BASH_DIR}/libs/bats-file/load"
 
 common_setup() {
-	# Make REPO_ROOT visible to tests
-	export REPO_ROOT
+  # Make REPO_ROOT visible to tests
+  export REPO_ROOT
 
-	# Ensure ~/.local/bin is on PATH so chezmoi (and friends) are findable
-	export PATH="${HOME}/.local/bin:${PATH}"
+  # Ensure ~/.local/bin is on PATH so chezmoi (and friends) are findable
+  export PATH="${HOME}/.local/bin:${PATH}"
 }
 
 common_teardown() {
-	# Placeholder for future per-test cleanup; currently a no-op so test
-	# files can call it unconditionally.
-	:
+  # Placeholder for future per-test cleanup; currently a no-op so test
+  # files can call it unconditionally.
+  :
 }

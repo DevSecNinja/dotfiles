@@ -31,20 +31,20 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO_ROOT"
+cd "${REPO_ROOT}"
 
 version="${1:-}"
 outdir="${2:-${REPO_ROOT}/dist}"
 
-if [ -z "$version" ]; then
-	if version="$(git describe --tags --abbrev=0 2>/dev/null)"; then
-		:
-	else
-		version="v0.0.0-dev"
-	fi
+if [ -z "${version}" ]; then
+    if version="$(git describe --tags --abbrev=0 2>/dev/null)"; then
+        :
+    else
+        version="v0.0.0-dev"
+    fi
 fi
 
-case "$version" in
+case "${version}" in
 v*) ;;
 *) version="v${version}" ;;
 esac
@@ -56,25 +56,25 @@ src_fish="${REPO_ROOT}/home/dot_config/fish/completions/log.fish"
 src_bash="${REPO_ROOT}/home/dot_config/shell/completions.d/log.bash"
 src_zsh="${REPO_ROOT}/home/dot_config/shell/completions.d/log.zsh"
 
-for f in "$src_log" "$src_installer" "$src_license" "$src_fish" "$src_bash" "$src_zsh"; do
-	if [ ! -f "$f" ]; then
-		printf 'error: required source file missing: %s\n' "$f" >&2
-		exit 1
-	fi
+for f in "${src_log}" "${src_installer}" "${src_license}" "${src_fish}" "${src_bash}" "${src_zsh}"; do
+    if [ ! -f "${f}" ]; then
+        printf 'error: required source file missing: %s\n' "${f}" >&2
+        exit 1
+    fi
 done
 
-mkdir -p "$outdir"
+mkdir -p "${outdir}"
 rm -f \
-	"${outdir}/log.sh" \
-	"${outdir}/log.sh.sha256" \
-	"${outdir}/install-log-sh.sh" \
-	"${outdir}/install-log-sh.sh.sha256" \
-	"${outdir}/log-sh-${version}.tar.gz" \
-	"${outdir}/log-sh-${version}.tar.gz.sha256"
+    "${outdir}/log.sh" \
+    "${outdir}/log.sh.sha256" \
+    "${outdir}/install-log-sh.sh" \
+    "${outdir}/install-log-sh.sh.sha256" \
+    "${outdir}/log-sh-${version}.tar.gz" \
+    "${outdir}/log-sh-${version}.tar.gz.sha256"
 
 # Raw single-file asset (for direct `curl ... -o scripts/lib/log.sh`).
-cp "$src_log" "${outdir}/log.sh"
-cp "$src_installer" "${outdir}/install-log-sh.sh"
+cp "${src_log}" "${outdir}/log.sh"
+cp "${src_installer}" "${outdir}/install-log-sh.sh"
 chmod 0644 "${outdir}/log.sh"
 chmod 0755 "${outdir}/install-log-sh.sh"
 
@@ -84,12 +84,12 @@ trap 'rm -rf "$stage"' EXIT
 pkgdir="${stage}/log-sh-${version}"
 mkdir -p "${pkgdir}/completions"
 
-cp "$src_log" "${pkgdir}/log.sh"
-cp "$src_installer" "${pkgdir}/install-log-sh.sh"
-cp "$src_license" "${pkgdir}/LICENSE"
-cp "$src_fish" "${pkgdir}/completions/log.fish"
-cp "$src_bash" "${pkgdir}/completions/log.bash"
-cp "$src_zsh" "${pkgdir}/completions/log.zsh"
+cp "${src_log}" "${pkgdir}/log.sh"
+cp "${src_installer}" "${pkgdir}/install-log-sh.sh"
+cp "${src_license}" "${pkgdir}/LICENSE"
+cp "${src_fish}" "${pkgdir}/completions/log.fish"
+cp "${src_bash}" "${pkgdir}/completions/log.bash"
+cp "${src_zsh}" "${pkgdir}/completions/log.zsh"
 
 cat >"${pkgdir}/README.md" <<EOF
 # log-sh ${version}
@@ -145,28 +145,28 @@ See the full reference in
 EOF
 
 # Reproducible-ish tarball: pin owner/mtime to the source file's mtime.
-mtime="$(date -u -r "$src_log" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null ||
-	date -u '+%Y-%m-%dT%H:%M:%SZ')"
+mtime="$(date -u -r "${src_log}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null ||
+    date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
 tar \
-	--owner=0 --group=0 --numeric-owner \
-	--mtime="$mtime" \
-	--sort=name \
-	-C "$stage" \
-	-czf "${outdir}/log-sh-${version}.tar.gz" \
-	"log-sh-${version}"
+    --owner=0 --group=0 --numeric-owner \
+    --mtime="${mtime}" \
+    --sort=name \
+    -C "${stage}" \
+    -czf "${outdir}/log-sh-${version}.tar.gz" \
+    "log-sh-${version}"
 
 # sha256 sidecars.
-(cd "$outdir" && sha256sum "log.sh" >"log.sh.sha256")
-(cd "$outdir" && sha256sum "install-log-sh.sh" >"install-log-sh.sh.sha256")
-(cd "$outdir" && sha256sum "log-sh-${version}.tar.gz" \
-	>"log-sh-${version}.tar.gz.sha256")
+(cd "${outdir}" && sha256sum "log.sh" >"log.sh.sha256")
+(cd "${outdir}" && sha256sum "install-log-sh.sh" >"install-log-sh.sh.sha256")
+(cd "${outdir}" && sha256sum "log-sh-${version}.tar.gz" \
+    >"log-sh-${version}.tar.gz.sha256")
 
-printf 'Built release artifacts for %s in %s:\n' "$version" "$outdir"
+printf 'Built release artifacts for %s in %s:\n' "${version}" "${outdir}"
 ls -1 \
-	"${outdir}/log.sh" \
-	"${outdir}/log.sh.sha256" \
-	"${outdir}/install-log-sh.sh" \
-	"${outdir}/install-log-sh.sh.sha256" \
-	"${outdir}/log-sh-${version}.tar.gz" \
-	"${outdir}/log-sh-${version}.tar.gz.sha256"
+    "${outdir}/log.sh" \
+    "${outdir}/log.sh.sha256" \
+    "${outdir}/install-log-sh.sh" \
+    "${outdir}/install-log-sh.sh.sha256" \
+    "${outdir}/log-sh-${version}.tar.gz" \
+    "${outdir}/log-sh-${version}.tar.gz.sha256"
