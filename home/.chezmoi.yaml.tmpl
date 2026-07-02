@@ -64,16 +64,18 @@
 {{-   $useYubiKey = promptBool "use YubiKey for SSH" $useYubiKey -}}
 {{- end -}}
 
-{{- /* 1Password Environment ID holding the COPILOT_GITHUB_TOKEN variable, used */ -}}
-{{- /* by the `copilot-ssh` helper to forward the token to headless servers.    */ -}}
-{{- /* This is a non-secret identifier (useless without 1Password auth) and is  */ -}}
-{{- /* stored only in your LOCAL chezmoi config, never committed. Leave empty   */ -}}
-{{- /* on machines that don't run `copilot-ssh`. See docs/copilot-cli.md.       */ -}}
-{{- $opCopilotEnvironmentId := "" -}}
+{{- /* 1Password Environment ID holding the COPILOT_GITHUB_TOKEN (and optional  */ -}}
+{{- /* GH_TOKEN) variables, used by the `copilot-ssh` helper to forward tokens  */ -}}
+{{- /* to headless servers. This is a NON-SECRET identifier — it is useless     */ -}}
+{{- /* without authenticating to 1Password — so it is safe to hardcode as the   */ -}}
+{{- /* default. Override per-machine by setting `opCopilotEnvironmentId` in your */ -}}
+{{- /* local chezmoi config, or at the interactive init prompt. See             */ -}}
+{{- /* docs/copilot-cli.md.                                                     */ -}}
+{{- $opCopilotEnvironmentId := "gmplb2x4m3ppmvca6l2ts5ihdi" -}}
 {{- if hasKey . "opCopilotEnvironmentId" -}}
 {{-   $opCopilotEnvironmentId = .opCopilotEnvironmentId -}}
 {{- else if $interactive -}}
-{{-   $opCopilotEnvironmentId = promptString "1Password Environment ID for Copilot CLI (optional)" $opCopilotEnvironmentId -}}
+{{-   $opCopilotEnvironmentId = promptString "1Password Environment ID for Copilot CLI" $opCopilotEnvironmentId -}}
 {{- end -}}
 
 {{- /* Extract GitHub username from email or prompt */ -}}

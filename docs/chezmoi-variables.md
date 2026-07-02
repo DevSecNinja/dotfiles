@@ -28,12 +28,13 @@ templates and scripts.
 
 ## GitHub Copilot CLI
 
-- `opCopilotEnvironmentId` — The [1Password Environment][openv] ID that holds a
-  `COPILOT_GITHUB_TOKEN` variable. Used by the `copilot-ssh` / `copilot_ssh`
-  helper to forward the token to headless servers over SSH. This is a non-secret
-  identifier (useless without authenticating to 1Password) and is stored only in
-  your **local** chezmoi config — it is never committed. Leave empty on machines
-  that don't run the helper. Exported to your shell as
+- `opCopilotEnvironmentId` — The [1Password Environment][openv] ID that holds the
+  `COPILOT_GITHUB_TOKEN` (and optional `GH_TOKEN`) variables. Used by the
+  `copilot-ssh` / `copilot_ssh` helper to forward the tokens to headless servers
+  over SSH. This is a **non-secret** identifier (useless without authenticating
+  to 1Password), so a shared default is hardcoded in `.chezmoi.yaml.tmpl`.
+  Override it per-machine by setting `opCopilotEnvironmentId` in your local
+  chezmoi config or at the interactive init prompt. Exported to your shell as
   `OP_COPILOT_ENVIRONMENT_ID`. See [copilot-cli.md](copilot-cli.md).
 
 [openv]: https://www.1password.dev/environments

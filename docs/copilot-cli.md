@@ -66,9 +66,11 @@ workstation                                   headless server (svldev, …)
    PAT (optional — omit it if you only want Copilot).
 3. **Get the Environment ID.** Open the Environment → **Manage environment →
    Copy environment ID**. This ID is not a secret.
-4. **Tell chezmoi.** Set the `opCopilotEnvironmentId` variable (prompted on
-   `chezmoi init`, or re-enter with `chezmoi init --data=false`). It is stored in
-   your local chezmoi config only and exported as `OP_COPILOT_ENVIRONMENT_ID`.
+4. **Tell chezmoi (usually nothing to do).** The Environment ID is a non-secret
+   identifier, so a shared default is hardcoded in `.chezmoi.yaml.tmpl` and
+   exported as `OP_COPILOT_ENVIRONMENT_ID`. To use a different Environment,
+   override `opCopilotEnvironmentId` in your local chezmoi config or at the
+   interactive init prompt (`chezmoi init --data=false` to re-enter).
 5. **1Password CLI.** Install the [1Password CLI][opcli] **beta ≥ 2.33.0-beta.02**
    and enable the **desktop-app integration** (so `op run` unlocks with
    biometrics — no service-account token needed). Environment support is beta.
