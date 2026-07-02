@@ -25,6 +25,12 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN f
         return 0
     end
 
+    if test (count $argv) -eq 0
+        echo "copilot_ssh: no destination given." >&2
+        echo "Usage: copilot_ssh [ssh options...] <host>   (e.g. copilot_ssh svldev)" >&2
+        return 1
+    end
+
     if not command -q op
         echo "copilot_ssh: 'op' (1Password CLI) not found; using plain ssh (no token forwarded)." >&2
         command ssh $argv

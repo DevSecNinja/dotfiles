@@ -1,0 +1,40 @@
+#!/bin/bash
+# chezmoi modify_ script: idempotently set VS Code's "remote.SSH.path" to the
+# copilot-ssh-proxy helper so VS Code Remote-SSH forwards the GitHub Copilot CLI
+# / gh tokens (see docs/copilot-cli.md). chezmoi passes the current settings.json
+# on stdin and replaces it with our stdout.
+#
+# Safety-first, because settings.json is user-edited and VS Code writes it too:
+#   - Never clobbers: if the file is not strict JSON (VS Code allows // comments
+#     and trailing commas, which jq cannot parse) it is emitted byte-for-byte
+#     unchanged and a hint is printed to stderr.
+#   - Low churn: if the key already has the desired value the input is emitted
+#     unchanged, preserving the user's formatting/comments.
+#   - Only ever sets a single key; all other settings are preserved.
+set -euo pipefail
+
+proxy="{{ .chezmoi.homeDir }}/.local/bin/copilot-ssh-proxy.sh"
+# Capture stdin preserving trailing newlines ($(cat) would strip them), so the
+# "unchanged" paths below are truly byte-for-byte no-ops.
+input="$(cat; printf x)"
+input="${input%x}"
+
+# Empty (file absent / whitespace only) -> start from an empty object.
+if [ -z "$(printf '%s' "$input" | tr -d '[:space:]')" ]; then
+	input='{}'
+fi
+
+# If the key already matches, emit unchanged (no churn, keeps comments intact).
+current="$(printf '%s' "$input" | jq -r '."remote.SSH.path" // empty' 2>/dev/null || true)"
+if [ "$current" = "$proxy" ]; then
+	printf '%s' "$input"
+	exit 0
+fi
+
+# Only edit when the file parses as strict JSON; never rewrite JSONC.
+if printf '%s' "$input" | jq empty >/dev/null 2>&1; then
+	printf '%s' "$input" | jq --indent 4 --arg p "$proxy" '.["remote.SSH.path"] = $p'
+else
+	printf '%s' "$input"
+	echo "modify_settings.json: VS Code settings.json is not plain JSON (has comments or trailing commas); leaving it unchanged. Add \"remote.SSH.path\": \"$proxy\" manually. See docs/copilot-cli.md." >&2
+fi

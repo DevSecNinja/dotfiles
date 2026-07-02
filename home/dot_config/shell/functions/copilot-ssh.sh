@@ -32,6 +32,12 @@ copilot-ssh() {
         return 0
     fi
 
+    if [ "$#" -eq 0 ]; then
+        echo "copilot-ssh: no destination given." >&2
+        echo "Usage: copilot-ssh [ssh options...] <host>   (e.g. copilot-ssh svldev)" >&2
+        return 1
+    fi
+
     if ! command -v op >/dev/null 2>&1; then
         echo "copilot-ssh: 'op' (1Password CLI) not found; using plain ssh (no token forwarded)." >&2
         command ssh "$@"
