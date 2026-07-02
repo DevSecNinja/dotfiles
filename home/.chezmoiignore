@@ -14,6 +14,7 @@ renovate.json
 
 {{ if ne .chezmoi.os "darwin" }}
 .chezmoiscripts/darwin/**
+Library/Application Support/Code/User/settings.json
 {{ end }}
 
 {{ if eq .chezmoi.os "windows" }}

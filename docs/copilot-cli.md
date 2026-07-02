@@ -103,14 +103,20 @@ centrally-managed pieces close that gap with **no per-repo changes**:
    by chezmoi) is a drop-in `ssh` for VS Code: for hosts matching
    `COPILOT_SSH_HOST_PATTERN` (default `svl`) it reads the tokens from your
    1Password Environment and adds `-o SendEnv=…`; every other host gets a plain
-   `ssh`. Point VS Code at it (one-time, per machine):
+   `ssh`. VS Code is pointed at it via the `remote.SSH.path` setting:
 
-   ```jsonc
-   // VS Code user settings.json
-   // macOS:   ~/Library/Application Support/Code/User/settings.json
-   // Linux:   ~/.config/Code/User/settings.json
-   "remote.SSH.path": "/Users/<you>/.local/bin/copilot-ssh-proxy.sh"
-   ```
+   - **macOS:** managed automatically — a chezmoi `modify_` script sets
+     `remote.SSH.path` in `~/Library/Application Support/Code/User/settings.json`
+     on `chezmoi apply`. It only ever sets that one key and never rewrites a
+     `settings.json` that contains comments/trailing commas (JSONC); in that case
+     it prints a hint to add the line manually.
+   - **Other OSes / manual:** add it to your VS Code user `settings.json`:
+
+     ```jsonc
+     // Linux:   ~/.config/Code/User/settings.json
+     // Windows: %APPDATA%\Code\User\settings.json
+     "remote.SSH.path": "/home/<you>/.local/bin/copilot-ssh-proxy.sh"
+     ```
 
    With this, the VS Code Server on the dev host inherits the tokens, so the
    **integrated terminal** has `copilot` and `gh` authenticated (scenario #1).

@@ -62,6 +62,13 @@ EOF
 	[[ "$output" =~ "Usage: copilot-ssh" ]]
 }
 
+@test "copilot-ssh: shows usage and errors when no destination is given" {
+	run copilot-ssh
+	[ "$status" -eq 1 ]
+	[[ "$output" =~ "no destination given" ]]
+	[[ "$output" =~ "Usage: copilot-ssh" ]]
+}
+
 @test "copilot-ssh: falls back to plain ssh when op is not installed" {
 	_stub_ssh
 	# PATH without op (stub dir has only ssh); real op excluded.
