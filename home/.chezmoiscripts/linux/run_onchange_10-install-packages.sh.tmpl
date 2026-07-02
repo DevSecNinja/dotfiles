@@ -34,6 +34,46 @@ brew_install_quiet() {
 	fi
 }
 
+# Helper: install a Homebrew cask (GUI application) quietly, mirroring
+# brew_install_quiet but for casks. Already-installed casks are skipped.
+brew_install_cask_quiet() {
+	pkg="$1"
+	if brew list --cask --versions "$pkg" >/dev/null 2>&1; then
+		log_step "$pkg (cask) already installed"
+		return 0
+	fi
+	log_step "Installing $pkg (cask)"
+	if output=$(brew install --cask "$pkg" 2>&1); then
+		log_result "Installed $pkg (cask)"
+	else
+		log_warn "Failed to install $pkg (cask)"
+		printf '%s\n' "$output" | log_data WARN "brew output"
+	fi
+}
+
+# Helper: install a Mac App Store app via `mas`. Requires the `mas` formula
+# (installed with the full-mode Homebrew formulas). Already-installed apps are
+# skipped based on their App Store ID.
+mas_install_quiet() {
+	app_id="$1"
+	app_name="$2"
+	if ! command -v mas >/dev/null 2>&1; then
+		log_warn "mas not available; skipping App Store app $app_name ($app_id)"
+		return 0
+	fi
+	if mas list 2>/dev/null | grep -q "^$app_id "; then
+		log_step "$app_name ($app_id) already installed"
+		return 0
+	fi
+	log_step "Installing $app_name ($app_id)"
+	if output=$(mas install "$app_id" 2>&1); then
+		log_result "Installed $app_name ($app_id)"
+	else
+		log_warn "Failed to install $app_name ($app_id)"
+		printf '%s\n' "$output" | log_data WARN "mas output"
+	fi
+}
+
 # Check if running with sudo privileges
 if [ "$EUID" -eq 0 ]; then
 	log_warn "Running as root, commands will execute directly"
@@ -193,22 +233,49 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 
 log_step "Installing packages with Homebrew"
-# Install light mode packages (always)
-# {{ range .packages.darwin.brew.light }}
+# Install light mode formulas (always)
+# {{ range .packages.darwin.brew.formulas.light }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 
 # {{ if eq .installType "full" }}
-# Install full mode packages (additional)
-# {{ range .packages.darwin.brew.full }}
+# Install full mode formulas (additional)
+# {{ range .packages.darwin.brew.formulas.full }}
 brew_install_quiet {{ . | quote }}
 # {{ end }}
 # {{ end }}
 
 # {{ if .useYubiKey }}
 # YubiKey extras (darwin brew) — installed when useYubiKey is true
-# {{ range .packages.darwin.brew.yubikey }}
+# {{ range .packages.darwin.brew.formulas.yubikey }}
 brew_install_quiet {{ . | quote }}
+# {{ end }}
+# {{ end }}
+
+# Install Homebrew casks (GUI applications)
+# {{ if or .packages.darwin.brew.cask.light (and (eq .installType "full") .packages.darwin.brew.cask.full) }}
+log_step "Installing casks with Homebrew"
+# {{ range .packages.darwin.brew.cask.light }}
+brew_install_cask_quiet {{ . | quote }}
+# {{ end }}
+# {{ if eq .installType "full" }}
+# {{ range .packages.darwin.brew.cask.full }}
+brew_install_cask_quiet {{ . | quote }}
+# {{ end }}
+# {{ end }}
+# {{ end }}
+
+# Install Mac App Store apps via `mas`
+# {{ $appStore := index .packages.darwin.brew "app-store" }}
+# {{ if or $appStore.light (and (eq .installType "full") $appStore.full) }}
+log_step "Installing Mac App Store apps"
+# {{ range $appStore.light }}
+mas_install_quiet {{ .id | quote }} {{ .name | quote }}
+# {{ end }}
+# {{ if eq .installType "full" }}
+# {{ range $appStore.full }}
+mas_install_quiet {{ .id | quote }} {{ .name | quote }}
+# {{ end }}
 # {{ end }}
 # {{ end }}
 # {{ end }}

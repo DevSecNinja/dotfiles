@@ -164,6 +164,27 @@ strip_template() {
 	grep -q '\.installType' "$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
 }
 
+@test "chezmoi-scripts: install-packages installs macOS Homebrew casks" {
+	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
+	grep -q "brew install --cask" "$script"
+	grep -q '\.packages\.darwin\.brew\.cask\.' "$script"
+}
+
+@test "chezmoi-scripts: install-packages installs Mac App Store apps via mas" {
+	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
+	grep -q "mas install" "$script"
+	grep -q 'index .packages.darwin.brew "app-store"' "$script"
+}
+
+@test "chezmoi-scripts: install-packages references nested darwin brew formulas" {
+	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
+	grep -q '\.packages\.darwin\.brew\.formulas\.' "$script"
+	# The old flat darwin.brew.light/full structure must no longer be used.
+	! grep -qE '\.packages\.darwin\.brew\.(light|full|yubikey)\b' "$script"
+	# The intermediate darwin.brew.brew.* naming has been renamed to formulas.
+	! grep -qE '\.packages\.darwin\.brew\.brew\.' "$script"
+}
+
 @test "chezmoi-scripts: darwin run_once_before_10-setup-fish-default-shell.sh.tmpl exists" {
 	[ -f "$DARWIN_SCRIPTS_DIR/run_once_before_10-setup-fish-default-shell.sh.tmpl" ]
 }
