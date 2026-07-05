@@ -16,8 +16,8 @@
 LOG_TAG="gh-telemetry"
 
 if ! command -v gh >/dev/null 2>&1; then
-	log_info "gh CLI not found, nothing to do"
-	exit 0
+    log_info "gh CLI not found, nothing to do"
+    exit 0
 fi
 
 log_info "gh has no configurable telemetry; export DO_NOT_TRACK=1 to opt out broadly"

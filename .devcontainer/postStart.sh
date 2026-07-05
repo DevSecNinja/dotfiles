@@ -23,26 +23,26 @@ workspace_home="${1:-/workspaces/dotfiles/home}"
 export PATH="${HOME}/.local/share/mise/shims:${HOME}/.local/bin:${PATH}"
 
 if ! command -v chezmoi >/dev/null 2>&1; then
-	echo "[postStart] chezmoi not on PATH; skipping source re-point" >&2
-	exit 0
+    echo "[postStart] chezmoi not on PATH; skipping source re-point" >&2
+    exit 0
 fi
 
-if [ ! -d "$workspace_home" ]; then
-	echo "[postStart] '$workspace_home' not found; skipping source re-point" >&2
-	exit 0
+if [ ! -d "${workspace_home}" ]; then
+    echo "[postStart] '${workspace_home}' not found; skipping source re-point" >&2
+    exit 0
 fi
 
 current_source="$(chezmoi source-path 2>/dev/null || true)"
-if [ "$current_source" = "$workspace_home" ]; then
-	echo "[postStart] chezmoi source already points at $workspace_home"
-	exit 0
+if [ "${current_source}" = "${workspace_home}" ]; then
+    echo "[postStart] chezmoi source already points at ${workspace_home}"
+    exit 0
 fi
 
-echo "[postStart] Re-pointing chezmoi source: ${current_source:-<unset>} -> $workspace_home"
+echo "[postStart] Re-pointing chezmoi source: ${current_source:-<unset>} -> ${workspace_home}"
 # init (without --apply) only regenerates the config from .chezmoi.yaml.tmpl,
 # which persists `sourceDir: {{ .chezmoi.sourceDir }}`. Data is read from the
 # existing chezmoi state DB, so this is non-interactive and side-effect free.
-chezmoi init --no-tty --source="$workspace_home"
+chezmoi init --no-tty --source="${workspace_home}"
 
 echo "[postStart] Done. chezmoi now sources from the workspace."
 echo "[postStart] Use 'chezmoi diff' to preview and 'chezmoi apply' to sync."

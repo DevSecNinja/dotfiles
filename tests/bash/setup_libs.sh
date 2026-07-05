@@ -19,21 +19,21 @@ BATS_ASSERT_VERSION="v2.1.0"
 BATS_FILE_VERSION="v0.4.0"
 
 download_lib() {
-	local name="$1" version="$2" dest="${LIBS_DIR}/${1}"
+    local name="$1" version="$2" dest="${LIBS_DIR}/${1}"
 
-	if [ -f "${dest}/load.bash" ]; then
-		return 0
-	fi
+    if [ -f "${dest}/load.bash" ]; then
+        return 0
+    fi
 
-	echo "Downloading ${name} ${version}..."
-	local url="https://github.com/bats-core/${name}/archive/refs/tags/${version}.tar.gz"
-	local tmpdir
-	tmpdir=$(mktemp -d)
+    echo "Downloading ${name} ${version}..."
+    local url="https://github.com/bats-core/${name}/archive/refs/tags/${version}.tar.gz"
+    local tmpdir
+    tmpdir=$(mktemp -d)
 
-	curl -fsSL "${url}" | tar -xz -C "${tmpdir}"
-	rm -rf "${dest}"
-	mv "${tmpdir}/${name}-${version#v}" "${dest}"
-	rm -rf "${tmpdir}"
+    curl -fsSL "${url}" | tar -xz -C "${tmpdir}"
+    rm -rf "${dest}"
+    mv "${tmpdir}/${name}-${version#v}" "${dest}"
+    rm -rf "${tmpdir}"
 }
 
 mkdir -p "${LIBS_DIR}"

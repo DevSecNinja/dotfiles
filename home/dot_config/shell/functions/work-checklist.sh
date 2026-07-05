@@ -15,7 +15,7 @@
 # Usage: work-checklist
 
 work-checklist() {
-	cat <<'EOF'
+    cat <<'EOF'
 Work machine — manual post-install checklist
 
 These steps can't be automated by chezmoi (network-gated, browser flows,
@@ -50,5 +50,5 @@ EOF
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-	work-checklist "$@"
+    work-checklist "$@"
 fi
