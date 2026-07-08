@@ -92,6 +92,51 @@ they pick up the forwarded tokens. Any extra `ssh` arguments are passed through
 If `op` or `OP_COPILOT_ENVIRONMENT_ID` is unavailable, the helper falls back to
 a plain `ssh` (you connect, but the tools won't receive a token).
 
+## VS Code Remote-SSH and Dev Containers
+
+VS Code Remote-SSH connects with its **own** `ssh` invocation, so it does not go
+through the `copilot-ssh` / `copilot_ssh` helper — the tokens won't reach the
+VS Code Server (or its integrated terminals / dev containers) by default. Two
+centrally-managed pieces close that gap with **no per-repo changes**:
+
+1. **`remote.SSH.path` wrapper** — `~/.local/bin/copilot-ssh-proxy.sh` (installed
+   by chezmoi) is a drop-in `ssh` for VS Code: for hosts matching
+   `COPILOT_SSH_HOST_PATTERN` (default `svl`) it reads the tokens from your
+   1Password Environment and adds `-o SendEnv=…`; every other host gets a plain
+   `ssh`. Point VS Code at it (one-time, per machine):
+
+   ```jsonc
+   // VS Code user settings.json
+   // macOS:   ~/Library/Application Support/Code/User/settings.json
+   // Linux:   ~/.config/Code/User/settings.json
+   "remote.SSH.path": "/Users/<you>/.local/bin/copilot-ssh-proxy.sh"
+   ```
+
+   With this, the VS Code Server on the dev host inherits the tokens, so the
+   **integrated terminal** has `copilot` and `gh` authenticated (scenario #1).
+   1Password will prompt to unlock when VS Code connects.
+
+2. **`remoteEnv` baked into the base dev container image** — the
+   `dotfiles-devcontainer` image embeds (via `devcontainer-prebuild.json`):
+
+   ```jsonc
+   "remoteEnv": {
+     "COPILOT_GITHUB_TOKEN": "${localEnv:COPILOT_GITHUB_TOKEN}",
+     "GH_TOKEN": "${localEnv:GH_TOKEN}"
+   }
+   ```
+
+   Dev Container image metadata is merged into every repo that uses the image,
+   so this propagates the tokens from the VS Code Server host (which has them
+   from piece 1) **into the container** — covering scenario #2 with no
+   per-repo `devcontainer.json` edits. Repos pick it up when Renovate bumps the
+   pinned image digest. Where the tokens aren't present (local dev, Codespaces)
+   the values resolve to empty, which the tools treat as unset (harmless).
+
+> The VS Code **Copilot chat / completions extension** is unrelated to this — it
+> authenticates via VS Code's own GitHub sign-in and already works over
+> Remote-SSH / Dev Containers.
+
 ## Security notes
 
 - The tokens live only in 1Password (at rest), transiently in the helper's
