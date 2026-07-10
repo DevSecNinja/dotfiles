@@ -121,20 +121,14 @@ packages:
     # WinGet packages
     winget:
       light:
-        - Fastfetch-cli.Fastfetch
         - Git.Git
         - Microsoft.PowerShell
         - twpayne.chezmoi
       full:
-        - Docker.DockerDesktop
-        - GitHub.Copilot
-        - jdx.mise
-        - Microsoft.APM
+        - Fastfetch-cli.Fastfetch
         - Microsoft.VisualStudioCode
-        - Microsoft.WindowsTerminal
         - JanDeDobbeleer.OhMyPosh
         - Microsoft.WSL
-        - Task.Task
       # Installed only when useYubiKey is true.
       yubikey:
         - Yubico.YubikeyManagerCLI
