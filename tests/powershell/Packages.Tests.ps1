@@ -189,11 +189,19 @@ Describe "Windows Package Configuration" {
             $lightPackages | Should -Contain "twpayne.chezmoi"
         }
 
-        It "Full mode should include development tools (VSCode, WSL, shell tooling)" {
+        It "Full mode should include development tools (VSCode, WSL, OhMyPosh)" {
             $fullPackages = $script:ChezmoiData.packages.windows.winget.full
             $fullPackages | Should -Contain "Microsoft.VisualStudioCode"
             $fullPackages | Should -Contain "Microsoft.WSL"
             $fullPackages | Should -Contain "JanDeDobbeleer.OhMyPosh"
+        }
+
+        It "Windows Terminal should be configured separately from the winget full list" {
+            $fullPackages = $script:ChezmoiData.packages.windows.winget.full
+            $fullPackages | Should -Not -Contain "Microsoft.WindowsTerminal"
+
+            $terminalSetupScript = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_once_setup-windows-terminal.ps1"
+            Test-Path $terminalSetupScript | Should -Be $true
         }
 
         It "Full mode should include WSL" {
@@ -264,12 +272,12 @@ Describe "Windows Package Configuration" {
             $script:ChezmoiData.packages.windows.powershell_git_modules.PSObject.Properties.Name | Should -Contain 'full'
         }
 
-        It "Full mode may leave Git-based modules empty" {
+        It "Full mode should leave Git-based modules empty" {
             $fullGitModules = $script:ChezmoiData.packages.windows.powershell_git_modules.full
-            @($fullGitModules).Count | Should -BeGreaterOrEqual 0
+            $fullGitModules | Should -BeNullOrEmpty
         }
 
-        It "Git modules should have required properties (name, url, destination)" {
+        It "Configured Git modules should have required properties (name, url, destination)" {
             $allGitModules = @()
             if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
                 $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
@@ -285,7 +293,7 @@ Describe "Windows Package Configuration" {
             }
         }
 
-        It "Git module URLs should be valid GitHub URLs" {
+        It "Configured Git module URLs should be valid GitHub URLs" {
             $allGitModules = @()
             if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
                 $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
@@ -299,7 +307,7 @@ Describe "Windows Package Configuration" {
             }
         }
 
-        It "Git module destinations should not contain invalid path characters" {
+        It "Configured Git module destinations should not contain invalid path characters" {
             $allGitModules = @()
             if ($script:ChezmoiData.packages.windows.powershell_git_modules.light) {
                 $allGitModules += $script:ChezmoiData.packages.windows.powershell_git_modules.light
