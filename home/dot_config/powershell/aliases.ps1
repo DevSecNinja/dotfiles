@@ -45,6 +45,8 @@ function motd { fastfetch @args }
 
 # SSH
 function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> Public key copied to clipboard.' }
+Set-Alias -Name copilot-ssh -Value Connect-CopilotSsh
+Set-Alias -Name copilot_ssh -Value Connect-CopilotSsh
 
 # Winget shortcuts
 Set-Alias -Name wup -Value Invoke-WingetUpgrade

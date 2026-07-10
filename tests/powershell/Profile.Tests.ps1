@@ -266,6 +266,28 @@ Describe "DotfilesHelpers Module" {
         # Read all module public function files
         $script:ModuleContent = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
             ForEach-Object { Get-Content $_.FullName -Raw } | Out-String
+
+        # Intentionally private helpers defined in Public/*.ps1 but deliberately
+        # NOT exported by the manifest. Add a function name here only if it is a
+        # true internal helper (not meant to be called from a shell session).
+        $script:PrivateHelpers = @(
+            'Remove-JsonComment'
+            'Invoke-NerdFontInstaller'
+        )
+
+        # Discover every top-level function defined across the Public files using
+        # the PowerShell parser (robust against comments / nested functions).
+        $script:DefinedFunctions = Get-ChildItem -Path $script:ModulePublicPath -Filter "*.ps1" |
+            ForEach-Object {
+                $ast = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$null)
+                $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $false)
+            } | Select-Object -ExpandProperty Name
+
+        # Functions that are expected to be exported (all public ones).
+        $script:PublicFunctions = $script:DefinedFunctions | Where-Object { $_ -notin $script:PrivateHelpers }
+
+        # The manifest's declared export list.
+        $script:ManifestExports = (Import-PowerShellDataFile -Path (Join-Path $script:ModulePath "DotfilesHelpers.psd1")).FunctionsToExport
     }
 
     It "Module manifest should be importable" {
@@ -279,6 +301,21 @@ Describe "DotfilesHelpers Module" {
         $manifest.ExportedFunctions.Keys | Should -Contain 'Test-WingetUpdates'
         $manifest.ExportedFunctions.Keys | Should -Contain 'Invoke-WingetUpgrade'
         $manifest.ExportedFunctions.Keys | Should -Contain 'Show-Aliases'
+    }
+
+    It "Every public function should be registered in the manifest FunctionsToExport" {
+        $missing = $script:PublicFunctions | Where-Object { $_ -notin $script:ManifestExports }
+        $missing | Should -BeNullOrEmpty -Because "these Public/*.ps1 functions are not listed in DotfilesHelpers.psd1 FunctionsToExport: $($missing -join ', ')"
+    }
+
+    It "Every manifest-exported function should be defined in a public file" {
+        $undefined = $script:ManifestExports | Where-Object { $_ -notin $script:DefinedFunctions }
+        $undefined | Should -BeNullOrEmpty -Because "these manifest exports have no matching function definition in Public/*.ps1: $($undefined -join ', ')"
+    }
+
+    It "Private helpers should not be exported by the manifest" {
+        $leaked = $script:PrivateHelpers | Where-Object { $_ -in $script:ManifestExports }
+        $leaked | Should -BeNullOrEmpty -Because "these helpers are meant to be private: $($leaked -join ', ')"
     }
 
     It "Should define Chezmoi utility functions" {

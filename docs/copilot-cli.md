@@ -41,8 +41,9 @@ workstation                                   headless server (svldev, …)
   exactly `COPILOT_GITHUB_TOKEN` (required) and, optionally, `GH_TOKEN` for the
   `gh` CLI. Same names end-to-end, so nothing is remapped. Keeping them separate
   lets each tool's token be scoped and rotated independently.
-- **Workstation:** the `copilot-ssh` (bash/zsh) / `copilot_ssh` (fish) helper
-  reads the token(s) via `op run` and forwards them with SSH `SendEnv`.
+- **Workstation:** the `copilot-ssh` (bash/zsh) / `copilot_ssh` (fish) /
+  `copilot-ssh` (PowerShell) helper reads the token(s) via `op run` and forwards
+  them with SSH `SendEnv`.
 - **Server:** `sshd` opts in with `AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN`.
   SSH's secure default is to drop all client-sent env vars, so this server-side
   allow-list is required — it is managed by the `system_setup` role in the
@@ -83,6 +84,7 @@ The server side needs no manual steps — the `docker` repo's Ansible pull adds
 ```bash
 copilot-ssh svldev        # bash / zsh
 copilot_ssh svldev        # fish
+copilot-ssh svldev        # PowerShell (Windows workstation)
 ```
 
 Then run `copilot` (and `gh`, if you added `GH_TOKEN`) on the server as usual —

@@ -25,6 +25,9 @@
         'Reset-ChezmoiEntries'
         'Invoke-ChezmoiSigning'
 
+        # Copilot CLI
+        'Connect-CopilotSsh'
+
         # Winget utilities
         'Test-WingetUpdates'
         'Invoke-WingetUpgrade'
