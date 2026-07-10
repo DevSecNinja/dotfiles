@@ -111,8 +111,10 @@ function Connect-CopilotSsh {
             (rendered from the chezmoi `opCopilotEnvironmentId` variable). The
             Environment must contain COPILOT_GITHUB_TOKEN; GH_TOKEN is optional.
 
-        If `op` or the Environment ID is unavailable, it falls back to a plain
-        ssh so the command still connects (the tools just won't get a token).
+        Pre-flight checks are fatal: if `ssh` or `op` is missing, or
+        OP_COPILOT_ENVIRONMENT_ID is unset, the command aborts without
+        connecting (rather than silently opening a token-less session that
+        would leave copilot/gh unauthenticated on the server).
     .PARAMETER HostName
         The SSH destination (e.g. svldev). Tab-completes from the `Host` aliases
         in your ~/.ssh/config.
@@ -167,18 +169,28 @@ function Connect-CopilotSsh {
     if ($SshArgument) { $passthrough += $SshArgument }
     if (-not [string]::IsNullOrEmpty($HostName)) { $passthrough += $HostName }
 
+    # Pre-flight checks. Each is fatal: the whole purpose of this helper is to
+    # forward GitHub tokens, so if we cannot, we stop rather than silently
+    # opening a token-less ssh session (which would leave copilot/gh
+    # unauthenticated on the server in a confusing way).
+    if (-not (Get-Command ssh -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Error "copilot-ssh: 'ssh' (OpenSSH client) was not found on PATH. Install the OpenSSH client and try again."
+        return
+    }
+
     if (-not (Get-Command op -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Warning "copilot-ssh: '1Password CLI' (op) not found; using plain ssh (no token forwarded)."
-        Write-Warning "            Enable it in 1Password -> Settings -> Developer -> 'Integrate with 1Password CLI',"
-        Write-Warning "            then restart your terminal. See docs/copilot-cli.md for details."
-        & ssh @passthrough
+        Write-Error ("copilot-ssh: '1Password CLI' (op) was not found on PATH; aborting (tokens cannot be forwarded).`n" +
+            "            1. Install it: https://developer.1password.com/docs/cli/get-started/ (>= 2.33.0-beta.02).`n" +
+            "            2. Enable the desktop-app integration: 1Password -> Settings -> Developer ->`n" +
+            "               'Integrate with 1Password CLI', then restart your terminal.`n" +
+            "            See docs/copilot-cli.md for details.")
         return
     }
 
     $envId = $env:OP_COPILOT_ENVIRONMENT_ID
     if ([string]::IsNullOrEmpty($envId)) {
-        Write-Warning "copilot-ssh: OP_COPILOT_ENVIRONMENT_ID is not set (set the chezmoi 'opCopilotEnvironmentId' variable); using plain ssh."
-        & ssh @passthrough
+        Write-Error ("copilot-ssh: OP_COPILOT_ENVIRONMENT_ID is not set; aborting (tokens cannot be forwarded).`n" +
+            "            Set the chezmoi 'opCopilotEnvironmentId' variable (see docs/copilot-cli.md).")
         return
     }
 

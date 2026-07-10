@@ -101,9 +101,12 @@ copilot-ssh svldev                 # host name tab-completes
 copilot-ssh svldev -- -A -p 2222   # extra ssh flags after --
 ```
 
-If `op` or `OP_COPILOT_ENVIRONMENT_ID` is unavailable, the helper falls back to
-a plain `ssh` (you connect, but the tools won't receive a token). When the
-1Password CLI is not found, the PowerShell helper points you to enable it in
+If `op` or `OP_COPILOT_ENVIRONMENT_ID` is unavailable, the **bash/zsh/fish**
+helpers fall back to a plain `ssh` (you connect, but the tools won't receive a
+token). The **PowerShell** helper instead runs fatal pre-flight checks and
+**aborts** if `ssh` or `op` is missing, or the Environment ID is unset — it
+never opens a token-less session. When the 1Password CLI is not found it tells
+you to (1) install it and (2) enable it in
 **1Password → Settings → Developer → "Integrate with 1Password CLI"**.
 
 ## Security notes

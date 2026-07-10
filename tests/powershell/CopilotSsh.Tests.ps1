@@ -112,8 +112,16 @@ Describe "Connect-CopilotSsh body" -Tag "Unit" {
         $script:Body | Should -Match 'SendEnv=GH_TOKEN'
     }
 
-    It "Should point users to 1Password Developer settings when op is missing" {
+    It "Should point users to install op and enable Developer settings when op is missing" {
+        $script:Body | Should -Match 'Install it'
         $script:Body | Should -Match 'Settings\s*->\s*Developer'
+    }
+
+    It "Should perform fatal pre-flight checks (abort, not fall back to plain ssh)" {
+        $script:Body | Should -Match "'ssh' \(OpenSSH client\) was not found"
+        # A bare '& ssh' fallback in the op/env-missing branches would defeat the
+        # purpose; ensure those branches Write-Error instead.
+        $script:Body | Should -Match 'aborting \(tokens cannot be forwarded\)'
     }
 
     It "HostName parameter should have an argument completer" {
@@ -162,21 +170,32 @@ Describe "Connect-CopilotSsh behaviour" -Tag "Unit" -Skip:(-not $script:IsWindow
         Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue
     }
 
-    It "Falls back to plain ssh when op is not installed" {
+    It "Aborts without invoking ssh when the OpenSSH client is missing" {
+        # Point PATH at an empty dir so neither ssh nor op resolve; the ssh
+        # pre-flight check must fire first and abort.
+        $emptyDir = (New-Item -ItemType Directory -Path (Join-Path $script:StubDir "nopath-$(Get-Random)")).FullName
+        $env:PATH = $emptyDir
+        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
+        $out | Should -Match "'ssh' \(OpenSSH client\) was not found"
+        $out | Should -Not -Match 'SSH_ARGS:'
+    }
+
+    It "Aborts without invoking ssh when op is not installed" {
         script:Remove-OpStub
         $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match "'1Password CLI' \(op\) not found"
+        $out | Should -Match "'1Password CLI' \(op\) was not found"
+        $out | Should -Match 'Install it'
         $out | Should -Match 'Settings -> Developer'
-        $out | Should -Match 'SSH_ARGS: myhost'
+        $out | Should -Not -Match 'SSH_ARGS:'
         $out | Should -Not -Match 'SendEnv'
     }
 
-    It "Falls back to plain ssh when the Environment ID is unset" {
+    It "Aborts without invoking ssh when the Environment ID is unset" {
         script:New-OpStub -Stdout "ctok$($script:Tab)gtok"
         Remove-Item Env:OP_COPILOT_ENVIRONMENT_ID -ErrorAction SilentlyContinue
         $out = (Connect-CopilotSsh myhost *>&1) | Out-String
         $out | Should -Match 'OP_COPILOT_ENVIRONMENT_ID is not set'
-        $out | Should -Match 'SSH_ARGS: myhost'
+        $out | Should -Not -Match 'SSH_ARGS:'
         $out | Should -Not -Match 'SendEnv'
     }
 
