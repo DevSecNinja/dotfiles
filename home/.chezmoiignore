@@ -1,6 +1,6 @@
+# Repo tooling / metadata that must never be applied to a device.
 .github/
 LICENSE
-README.md
 .lefthook.toml
 tests/
 install.sh
@@ -11,6 +11,12 @@ CONTRIBUTING.md
 STRUCTURE.md
 renovate.json
 .chezmoihelpers/
+
+# Developer/meta files that live alongside real dotfiles but should not land
+# on a device: documentation, scaffolding templates and stale ".old" copies.
+**/README.md
+**/_template.*
+**/*.old
 
 {{ if ne .chezmoi.os "darwin" }}
 .chezmoiscripts/darwin/**
