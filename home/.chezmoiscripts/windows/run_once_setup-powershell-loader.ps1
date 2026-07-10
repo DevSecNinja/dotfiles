@@ -25,7 +25,7 @@ $profiles = @(
 
 foreach ($profileItem in $profiles) {
     if (-not (Test-Path $profileItem.Source)) {
-        Write-Warning "⚠️  $($profileItem.Name) profile not found at $($profileItem.Source), skipping..."
+        Write-Warning "[WARN] $($profileItem.Name) profile not found at $($profileItem.Source), skipping..."
         continue
     }
 
@@ -35,10 +35,10 @@ foreach ($profileItem in $profiles) {
     }
 
     Copy-Item -Path $profileItem.Source -Destination $profileItem.Target -Force
-    Write-Host "✅ $($profileItem.Name) profile deployed to $($profileItem.Target)"
+    Write-Host "[OK] $($profileItem.Name) profile deployed to $($profileItem.Target)"
 }
 
-Write-Host "`n🎉 All PowerShell profiles have been deployed!"
+Write-Host "`n>> All PowerShell profiles have been deployed!"
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

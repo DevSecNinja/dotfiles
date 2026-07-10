@@ -9,16 +9,40 @@ else {
     exit 1
 }
 
+# Refresh PATH from the machine/user environment so tools installed earlier in
+# this same chezmoi run are visible here. The package install script (which
+# runs before this one) installs PowerShell 7 (pwsh) via winget, but winget
+# only updates the persisted environment — the current process keeps its old
+# PATH. Both the font install and the module install below shell out to pwsh,
+# so without this refresh they fail with "pwsh is not recognized".
+$machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+$env:Path = (@($machinePath, $userPath) | Where-Object { $_ }) -join ';'
+
 Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
-Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted #-PassThru
+
+# Set-PSResourceRepository ships with Microsoft.PowerShell.PSResourceGet and is
+# only present in PowerShell 7. chezmoi runs .ps1 scripts under Windows
+# PowerShell 5.1, which only has PowerShellGet's Set-PSRepository. Trust
+# PSGallery with whichever cmdlet is available so unattended module installs do
+# not prompt; skip gracefully if neither exists.
+if (Get-Command Set-PSResourceRepository -ErrorAction SilentlyContinue) {
+    Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted
+}
+elseif (Get-Command Set-PSRepository -ErrorAction SilentlyContinue) {
+    Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+}
+else {
+    Write-Warning "Neither Set-PSResourceRepository nor Set-PSRepository is available; skipping PSGallery trust configuration."
+}
 
 Write-Host "`nInstalling PowerShell Fonts..." -ForegroundColor Cyan
 
 # Install-DotfilesNerdFont (from the DotfilesHelpers module imported above) is
 # idempotent, delegates the actual install to pwsh (the NerdFonts module is
 # PowerShell 7 only), and verifies the font registered instead of swallowing
-# failures. See Public/FontManagement.ps1.
-# TODO: Move font install after installing packages since package install will install pwsh
+# failures. See Public/FontManagement.ps1. This runs after the package install
+# script so pwsh is already present (see the PATH refresh above).
 Install-DotfilesNerdFont -Name FiraCode -Scope CurrentUser | Out-Null
 
 Write-Host "`nInstalling PowerShell Modules..." -ForegroundColor Cyan

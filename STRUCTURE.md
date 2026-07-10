@@ -66,7 +66,8 @@ dotfiles/
 │   │   │   └── run_once_before_10-setup-fish.sh.tmpl  # Fish setup (macOS)
 │   │   └── windows/
 │   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
-│   │       ├── run_onchange_install-packages.ps1.tmpl # Development tools (winget, runs on packages.yaml change)
+│   │       ├── run_onchange_10-install-packages.ps1.tmpl # Development tools (winget, runs on packages.yaml change)
+│   │       ├── run_once_20-install-modules.ps1.tmpl   # PowerShell modules/fonts (after packages so pwsh exists)
 │   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing

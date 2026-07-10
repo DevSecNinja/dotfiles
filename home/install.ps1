@@ -278,8 +278,8 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "`n✅ Dotfiles installation complete!" -ForegroundColor Green
-Write-Host "💡 Run 'chezmoi update' to pull and apply the latest changes" -ForegroundColor Yellow
+Write-Host "`n[OK] Dotfiles installation complete!" -ForegroundColor Green
+Write-Host ">> Run 'chezmoi update' to pull and apply the latest changes" -ForegroundColor Yellow
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

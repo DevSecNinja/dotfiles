@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 Running initial Windows setup..." -ForegroundColor Cyan
+Write-Host ">> Running initial Windows setup..." -ForegroundColor Cyan
 
 # Create necessary directories
 $directories = @(
@@ -17,11 +17,11 @@ foreach ($dir in $directories) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
     else {
-        Write-Host "✅ Directory already exists: $dir" -ForegroundColor Green
+        Write-Host "[OK] Directory already exists: $dir" -ForegroundColor Green
     }
 }
 
-Write-Host "✅ Initial Windows setup complete!" -ForegroundColor Green
+Write-Host "[OK] Initial Windows setup complete!" -ForegroundColor Green
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor

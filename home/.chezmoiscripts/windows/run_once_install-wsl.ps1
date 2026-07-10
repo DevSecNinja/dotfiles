@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🐧 Checking WSL installation..." -ForegroundColor Cyan
+Write-Host ">> Checking WSL installation..." -ForegroundColor Cyan
 
 # Check if WSL is already installed
 $wslInstalled = $false
@@ -11,7 +11,7 @@ try {
     $wslCommand = Get-Command wsl.exe -ErrorAction SilentlyContinue
     if ($wslCommand) {
         $wslInstalled = $true
-        Write-Host "✅ WSL is already installed" -ForegroundColor Green
+        Write-Host "[OK] WSL is already installed" -ForegroundColor Green
     }
 }
 catch {
@@ -25,7 +25,7 @@ if (-not $wslInstalled) {
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
     if (-not $isAdmin) {
-        Write-Host "⚠️  WSL installation requires administrator privileges." -ForegroundColor Yellow
+        Write-Host "[WARN] WSL installation requires administrator privileges." -ForegroundColor Yellow
         Write-Host "Please run the following command in an elevated PowerShell:" -ForegroundColor Yellow
         Write-Host "  wsl --install -d Debian" -ForegroundColor Cyan
         exit 0
@@ -36,11 +36,11 @@ if (-not $wslInstalled) {
     wsl.exe --install -d Debian
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ WSL installed successfully" -ForegroundColor Green
-        Write-Host "⚠️  You may need to restart your computer for WSL to work properly." -ForegroundColor Yellow
+        Write-Host "[OK] WSL installed successfully" -ForegroundColor Green
+        Write-Host "[WARN] You may need to restart your computer for WSL to work properly." -ForegroundColor Yellow
     }
     else {
-        Write-Host "❌ WSL installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        Write-Host "[FAILED] WSL installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
         exit 1
     }
 }
@@ -53,7 +53,7 @@ else {
             Write-Host "WSL version: $wslVersion" -ForegroundColor Cyan
 
             if ($wslVersion -eq 1) {
-                Write-Host "⚠️  WARNING: WSL version 1 detected!" -ForegroundColor Yellow
+                Write-Host "[WARN] WSL version 1 detected!" -ForegroundColor Yellow
                 Write-Host "WSL 2 is recommended for better performance and compatibility." -ForegroundColor Yellow
                 Write-Host "To upgrade to WSL 2:" -ForegroundColor Yellow
                 Write-Host "  1. Run: wsl --set-default-version 2" -ForegroundColor Cyan
@@ -92,33 +92,57 @@ else {
             $skipReason = if ($installType -eq "light") { "light installation mode" }
                           elseif ($isCI -eq "true") { "CI environment" }
                           else { "non-interactive environment" }
-            Write-Host "⏭️  Skipping Debian installation ($skipReason)" -ForegroundColor Yellow
-            Write-Host "💡 To install manually, run: wsl --install -d Debian" -ForegroundColor Cyan
+            Write-Host "[SKIP] Skipping Debian installation ($skipReason)" -ForegroundColor Yellow
+            Write-Host ">> To install manually, run: wsl --install -d Debian" -ForegroundColor Cyan
             exit 0
         }
 
         # In interactive mode, run the installer
         Write-Host "Debian distribution not found. Installing..." -ForegroundColor Yellow
         Write-Host "Running: wsl --install -d Debian" -ForegroundColor Cyan
-        Write-Host "💡 You may be prompted for administrator privileges..." -ForegroundColor Yellow
+        Write-Host ">> You may be prompted for administrator privileges..." -ForegroundColor Yellow
 
         wsl.exe --install -d Debian
+        $installExit = $LASTEXITCODE
 
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Debian installed successfully" -ForegroundColor Green
-            Write-Host "💡 You can launch Debian by running: wsl" -ForegroundColor Yellow
+        # Verify Debian actually registered. `wsl --install` can return exit
+        # code 0 while only repairing/updating the WSL engine itself (e.g.
+        # "WSL installation appears to be corrupted ... Updating Windows
+        # Subsystem for Linux"). That engine update requires a reboot before
+        # any distribution can be installed, so a 0 exit code does not
+        # guarantee Debian is present.
+        $debianRegistered = $false
+        try {
+            $distros = wsl.exe --list --quiet 2>$null
+            $distroList = $distros | ForEach-Object {
+                $_.Trim() -replace '\x00', '' -replace '\r', ''
+            } | Where-Object { $_ -match '\S' }
+            $debianRegistered = [bool]($distroList -match "^Debian")
+        }
+        catch {
+            # Ignore errors; handled as "not registered" below.
+        }
+
+        if ($debianRegistered) {
+            Write-Host "[OK] Debian installed successfully" -ForegroundColor Green
+            Write-Host ">> You can launch Debian by running: wsl" -ForegroundColor Yellow
         }
         else {
-            Write-Host "❌ Debian installation failed with exit code $LASTEXITCODE" -ForegroundColor Red
+            Write-Host "[WARN] Debian is not registered yet (wsl --install exit code $installExit)." -ForegroundColor Yellow
+            Write-Host "       WSL likely updated its engine and needs a reboot to finish." -ForegroundColor Yellow
+            Write-Host ">> Reboot Windows, then run: wsl --install -d Debian" -ForegroundColor Cyan
+            Write-Host "   (or re-run .\install.ps1 / chezmoi apply after rebooting)" -ForegroundColor Cyan
+            # Exit non-zero so chezmoi does not record this run_once script as
+            # completed; it will retry automatically after the reboot.
             exit 1
         }
     }
     else {
-        Write-Host "✅ Debian distribution is installed" -ForegroundColor Green
+        Write-Host "[OK] Debian distribution is installed" -ForegroundColor Green
     }
 }
 
-Write-Host "`n💡 To launch WSL, run: wsl" -ForegroundColor Yellow
+Write-Host "`n>> To launch WSL, run: wsl" -ForegroundColor Yellow
 
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
