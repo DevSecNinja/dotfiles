@@ -88,11 +88,23 @@ copilot-ssh svldev        # PowerShell (Windows workstation)
 ```
 
 Then run `copilot` (and `gh`, if you added `GH_TOKEN`) on the server as usual —
-they pick up the forwarded tokens. Any extra `ssh` arguments are passed through
-(e.g. `copilot-ssh -A svldev`).
+they pick up the forwarded tokens.
+
+On the **bash/zsh/fish** helpers, extra `ssh` arguments are passed through
+directly (e.g. `copilot-ssh -A svldev`). On the **PowerShell** helper the host
+name is a real parameter that tab-completes from your `~/.ssh/config` `Host`
+entries; because ssh flags such as `-p`/`-o` collide with PowerShell's parameter
+binder, pass any extra ssh options after a `--` separator:
+
+```powershell
+copilot-ssh svldev                 # host name tab-completes
+copilot-ssh svldev -- -A -p 2222   # extra ssh flags after --
+```
 
 If `op` or `OP_COPILOT_ENVIRONMENT_ID` is unavailable, the helper falls back to
-a plain `ssh` (you connect, but the tools won't receive a token).
+a plain `ssh` (you connect, but the tools won't receive a token). When the
+1Password CLI is not found, the PowerShell helper points you to enable it in
+**1Password → Settings → Developer → "Integrate with 1Password CLI"**.
 
 ## Security notes
 

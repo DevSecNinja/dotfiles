@@ -273,6 +273,7 @@ Describe "DotfilesHelpers Module" {
         $script:PrivateHelpers = @(
             'Remove-JsonComment'
             'Invoke-NerdFontInstaller'
+            'Get-DotfilesSshHost'
         )
 
         # Discover every top-level function defined across the Public files using
