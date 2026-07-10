@@ -95,6 +95,23 @@ strip_template() {
 	[ "$status" -eq 0 ]
 }
 
+# On Linux, Homebrew is optional, so missing prerequisites (e.g. git on a
+# clean WSL distro) must not abort the whole chezmoi apply. The Linux branch
+# should try to install the dependencies and otherwise skip gracefully.
+@test "chezmoi-scripts: install-homebrew attempts to install missing dependencies on Linux" {
+	local script="$LINUX_SCRIPTS_DIR/run_once_before_05-install-homebrew.sh.tmpl"
+	grep -q "apt-get install -y \"\${MISSING_DEPS\[@\]}\"" "$script"
+	grep -q "dnf install -y \"\${MISSING_DEPS\[@\]}\"" "$script"
+}
+
+@test "chezmoi-scripts: install-homebrew does not hard-fail on Linux when deps are missing" {
+	local script="$LINUX_SCRIPTS_DIR/run_once_before_05-install-homebrew.sh.tmpl"
+	# The Linux dependency path skips gracefully (exit 0); only the macOS
+	# branch (after the template else) is allowed to exit 1.
+	grep -q "Homebrew is optional on Linux - skipping installation." "$script"
+	grep -q "STILL_MISSING" "$script"
+}
+
 @test "chezmoi-scripts: run_once_install-lefthook.sh.tmpl exists" {
 	[ -f "$LINUX_SCRIPTS_DIR/run_once_install-lefthook.sh.tmpl" ]
 }

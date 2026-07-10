@@ -49,14 +49,56 @@ for cmd in curl git; do
 done
 
 if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
-	log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
-	log_hint "Please install them first:"
-	# {{ if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu" "debian") }}
-	log_hint "  sudo apt-get install -y ${MISSING_DEPS[*]}"
-	# {{ else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "fedora" "rhel" "centos") }}
-	log_hint "  sudo dnf install -y ${MISSING_DEPS[*]}"
+	log_warn "Missing required dependencies: ${MISSING_DEPS[*]}"
+
+	# {{ if eq .chezmoi.os "linux" }}
+	# On Linux, Homebrew is optional and its prerequisites (git, curl) are
+	# also installed later by the package-install script. On a clean system
+	# (e.g. a fresh WSL distro) they may not be present yet, so try to
+	# install them automatically. If that isn't possible, skip Homebrew
+	# rather than aborting the whole chezmoi apply.
+	# {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+	if sudo -n true 2>/dev/null; then
+		log_step "Installing missing dependencies with apt-get: ${MISSING_DEPS[*]}"
+		DEBIAN_FRONTEND=noninteractive sudo apt-get update -qq || true
+		DEBIAN_FRONTEND=noninteractive sudo apt-get install -y "${MISSING_DEPS[@]}" || true
+	else
+		log_warn "Cannot install dependencies automatically (no passwordless sudo)"
+	fi
+	# {{ else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+	if sudo -n true 2>/dev/null; then
+		log_step "Installing missing dependencies with dnf: ${MISSING_DEPS[*]}"
+		sudo dnf install -y "${MISSING_DEPS[@]}" || true
+	else
+		log_warn "Cannot install dependencies automatically (no passwordless sudo)"
+	fi
 	# {{ end }}
+
+	# Re-check after the install attempt.
+	STILL_MISSING=()
+	for cmd in "${MISSING_DEPS[@]}"; do
+		if ! command -v "$cmd" >/dev/null 2>&1; then
+			STILL_MISSING+=("$cmd")
+		fi
+	done
+
+	if [[ ${#STILL_MISSING[@]} -gt 0 ]]; then
+		log_warn "Still missing dependencies: ${STILL_MISSING[*]}"
+		log_info "Homebrew is optional on Linux - skipping installation."
+		log_hint "Install them manually if you need Homebrew later:"
+		# {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+		log_hint "  sudo apt-get install -y ${STILL_MISSING[*]}"
+		# {{ else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
+		log_hint "  sudo dnf install -y ${STILL_MISSING[*]}"
+		# {{ end }}
+		exit 0
+	fi
+	log_result "Dependencies installed successfully"
+	# {{ else }}
+	log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
+	log_hint "Please install them first, then re-run chezmoi apply."
 	exit 1
+	# {{ end }}
 fi
 
 # Check for sudo permissions (only relevant on Linux)
