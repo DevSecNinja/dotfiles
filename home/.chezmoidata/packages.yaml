@@ -153,9 +153,9 @@ packages:
       light: []
       full:
         # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
-        - name: "Office 365 Mail Alias"
-          url: "https://github.com/DevSecNinja/Office365AliasModule.git"
-          destination: "DevSecNinja.Office365AliasModule"
+        # - name: "Office 365 Mail Alias"
+        #   url: "https://github.com/DevSecNinja/Office365AliasModule.git"
+        #   destination: "DevSecNinja.Office365AliasModule"
 
 # VS Code extensions (optional, separate from package installation)
 # Note: GitHub.copilot and GitHub.copilot-chat are now bundled as built-in
