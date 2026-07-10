@@ -175,17 +175,20 @@ Describe "Connect-CopilotSsh behaviour" -Tag "Unit" -Skip:(-not $script:IsWindow
         # pre-flight check must fire first and abort.
         $emptyDir = (New-Item -ItemType Directory -Path (Join-Path $script:StubDir "nopath-$(Get-Random)")).FullName
         $env:PATH = $emptyDir
-        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match "'ssh' \(OpenSSH client\) was not found"
+        $err = @()
+        $out = (Connect-CopilotSsh myhost -ErrorAction SilentlyContinue -ErrorVariable +err 2>$null) | Out-String
+        ($err | Out-String) | Should -Match "'ssh' \(OpenSSH client\) was not found"
         $out | Should -Not -Match 'SSH_ARGS:'
     }
 
     It "Aborts without invoking ssh when op is not installed" {
         script:Remove-OpStub
-        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match "'1Password CLI' \(op\) was not found"
-        $out | Should -Match 'Install it'
-        $out | Should -Match 'Settings -> Developer'
+        $err = @()
+        $out = (Connect-CopilotSsh myhost -ErrorAction SilentlyContinue -ErrorVariable +err 2>$null) | Out-String
+        $errText = $err | Out-String
+        $errText | Should -Match "'1Password CLI' \(op\) was not found"
+        $errText | Should -Match 'Install it'
+        $errText | Should -Match 'Settings -> Developer'
         $out | Should -Not -Match 'SSH_ARGS:'
         $out | Should -Not -Match 'SendEnv'
     }
@@ -193,8 +196,9 @@ Describe "Connect-CopilotSsh behaviour" -Tag "Unit" -Skip:(-not $script:IsWindow
     It "Aborts without invoking ssh when the Environment ID is unset" {
         script:New-OpStub -Stdout "ctok$($script:Tab)gtok"
         Remove-Item Env:OP_COPILOT_ENVIRONMENT_ID -ErrorAction SilentlyContinue
-        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match 'OP_COPILOT_ENVIRONMENT_ID is not set'
+        $err = @()
+        $out = (Connect-CopilotSsh myhost -ErrorAction SilentlyContinue -ErrorVariable +err 2>$null) | Out-String
+        ($err | Out-String) | Should -Match 'OP_COPILOT_ENVIRONMENT_ID is not set'
         $out | Should -Not -Match 'SSH_ARGS:'
         $out | Should -Not -Match 'SendEnv'
     }
@@ -224,15 +228,17 @@ Describe "Connect-CopilotSsh behaviour" -Tag "Unit" -Skip:(-not $script:IsWindow
 
     It "Errors when COPILOT_GITHUB_TOKEN is missing from the Environment" {
         script:New-OpStub -Stdout ''
-        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match 'COPILOT_GITHUB_TOKEN not found'
+        $err = @()
+        $out = (Connect-CopilotSsh myhost -ErrorAction SilentlyContinue -ErrorVariable +err 2>$null) | Out-String
+        ($err | Out-String) | Should -Match 'COPILOT_GITHUB_TOKEN not found'
         $out | Should -Not -Match 'SSH_ARGS:'
     }
 
     It "Errors with a dedicated message when op run fails" {
         script:New-OpStub -ExitCode 3
-        $out = (Connect-CopilotSsh myhost *>&1) | Out-String
-        $out | Should -Match 'failed to read tokens'
+        $err = @()
+        $out = (Connect-CopilotSsh myhost -ErrorAction SilentlyContinue -ErrorVariable +err 2>$null) | Out-String
+        ($err | Out-String) | Should -Match 'failed to read tokens'
         $out | Should -Not -Match 'SSH_ARGS:'
     }
 }

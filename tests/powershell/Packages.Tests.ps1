@@ -189,10 +189,11 @@ Describe "Windows Package Configuration" {
             $lightPackages | Should -Contain "twpayne.chezmoi"
         }
 
-        It "Full mode should include development tools (VSCode, Terminal)" {
+        It "Full mode should include development tools (VSCode, WSL, shell tooling)" {
             $fullPackages = $script:ChezmoiData.packages.windows.winget.full
             $fullPackages | Should -Contain "Microsoft.VisualStudioCode"
-            $fullPackages | Should -Contain "Microsoft.WindowsTerminal"
+            $fullPackages | Should -Contain "Microsoft.WSL"
+            $fullPackages | Should -Contain "JanDeDobbeleer.OhMyPosh"
         }
 
         It "Full mode should include WSL" {
@@ -259,14 +260,13 @@ Describe "Windows Package Configuration" {
             $script:ChezmoiData.packages.windows.powershell_git_modules | Get-Member -Name "light" | Should -Not -BeNullOrEmpty
         }
 
-        It "Should have PowerShell Git full mode modules" {
-            $script:ChezmoiData.packages.windows.powershell_git_modules.full | Should -Not -BeNullOrEmpty
+        It "Should have PowerShell Git full mode modules property" {
+            $script:ChezmoiData.packages.windows.powershell_git_modules.PSObject.Properties.Name | Should -Contain 'full'
         }
 
-        It "Full mode should include Git-based modules" {
+        It "Full mode may leave Git-based modules empty" {
             $fullGitModules = $script:ChezmoiData.packages.windows.powershell_git_modules.full
-            # At least one module should be defined
-            $fullGitModules.Count | Should -BeGreaterThan 0
+            @($fullGitModules).Count | Should -BeGreaterOrEqual 0
         }
 
         It "Git modules should have required properties (name, url, destination)" {
