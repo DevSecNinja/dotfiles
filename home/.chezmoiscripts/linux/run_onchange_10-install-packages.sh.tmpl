@@ -31,13 +31,13 @@ brew_install_quiet() {
 	# "Error: Broken pipe" (SIGPIPE) when its stdout is a pipe rather than a
 	# TTY or regular file, which was breaking installs on WSL/Debian.
 	brew_log=$(mktemp)
+	trap 'rm -f "$brew_log"' RETURN
 	if brew install "$pkg" >"$brew_log" 2>&1; then
 		log_result "Installed $pkg"
 	else
 		log_warn "Failed to install $pkg"
 		log_data WARN "brew output" <"$brew_log"
 	fi
-	rm -f "$brew_log"
 }
 
 # Helper: install a Homebrew cask (GUI application) quietly, mirroring
@@ -51,13 +51,13 @@ brew_install_cask_quiet() {
 	log_step "Installing $pkg (cask)"
 	# See brew_install_quiet: redirect to a file to avoid SIGPIPE/"Broken pipe".
 	brew_log=$(mktemp)
+	trap 'rm -f "$brew_log"' RETURN
 	if brew install --cask "$pkg" >"$brew_log" 2>&1; then
 		log_result "Installed $pkg (cask)"
 	else
 		log_warn "Failed to install $pkg (cask)"
 		log_data WARN "brew output" <"$brew_log"
 	fi
-	rm -f "$brew_log"
 }
 
 # Helper: install a Mac App Store app via `mas`. Requires the `mas` formula
@@ -77,13 +77,13 @@ mas_install_quiet() {
 	log_step "Installing $app_name ($app_id)"
 	# See brew_install_quiet: redirect to a file to avoid SIGPIPE/"Broken pipe".
 	mas_log=$(mktemp)
+	trap 'rm -f "$mas_log"' RETURN
 	if mas install "$app_id" >"$mas_log" 2>&1; then
 		log_result "Installed $app_name ($app_id)"
 	else
 		log_warn "Failed to install $app_name ($app_id)"
 		log_data WARN "mas output" <"$mas_log"
 	fi
-	rm -f "$mas_log"
 }
 
 # Check if running with sudo privileges
