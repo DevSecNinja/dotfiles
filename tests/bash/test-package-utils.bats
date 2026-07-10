@@ -30,7 +30,9 @@ setup() {
 }
 
 @test "package-utils: Windows package IDs can match by package suffix" {
-	run bash -c "source \"$PACKAGE_UTILS\" && package_required_for_install_type mise full windows \"$PACKAGES_FILE\""
+	# Windows winget uses reverse-DNS IDs (e.g. "twpayne.chezmoi"), which
+	# must match a plain package name ("chezmoi") by suffix.
+	run bash -c "source \"$PACKAGE_UTILS\" && package_required_for_install_type chezmoi full windows \"$PACKAGES_FILE\""
 	[ "$status" -eq 0 ]
 }
 
