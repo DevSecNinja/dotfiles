@@ -39,7 +39,7 @@ uv = "latest"
 # release is a PyInstaller bundle that mise's github/ubi backends extract
 # incompletely, so pipx is the working install path.
 # renovate: datasource=pypi depName=apm-cli
-"pipx:apm-cli" = "0.21.0"
+"pipx:apm-cli" = "0.24.0"
 
 # Additional tools for development (commented out by default)
 # Uncomment based on your needs
