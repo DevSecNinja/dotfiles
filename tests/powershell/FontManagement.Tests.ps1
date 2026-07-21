@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Pester tests for font management utilities (Test-NerdFontInstalled,
-    Install-DotfilesNerdFont, Set-WindowsTerminalFont) in the DotfilesHelpers
-    module.
+    Pester tests for Nerd Font management utilities (Test-NerdFontInstalled,
+    Install-DotfilesNerdFont) in the DotfilesHelpers module.
 
 .DESCRIPTION
-    Validates function metadata, the idempotency / failure control flow of the
-    Nerd Font installer (with the real install mocked), and the surgical
-    Windows Terminal settings.json font patching against real temporary files.
+    Validates function metadata and the idempotency / failure control flow of
+    the Nerd Font installer (with the real install mocked). Windows Terminal
+    settings.json patching (Set-WindowsTerminalFont, Set-WindowsTerminalDefaultProfile)
+    is covered by WindowsTerminal.Tests.ps1.
 #>
 
 BeforeAll {
@@ -106,120 +106,6 @@ Describe "Install-DotfilesNerdFont Function" -Tag "Unit" {
 
             Should -Invoke -ModuleName DotfilesHelpers Invoke-NerdFontInstaller -Times 0 -Exactly
         }
-    }
-}
-
-Describe "Set-WindowsTerminalFont Function" -Tag "Unit" {
-    BeforeEach {
-        $script:settingsPath = Join-Path $script:TestDir.FullName "settings-$(Get-Random).json"
-    }
-
-    AfterEach {
-        Remove-Item -LiteralPath $script:settingsPath -ErrorAction SilentlyContinue
-    }
-
-    It "Should be available as a function with a mandatory FontFace parameter" {
-        $cmd = Get-Command Set-WindowsTerminalFont
-        $cmd | Should -Not -BeNullOrEmpty
-        $cmd.Parameters["FontFace"].Attributes |
-            Where-Object { $_ -is [Parameter] } |
-            Select-Object -ExpandProperty Mandatory |
-            Should -Contain $true
-    }
-
-    It "Should set the font when no profiles section exists" {
-        '{ "theme": "dark" }' | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath
-
-        $result.Status | Should -Be 'Updated'
-        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
-        $json.profiles.defaults.font.face | Should -Be "FiraCode Nerd Font"
-        $json.theme | Should -Be "dark"
-    }
-
-    It "Should update an existing different font face" {
-        '{ "profiles": { "defaults": { "font": { "face": "Consolas" } } } }' |
-            Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath
-
-        $result.Status | Should -Be 'Updated'
-        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
-        $json.profiles.defaults.font.face | Should -Be "FiraCode Nerd Font"
-    }
-
-    It "Should be idempotent when the font is already correct" {
-        '{ "profiles": { "defaults": { "font": { "face": "FiraCode Nerd Font" } } } }' |
-            Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath
-
-        $result.Status | Should -Be 'AlreadySet'
-        $result.Changed | Should -Be $false
-    }
-
-    It "Should preserve other settings including the profiles.list array" {
-        $original = @'
-{
-    "theme": "dark",
-    "profiles": {
-        "defaults": { "font": { "face": "Consolas" } },
-        "list": [
-            { "name": "PowerShell", "guid": "{abc}" },
-            { "name": "cmd", "guid": "{def}" }
-        ]
-    }
-}
-'@
-        $original | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath | Out-Null
-
-        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
-        $json.profiles.defaults.font.face | Should -Be "FiraCode Nerd Font"
-        $json.theme | Should -Be "dark"
-        $json.profiles.list.Count | Should -Be 2
-        $json.profiles.list[0].name | Should -Be "PowerShell"
-    }
-
-    It "Should parse JSONC (comments and trailing commas) without mangling URLs" {
-        $jsonc = @'
-{
-    // user comment
-    "schema": "https://aka.ms/terminal-profiles-schema",
-    "profiles": {
-        "defaults": { "font": { "face": "Consolas" } },
-    }
-}
-'@
-        $jsonc | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath
-
-        $result.Status | Should -Be 'Updated'
-        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
-        $json.profiles.defaults.font.face | Should -Be "FiraCode Nerd Font"
-        $json.schema | Should -Be "https://aka.ms/terminal-profiles-schema"
-    }
-
-    It "Should skip paths that do not exist" {
-        $missing = Join-Path $script:TestDir.FullName "does-not-exist-$(Get-Random).json"
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $missing
-
-        $result | Should -BeNullOrEmpty
-    }
-
-    It "Should not write under -WhatIf" {
-        '{ "profiles": { "defaults": { "font": { "face": "Consolas" } } } }' |
-            Set-Content -LiteralPath $script:settingsPath -Encoding utf8
-
-        $result = Set-WindowsTerminalFont -FontFace "FiraCode Nerd Font" -SettingsPath $script:settingsPath -WhatIf
-
-        $result.Status | Should -Be 'WhatIf'
-        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
-        $json.profiles.defaults.font.face | Should -Be "Consolas"
     }
 }
 

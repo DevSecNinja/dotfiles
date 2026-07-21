@@ -1,0 +1,37 @@
+# {{ if eq .chezmoi.os "windows" }}
+# Point Windows Terminal's defaultProfile at PowerShell Core WITHOUT managing the
+# whole config. Windows Terminal owns settings.json (it rewrites it at runtime)
+# and every machine has a different, hand-tuned config, so we only resolve the
+# PowerShell Core profile's guid from profiles.list and set the top-level
+# defaultProfile to it. Everything else is left untouched.
+#
+# This complements run_once_setup-windows-terminal.ps1 (which creates the file
+# only if it is missing): the run_once handles brand-new machines, while this
+# run_onchange fixes the default profile on machines that already had Windows
+# Terminal settings.
+#
+# On machines where PowerShell Core is not installed, the profile will not exist
+# in the list and the config is left unchanged (skipped cleanly).
+#
+# Target profile source: Windows.Terminal.PowershellCore
+$ErrorActionPreference = "Stop"
+
+$modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
+if (Test-Path $modulePath) {
+    Import-Module $modulePath -Force -DisableNameChecking
+}
+else {
+    Write-Error "DotfilesHelpers module not found at: $modulePath"
+    exit 1
+}
+
+Write-Host "Setting Windows Terminal default profile to PowerShell Core..." -ForegroundColor Cyan
+$results = Set-WindowsTerminalDefaultProfile -Source "Windows.Terminal.PowershellCore"
+
+if (-not $results) {
+    Write-Host "[SKIP] No Windows Terminal settings found to update" -ForegroundColor Yellow
+}
+elseif (-not ($results | Where-Object { $_.Status -in @('Updated', 'AlreadySet') })) {
+    Write-Host "[SKIP] PowerShell Core profile not found; leaving defaultProfile unchanged" -ForegroundColor Yellow
+}
+# {{ end }}
