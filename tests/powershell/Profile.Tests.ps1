@@ -272,6 +272,9 @@ Describe "DotfilesHelpers Module" {
         # true internal helper (not meant to be called from a shell session).
         $script:PrivateHelpers = @(
             'Remove-JsonComment'
+            'Get-WindowsTerminalSettingsPath'
+            'Read-WindowsTerminalSettings'
+            'Save-WindowsTerminalSettings'
             'Invoke-NerdFontInstaller'
             'Get-DotfilesSshHost'
         )

@@ -47,6 +47,9 @@
         'Install-DotfilesNerdFont'
         'Set-WindowsTerminalFont'
 
+        # Windows Terminal settings
+        'Set-WindowsTerminalDefaultProfile'
+
         # Office 365 mail aliases
         'New-MailAlias'
         'Select-MailAlias'
