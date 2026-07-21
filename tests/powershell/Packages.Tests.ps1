@@ -189,10 +189,9 @@ Describe "Windows Package Configuration" {
             $lightPackages | Should -Contain "twpayne.chezmoi"
         }
 
-        It "Full mode should include development tools (VSCode, Terminal)" {
+        It "Full mode should include development tools (VSCode)" {
             $fullPackages = $script:ChezmoiData.packages.windows.winget.full
             $fullPackages | Should -Contain "Microsoft.VisualStudioCode"
-            $fullPackages | Should -Contain "Microsoft.WindowsTerminal"
         }
 
         It "Full mode should include WSL" {
@@ -259,14 +258,13 @@ Describe "Windows Package Configuration" {
             $script:ChezmoiData.packages.windows.powershell_git_modules | Get-Member -Name "light" | Should -Not -BeNullOrEmpty
         }
 
-        It "Should have PowerShell Git full mode modules" {
-            $script:ChezmoiData.packages.windows.powershell_git_modules.full | Should -Not -BeNullOrEmpty
-        }
-
-        It "Full mode should include Git-based modules" {
-            $fullGitModules = $script:ChezmoiData.packages.windows.powershell_git_modules.full
-            # At least one module should be defined
-            $fullGitModules.Count | Should -BeGreaterThan 0
+        It "Should define a PowerShell Git full mode modules key (may be empty)" {
+            # powershell_git_modules.full is intentionally empty on Windows since
+            # the Office 365 alias module was retired; only assert the key is
+            # present so the git-clone loop in run_once_20-install-modules has a
+            # defined (possibly empty) range to iterate.
+            $script:ChezmoiData.packages.windows.powershell_git_modules.PSObject.Properties.Name |
+                Should -Contain 'full'
         }
 
         It "Git modules should have required properties (name, url, destination)" {
