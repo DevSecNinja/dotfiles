@@ -172,9 +172,12 @@ function Connect-CopilotSsh {
     # Pre-flight checks. Each is fatal: the whole purpose of this helper is to
     # forward GitHub tokens, so if we cannot, we stop rather than silently
     # opening a token-less ssh session (which would leave copilot/gh
-    # unauthenticated on the server in a confusing way).
+    # unauthenticated on the server in a confusing way). Write-Error uses
+    # -ErrorAction Continue so the abort stays non-terminating (emit message,
+    # then return) even when the caller's $ErrorActionPreference is 'Stop',
+    # as it is under GitHub Actions' `shell: pwsh`.
     if (-not (Get-Command ssh -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Error "copilot-ssh: 'ssh' (OpenSSH client) was not found on PATH. Install the OpenSSH client and try again."
+        Write-Error "copilot-ssh: 'ssh' (OpenSSH client) was not found on PATH. Install the OpenSSH client and try again." -ErrorAction Continue
         return
     }
 
@@ -183,14 +186,14 @@ function Connect-CopilotSsh {
             "            1. Install it: https://developer.1password.com/docs/cli/get-started/ (>= 2.33.0-beta.02).`n" +
             "            2. Enable the desktop-app integration: 1Password -> Settings -> Developer ->`n" +
             "               'Integrate with 1Password CLI', then restart your terminal.`n" +
-            "            See docs/copilot-cli.md for details.")
+            "            See docs/copilot-cli.md for details.") -ErrorAction Continue
         return
     }
 
     $envId = $env:OP_COPILOT_ENVIRONMENT_ID
     if ([string]::IsNullOrEmpty($envId)) {
         Write-Error ("copilot-ssh: OP_COPILOT_ENVIRONMENT_ID is not set; aborting (tokens cannot be forwarded).`n" +
-            "            Set the chezmoi 'opCopilotEnvironmentId' variable (see docs/copilot-cli.md).")
+            "            Set the chezmoi 'opCopilotEnvironmentId' variable (see docs/copilot-cli.md).") -ErrorAction Continue
         return
     }
 
@@ -206,7 +209,7 @@ function Connect-CopilotSsh {
     $childCmd = '[Console]::Out.Write(([string]$env:COPILOT_GITHUB_TOKEN) + [char]9 + ([string]$env:GH_TOKEN))'
     $creds = & op run --environment $envId --no-masking -- $psExe -NoProfile -NonInteractive -Command $childCmd 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "copilot-ssh: failed to read tokens from 1Password Environment '$envId'. Ensure 'op' >= 2.33.0-beta.02, the desktop-app integration is enabled (1Password -> Settings -> Developer), and the Environment ID is correct."
+        Write-Error "copilot-ssh: failed to read tokens from 1Password Environment '$envId'. Ensure 'op' >= 2.33.0-beta.02, the desktop-app integration is enabled (1Password -> Settings -> Developer), and the Environment ID is correct." -ErrorAction Continue
         return
     }
 
@@ -215,7 +218,7 @@ function Connect-CopilotSsh {
     $ghToken = if ($parts.Count -ge 2) { $parts[1] } else { '' }
 
     if ([string]::IsNullOrEmpty($copilotToken)) {
-        Write-Error "copilot-ssh: COPILOT_GITHUB_TOKEN not found in Environment '$envId'."
+        Write-Error "copilot-ssh: COPILOT_GITHUB_TOKEN not found in Environment '$envId'." -ErrorAction Continue
         return
     }
 
