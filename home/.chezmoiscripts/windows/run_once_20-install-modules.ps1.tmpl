@@ -27,6 +27,8 @@ Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
 # PSGallery with whichever cmdlet is available so unattended module installs do
 # not prompt; skip gracefully if neither exists.
 if (Get-Command Set-PSResourceRepository -ErrorAction SilentlyContinue) {
+    $repositoryStorePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "PSResourceGet"
+    New-Item -ItemType Directory -Path $repositoryStorePath -Force | Out-Null
     Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted
 }
 elseif (Get-Command Set-PSRepository -ErrorAction SilentlyContinue) {
