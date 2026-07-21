@@ -30,7 +30,9 @@ setup() {
 }
 
 @test "package-utils: Windows package IDs can match by package suffix" {
-	run bash -c "source \"$PACKAGE_UTILS\" && package_required_for_install_type mise full windows \"$PACKAGES_FILE\""
+	# Windows winget IDs are reverse-DNS (e.g. "Fastfetch-cli.Fastfetch"), so
+	# they must match a plain package name ("fastfetch") by suffix.
+	run bash -c "source \"$PACKAGE_UTILS\" && package_required_for_install_type fastfetch full windows \"$PACKAGES_FILE\""
 	[ "$status" -eq 0 ]
 }
 
