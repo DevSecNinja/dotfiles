@@ -111,7 +111,7 @@ If the user has already staged files, skip this step.
 ### Step 3 — Derive and validate the commit message
 
 Draft a message following the Conventional Commits format above. Then
-validate it with `cog verify` before asking the user:
+validate it with `cog verify`:
 
 ```sh
 mise exec -- cog verify "feat(log): add log_data helper"
@@ -119,22 +119,15 @@ mise exec -- cog verify "feat(log): add log_data helper"
 
 Exit code 0 = valid. If it fails, fix the message and retry.
 
-### Step 4 — Ask the user to confirm the commit message
+### Step 4 — Judge the commit message yourself
 
-**MANDATORY**: Before committing, use the `vscode_askQuestions` tool to
-present the proposed commit message and ask for confirmation. Provide the
-message as an option the user can click — do not just print it in chat.
-
-Example question structure:
-
-- Header: "Commit message"
-- Question: "Does this commit message look right?"
-- Options: the proposed message as a selectable option, plus "Let me edit
-  it" as a free-form alternative
-- Set `allowFreeformInput: true` so the user can type a corrected message
-
-If the user selects the proposed message, proceed. If they provide a
-different message, use that one and re-run `cog verify` before continuing.
+You do **not** need to ask the user to confirm the commit message. Derive
+a clear Conventional Commits message from the staged diff and proceed. Only
+pause to ask the user when the intent is genuinely ambiguous (for example,
+you cannot tell whether a change is a `fix` or a `feat`, or the scope is
+unclear and it materially changes the version bump). When you do commit
+without asking, state the message you used in your reply so the user can
+review it after the fact.
 
 ### Step 5 — Run the pre-commit hook
 
@@ -151,7 +144,7 @@ and `file-set-execution-bit` on staged shell files.
 ### Step 6 — Commit
 
 ```sh
-git commit -m "<confirmed-message>"
+git commit -m "<validated-message>"
 ```
 
 The `commit-msg` hook will re-run `cog verify` automatically. Both hooks
