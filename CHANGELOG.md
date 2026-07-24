@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/DevSecNinja/dotfiles/compare/v0.6.0...v0.7.0) (2026-07-24)
+
+
+### Features
+
+* add GitHub Copilot CLI to packages.yaml ([ae73555](https://github.com/DevSecNinja/dotfiles/commit/ae73555324994b1f6e3fa6f5bf2cf27bff9ffabb))
+* add Microsoft APM to package configurations ([d50a7b9](https://github.com/DevSecNinja/dotfiles/commit/d50a7b993adf15c30cac725fe99dee093e61d973))
+* **copilot:** cli token forwarding ([#540](https://github.com/DevSecNinja/dotfiles/issues/540)) ([b987dbe](https://github.com/DevSecNinja/dotfiles/commit/b987dbe5da9a99a182a381ee7d5b591a6a15dcf7))
+* **github-release:** update release jdx/mise ( v2026.6.14 ➔ v2026.7.0 ) [automerge] ([#571](https://github.com/DevSecNinja/dotfiles/issues/571)) ([257964c](https://github.com/DevSecNinja/dotfiles/commit/257964c649938983d1c46afdb81ed4f73a04c1de))
+* **macos:** support Homebrew casks and Mac App Store apps ([#543](https://github.com/DevSecNinja/dotfiles/issues/543)) ([61d9aac](https://github.com/DevSecNinja/dotfiles/commit/61d9aac87d849fe90466913ec4fd388028ee2b58))
+* **mise:** update chezmoi ( 2.70.5 ➔ 2.71.0 ) [automerge] ([#586](https://github.com/DevSecNinja/dotfiles/issues/586)) ([52a4a5b](https://github.com/DevSecNinja/dotfiles/commit/52a4a5b18246114e02e7a3fc6dbe31558fa450d2))
+* **mise:** update tool pipx:apm-cli ( 0.21.0 ➔ 0.22.0 ) [automerge] ([#562](https://github.com/DevSecNinja/dotfiles/issues/562)) ([e1cc539](https://github.com/DevSecNinja/dotfiles/commit/e1cc539c49ec0b9ddbd5092efdd4a433882b1521))
+* **pwsh:** add copilot-ssh helper forwarding GitHub tokens over SSH ([d685789](https://github.com/DevSecNinja/dotfiles/commit/d6857899cc032aff18240835c6ed5e0d68810907))
+* **pwsh:** add Set-WindowsTerminalDefaultProfile to patch defaultProfile non-destructively ([c71420e](https://github.com/DevSecNinja/dotfiles/commit/c71420e69fb4a3135fa0486c50ee00e28d411b87))
+* **pwsh:** tab-complete copilot-ssh host from ssh config and improve op guidance ([e01322f](https://github.com/DevSecNinja/dotfiles/commit/e01322f42b79ca8a8e9167c92c6d3d3b04f5e5a6))
+
+
+### Bug Fixes
+
+* **devcontainer:** repin image to the stable v0.6.0 release digest ([6e6d6d0](https://github.com/DevSecNinja/dotfiles/commit/6e6d6d0de6a66db6994c7a538aa733cc4f2d9dc9))
+* **github-release:** update release jdx/mise ( v2026.6.11 ➔ v2026.6.14 ) [automerge] ([#557](https://github.com/DevSecNinja/dotfiles/issues/557)) ([bb70945](https://github.com/DevSecNinja/dotfiles/commit/bb709451a56b990a1ba09d666d4e53788260e095))
+* **github-release:** update release jdx/mise ( v2026.6.9 ➔ v2026.6.11 ) [automerge] ([#550](https://github.com/DevSecNinja/dotfiles/issues/550)) ([d6086ae](https://github.com/DevSecNinja/dotfiles/commit/d6086aedabc51beb95d1637f76857ab0a40149dc))
+* **github-release:** update release jdx/mise ( v2026.7.2 ➔ v2026.7.5 ) [automerge] ([#583](https://github.com/DevSecNinja/dotfiles/issues/583)) ([eebca37](https://github.com/DevSecNinja/dotfiles/commit/eebca37265fd61ef806c93c38700d1e9a30e5747))
+* **pwsh:** keep copilot-ssh pre-flight aborts non-terminating under ErrorActionPreference=Stop ([8910d01](https://github.com/DevSecNinja/dotfiles/commit/8910d0107f30fb819d2b54c55aa5e4e675b8137f))
+* **pwsh:** make copilot-ssh abort on failed pre-flight checks instead of plain ssh ([4997604](https://github.com/DevSecNinja/dotfiles/commit/49976045a8d1029e1ac5e3210033b16f60a48f4a))
+* **windows:** repair fresh install flow and document manual steps ([58110f4](https://github.com/DevSecNinja/dotfiles/commit/58110f46327ec04639f80fe74f29bf2901ae021c))
+
 ## [0.6.0](https://github.com/DevSecNinja/dotfiles/compare/v0.5.0...v0.6.0) (2026-07-01)
 
 
