@@ -1,0 +1,53 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "//": "Managed by chezmoi (dot_config/fastfetch/config.jsonc). The three trailing 'command' modules call status.sh, which prints cached lines and refreshes in the background so login stays fast. Empty output makes a line disappear, so updates/reboot/ansible only show when relevant.",
+  "modules": [
+    "title",
+    "separator",
+    "os",
+    "host",
+    "kernel",
+    "uptime",
+    "packages",
+    "shell",
+    "display",
+    "de",
+    "wm",
+    "wmtheme",
+    "theme",
+    "icons",
+    "font",
+    "cursor",
+    "terminal",
+    "terminalfont",
+    "cpu",
+    "gpu",
+    "memory",
+    "swap",
+    "disk",
+    "localip",
+    "battery",
+    "poweradapter",
+    "locale",
+    {
+      "type": "command",
+      "key": "Updates",
+      "keyColor": "yellow",
+      "text": "\"$HOME/.config/fastfetch/status.sh\" updates"
+    },
+    {
+      "type": "command",
+      "key": "Reboot",
+      "keyColor": "red",
+      "text": "\"$HOME/.config/fastfetch/status.sh\" reboot"
+    },
+    {
+      "type": "command",
+      "key": "Ansible",
+      "keyColor": "blue",
+      "text": "\"$HOME/.config/fastfetch/status.sh\" ansible"
+    },
+    "break",
+    "colors"
+  ]
+}

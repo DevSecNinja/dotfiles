@@ -24,6 +24,9 @@ renovate.json
 
 {{ if eq .chezmoi.os "windows" }}
 .chezmoiscripts/linux/**
+# fastfetch status modules are driven by a bash script (status.sh); Windows
+# fastfetch keeps its own default config instead.
+dot_config/fastfetch/**
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
