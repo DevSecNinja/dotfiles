@@ -11,9 +11,14 @@ everything on this page.
 ## Setup
 
 The repository owner's public key ships as the default for `gitSigningKey`, so
-signing switches itself on as soon as a 1Password signer binary is present —
-nothing to configure. (That key is public and already published at
+on **WSL, native Windows and macOS** signing switches itself on as soon as
+1Password is installed — nothing to configure, because the signer binary is
+auto-detected there. (That key is public and already published at
 <https://github.com/DevSecNinja.keys>.)
+
+On **Linux** there is no standard signer path, so signing stays off until you
+point [`opSshSignProgram`](#the-signer-is-platform-specific) at the binary
+yourself.
 
 **Using your own key instead:**
 
