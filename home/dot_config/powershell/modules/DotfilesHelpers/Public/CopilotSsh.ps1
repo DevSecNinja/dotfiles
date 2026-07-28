@@ -86,6 +86,291 @@ function Get-DotfilesSshHost {
     return @($result | Sort-Object -Unique)
 }
 
+function ConvertFrom-SshConfigOutput {
+    <#
+    .SYNOPSIS
+        Extract the effective hostname/port from `ssh -G` output.
+    .DESCRIPTION
+        `ssh -G <args>` prints the fully resolved client configuration for a
+        destination (honouring ~/.ssh/config aliases, HostName/Port overrides
+        and -o flags) without connecting. This parses the two keys the
+        pre-flight probe needs. Returns $null when no hostname was resolved,
+        which callers treat as "skip the probe".
+    .PARAMETER Lines
+        The raw lines emitted by `ssh -G`.
+    #>
+    [CmdletBinding()]
+    param([string[]]$Lines)
+
+    $hostName = $null
+    $port = $null
+    foreach ($line in $Lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        $parts = $line.Trim() -split '\s+', 2
+        if ($parts.Count -lt 2) { continue }
+        switch ($parts[0].ToLowerInvariant()) {
+            'hostname' { $hostName = $parts[1].Trim() }
+            'port' { $port = $parts[1].Trim() }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($hostName)) { return $null }
+    $portValue = 22
+    if (-not [string]::IsNullOrWhiteSpace($port)) { [void][int]::TryParse($port, [ref]$portValue) }
+    return [PSCustomObject]@{ HostName = $hostName; Port = $portValue }
+}
+
+function Select-CopilotSshAzureVm {
+    <#
+    .SYNOPSIS
+        Pick the Azure VMs that correspond to an SSH host.
+    .DESCRIPTION
+        Matches the VM name against the host and against its short form
+        (vm01.example.com -> vm01), then falls back to matching the host
+        against the VM's public/private IP addresses. Pure string logic so it
+        is testable without the Azure CLI.
+    .PARAMETER Row
+        TSV rows as produced by
+        `az vm list -d -o tsv --query '[].[name,resourceGroup,powerState,publicIps,privateIps]'`.
+    .PARAMETER HostName
+        The resolved SSH host (name, FQDN or IP address).
+    #>
+    [CmdletBinding()]
+    param(
+        [string[]]$Row,
+        [string]$HostName
+    )
+
+    $short = $HostName.Split('.')[0]
+    $results = @()
+
+    foreach ($line in $Row) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        $cols = $line -split "`t"
+        if ($cols.Count -lt 3) { continue }
+
+        $name = $cols[0].Trim()
+        $matched = ($name -ieq $HostName) -or ($name -ieq $short)
+
+        if (-not $matched -and $cols.Count -ge 4) {
+            # publicIps/privateIps may hold a comma-separated list.
+            $ips = @()
+            foreach ($field in $cols[3..($cols.Count - 1)]) {
+                $ips += ($field -split ',' | ForEach-Object { $_.Trim() })
+            }
+            $matched = $ips -contains $HostName
+        }
+
+        if ($matched) {
+            $results += [PSCustomObject]@{
+                Name          = $name
+                ResourceGroup = $cols[1].Trim()
+                PowerState    = $cols[2].Trim()
+            }
+        }
+    }
+
+    return @($results)
+}
+
+function Test-CopilotSshPort {
+    <#
+    .SYNOPSIS
+        Fast TCP reachability probe for an SSH endpoint.
+    .DESCRIPTION
+        Opens a TCP connection with a hard timeout so an unreachable host fails
+        in seconds instead of hanging on ssh's own connect timeout. DNS failures
+        and refused connections both return $false.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$HostName,
+        [int]$Port = 22,
+        [int]$TimeoutSeconds = 3
+    )
+
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $async = $client.BeginConnect($HostName, $Port, $null, $null)
+        if (-not $async.AsyncWaitHandle.WaitOne([TimeSpan]::FromSeconds($TimeoutSeconds))) {
+            return $false
+        }
+        $client.EndConnect($async)
+        return $true
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Close()
+    }
+}
+
+function Get-CopilotSshConfirmation {
+    <#
+    .SYNOPSIS
+        Ask a yes/no question, defaulting to "no" when nobody can answer.
+    .DESCRIPTION
+        Non-interactive sessions (redirected stdin, no user interaction) always
+        answer "no" so scripts never block on the prompt. Set
+        COPILOT_SSH_ASSUME_YES=1 to answer "yes" automatically.
+    #>
+    [CmdletBinding()]
+    param([string]$Message)
+
+    if ($env:COPILOT_SSH_ASSUME_YES -eq '1') { return $true }
+    if ($env:COPILOT_SSH_ASSUME_NO -eq '1') { return $false }
+    if (-not [Environment]::UserInteractive) { return $false }
+    if ([Console]::IsInputRedirected) { return $false }
+
+    $answer = Read-Host "$Message [y/N]"
+    return ($answer -match '^\s*(y|yes)\s*$')
+}
+
+function Wait-CopilotSshPort {
+    <#
+    .SYNOPSIS
+        Poll an SSH endpoint until it accepts connections (or time out).
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$HostName,
+        [int]$Port,
+        [int]$TimeoutSeconds = 180
+    )
+
+    $waited = 0
+    Write-Host "copilot-ssh: waiting for ${HostName}:${Port} to accept connections" -NoNewline
+    while ($waited -lt $TimeoutSeconds) {
+        if (Test-CopilotSshPort -HostName $HostName -Port $Port -TimeoutSeconds 3) {
+            Write-Host ' up'
+            return $true
+        }
+        Write-Host '.' -NoNewline
+        Start-Sleep -Seconds 5
+        $waited += 5
+    }
+    Write-Host ' timed out'
+    return $false
+}
+
+function Invoke-CopilotSshAzureRecovery {
+    <#
+    .SYNOPSIS
+        Try to bring a stopped Azure VM back up after a failed reachability probe.
+    .DESCRIPTION
+        Looks the host up with `az vm list -d`. When the VM is stopped or
+        deallocated the user is offered to start it, and the connection resumes
+        once the SSH port answers. Returns $true only when the host became
+        reachable.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$HostName,
+        [int]$Port
+    )
+
+    if (-not (Get-Command az -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Host "copilot-ssh: install the Azure CLI ('az') to check whether the VM is stopped."
+        return $false
+    }
+
+    Write-Host "copilot-ssh: looking up '$HostName' in Azure..."
+    $rows = @()
+    try {
+        $rows = @(& az vm list -d --only-show-errors -o tsv `
+                --query '[].[name,resourceGroup,powerState,publicIps,privateIps]' 2>$null)
+    }
+    catch {
+        $rows = @()
+    }
+
+    $vmMatches = @(Select-CopilotSshAzureVm -Row $rows -HostName $HostName)
+
+    if ($vmMatches.Count -eq 0) {
+        Write-Host "copilot-ssh: no Azure VM matches '$HostName' in the current subscription."
+        Write-Host "            Check 'az account show' / 'az login', or the host may not be an Azure VM."
+        return $false
+    }
+
+    if ($vmMatches.Count -gt 1) {
+        Write-Host "copilot-ssh: several Azure VMs match '$HostName'; not guessing:"
+        foreach ($vm in $vmMatches) {
+            Write-Host ("            - {0} (resource group {1}, {2})" -f $vm.Name, $vm.ResourceGroup, $vm.PowerState)
+        }
+        return $false
+    }
+
+    $vm = $vmMatches[0]
+    if ($vm.PowerState -match 'running') {
+        Write-Host "copilot-ssh: Azure VM '$($vm.Name)' is running but ${HostName}:${Port} is unreachable."
+        Write-Host '            Check the NSG rules, the VPN/network path or sshd on the VM.'
+        return $false
+    }
+
+    $state = if ([string]::IsNullOrWhiteSpace($vm.PowerState)) { 'in an unknown state' } else { $vm.PowerState }
+    Write-Host "copilot-ssh: Azure VM '$($vm.Name)' (resource group $($vm.ResourceGroup)) is $state."
+    if (-not (Get-CopilotSshConfirmation -Message 'copilot-ssh: start it now?')) {
+        Write-Host 'copilot-ssh: not starting the VM; aborting.'
+        return $false
+    }
+
+    & az vm start --only-show-errors -g $vm.ResourceGroup -n $vm.Name | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "copilot-ssh: 'az vm start' failed for '$($vm.Name)'."
+        return $false
+    }
+    Write-Host "copilot-ssh: started '$($vm.Name)'."
+
+    $startTimeout = 180
+    if ($env:COPILOT_SSH_START_TIMEOUT) { [void][int]::TryParse($env:COPILOT_SSH_START_TIMEOUT, [ref]$startTimeout) }
+    return (Wait-CopilotSshPort -HostName $HostName -Port $Port -TimeoutSeconds $startTimeout)
+}
+
+function Test-CopilotSshPreflight {
+    <#
+    .SYNOPSIS
+        Fail fast when the SSH host is unreachable.
+    .DESCRIPTION
+        Resolves the destination with `ssh -G` and probes its TCP port. Returns
+        $true when the host answers, when the check could not run (no
+        destination resolved), or when the Azure recovery brought the VM back
+        up; $false when the connection should be abandoned.
+
+        Set COPILOT_SSH_SKIP_PREFLIGHT=1 to bypass, or
+        COPILOT_SSH_PREFLIGHT_TIMEOUT to change the 3 second probe timeout.
+    .PARAMETER SshArgument
+        The arguments that will be passed to ssh (destination included).
+    #>
+    [CmdletBinding()]
+    param([string[]]$SshArgument)
+
+    if ($env:COPILOT_SSH_SKIP_PREFLIGHT -eq '1') { return $true }
+
+    $config = @()
+    try {
+        $config = @(& ssh -G @SshArgument 2>$null)
+    }
+    catch {
+        $config = @()
+    }
+
+    $endpoint = ConvertFrom-SshConfigOutput -Lines $config
+    # No destination resolved (e.g. ssh could not parse the args): skip the
+    # probe rather than blocking a connection that might still work.
+    if ($null -eq $endpoint) { return $true }
+
+    $timeout = 3
+    if ($env:COPILOT_SSH_PREFLIGHT_TIMEOUT) { [void][int]::TryParse($env:COPILOT_SSH_PREFLIGHT_TIMEOUT, [ref]$timeout) }
+
+    if (Test-CopilotSshPort -HostName $endpoint.HostName -Port $endpoint.Port -TimeoutSeconds $timeout) {
+        return $true
+    }
+
+    Write-Host "copilot-ssh: $($endpoint.HostName):$($endpoint.Port) is not reachable."
+    return (Invoke-CopilotSshAzureRecovery -HostName $endpoint.HostName -Port $endpoint.Port)
+}
+
 function Connect-CopilotSsh {
     <#
     .SYNOPSIS
@@ -178,6 +463,14 @@ function Connect-CopilotSsh {
     # as it is under GitHub Actions' `shell: pwsh`.
     if (-not (Get-Command ssh -CommandType Application -ErrorAction SilentlyContinue)) {
         Write-Error "copilot-ssh: 'ssh' (OpenSSH client) was not found on PATH. Install the OpenSSH client and try again." -ErrorAction Continue
+        return
+    }
+
+    # Reachability pre-flight, before unlocking 1Password: a short TCP probe so
+    # an unreachable host fails in ~3s, with an Azure CLI assisted recovery
+    # (offer to start a stopped VM) when the probe fails.
+    if (-not (Test-CopilotSshPreflight -SshArgument $passthrough)) {
+        Write-Error "copilot-ssh: aborting; '$HostName' is not reachable." -ErrorAction Continue
         return
     }
 
