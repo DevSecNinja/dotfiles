@@ -117,18 +117,25 @@
 {{- $opShellPluginList = $opShellPluginList | sortAlpha | uniq -}}
 
 {{- /* SSH public key used to sign Git commits when the 1Password SSH agent is  */ -}}
-{{- /* driving signing (notably in WSL, where signing runs through              */ -}}
-{{- /* op-ssh-sign-wsl.exe). Paste the literal key from the 1Password app       */ -}}
-{{- /* ("Configure Commit Signing" -> Copy Snippet), e.g. "ssh-ed25519 AAAA…". */ -}}
-{{- /* A public key is not a secret. Ignored when useYubiKey is true.           */ -}}
-{{- $gitSigningKey := "" -}}
-{{- if hasKey . "gitSigningKey" -}}
+{{- /* driving signing. Copy it from the 1Password app ("Configure Commit       */ -}}
+{{- /* Signing" -> Copy Snippet). Works on WSL, native Windows and macOS; the   */ -}}
+{{- /* platform-specific signer binary is auto-detected. Ignored when           */ -}}
+{{- /* useYubiKey is true. See docs/git-signing.md.                             */ -}}
+{{- /*                                                                          */ -}}
+{{- /* This is a PUBLIC key, not a secret — it is already published at          */ -}}
+{{- /* https://github.com/DevSecNinja.keys — so it is safe to ship as the       */ -}}
+{{- /* default. Override it per-machine by setting `gitSigningKey` in your      */ -}}
+{{- /* local chezmoi config. `get` (not `hasKey`) so an existing config that    */ -}}
+{{- /* already carries an empty value still picks the default up.               */ -}}
+{{- $gitSigningKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99" -}}
+{{- if get . "gitSigningKey" -}}
 {{-   $gitSigningKey = .gitSigningKey -}}
 {{- end -}}
 
-{{- /* Path to the 1Password SSH signer used in WSL. Empty means auto-detect  */ -}}
-{{- /* (the MSIX WindowsApps path, then the pre-8.11.18 one). Set this only   */ -}}
-{{- /* for a non-standard 1Password install. See docs/wsl.md.                 */ -}}
+{{- /* Path to the 1Password SSH signer binary. Empty means auto-detect per   */ -}}
+{{- /* platform: op-ssh-sign-wsl.exe in WSL, op-ssh-sign.exe on Windows and   */ -}}
+{{- /* op-ssh-sign on macOS. Set this for a non-standard install, or on Linux */ -}}
+{{- /* where there is no standard path. See docs/git-signing.md.             */ -}}
 {{- $opSshSignProgram := "" -}}
 {{- if hasKey . "opSshSignProgram" -}}
 {{-   $opSshSignProgram = .opSshSignProgram -}}

@@ -60,16 +60,20 @@ templates and scripts.
 ## Git commit signing
 
 - `gitSigningKey` — The SSH **public** key used to sign Git commits when the
-  1Password SSH agent drives signing (notably in WSL, where signing runs
-  through `op-ssh-sign-wsl.exe`). Paste the literal key from the 1Password app
-  — *item → ⋮ → Configure Commit Signing → Copy Snippet* — for example
-  `ssh-ed25519 AAAA… comment`. A public key is not a secret. Empty by default,
-  which leaves signing off; ignored when `useYubiKey` is `true`, since the
-  YubiKey flow derives its key from `~/.ssh/id_*_sk*.pub` instead.
-  See [wsl.md](wsl.md).
-- `opSshSignProgram` — Explicit path to the 1Password SSH signer used in WSL.
-  Empty by default, which auto-detects the MSIX `WindowsApps` path and then the
-  pre-8.11.18 one. Set it only for a non-standard 1Password install. When no
+  1Password SSH agent drives signing. Works on WSL, native Windows and macOS;
+  the platform-specific signer binary is auto-detected. Defaults to the
+  repository owner's key, which is a public key and already published at
+  <https://github.com/DevSecNinja.keys>, so it is safe to ship in the repo.
+  Override it per-machine by setting `gitSigningKey` in your local chezmoi
+  config to your own key — copy it from the 1Password app, *item → ⋮ →
+  Configure Commit Signing → Copy Snippet*. An empty value falls back to the
+  default. Ignored when `useYubiKey` is `true`, since the YubiKey flow derives
+  its key from `~/.ssh/id_*_sk*.pub` instead.
+  See [git-signing.md](git-signing.md).
+- `opSshSignProgram` — Explicit path to the 1Password SSH signer binary. Empty
+  by default, which auto-detects per platform (`op-ssh-sign-wsl.exe` in WSL,
+  `op-ssh-sign.exe` on Windows, `op-ssh-sign` on macOS). Set it for a
+  non-standard install, or on Linux where there is no standard path. When no
   signer is found, signing stays off rather than breaking every `git commit`.
 
 ## Windows Enterprise (Windows and WSL)

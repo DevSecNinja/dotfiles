@@ -327,9 +327,11 @@ _render() {
 	[[ ! "$output" =~ "key::ssh-ed25519 AAAATESTKEY" ]]
 }
 
-@test "wsl-signing: native Linux without YubiKey stays unsigned" {
+@test "signing: Linux auto-detects no signer, so it stays unsigned" {
 	_skip_without_chezmoi
 	local cfg
+	# There is no auto-detected 1Password signer path on Linux; a desktop-Linux
+	# user points at theirs with opSshSignProgram.
 	cfg="$(_config \
 		's|^  wsl: .*|  wsl: false|' \
 		's|^  useYubiKey: .*|  useYubiKey: false|' \
@@ -406,4 +408,78 @@ _render() {
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "COPILOT_TOKEN=forwarded-token" ]]
 	[[ ! "$output" =~ "OP_RUN:" ]]
+}
+
+@test "signing: a Windows signer path is emitted with forward slashes" {
+	_skip_without_chezmoi
+	local cfg
+	# git config treats backslashes as escapes, so a native-Windows path must be
+	# normalised — which is also the form 1Password's own snippet uses.
+	cfg="$(_config \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY"|' \
+		's|^  opSshSignProgram: .*|  opSshSignProgram: "C:\\\\Users\\\\Me\\\\AppData\\\\Local\\\\Microsoft\\\\WindowsApps\\\\op-ssh-sign.exe"|')"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'program = "C:/Users/Me/AppData/Local/Microsoft/WindowsApps/op-ssh-sign.exe"' ]]
+	[[ ! "$output" =~ '\\' ]]
+	[[ "$output" =~ "gpgsign = true" ]]
+}
+
+@test "signing: a key without a comment still gets the key:: prefix" {
+	_skip_without_chezmoi
+	local cfg
+	# 1Password's snippet emits a bare key with no trailing comment.
+	cfg="$(_config \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9Rsn"|' \
+		"s|^  opSshSignProgram: .*|  opSshSignProgram: \"${TEST_DIR}/op-ssh-sign\"|")"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "signingkey = key::ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9Rsn" ]]
+}
+
+@test "signing: works outside WSL too (signer override on any platform)" {
+	_skip_without_chezmoi
+	local cfg
+	# Before this branch, gitSigningKey was only honoured when wsl was true, so
+	# a native Windows or macOS workstation silently got no signing at all.
+	cfg="$(_config \
+		's|^  wsl: .*|  wsl: false|' \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY"|' \
+		"s|^  opSshSignProgram: .*|  opSshSignProgram: \"${TEST_DIR}/op-ssh-sign\"|")"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "gpgsign = true" ]]
+	[[ "$output" =~ "format = ssh" ]]
+}
+
+@test "signing: the public signing key ships as a default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/fresh.yaml"
+	printf '{}\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 ' ]]
+}
+
+@test "signing: an existing empty value still picks up the default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/empty-key.yaml"
+	# A config written by an earlier init already carries gitSigningKey: "",
+	# so `hasKey` would be permanently true and the default never apply.
+	printf 'data:\n  gitSigningKey: ""\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 ' ]]
+}
+
+@test "signing: a per-machine key overrides the default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/other-key.yaml"
+	printf 'data:\n  gitSigningKey: "ssh-ed25519 OTHERKEY someone@example.com"\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 OTHERKEY someone@example.com"' ]]
 }
