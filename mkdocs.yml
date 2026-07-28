@@ -69,5 +69,6 @@ nav:
       - Shell Logging: logging.md
       - GitHub Copilot CLI: copilot-cli.md
       - 1Password Shell Plugins: 1password-shell-plugins.md
+      - Git Commit Signing: git-signing.md
       - WSL: wsl.md
       - YubiKey: yubikey.md

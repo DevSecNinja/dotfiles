@@ -14,7 +14,7 @@ This repo wires that up for you.
 | --- | --- | --- |
 | Git over SSH | `core.sshCommand = ssh.exe` | `dot_config/git/config.tmpl` |
 | Interactive `ssh` / `ssh-add` | aliased to `ssh.exe` / `ssh-add.exe` | `dot_config/shell/functions/wsl-ssh.sh`, `dot_config/fish/conf.d/wsl-ssh.fish` |
-| Commit signing | `gpg.ssh.program = op-ssh-sign-wsl.exe` | `dot_config/git/config.tmpl` |
+| Commit signing | `gpg.ssh.program = op-ssh-sign-wsl.exe` | `dot_config/git/config.tmpl` (see [git-signing.md](git-signing.md)) |
 
 The aliases are guarded on `WSL_DISTRO_NAME` **and** on `ssh.exe` being
 reachable, so they never leak into a native Linux or macOS session and stay
@@ -36,53 +36,13 @@ You should see the same keys as on Windows. If you get `command not found`,
 either use the full path `/mnt/c/Windows/System32/OpenSSH/ssh-add.exe` or check
 that `[interop] enabled = true` in your WSL config.
 
-## Enabling commit signing
+## Commit signing
 
-Signing needs your **public** key, which this repo reads from the
-`gitSigningKey` chezmoi variable:
-
-1. In the 1Password Windows app, open the SSH key item.
-2. Choose **⋮ → Configure Commit Signing**.
-3. Tick **Configure for Windows Subsystem for Linux (WSL)** and select
-   **Copy Snippet**.
-4. Put the public key from that snippet into your local chezmoi config:
-
-   ```yaml
-   data:
-     gitSigningKey: "ssh-ed25519 AAAA… comment"
-   ```
-
-5. Run `chezmoi apply`.
-
-That renders `user.signingkey`, turns on `commit.gpgsign` / `tag.gpgsign`, and
-adds the key to `~/.config/git/allowed_signers` so your own commits verify
-locally. A public key is not a secret, so keeping it in the config is fine.
-
-Git needs the `key::` prefix to read a literal public key rather than a file
-path; the template adds it for you, so paste the key exactly as 1Password
-gives it.
-
-The signer binary is located automatically, preferring the current MSIX path
-and falling back to the pre-8.11.18 one:
-
-```text
-/mnt/c/Users/<you>/AppData/Local/Microsoft/WindowsApps/op-ssh-sign-wsl.exe
-/mnt/c/Users/<you>/AppData/Local/1Password/app/8/op-ssh-sign-wsl
-```
-
-If neither exists, signing is left **off** and the rendered config explains
-why. Turning `commit.gpgsign` on without a signer would make git fall back to
-the local `ssh-keygen`, which cannot reach the key held by 1Password on
-Windows — every `git commit` would fail. Install or update 1Password for
-Windows, then re-run `chezmoi apply`.
-
-For a non-standard install you can point at the signer explicitly instead of
-relying on auto-detection:
-
-```yaml
-data:
-  opSshSignProgram: "/mnt/c/path/to/op-ssh-sign-wsl.exe"
-```
+Signing in WSL runs through `op-ssh-sign-wsl.exe` on the Windows host, driven
+by the `gitSigningKey` chezmoi variable. The setup is shared with the other
+platforms, so it lives in [git-signing.md](git-signing.md) — use the
+**Configure for Windows Subsystem for Linux (WSL)** option when copying the
+snippet out of the 1Password app.
 
 !!! note
 
