@@ -302,6 +302,8 @@ Describe "DotfilesHelpers Module" {
             'ConvertFrom-DotfilesSecureString'
             'New-GitHubRulesetPayload'
             'New-GitHubConfigDrift'
+            'Get-GitHubCredentialScope'
+            'Get-GitHubEnvironmentState'
         )
 
         # Discover every top-level function defined across the Public files using

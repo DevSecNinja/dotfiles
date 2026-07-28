@@ -258,12 +258,50 @@ $env:OP_GITHUB_APP_ID_REF  = 'op://Work/Bot/app-id'
 $env:OP_GITHUB_APP_KEY_REF = 'op://Work/Bot/private-key'
 ```
 
+### Where the credential is stored
+
+By default the credential goes into a GitHub Actions **environment** named
+`production`, pinned to the default branch:
+
+| Baseline key                | Default                                         |
+| --------------------------- | ----------------------------------------------- |
+| `AppCredential.Environment` | `production` (set to `''` for repository-level) |
+
+The pin is the entire point. An environment secret is only safer than a
+repository secret because the deployment branch policy stops a workflow running
+on an attacker-controlled PR branch from reading it. `Get-GitHubRepoConfig`
+therefore reports an environment without that policy as drift
+(`environment_pinned_to_default_branch`), not just a missing environment.
+
+Your workflow must opt in, or the secret is simply invisible to it:
+
+```yaml
+jobs:
+  sync:
+    environment: production   # required to see environment secrets
+```
+
+!!! warning "Private repositories fall back automatically"
+
+    Environments, environment secrets and deployment branch policies are
+    public-repository-only on the GitHub Free plan. Private repositories
+    transparently fall back to repository-level secrets with a warning.
+
+    Nothing is lost by that fallback: the branch policy is exactly what the
+    Free plan withholds, and without it an environment secret is no safer than
+    a repository secret. Upgrading to GitHub Pro enables environments on private
+    repositories, after which a re-run moves them across.
+
 ### Rolling it out
 
 ```powershell
 $cred = Get-GitHubAppCredential
 Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -AppCredential $cred -WhatIf
 ```
+
+Remediation creates the environment, enables custom branch policies, pins it to
+the default branch, then writes the variable and secret into it — in that order,
+since each step depends on the previous one.
 
 `Get-GitHubAppCredential` checks everything before reading a value, so a
 missing entry fails immediately with a message naming what to fix rather than

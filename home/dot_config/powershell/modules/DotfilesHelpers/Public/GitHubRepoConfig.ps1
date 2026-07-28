@@ -584,6 +584,92 @@ function New-GitHubRulesetPayload {
     }
 }
 
+function Get-GitHubCredentialScope {
+    <#
+    .SYNOPSIS
+        Decide whether a repository's App credential lives in an environment.
+    .DESCRIPTION
+        Environments, environment secrets and deployment branch policies are
+        public-repository-only on the GitHub Free plan. Rather than failing on a
+        private repository, callers fall back to repository-level secrets.
+
+        The fallback loses nothing in practice: an environment secret is only
+        safer than a repository secret because of the deployment branch policy
+        pinning it to the default branch, and that policy is exactly what the
+        Free plan withholds on private repositories.
+    .PARAMETER Repository
+        Repository in 'owner/name' form.
+    .PARAMETER Environment
+        Desired environment name. Empty means repository-level by choice.
+    .PARAMETER Visibility
+        Repository visibility as reported by the API.
+    #>
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+        [Parameter(Mandatory = $false)][string]$Environment,
+        [Parameter(Mandatory = $true)][string]$Visibility
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Environment)) {
+        return [PSCustomObject]@{ UseEnvironment = $false; Environment = ''; Reason = 'baseline requests repository-level credentials' }
+    }
+
+    if ($Visibility -ne 'public') {
+        return [PSCustomObject]@{
+            UseEnvironment = $false
+            Environment    = $Environment
+            Reason         = "environments are public-repository-only on the GitHub Free plan; $Repository is $Visibility"
+        }
+    }
+
+    return [PSCustomObject]@{ UseEnvironment = $true; Environment = $Environment; Reason = '' }
+}
+
+function Get-GitHubEnvironmentState {
+    <#
+    .SYNOPSIS
+        Report whether an environment exists and how its branch policy is set.
+    .DESCRIPTION
+        Distinguishes "environment absent" from "environment present but
+        unrestricted", because only the second is a security gap worth naming:
+        an environment without a deployment branch policy grants no more
+        protection than a repository secret.
+    .PARAMETER Repository
+        Repository in 'owner/name' form.
+    .PARAMETER Environment
+        Environment name.
+    .PARAMETER DefaultBranch
+        Branch the environment should be pinned to.
+    #>
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+        [Parameter(Mandatory = $true)][string]$Environment,
+        [Parameter(Mandatory = $false)][AllowEmptyString()][string]$DefaultBranch
+    )
+
+    $env = Invoke-GitHubApi -Endpoint "repos/$Repository/environments/$Environment" -AllowFailure
+    if ($null -eq $env) {
+        return [PSCustomObject]@{ Exists = $false; PinnedToDefaultBranch = $false }
+    }
+
+    # A policy of custom_branch_policies with the default branch listed is the
+    # only shape that actually pins deployments to that branch.
+    $pinned = $false
+    if ($null -ne $env.deployment_branch_policy -and $env.deployment_branch_policy.custom_branch_policies) {
+        $policies = Invoke-GitHubApi -Endpoint "repos/$Repository/environments/$Environment/deployment-branch-policies" -AllowFailure
+        if ($null -ne $policies -and -not [string]::IsNullOrWhiteSpace($DefaultBranch)) {
+            $names = @($policies.branch_policies | ForEach-Object { $_.name })
+            $pinned = $names -contains $DefaultBranch
+        }
+    }
+
+    return [PSCustomObject]@{ Exists = $true; PinnedToDefaultBranch = $pinned }
+}
+
 function New-GitHubConfigDrift {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns an object; does not change system state.')]
     <#
@@ -636,6 +722,18 @@ function Get-GitHubRepoBaseline {
             which would let automation satisfy required reviews on its own.
           - default_workflow_permissions = read follows least privilege;
             workflows that need more request it explicitly via `permissions:`.
+          - AppCredential.Environment scopes the App credential to a GitHub
+            Actions environment instead of the repository. The security gain
+            comes from the environment's deployment branch policy, which pins it
+            to the default branch so a workflow on an attacker-controlled PR
+            branch cannot read the key. Set it to '' to keep credentials at the
+            repository level.
+
+            Environments, environment secrets and deployment branch policies
+            are public-repository-only on the GitHub Free plan, so private
+            repositories transparently fall back to repository-level secrets
+            (with a warning). Without a branch policy an environment secret is
+            no safer than a repository secret, so the fallback loses nothing.
           - The Ruleset name matches what GitHub's UI creates ('Default'), so
             a repository that already has one is updated in place instead of
             gaining a second, competing ruleset. Override Name if yours differs.
@@ -710,6 +808,7 @@ function Get-GitHubRepoBaseline {
         AppCredential = [ordered]@{
             VariableName = 'AUTOMATION_APP_ID'
             SecretName   = 'AUTOMATION_APP_PRIVATE_KEY'
+            Environment  = 'production'
         }
     }
 
@@ -1118,12 +1217,51 @@ function Get-GitHubRepoConfig {
                 }
             }
 
+            $credentialScope = $null
             if ($Check -contains 'AppCredential') {
                 $variableName = $desired.AppCredential.VariableName
                 $secretName = $desired.AppCredential.SecretName
 
-                $variables = Invoke-GitHubApi -Endpoint "repos/$target/actions/variables" -AllowFailure
-                $secrets = Invoke-GitHubApi -Endpoint "repos/$target/actions/secrets" -AllowFailure
+                $credentialScope = Get-GitHubCredentialScope -Repository $target `
+                    -Environment $desired.AppCredential.Environment -Visibility $repo.visibility
+
+                if (-not $credentialScope.UseEnvironment -and -not [string]::IsNullOrWhiteSpace($credentialScope.Environment)) {
+                    Write-Warning "Falling back to repository-level credentials for ${target}: $($credentialScope.Reason)."
+                }
+
+                $current['credential_scope'] = if ($credentialScope.UseEnvironment) { "environment:$($credentialScope.Environment)" } else { 'repository' }
+
+                if ($credentialScope.UseEnvironment) {
+                    $envName = $credentialScope.Environment
+                    $envState = Get-GitHubEnvironmentState -Repository $target -Environment $envName -DefaultBranch $repo.default_branch
+
+                    $current['environment_present'] = $envState.Exists
+                    if (-not $envState.Exists) {
+                        $drift.Add((New-GitHubConfigDrift -Category 'AppCredential' -Setting 'environment_present' -Current $false -Desired $true))
+                    }
+
+                    # The branch policy is the whole point of using an
+                    # environment; without it the secret is no better protected
+                    # than a repository secret.
+                    $current['environment_pinned_to_default_branch'] = $envState.PinnedToDefaultBranch
+                    if (-not $envState.PinnedToDefaultBranch) {
+                        $drift.Add((New-GitHubConfigDrift -Category 'AppCredential' -Setting 'environment_pinned_to_default_branch' -Current $envState.PinnedToDefaultBranch -Desired $true))
+                    }
+
+                    $variables = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName/variables" -AllowFailure
+                    $secrets = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName/secrets" -AllowFailure
+
+                    if (-not $envState.Exists) {
+                        # An absent environment cannot hold anything; report the
+                        # contents as missing rather than as unreadable.
+                        $variables = [PSCustomObject]@{ variables = @() }
+                        $secrets = [PSCustomObject]@{ secrets = @() }
+                    }
+                }
+                else {
+                    $variables = Invoke-GitHubApi -Endpoint "repos/$target/actions/variables" -AllowFailure
+                    $secrets = Invoke-GitHubApi -Endpoint "repos/$target/actions/secrets" -AllowFailure
+                }
 
                 if ($null -eq $variables -or $null -eq $secrets) {
                     Write-Warning "Could not list Actions variables/secrets for $target. The gh token likely lacks the 'secrets'/'variables' permissions; skipping the AppCredential category."
@@ -1160,6 +1298,8 @@ function Get-GitHubRepoConfig {
                 Checked     = $Check
                 RulesetId   = $rulesetId
                 RulesetDetail = $rulesetDetail
+                CredentialScope = $credentialScope
+                DefaultBranch = $repo.default_branch
             }
         }
     }
@@ -1387,11 +1527,59 @@ function Set-GitHubRepoConfig {
                 else {
                     $variableName = $config.Baseline.AppCredential.VariableName
                     $secretName = $config.Baseline.AppCredential.SecretName
+                    $scope = $config.CredentialScope
+                    $useEnv = ($null -ne $scope) -and $scope.UseEnvironment
+                    $envName = if ($useEnv) { $scope.Environment } else { '' }
+                    $scopeLabel = if ($useEnv) { "environment '$envName'" } else { 'repository' }
+
+                    # Scope flags appended to every gh secret/variable call, so
+                    # the credential lands in the environment when one is used.
+                    $scopeArgs = @('--repo', $target)
+                    if ($useEnv) { $scopeArgs += @('--env', $envName) }
+
+                    # The environment has to exist before anything can be stored
+                    # in it, and the branch policy is what makes storing it there
+                    # worthwhile - so both are created up front, ahead of the
+                    # secret and variable that depend on them.
+                    $needsEnvironment = $useEnv -and @($credentialDrift | Where-Object { $_.Setting -eq 'environment_present' }).Count -gt 0
+                    $needsPin = $useEnv -and @($credentialDrift | Where-Object { $_.Setting -eq 'environment_pinned_to_default_branch' }).Count -gt 0
+
+                    if ($needsEnvironment -or $needsPin) {
+                        # One idempotent PUT covers both cases: it creates the
+                        # environment when absent and switches an existing,
+                        # unrestricted one to custom branch policies, which the
+                        # API requires before a branch policy can be added.
+                        $action = if ($needsEnvironment) { "Create environment '$envName'" } else { "Enable branch policies on environment '$envName'" }
+                        if ($PSCmdlet.ShouldProcess($target, $action)) {
+                            $null = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName" -Method 'PUT' -Body @{
+                                deployment_branch_policy = @{
+                                    protected_branches     = $false
+                                    custom_branch_policies = $true
+                                }
+                            }
+                            if ($needsEnvironment) { $applied.Add('AppCredential/environment_present') }
+                        }
+                    }
+
+                    if ($needsPin) {
+                        $branch = $config.DefaultBranch
+                        if ($PSCmdlet.ShouldProcess($target, "Pin environment '$envName' to branch '$branch'")) {
+                            $policy = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName/deployment-branch-policies" `
+                                -Method 'POST' -Body @{ name = $branch; type = 'branch' } -AllowFailure
+                            if ($null -eq $policy) {
+                                Write-Error "Could not pin environment '$envName' on $target to '$branch'. Without a branch policy the environment secret is no safer than a repository secret."
+                                $skipped.Add('AppCredential/environment_pinned_to_default_branch')
+                            }
+                            else {
+                                $applied.Add('AppCredential/environment_pinned_to_default_branch')
+                            }
+                        }
+                    }
 
                     foreach ($item in $credentialDrift) {
                         if ($item.Setting -eq $variableName) {
-                            if ($PSCmdlet.ShouldProcess($target, "Set Actions variable $variableName")) {
-                                $result = Invoke-GitHubCli -Arguments @('variable', 'set', $variableName, '--repo', $target, '--body', $AppCredential.AppId) -AllowFailure -ErrorContext "gh variable set $variableName on $target"
+                            if ($PSCmdlet.ShouldProcess($target, "Set $scopeLabel variable $variableName")) {
+                                $result = Invoke-GitHubCli -Arguments (@('variable', 'set', $variableName) + $scopeArgs + @('--body', $AppCredential.AppId)) -AllowFailure -ErrorContext "gh variable set $variableName on $target"
                                 if ($null -eq $result) {
                                     Write-Error "Could not set variable $variableName on ${target}."
                                     $skipped.Add("AppCredential/$variableName")
@@ -1402,12 +1590,12 @@ function Set-GitHubRepoConfig {
                             }
                         }
                         elseif ($item.Setting -eq $secretName) {
-                            if ($PSCmdlet.ShouldProcess($target, "Set Actions secret $secretName")) {
+                            if ($PSCmdlet.ShouldProcess($target, "Set $scopeLabel secret $secretName")) {
                                 $plain = ConvertFrom-DotfilesSecureString -SecureString $AppCredential.PrivateKey
                                 try {
                                     # Piped on stdin so the PEM never appears in
                                     # a process argument list.
-                                    $result = Invoke-GitHubCli -Arguments @('secret', 'set', $secretName, '--repo', $target) -StdIn $plain -AllowFailure -ErrorContext "gh secret set $secretName on $target"
+                                    $result = Invoke-GitHubCli -Arguments (@('secret', 'set', $secretName) + $scopeArgs) -StdIn $plain -AllowFailure -ErrorContext "gh secret set $secretName on $target"
                                     if ($null -eq $result) {
                                         Write-Error "Could not set secret $secretName on ${target}."
                                         $skipped.Add("AppCredential/$secretName")

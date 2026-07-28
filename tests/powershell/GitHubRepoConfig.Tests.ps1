@@ -29,6 +29,7 @@ BeforeAll {
             name                        = 'compliant'
             visibility                  = 'public'
             archived                    = $false
+            default_branch              = 'main'
             allow_squash_merge          = $true
             allow_merge_commit          = $false
             allow_rebase_merge          = $false
@@ -110,11 +111,17 @@ BeforeAll {
             [object]$Actions,
             [object]$RulesetDetail,
             [object]$Variables,
-            [object]$Secrets
+            [object]$Secrets,
+            [object]$EnvironmentDetail,
+            [object]$BranchPolicies
         )
 
         switch -Regex ($Endpoint) {
             '/actions/permissions/workflow$' { return $Actions }
+            '/environments/[^/]+/variables$' { return $Variables }
+            '/environments/[^/]+/secrets$' { return $Secrets }
+            '/environments/[^/]+/deployment-branch-policies$' { return $BranchPolicies }
+            '/environments/[^/]+$' { return $EnvironmentDetail }
             '/actions/variables$' { return $Variables }
             '/actions/secrets$' { return $Secrets }
             '/rulesets/\d+$' { return $RulesetDetail }
@@ -915,7 +922,7 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
             $settings | Should -Contain 'AUTOMATION_APP_PRIVATE_KEY'
         }
 
-        It "does not report drift when the App credential is already present" {
+        It "does not report drift when a repository-level App credential is already present" {
             Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListEmpty }
             Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
                 script:Get-MockApiResponse -Endpoint $Endpoint `
@@ -926,8 +933,16 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
                     -Secrets ([PSCustomObject]@{ secrets = @([PSCustomObject]@{ name = 'AUTOMATION_APP_PRIVATE_KEY' }) })
             }
 
-            $result = Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential
+            $result = Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential -Baseline @{ AppCredential = @{ Environment = '' } }
             @($result.Drift | Where-Object { $_.Category -eq 'AppCredential' }).Count | Should -Be 0
+        }
+
+        It "reads repository-level endpoints when the baseline asks for no environment" {
+            $null = Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential -Baseline @{ AppCredential = @{ Environment = '' } }
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 1 -Exactly -ParameterFilter {
+                $Endpoint -eq 'repos/DevSecNinja/drifted/actions/secrets'
+            }
         }
     }
 
@@ -1149,6 +1164,98 @@ Describe "Set-GitHubRepoConfig" -Tag "Unit" {
                 AppId      = '123456'
                 PrivateKey = (ConvertTo-SecureString "-----BEGIN RSA PRIVATE KEY-----`nX`n-----END RSA PRIVATE KEY-----" -AsPlainText -Force)
             }
+
+            # Public repo with no environment yet: the environment and its
+            # branch policy are created, then the credential is stored in it.
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo (script:New-DriftedRepoResponse) `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail $null `
+                    -Variables ([PSCustomObject]@{ variables = @() }) `
+                    -Secrets ([PSCustomObject]@{ secrets = @() }) `
+                    -EnvironmentDetail $null `
+                    -BranchPolicies ([PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'main' }) })
+            }
+        }
+
+        It "creates the environment before storing anything in it" {
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:Credential -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 1 -Exactly -ParameterFilter {
+                $Method -eq 'PUT' -and $Endpoint -eq 'repos/DevSecNinja/drifted/environments/production' -and
+                $Body['deployment_branch_policy'].custom_branch_policies -eq $true
+            }
+        }
+
+        It "pins the environment to the default branch" {
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:Credential -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 1 -Exactly -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Endpoint -eq 'repos/DevSecNinja/drifted/environments/production/deployment-branch-policies' -and
+                $Body['name'] -eq 'main' -and $Body['type'] -eq 'branch'
+            }
+        }
+
+        It "scopes the secret to the environment with --env" {
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:Credential -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret' -and $Arguments -contains '--env' -and $Arguments -contains 'production'
+            }
+        }
+
+        It "scopes the variable to the environment with --env" {
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:Credential -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'variable' -and $Arguments -contains '--env' -and $Arguments -contains 'production'
+            }
+        }
+
+        It "falls back to repository scope on a private repository" {
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                $repo = script:New-DriftedRepoResponse
+                $repo.visibility = 'private'
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo $repo `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail $null `
+                    -Variables ([PSCustomObject]@{ variables = @() }) `
+                    -Secrets ([PSCustomObject]@{ secrets = @() })
+            }
+
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential -WarningAction SilentlyContinue |
+                Set-GitHubRepoConfig -AppCredential $script:Credential -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 0 -Exactly -ParameterFilter {
+                $Arguments -contains '--env'
+            }
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 0 -Exactly -ParameterFilter {
+                $Endpoint -like '*/environments/*' -and $Method -ne 'GET'
+            }
+        }
+
+        It "warns that a private repository cannot use an environment" {
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                $repo = script:New-DriftedRepoResponse
+                $repo.visibility = 'private'
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo $repo `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail $null `
+                    -Variables ([PSCustomObject]@{ variables = @() }) `
+                    -Secrets ([PSCustomObject]@{ secrets = @() })
+            }
+
+            $warnings = @()
+            $null = Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential -WarningVariable warnings -WarningAction SilentlyContinue
+            ($warnings -join ' ') | Should -Match 'Free plan'
         }
 
         It "sets the App ID as an Actions variable" {
@@ -1338,6 +1445,90 @@ Describe "Invoke-GitHubApi response shaping" -Tag "Unit" {
             Mock Invoke-GitHubCli { 'not json at all' }
 
             { Invoke-GitHubApi -Endpoint 'repos/o/r' } | Should -Throw -ExpectedMessage "*as JSON*"
+        }
+    }
+}
+
+Describe "Get-GitHubCredentialScope" -Tag "Unit" {
+    It "uses the environment on a public repository" {
+        InModuleScope DotfilesHelpers {
+            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment 'production' -Visibility 'public'
+            $scope.UseEnvironment | Should -BeTrue
+            $scope.Environment | Should -Be 'production'
+        }
+    }
+
+    It "falls back to repository level on a <_> repository" -ForEach @('private', 'internal') {
+        $visibility = $_
+        InModuleScope DotfilesHelpers -Parameters @{ Visibility = $visibility } {
+            param($Visibility)
+            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment 'production' -Visibility $Visibility
+            $scope.UseEnvironment | Should -BeFalse
+            $scope.Reason | Should -Match 'Free plan'
+        }
+    }
+
+    It "stays at repository level when the baseline asks for no environment" {
+        InModuleScope DotfilesHelpers {
+            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment '' -Visibility 'public'
+            $scope.UseEnvironment | Should -BeFalse
+            $scope.Reason | Should -Match 'baseline'
+        }
+    }
+}
+
+Describe "Get-GitHubEnvironmentState" -Tag "Unit" {
+    It "reports an absent environment" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi { $null }
+            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+            $state.Exists | Should -BeFalse
+            $state.PinnedToDefaultBranch | Should -BeFalse
+        }
+    }
+
+    It "reports an environment with no branch policy as unpinned" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi { [PSCustomObject]@{ name = 'production'; deployment_branch_policy = $null } }
+            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+            $state.Exists | Should -BeTrue
+            $state.PinnedToDefaultBranch | Should -BeFalse
+        }
+    }
+
+    It "reports an environment pinned to the default branch" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*deployment-branch-policies*') {
+                    return [PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'main' }) }
+                }
+                return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
+            }
+            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+            $state.PinnedToDefaultBranch | Should -BeTrue
+        }
+    }
+
+    It "does not treat a policy for another branch as pinned" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*deployment-branch-policies*') {
+                    return [PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'develop' }) }
+                }
+                return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
+            }
+            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+            $state.PinnedToDefaultBranch | Should -BeFalse
+        }
+    }
+
+    It "treats protected_branches-only policy as not pinned to the default branch" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi {
+                [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $false; protected_branches = $true } }
+            }
+            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+            $state.PinnedToDefaultBranch | Should -BeFalse
         }
     }
 }
