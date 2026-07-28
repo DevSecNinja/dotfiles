@@ -62,13 +62,60 @@ _chezmoi_up_needs_init() {
     local state
     state="$(chezmoi state get --bucket=configState --key=configState 2>/dev/null || true)"
     [ -n "${state}" ] || return 0
-    stored="$(awk -F: '/configTemplateContentsSHA256/ { gsub(/[ ",]/, "", $2); print $2 }' <<<"${state}")"
+    # Keep only hex so the parse survives both chezmoi's pretty-printed JSON
+    # and a compact one-line object (where a trailing } would otherwise stick).
+    stored="$(awk -F: '/configTemplateContentsSHA256/ { gsub(/[^0-9a-fA-F]/, "", $2); print $2 }' <<<"${state}")"
     [ -n "${stored}" ] || return 0
 
     actual="$(_chezmoi_up_sha256 "${template}")"
     [ -n "${actual}" ] || return 0
 
     [ "${stored}" != "${actual}" ]
+}
+
+# _chezmoi_up_load_log -> make log.sh's helpers available when we can.
+# config.bash/config.zsh source every file in this directory, but this one
+# sorts before log.sh, so pull it in on first use. Falls back to the copy next
+# to this file, which is how it is reachable from a bare repo checkout.
+_chezmoi_up_load_log() {
+    command -v log_step >/dev/null 2>&1 && return 0
+
+    local here="" candidate
+    if [ -n "${BASH_SOURCE[0]:-}" ]; then
+        here="$(dirname -- "${BASH_SOURCE[0]}")"
+    fi
+
+    for candidate in "${HOME}/.config/shell/functions/log.sh" "${here}/log.sh"; do
+        if [ -n "${candidate}" ] && [ -f "${candidate}" ]; then
+            # shellcheck source=/dev/null
+            . "${candidate}" && return 0
+        fi
+    done
+    return 0
+}
+
+# _chezmoi_up_say KIND MESSAGE... -> print a message through log.sh when it is
+# available, else through plain echo. Never let a missing log.sh swallow output
+# (or abort the run) on a machine where the dotfiles are not applied yet.
+_chezmoi_up_say() {
+    local kind="${1}"
+    shift
+
+    case "${kind}" in
+    step)
+        if command -v log_step >/dev/null 2>&1; then log_step "$*"; else printf '==> %s\n' "$*"; fi
+        ;;
+    info)
+        if command -v log_info >/dev/null 2>&1; then log_info "$*"; else printf '==> %s\n' "$*"; fi
+        ;;
+    result)
+        if command -v log_result >/dev/null 2>&1; then log_result "$*"; else printf '\342\234\223 %s\n' "$*"; fi
+        ;;
+    error)
+        if command -v log_error >/dev/null 2>&1; then log_error "$*"; else printf '\342\234\227 %s\n' "$*" >&2; fi
+        ;;
+    *) printf '%s\n' "$*" ;;
+    esac
 }
 
 chezmoi-up() {
@@ -102,44 +149,39 @@ chezmoi-up() {
         return 1
     fi
 
-    # log.sh is sourced by config.bash/config.zsh, but this file sorts before
-    # it, so pull it in when running standalone.
-    if ! command -v log_step >/dev/null 2>&1 && [ -f "${HOME}/.config/shell/functions/log.sh" ]; then
-        # shellcheck source=/dev/null
-        . "${HOME}/.config/shell/functions/log.sh"
-    fi
+    _chezmoi_up_load_log
     # shellcheck disable=SC2034  # consumed by log.sh
     local LOG_TAG="chezmoi-up"
 
-    log_step "Pulling the source repository"
+    _chezmoi_up_say step "Pulling the source repository"
     if ! chezmoi update --apply=false; then
-        log_error "chezmoi update failed; not continuing to init/apply"
+        _chezmoi_up_say error "chezmoi update failed; not continuing to init/apply"
         return 1
     fi
 
     if [ "${force_init}" = true ]; then
-        log_step "Regenerating the config file (forced)"
+        _chezmoi_up_say step "Regenerating the config file (forced)"
         if ! chezmoi init; then
-            log_error "chezmoi init failed; not continuing to apply"
+            _chezmoi_up_say error "chezmoi init failed; not continuing to apply"
             return 1
         fi
     elif _chezmoi_up_needs_init; then
-        log_step "Config template changed, regenerating the config file"
+        _chezmoi_up_say step "Config template changed, regenerating the config file"
         if ! chezmoi init; then
-            log_error "chezmoi init failed; not continuing to apply"
+            _chezmoi_up_say error "chezmoi init failed; not continuing to apply"
             return 1
         fi
     else
-        log_info "Config template unchanged, skipping chezmoi init"
+        _chezmoi_up_say info "Config template unchanged, skipping chezmoi init"
     fi
 
-    log_step "Applying"
+    _chezmoi_up_say step "Applying"
     if ! chezmoi apply; then
-        log_error "chezmoi apply failed"
+        _chezmoi_up_say error "chezmoi apply failed"
         return 1
     fi
 
-    log_result "Dotfiles are up to date"
+    _chezmoi_up_say result "Dotfiles are up to date"
     return 0
 }
 

@@ -17,7 +17,7 @@ setup() {
 	ORIGINAL_PATH="${PATH}"
 	export ORIGINAL_PATH
 
-	mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/src"
+	mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/src" "${TEST_DIR}/home"
 	printf 'template-v1\n' >"${TEST_DIR}/src/.chezmoi.yaml.tmpl"
 
 	# Stub chezmoi: records each invocation and honours FAKE_*_RC exit codes.
@@ -50,7 +50,10 @@ teardown() {
 
 # _run_up [env assignments...] -> source the function and run it.
 _run_up() {
-	PATH="${TEST_DIR}/bin:${ORIGINAL_PATH}" run bash -c "source '${SCRIPT}'; chezmoi-up $*; echo \"rc=\$?\""
+	# HOME points at an empty dir: CI runners have no ~/.config/shell/functions,
+	# so this keeps local runs honest about the log.sh fallback path.
+	PATH="${TEST_DIR}/bin:${ORIGINAL_PATH}" HOME="${TEST_DIR}/home" \
+		run bash -c "source '${SCRIPT}'; chezmoi-up $*; echo \"rc=\$?\""
 }
 
 @test "chezmoi-up: script exists and is executable" {
@@ -148,6 +151,56 @@ _run_up() {
 	[[ "$output" =~ "chezmoi apply failed" ]]
 	[[ ! "$output" =~ "up to date" ]]
 	[[ "$output" =~ "rc=1" ]]
+}
+
+
+@test "chezmoi-up: still reports every step when log.sh is unavailable" {
+	# A machine that has not applied the dotfiles yet has no log.sh at all.
+	# Missing log helpers must not swallow the output or abort the run.
+	local isolated="${TEST_DIR}/isolated"
+	mkdir -p "${isolated}"
+	cp "${SCRIPT}" "${isolated}/chezmoi-up.sh"
+
+	PATH="${TEST_DIR}/bin:${ORIGINAL_PATH}" HOME="${TEST_DIR}/home" FAKE_STORED_SHA="${TEMPLATE_SHA}" \
+		run bash -c "source '${isolated}/chezmoi-up.sh'; chezmoi-up; echo \"rc=\$?\""
+	[[ "$output" =~ "Pulling the source repository" ]]
+	[[ "$output" =~ "skipping chezmoi init" ]]
+	[[ "$output" =~ "Applying" ]]
+	[[ "$output" =~ "up to date" ]]
+	[[ ! "$output" =~ "command not found" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: reports failures when log.sh is unavailable" {
+	local isolated="${TEST_DIR}/isolated-fail"
+	mkdir -p "${isolated}"
+	cp "${SCRIPT}" "${isolated}/chezmoi-up.sh"
+
+	PATH="${TEST_DIR}/bin:${ORIGINAL_PATH}" HOME="${TEST_DIR}/home" FAKE_UPDATE_RC=1 \
+		run bash -c "source '${isolated}/chezmoi-up.sh'; chezmoi-up; echo \"rc=\$?\""
+	[[ "$output" =~ "chezmoi update failed" ]]
+	[[ ! "$output" =~ "command not found" ]]
+	[[ "$output" =~ "rc=1" ]]
+}
+
+@test "chezmoi-up: parses a compact one-line state object" {
+	# chezmoi pretty-prints today, but a compact object must not leave a
+	# trailing brace glued to the hash and make every run look changed.
+	cat >"${TEST_DIR}/bin/chezmoi" <<'EOF'
+#!/bin/bash
+if [ "$1" = "source-path" ]; then echo "${FAKE_SRC}"; exit 0; fi
+case "$1" in
+update) echo "UPDATE: $*"; exit 0 ;;
+init)   echo "INIT: $*"; exit 0 ;;
+apply)  echo "APPLY: $*"; exit 0 ;;
+state)  printf '{"configTemplateContentsSHA256": "%s"}\n' "${FAKE_STORED_SHA}"; exit 0 ;;
+esac
+EOF
+	chmod +x "${TEST_DIR}/bin/chezmoi"
+
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" _run_up
+	[[ "$output" =~ "skipping chezmoi init" ]]
+	[[ ! "$output" =~ "INIT:" ]]
 }
 
 # --- fish twin --------------------------------------------------------------
