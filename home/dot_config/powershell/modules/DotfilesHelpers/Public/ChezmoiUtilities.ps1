@@ -60,6 +60,154 @@ function Invoke-ChezmoiSigning {
     & $signingScript -CertificateThumbprint $CertificateThumbprint -Path $repoRoot
 }
 
+function Get-ChezmoiConfigTemplate {
+    <#
+    .SYNOPSIS
+    Returns the path of the chezmoi config template, or $null when there is none.
+    .DESCRIPTION
+    Usually <source-path>/.chezmoi.yaml.tmpl. Private helper for Update-Chezmoi.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param()
+
+    # Guard and catch: with $ErrorActionPreference = 'Stop' (as under GitHub
+    # Actions' `shell: pwsh`) a missing chezmoi would otherwise throw.
+    if (-not (Get-Command chezmoi -CommandType Application -ErrorAction SilentlyContinue)) { return $null }
+
+    $sourceDir = $null
+    try { $sourceDir = & chezmoi source-path 2>$null }
+    catch { return $null }
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceDir)) { return $null }
+
+    foreach ($ext in @('yaml', 'toml', 'json', 'jsonc', 'yml')) {
+        $candidate = Join-Path $sourceDir ".chezmoi.$ext.tmpl"
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
+function Test-ChezmoiConfigChanged {
+    <#
+    .SYNOPSIS
+    Returns $true when `chezmoi init` should run.
+    .DESCRIPTION
+    Compares the SHA256 chezmoi recorded for the config template (its
+    configState bucket, the same data behind its "config file template has
+    changed" warning) with the template on disk. When either side cannot be
+    determined this returns $true and lets init run: a redundant init is
+    harmless, a skipped one is not.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+
+    $template = Get-ChezmoiConfigTemplate
+    if (-not $template) { return $true }
+
+    $state = $null
+    try { $state = & chezmoi state get --bucket=configState --key=configState 2>$null }
+    catch { return $true }
+    if ($LASTEXITCODE -ne 0 -or -not $state) { return $true }
+
+    $stored = $null
+    try {
+        $stored = ($state | ConvertFrom-Json).configTemplateContentsSHA256
+    }
+    catch {
+        return $true
+    }
+    if ([string]::IsNullOrWhiteSpace($stored)) { return $true }
+
+    $actual = (Get-FileHash -LiteralPath $template -Algorithm SHA256).Hash
+    if ([string]::IsNullOrWhiteSpace($actual)) { return $true }
+
+    return ($stored -ne $actual)
+}
+
+function Update-Chezmoi {
+    <#
+    .SYNOPSIS
+    Pull, re-init when the config template changed, then apply, stopping on the
+    first failure.
+
+    .DESCRIPTION
+    Replaces the usual `chezmoi update; chezmoi init; chezmoi apply` dance.
+    Each step is a gate: if one fails the run stops there, so a failed pull can
+    never be followed by an apply of half-updated source.
+
+    The steps are:
+      1. `chezmoi update --apply=false` - pull the source repo only. Applying
+         here would use the OLD config, which breaks when the pull introduces a
+         template variable the current config does not have yet.
+      2. `chezmoi init` - only when the config template actually changed.
+         Skipping is logged.
+      3. `chezmoi apply` - apply with the freshly generated config.
+
+    .PARAMETER ForceInit
+    Run `chezmoi init` even when the config template is unchanged.
+
+    .EXAMPLE
+    Update-Chezmoi
+    Pull, conditionally re-init, and apply.
+
+    .EXAMPLE
+    czu -ForceInit
+    Same, but always regenerate the config file.
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Interactive helper; progress output is the point.')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Thin wrapper around chezmoi, which owns its own --dry-run/--force flags.')]
+    [CmdletBinding()]
+    param(
+        [Alias('f')]
+        [switch]$ForceInit
+    )
+
+    if (-not (Get-Command chezmoi -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Error 'chezmoi is not installed or not in PATH' -ErrorAction Continue
+        return
+    }
+
+    Write-Host '==> Pulling the source repository' -ForegroundColor Blue
+    & chezmoi update --apply=false
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error 'chezmoi update failed; not continuing to init/apply' -ErrorAction Continue
+        return
+    }
+
+    $runInit = $false
+    $reason = ''
+    if ($ForceInit) {
+        $runInit = $true
+        $reason = 'forced'
+    }
+    elseif (Test-ChezmoiConfigChanged) {
+        $runInit = $true
+        $reason = 'config template changed'
+    }
+
+    if ($runInit) {
+        Write-Host "==> Regenerating the config file ($reason)" -ForegroundColor Blue
+        & chezmoi init
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error 'chezmoi init failed; not continuing to apply' -ErrorAction Continue
+            return
+        }
+    }
+    else {
+        Write-Host '==> Config template unchanged, skipping chezmoi init'
+    }
+
+    Write-Host '==> Applying' -ForegroundColor Blue
+    & chezmoi apply
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error 'chezmoi apply failed' -ErrorAction Continue
+        return
+    }
+
+    Write-Host '[OK] Dotfiles are up to date' -ForegroundColor Green
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

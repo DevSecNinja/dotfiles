@@ -73,6 +73,103 @@ Describe "Invoke-ChezmoiSigning" -Tag "Unit" {
     }
 }
 
+
+Describe "Update-Chezmoi" -Tag "Unit" {
+    BeforeAll {
+        $script:Module = Get-Module DotfilesHelpers
+        $script:Body = (Get-Command Update-Chezmoi).ScriptBlock.ToString()
+    }
+
+    It "Should be available as a function" {
+        Get-Command Update-Chezmoi -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+    }
+
+    It "Should be exported by the module manifest" {
+        $manifestPath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/DotfilesHelpers.psd1"
+        (Import-PowerShellDataFile -Path $manifestPath).FunctionsToExport | Should -Contain 'Update-Chezmoi'
+    }
+
+    It "Should be aliased as chezmoi-up, chezmoi_up and czu in aliases.ps1" {
+        $aliases = Get-Content (Join-Path $script:RepoRoot "home/dot_config/powershell/aliases.ps1") -Raw
+        $aliases | Should -Match 'Set-Alias\s+-Name\s+chezmoi-up\s+-Value\s+Update-Chezmoi'
+        $aliases | Should -Match 'Set-Alias\s+-Name\s+chezmoi_up\s+-Value\s+Update-Chezmoi'
+        $aliases | Should -Match 'Set-Alias\s+-Name\s+czu\s+-Value\s+Update-Chezmoi'
+    }
+
+    It "Should pull without applying, so the old config is never used to apply" {
+        $script:Body | Should -Match 'chezmoi update --apply=false'
+    }
+
+    It "Should stop after a failed step instead of continuing" {
+        # Every external call is followed by a $LASTEXITCODE gate that returns.
+        ([regex]::Matches($script:Body, '\$LASTEXITCODE -ne 0')).Count | Should -BeGreaterOrEqual 3
+        $script:Body | Should -Match 'not continuing to init/apply'
+        $script:Body | Should -Match 'not continuing to apply'
+    }
+
+    It "Should log when it skips the init step" {
+        $script:Body | Should -Match 'skipping chezmoi init'
+    }
+
+    It "Should expose a ForceInit switch" {
+        (Get-Command Update-Chezmoi).Parameters.ContainsKey('ForceInit') | Should -Be $true
+    }
+
+    It "Should keep its helpers private (not exported by the manifest)" {
+        $manifestPath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/DotfilesHelpers.psd1"
+        $exported = (Import-PowerShellDataFile -Path $manifestPath).FunctionsToExport
+        $exported | Should -Not -Contain 'Get-ChezmoiConfigTemplate'
+        $exported | Should -Not -Contain 'Test-ChezmoiConfigChanged'
+    }
+}
+
+Describe "Test-ChezmoiConfigChanged" -Tag "Unit" {
+    BeforeAll {
+        $script:Module = Get-Module DotfilesHelpers
+        $script:Body = & $script:Module { (Get-Command Test-ChezmoiConfigChanged).ScriptBlock.ToString() }
+    }
+
+    It "Should compare the recorded SHA256 with the template on disk" {
+        $script:Body | Should -Match 'configState'
+        $script:Body | Should -Match 'configTemplateContentsSHA256'
+        $script:Body | Should -Match 'Get-FileHash'
+    }
+
+    It "Should default to running init when the state cannot be determined" {
+        # Every early exit returns $true: a redundant init is harmless, a
+        # skipped one leaves a stale config behind.
+        ([regex]::Matches($script:Body, 'return \$true')).Count | Should -BeGreaterOrEqual 4
+    }
+
+    It "Should return a boolean when chezmoi is unavailable" {
+        # Deterministically hide chezmoi rather than relying on the runner not
+        # having it. With $ErrorActionPreference = 'Stop' (GitHub Actions'
+        # `shell: pwsh`) an unguarded call would throw instead of returning.
+        $originalPath = $env:PATH
+        try {
+            $env:PATH = Join-Path ([System.IO.Path]::GetTempPath()) "no-chezmoi-$(Get-Random)"
+            $result = & $script:Module {
+                $ErrorActionPreference = 'Stop'
+                Test-ChezmoiConfigChanged
+            }
+            $result | Should -BeOfType [bool]
+            $result | Should -BeTrue
+        }
+        finally {
+            $env:PATH = $originalPath
+        }
+    }
+}
+
+Describe "Get-ChezmoiConfigTemplate" -Tag "Unit" {
+    It "Should look for the known chezmoi config template extensions" {
+        $module = Get-Module DotfilesHelpers
+        $body = & $module { (Get-Command Get-ChezmoiConfigTemplate).ScriptBlock.ToString() }
+        $body | Should -Match "'yaml'"
+        $body | Should -Match '\.chezmoi\.\$ext\.tmpl'
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

@@ -24,6 +24,7 @@
         'Reset-ChezmoiScripts'
         'Reset-ChezmoiEntries'
         'Invoke-ChezmoiSigning'
+        'Update-Chezmoi'
 
         # Copilot CLI
         'Connect-CopilotSsh'
