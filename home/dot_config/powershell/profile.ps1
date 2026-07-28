@@ -19,6 +19,34 @@ if (Test-Path $chezmoiConfig) {
     . $chezmoiConfig
 }
 
+# Add OneDrive Portable Programs to this PowerShell session without reading
+# the registry on every startup. Persistence is handled by a chezmoi script.
+if ($env:OneDrive) {
+    $portableProgramsPath = Join-Path $env:OneDrive "Portable Programs"
+    $portableProgramsKey = $portableProgramsPath.Trim().Trim('"').TrimEnd('\').ToUpperInvariant()
+    $portableProgramsInPath = $false
+    $currentSessionPath = if ($null -eq $env:Path) { "" } else { $env:Path }
+
+    foreach ($pathEntry in ($currentSessionPath -split ';')) {
+        if ($pathEntry.Trim().Trim('"').TrimEnd('\').ToUpperInvariant() -eq $portableProgramsKey) {
+            $portableProgramsInPath = $true
+            break
+        }
+    }
+
+    if (-not $portableProgramsInPath) {
+        $env:Path = if ([string]::IsNullOrWhiteSpace($currentSessionPath)) {
+            $portableProgramsPath
+        }
+        elseif ($currentSessionPath.EndsWith(';')) {
+            "$currentSessionPath$portableProgramsPath"
+        }
+        else {
+            "$currentSessionPath;$portableProgramsPath"
+        }
+    }
+}
+
 # Set working directory to projects folder if not already there
 # Skip this if running in VS Code to preserve the opened folder location
 if ($ENV:TERM_PROGRAM -ne "vscode") {

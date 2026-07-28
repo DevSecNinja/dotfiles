@@ -58,6 +58,13 @@ chezmoi data
 chezmoi verify
 ```
 
+## Windows PATH
+
+On Windows, the setup adds `%OneDrive%\Portable Programs` to the user-scope
+PATH when the folder exists, so it survives reboots and is available to GUI
+apps. The PowerShell profile also adds the same folder to the current session
+when OneDrive is configured.
+
 ## Learn More
 
 - [Chezmoi documentation](https://www.chezmoi.io/user-guide/command-overview/)
