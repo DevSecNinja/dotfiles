@@ -363,6 +363,155 @@ function Set-WindowsTerminalDefaultProfile {
     return $results
 }
 
+function Set-WindowsTerminalCopilotProfile {
+    <#
+    .SYNOPSIS
+    Adds or updates a Windows Terminal profile for the copilot-ssh helper.
+
+    .DESCRIPTION
+    Parses each existing Windows Terminal settings.json and ensures
+    profiles.list contains one profile that opens PowerShell and runs the
+    copilot-ssh alias for the configured host. The profile GUID is a fixed UUID
+    v5 derived from the dotfiles repository URL and the logical profile purpose,
+    not from the host, so changing hosts updates the same profile instead of
+    creating duplicates.
+
+    Files that do not exist are skipped; initial settings.json creation is
+    handled by run_once_setup-windows-terminal.ps1.
+
+    .PARAMETER HostName
+    The SSH host passed to copilot-ssh. The SshHost alias is also accepted.
+
+    .PARAMETER ProfileName
+    The Windows Terminal display name. Defaults to "Copilot SSH (<HostName>)".
+
+    .PARAMETER SettingsPath
+    One or more settings.json paths. Defaults to the known Windows Terminal
+    locations (Store, Preview, and unpackaged).
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Matches sibling Windows Terminal helpers that print visible status after a change.')]
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory)]
+        [Alias('SshHost')]
+        [ValidateNotNullOrEmpty()]
+        [string]$HostName,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$ProfileName,
+
+        [Parameter()]
+        [string[]]$SettingsPath
+    )
+
+    if (-not $SettingsPath) {
+        $SettingsPath = Get-WindowsTerminalSettingsPath
+    }
+
+    if (-not $PSBoundParameters.ContainsKey('ProfileName')) {
+        $ProfileName = "Copilot SSH ($HostName)"
+    }
+
+    $profileGuid = '{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}'
+    $quotedHost = $HostName -replace "'", "''"
+    $commandLine = "pwsh -NoExit -NoLogo -Command `"copilot-ssh '$quotedHost'`""
+    $results = @()
+
+    foreach ($path in $SettingsPath) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            Write-Verbose "Windows Terminal settings not found at: $path (skipping)"
+            continue
+        }
+
+        try {
+            $json = Read-WindowsTerminalSettings -Path $path
+
+            if ($null -eq $json.profiles) {
+                $json | Add-Member -NotePropertyName profiles -NotePropertyValue ([pscustomobject]@{}) -Force
+            }
+
+            $listProperty = $json.profiles.PSObject.Properties['list']
+            if ($null -eq $listProperty -or $null -eq $json.profiles.list) {
+                $list = @()
+            }
+            else {
+                $list = @($json.profiles.list)
+            }
+
+            $copilotProfile = $list | Where-Object { $null -ne $_ -and $_.PSObject.Properties['guid'] -and $_.guid -eq $profileGuid } | Select-Object -First 1
+            $changed = $false
+
+            if (-not $copilotProfile) {
+                $copilotProfile = [pscustomobject]@{
+                    guid        = $profileGuid
+                    hidden      = $false
+                    name        = $ProfileName
+                    commandline = $commandLine
+                }
+                $list += $copilotProfile
+                if ($null -eq $listProperty) {
+                    $json.profiles | Add-Member -NotePropertyName list -NotePropertyValue $list -Force
+                }
+                else {
+                    $json.profiles.list = $list
+                }
+                $changed = $true
+            }
+            else {
+                if ($null -eq $copilotProfile.PSObject.Properties['hidden']) {
+                    $copilotProfile | Add-Member -NotePropertyName hidden -NotePropertyValue $false -Force
+                    $changed = $true
+                }
+                elseif ($copilotProfile.hidden -ne $false) {
+                    $copilotProfile.hidden = $false
+                    $changed = $true
+                }
+
+                if ($null -eq $copilotProfile.PSObject.Properties['name']) {
+                    $copilotProfile | Add-Member -NotePropertyName name -NotePropertyValue $ProfileName -Force
+                    $changed = $true
+                }
+                elseif ($copilotProfile.name -ne $ProfileName) {
+                    $copilotProfile.name = $ProfileName
+                    $changed = $true
+                }
+
+                if ($null -eq $copilotProfile.PSObject.Properties['commandline']) {
+                    $copilotProfile | Add-Member -NotePropertyName commandline -NotePropertyValue $commandLine -Force
+                    $changed = $true
+                }
+                elseif ($copilotProfile.commandline -ne $commandLine) {
+                    $copilotProfile.commandline = $commandLine
+                    $changed = $true
+                }
+            }
+
+            if (-not $changed) {
+                Write-Verbose "Copilot SSH profile already set for '$HostName' at: $path"
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'AlreadySet'; Guid = $profileGuid; ProfileName = $ProfileName; CommandLine = $commandLine }
+                continue
+            }
+
+            if ($PSCmdlet.ShouldProcess($path, "Set Copilot SSH profile '$ProfileName'")) {
+                Save-WindowsTerminalSettings -Path $path -Settings $json
+                Write-Host "[OK] Set Windows Terminal Copilot SSH profile '$ProfileName' at: $path" -ForegroundColor Green
+                $results += [pscustomobject]@{ Path = $path; Changed = $true; Status = 'Updated'; Guid = $profileGuid; ProfileName = $ProfileName; CommandLine = $commandLine }
+            }
+            else {
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'WhatIf'; Guid = $profileGuid; ProfileName = $ProfileName; CommandLine = $commandLine }
+            }
+        }
+        catch {
+            Write-Warning "Could not update Windows Terminal Copilot SSH profile at '$path': $_"
+            $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'Error'; Guid = $profileGuid; ProfileName = $ProfileName; CommandLine = $commandLine }
+        }
+    }
+
+    return $results
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

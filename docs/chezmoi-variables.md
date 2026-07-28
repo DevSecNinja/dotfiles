@@ -36,6 +36,11 @@ templates and scripts.
   Override it per-machine by setting `opCopilotEnvironmentId` in your local
   chezmoi config or at the interactive init prompt. Exported to your shell as
   `OP_COPILOT_ENVIRONMENT_ID`. See [copilot-cli.md](copilot-cli.md).
+- `copilotSshHost` — The SSH host used by the Windows Terminal "Copilot SSH"
+  profile that runs the `copilot-ssh` PowerShell helper. Defaults to
+  `svlazdev.<privateDomain>` when `privateDomain` is set, otherwise `svlazdev`.
+  Override it per-machine by setting `copilotSshHost` in your local chezmoi
+  config or at the interactive init prompt.
 
 [openv]: https://www.1password.dev/environments
 

@@ -78,6 +78,22 @@
 {{-   $opCopilotEnvironmentId = promptString "1Password Environment ID for Copilot CLI" $opCopilotEnvironmentId -}}
 {{- end -}}
 
+{{- /* SSH host used by Windows Terminal's Copilot SSH profile. This defaults  */ -}}
+{{- /* to the same svlazdev host alias declared in private_dot_ssh/config.tmpl */ -}}
+{{- /* when privateDomain is set, and falls back to plain svlazdev when it is  */ -}}
+{{- /* empty. Override per-machine by setting `copilotSshHost` in your local   */ -}}
+{{- /* chezmoi config, or at the interactive init prompt. See                  */ -}}
+{{- /* docs/copilot-cli.md.                                                     */ -}}
+{{- $copilotSshHost := "svlazdev" -}}
+{{- if $privateDomain -}}
+{{-   $copilotSshHost = printf "svlazdev.%s" $privateDomain -}}
+{{- end -}}
+{{- if hasKey . "copilotSshHost" -}}
+{{-   $copilotSshHost = .copilotSshHost -}}
+{{- else if $interactive -}}
+{{-   $copilotSshHost = promptString "Copilot SSH host" $copilotSshHost -}}
+{{- end -}}
+
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
 {{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
@@ -214,6 +230,7 @@ interpreters:
 
 data:
   ci: {{ $ci }}
+  copilotSshHost: {{ $copilotSshHost | quote }}
   codespaces: {{ $codespaces }}
   devcontainer: {{ $devcontainer }}
   email: {{ $email | quote }}
