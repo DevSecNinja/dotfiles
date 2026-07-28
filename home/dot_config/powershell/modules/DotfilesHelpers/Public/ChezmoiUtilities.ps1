@@ -71,7 +71,13 @@ function Get-ChezmoiConfigTemplate {
     [OutputType([string])]
     param()
 
-    $sourceDir = & chezmoi source-path 2>$null
+    # Guard and catch: with $ErrorActionPreference = 'Stop' (as under GitHub
+    # Actions' `shell: pwsh`) a missing chezmoi would otherwise throw.
+    if (-not (Get-Command chezmoi -CommandType Application -ErrorAction SilentlyContinue)) { return $null }
+
+    $sourceDir = $null
+    try { $sourceDir = & chezmoi source-path 2>$null }
+    catch { return $null }
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceDir)) { return $null }
 
     foreach ($ext in @('yaml', 'toml', 'json', 'jsonc', 'yml')) {
@@ -99,7 +105,9 @@ function Test-ChezmoiConfigChanged {
     $template = Get-ChezmoiConfigTemplate
     if (-not $template) { return $true }
 
-    $state = & chezmoi state get --bucket=configState --key=configState 2>$null
+    $state = $null
+    try { $state = & chezmoi state get --bucket=configState --key=configState 2>$null }
+    catch { return $true }
     if ($LASTEXITCODE -ne 0 -or -not $state) { return $true }
 
     $stored = $null

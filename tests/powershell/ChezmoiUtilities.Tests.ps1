@@ -142,9 +142,22 @@ Describe "Test-ChezmoiConfigChanged" -Tag "Unit" {
     }
 
     It "Should return a boolean when chezmoi is unavailable" {
-        # No chezmoi on PATH in CI: the helper must not throw.
-        $result = & $script:Module { Test-ChezmoiConfigChanged }
-        $result | Should -BeOfType [bool]
+        # Deterministically hide chezmoi rather than relying on the runner not
+        # having it. With $ErrorActionPreference = 'Stop' (GitHub Actions'
+        # `shell: pwsh`) an unguarded call would throw instead of returning.
+        $originalPath = $env:PATH
+        try {
+            $env:PATH = Join-Path ([System.IO.Path]::GetTempPath()) "no-chezmoi-$(Get-Random)"
+            $result = & $script:Module {
+                $ErrorActionPreference = 'Stop'
+                Test-ChezmoiConfigChanged
+            }
+            $result | Should -BeOfType [bool]
+            $result | Should -BeTrue
+        }
+        finally {
+            $env:PATH = $originalPath
+        }
     }
 }
 
