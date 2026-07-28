@@ -1,5 +1,6 @@
 #Requires -Version 5.1
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Test fixtures build SecureStrings from literal, non-sensitive placeholder values.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'InModuleScope -Parameters values are consumed inside nested Mock scriptblocks, which the analyzer cannot trace.')]
 param()
 <#
 .SYNOPSIS
@@ -482,81 +483,218 @@ Describe "ConvertFrom-DotfilesSecureString" -Tag "Unit" {
 }
 
 Describe "Get-GitHubAppCredential" -Tag "Unit" {
-    It "reads the App ID and private key from 1Password" {
-        InModuleScope DotfilesHelpers {
-            $pem = "-----BEGIN RSA PRIVATE KEY-----`nMIIFAKE`n-----END RSA PRIVATE KEY-----"
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli {
-                if ($Reference -like '*app-id*') { return '123456' }
-                return $pem
+    BeforeAll {
+        $script:FakePem = "-----BEGIN RSA PRIVATE KEY-----`nMIIFAKE`n-----END RSA PRIVATE KEY-----"
+
+        # Shape of `op item get --format json` for a well-formed entry.
+        $script:ItemJson = @{
+            id     = 'abc123'
+            title  = 'GitHub Automation App'
+            fields = @(
+                @{ id = 'app-id'; label = 'app-id'; type = 'STRING' }
+                @{ id = 'private-key'; label = 'private-key'; type = 'CONCEALED' }
+            )
+        } | ConvertTo-Json -Depth 5
+    }
+
+    Context "reference parsing" {
+        It "splits a well-formed reference into vault, item and field" {
+            InModuleScope DotfilesHelpers {
+                $parsed = ConvertFrom-OnePasswordReference -Reference 'op://Private/GitHub Automation App/app-id'
+                $parsed.Vault | Should -Be 'Private'
+                $parsed.Item | Should -Be 'GitHub Automation App'
+                $parsed.Field | Should -Be 'app-id'
             }
-
-            $cred = Get-GitHubAppCredential -AppIdReference 'op://v/i/app-id' -PrivateKeyReference 'op://v/i/key'
-
-            $cred.AppId | Should -Be '123456'
-            $cred.PrivateKey | Should -BeOfType [System.Security.SecureString]
-            Should -Invoke Invoke-OnePasswordCli -Times 2 -Exactly
         }
-    }
 
-    It "returns the private key as a SecureString rather than plain text" {
-        InModuleScope DotfilesHelpers {
-            $pem = "-----BEGIN RSA PRIVATE KEY-----`nMIIFAKE`n-----END RSA PRIVATE KEY-----"
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli {
-                if ($Reference -like '*app-id*') { return '123456' }
-                return $pem
+        It "throws on <_>" -ForEach @(
+            'Private/Item/field'
+            'op://Private/Item'
+            'op://'
+            'nonsense'
+        ) {
+            $reference = $_
+            InModuleScope DotfilesHelpers -Parameters @{ Reference = $reference } {
+                param($Reference)
+                { ConvertFrom-OnePasswordReference -Reference $Reference } |
+                    Should -Throw -ExpectedMessage "*not a valid 1Password secret reference*"
             }
-
-            $cred = Get-GitHubAppCredential -AppIdReference 'op://v/i/app-id' -PrivateKeyReference 'op://v/i/key'
-            ConvertFrom-DotfilesSecureString -SecureString $cred.PrivateKey | Should -Be $pem
         }
     }
 
-    It "throws when the op CLI is missing" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { $null } -ParameterFilter { $Name -eq 'op' }
-            { Get-GitHubAppCredential -AppIdReference 'op://v/i/a' -PrivateKeyReference 'op://v/i/b' } |
-                Should -Throw -ExpectedMessage "*1Password CLI*"
-        }
-    }
-
-    It "throws when no App ID reference is configured" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            { Get-GitHubAppCredential -AppIdReference '' -PrivateKeyReference 'op://v/i/b' } |
-                Should -Throw -ExpectedMessage "*OP_GITHUB_APP_ID_REF*"
-        }
-    }
-
-    It "throws when no private key reference is configured" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            { Get-GitHubAppCredential -AppIdReference 'op://v/i/a' -PrivateKeyReference '' } |
-                Should -Throw -ExpectedMessage "*OP_GITHUB_APP_KEY_REF*"
-        }
-    }
-
-    It "rejects a value that is not a PEM private key" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli {
-                if ($Reference -like '*app-id*') { return '123456' }
-                return 'this is not a key'
+    Context "pre-flight checks" {
+        It "throws when the op CLI is missing" {
+            InModuleScope DotfilesHelpers {
+                Mock Get-Command { $null } -ParameterFilter { $Name -eq 'op' }
+                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*1Password CLI (op) was not found*"
             }
+        }
 
-            { Get-GitHubAppCredential -AppIdReference 'op://v/i/app-id' -PrivateKeyReference 'op://v/i/key' } |
-                Should -Throw -ExpectedMessage "*does not look like a PEM-encoded private key*"
+        It "throws when 1Password is locked or signed out" {
+            InModuleScope DotfilesHelpers {
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'whoami' }
+
+                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*not signed in*"
+            }
+        }
+
+        It "names the missing item and how to create it" {
+            InModuleScope DotfilesHelpers {
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
+
+                { Get-GitHubAppCredential } |
+                    Should -Throw -ExpectedMessage "*'GitHub Automation App' was not found in vault 'Private'*"
+            }
+        }
+
+        It "suggests an op item create command when the item is missing" {
+            InModuleScope DotfilesHelpers {
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
+
+                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*op item create*"
+            }
+        }
+
+        It "names the missing field and lists the ones that do exist" {
+            InModuleScope DotfilesHelpers {
+                $json = @{
+                    fields = @(@{ id = 'username'; label = 'username' })
+                } | ConvertTo-Json -Depth 5
+
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
+
+                { Get-GitHubAppCredential } |
+                    Should -Throw -ExpectedMessage "*has no field named 'app-id'*username*"
+            }
+        }
+
+        It "verifies both references before reading any value" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
+                param($Json, $Pem)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
+                    return $Pem
+                } -ParameterFilter { $Arguments -contains 'read' }
+
+                $null = Get-GitHubAppCredential
+
+                Should -Invoke Invoke-OnePasswordCli -Times 2 -Exactly -ParameterFilter { $Arguments -contains 'item' }
+            }
         }
     }
 
-    It "throws when 1Password returns an empty App ID" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { return '' }
+    Context "reading the credential" {
+        It "returns the App ID and the key as a SecureString" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
+                param($Json, $Pem)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
+                    return $Pem
+                } -ParameterFilter { $Arguments -contains 'read' }
 
-            { Get-GitHubAppCredential -AppIdReference 'op://v/i/app-id' -PrivateKeyReference 'op://v/i/key' } |
-                Should -Throw -ExpectedMessage "*returned an empty value*"
+                $cred = Get-GitHubAppCredential
+
+                $cred.AppId | Should -Be '123456'
+                $cred.PrivateKey | Should -BeOfType [System.Security.SecureString]
+                ConvertFrom-DotfilesSecureString -SecureString $cred.PrivateKey | Should -Be $Pem
+            }
+        }
+
+        It "defaults to the Private vault entry when nothing is configured" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
+                param($Json, $Pem)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
+                    return $Pem
+                } -ParameterFilter { $Arguments -contains 'read' }
+
+                $null = Get-GitHubAppCredential
+
+                Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
+                    $Arguments -contains 'read' -and $Arguments -contains 'op://Private/GitHub Automation App/private-key'
+                }
+            }
+        }
+
+        It "honours an explicit reference override" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
+                param($Json, $Pem)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Work/Bot/app-id') { return '999' }
+                    return $Pem
+                } -ParameterFilter { $Arguments -contains 'read' }
+
+                $cred = Get-GitHubAppCredential -AppIdReference 'op://Work/Bot/app-id' -PrivateKeyReference 'op://Work/Bot/private-key'
+                $cred.AppId | Should -Be '999'
+
+                # Both overridden references live in the Work vault, so the
+                # item check runs once per reference.
+                Should -Invoke Invoke-OnePasswordCli -Times 2 -Exactly -ParameterFilter {
+                    $Arguments -contains 'item' -and $Arguments -contains 'Work'
+                }
+            }
+        }
+
+        It "rejects an App ID that is not numeric" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
+                param($Json, $Pem)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return 'Iv1.abc123' }
+                    return $Pem
+                } -ParameterFilter { $Arguments -contains 'read' }
+
+                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*not a numeric GitHub App ID*"
+            }
+        }
+
+        It "rejects an empty App ID" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson } {
+                param($Json)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli { '' } -ParameterFilter { $Arguments -contains 'read' }
+
+                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*is empty*"
+            }
+        }
+
+        It "rejects a value that is not a PEM private key" {
+            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson } {
+                param($Json)
+                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+                Mock Invoke-OnePasswordCli {
+                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
+                    return 'this is not a key'
+                } -ParameterFilter { $Arguments -contains 'read' }
+
+                { Get-GitHubAppCredential } |
+                    Should -Throw -ExpectedMessage "*does not look like a PEM-encoded private key*"
+            }
         }
     }
 }

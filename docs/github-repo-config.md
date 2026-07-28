@@ -100,11 +100,12 @@ audit and the remediation read from it, so an edit propagates to both.
 | `can_approve_pull_request_reviews` | `false` | See the warning below                                |
 
 !!! warning "Why `can_approve_pull_request_reviews` stays false"
-That repository toggle is a single switch for two capabilities: letting
-Actions **create** pull requests and letting Actions **approve** them. The
-approval half is the dangerous one — a `GITHUB_TOKEN` approval counts
-toward required reviews, so any workflow with `pull-requests: write` could
-rubber-stamp its own PR and satisfy branch protection on its own.
+
+    That repository toggle is a single switch for two capabilities: letting
+    Actions **create** pull requests and letting Actions **approve** them. The
+    approval half is the dangerous one — a `GITHUB_TOKEN` approval counts
+    toward required reviews, so any workflow with `pull-requests: write` could
+    rubber-stamp its own PR and satisfy branch protection on its own.
 
     If you need automation to open PRs, use a GitHub App token instead
     (see [App credentials](#app-credentials)). App-opened PRs also trigger
@@ -160,8 +161,9 @@ Everything else is carried over verbatim:
   `~DEFAULT_BRANCH`
 
 !!! note "Private repositories need GitHub Pro"
-Rulesets are unavailable on private repositories on the Free plan. Those
-repositories are skipped with a warning instead of failing the run.
+
+    Rulesets are unavailable on private repositories on the Free plan. Those
+    repositories are skipped with a warning instead of failing the run.
 
 ## Overriding the baseline
 
@@ -203,31 +205,63 @@ Archived repositories are excluded from `-All` and are skipped by
 needs extra token scopes. It verifies that the Actions variable
 `AUTOMATION_APP_ID` and the secret `AUTOMATION_APP_PRIVATE_KEY` exist.
 
-Point the helper at your 1Password items — these references are non-secret
-identifiers, useless without authenticating to 1Password:
+### The 1Password entry
+
+Create this once — the defaults expect it, so no configuration is needed:
+
+|                     |                                                          |
+| ------------------- | -------------------------------------------------------- |
+| Vault               | `Private`                                                |
+| Item                | `GitHub Automation App` (category: **API Credential**)   |
+| Field `app-id`      | The numeric **App ID** from the App's settings page      |
+| Field `private-key` | The full PEM, including the `-----BEGIN ... -----` lines |
+
+In the 1Password app, or from the CLI:
 
 ```powershell
-$env:OP_GITHUB_APP_ID_REF  = 'op://Private/GitHub Automation App/app id'
-$env:OP_GITHUB_APP_KEY_REF = 'op://Private/GitHub Automation App/private key'
+op item create --category 'API Credential' --vault Private --title 'GitHub Automation App' `
+    'app-id[text]=123456' `
+    "private-key[password]=$(Get-Content .\your-app.private-key.pem -Raw)"
 ```
 
-Then roll the credential out:
+Use the **App ID**, not the client ID or the slug — the value is validated.
+
+To keep the credential somewhere else, override per call or via environment
+variables. Secret references are non-secret identifiers, useless without
+authenticating to 1Password:
+
+```powershell
+Get-GitHubAppCredential -AppIdReference 'op://Work/Bot/app-id' -PrivateKeyReference 'op://Work/Bot/private-key'
+
+$env:OP_GITHUB_APP_ID_REF  = 'op://Work/Bot/app-id'
+$env:OP_GITHUB_APP_KEY_REF = 'op://Work/Bot/private-key'
+```
+
+### Rolling it out
 
 ```powershell
 $cred = Get-GitHubAppCredential
 Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -AppCredential $cred -WhatIf
 ```
 
+`Get-GitHubAppCredential` checks everything before reading a value, so a
+missing entry fails immediately with a message naming what to fix rather than
+surfacing as an empty secret partway through the rollout. It verifies that
+`op` is installed, that 1Password is unlocked, that the item exists in the
+vault, and that both fields exist on it — listing the fields that _are_ present
+when one is missing.
+
 The private key is held as a `SecureString` and piped to `gh secret set` on
 standard input, so the PEM never appears in a process argument list or on disk.
 
 !!! danger "Never give this credential `administration` permissions"
-The App's private key ends up as an Actions secret in every repository it is
-installed on. Anyone who can edit a workflow in **any** of those
-repositories can mint a token with the App's **full** installation
-permissions — the `permission-*` downscoping in
-`actions/create-github-app-token` is a self-imposed request, not a platform
-constraint.
+
+    The App's private key ends up as an Actions secret in every repository it is
+    installed on. Anyone who can edit a workflow in **any** of those
+    repositories can mint a token with the App's **full** installation
+    permissions — the `permission-*` downscoping in
+    `actions/create-github-app-token` is a self-imposed request, not a platform
+    constraint.
 
     Keep the installation to Contents, Pull requests and Issues `write`. Drive
     repository settings from your own `gh` login instead, so the
