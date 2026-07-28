@@ -44,6 +44,34 @@ templates and scripts.
 
 [openv]: https://www.1password.dev/environments
 
+## 1Password shell plugins
+
+- `opShellPlugins` — CLIs wrapped by a [1Password shell plugin][opsp] so they
+  authenticate with biometrics instead of a token on disk. Defaults to
+  `["gh", "copilot"]`. Accepts either a YAML list or a comma-separated string
+  in your local chezmoi config (the string form is trimmed, de-duplicated and
+  sorted). Not prompted. Each entry still needs a one-off
+  `op plugin init <cli>`, and the wrappers are skipped entirely on WSL, where
+  shell plugins are unsupported.
+  See [1password-shell-plugins.md](1password-shell-plugins.md).
+
+[opsp]: https://developer.1password.com/docs/cli/shell-plugins/
+
+## Git commit signing
+
+- `gitSigningKey` — The SSH **public** key used to sign Git commits when the
+  1Password SSH agent drives signing (notably in WSL, where signing runs
+  through `op-ssh-sign-wsl.exe`). Paste the literal key from the 1Password app
+  — *item → ⋮ → Configure Commit Signing → Copy Snippet* — for example
+  `ssh-ed25519 AAAA… comment`. A public key is not a secret. Empty by default,
+  which leaves signing off; ignored when `useYubiKey` is `true`, since the
+  YubiKey flow derives its key from `~/.ssh/id_*_sk*.pub` instead.
+  See [wsl.md](wsl.md).
+- `opSshSignProgram` — Explicit path to the 1Password SSH signer used in WSL.
+  Empty by default, which auto-detects the MSIX `WindowsApps` path and then the
+  pre-8.11.18 one. Set it only for a non-standard 1Password install. When no
+  signer is found, signing stays off rather than breaking every `git commit`.
+
 ## Windows Enterprise (Windows and WSL)
 
 - `isEntraIDJoined` — Device is Entra ID (Azure AD) joined.

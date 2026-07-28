@@ -26,11 +26,25 @@ renovate.json
 .chezmoiscripts/linux/**
 # fastfetch status modules are driven by a bash script (status.sh); Windows
 # fastfetch keeps its own default config instead.
-dot_config/fastfetch/**
+# Patterns match the TARGET path, so this is .config/… and not dot_config/….
+.config/fastfetch/**
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
 .chezmoiscripts/windows/**
 Documents
 AppData
+{{ end }}
+
+{{ if get . "wsl" }}
+# 1Password shell plugins are unsupported in WSL: `op plugin run` refuses to
+# run there (1Password/shell-plugins#402), and wrapping a CLI with a command
+# that always fails would be worse than not wrapping it at all. WSL instead
+# reaches 1Password through the Windows SSH agent (see docs/wsl.md).
+#
+# `get` rather than a bare `.wsl` so commands that evaluate this file without a
+# rendered config (e.g. `chezmoi ignored --source=.` in CI) don't fail on a
+# missing key.
+.config/shell/functions/op-plugins.sh
+.config/fish/conf.d/op-plugins.fish
 {{ end }}

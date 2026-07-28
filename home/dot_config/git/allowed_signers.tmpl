@@ -31,4 +31,8 @@
 {{- if not $found }}
 # No FIDO2 SSH pubkey found yet. Run `yk-enroll` and re-run `chezmoi apply`.
 {{- end }}
+{{- else if .gitSigningKey }}
+{{- /* 1Password-held signing key (see docs/wsl.md). The public key is enough  */ -}}
+{{- /* to verify signatures; the private half stays in 1Password.             */ -}}
+{{ .email }} {{ .gitSigningKey | trim }}
 {{- end }}

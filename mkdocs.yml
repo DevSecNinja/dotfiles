@@ -67,4 +67,7 @@ nav:
       - Chezmoi Variables: chezmoi-variables.md
       - Development Tools: development-tools.md
       - Shell Logging: logging.md
+      - GitHub Copilot CLI: copilot-cli.md
+      - 1Password Shell Plugins: 1password-shell-plugins.md
+      - WSL: wsl.md
       - YubiKey: yubikey.md

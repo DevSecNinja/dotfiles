@@ -94,6 +94,46 @@
 {{-   $copilotSshHost = promptString "Copilot SSH host" $copilotSshHost -}}
 {{- end -}}
 
+{{- /* CLIs wrapped by a 1Password shell plugin (`op plugin run -- <cli>`).     */ -}}
+{{- /* Accepts a comma-separated string or a YAML list in your local chezmoi    */ -}}
+{{- /* config; not prompted, since the default suits every machine. Each entry  */ -}}
+{{- /* still needs a one-off `op plugin init <cli>`. Shell plugins are not      */ -}}
+{{- /* supported in WSL, where the wrappers are skipped entirely.               */ -}}
+{{- /* See docs/1password-shell-plugins.md.                                     */ -}}
+{{- $opShellPlugins := list "gh" "copilot" -}}
+{{- if hasKey . "opShellPlugins" -}}
+{{-   $opShellPlugins = .opShellPlugins -}}
+{{- end -}}
+{{- if kindIs "string" $opShellPlugins -}}
+{{-   $opShellPlugins = splitList "," $opShellPlugins -}}
+{{- end -}}
+{{- /* Trim before de-duplicating: "aws, aws " would otherwise survive uniq as */ -}}
+{{- /* two distinct strings and only collapse to duplicates afterwards.        */ -}}
+{{- $opShellPluginList := list -}}
+{{- range $opShellPlugins -}}
+{{-   $entry := . | toString | trim -}}
+{{-   if $entry -}}{{- $opShellPluginList = append $opShellPluginList $entry -}}{{- end -}}
+{{- end -}}
+{{- $opShellPluginList = $opShellPluginList | sortAlpha | uniq -}}
+
+{{- /* SSH public key used to sign Git commits when the 1Password SSH agent is  */ -}}
+{{- /* driving signing (notably in WSL, where signing runs through              */ -}}
+{{- /* op-ssh-sign-wsl.exe). Paste the literal key from the 1Password app       */ -}}
+{{- /* ("Configure Commit Signing" -> Copy Snippet), e.g. "ssh-ed25519 AAAA…". */ -}}
+{{- /* A public key is not a secret. Ignored when useYubiKey is true.           */ -}}
+{{- $gitSigningKey := "" -}}
+{{- if hasKey . "gitSigningKey" -}}
+{{-   $gitSigningKey = .gitSigningKey -}}
+{{- end -}}
+
+{{- /* Path to the 1Password SSH signer used in WSL. Empty means auto-detect  */ -}}
+{{- /* (the MSIX WindowsApps path, then the pre-8.11.18 one). Set this only   */ -}}
+{{- /* for a non-standard 1Password install. See docs/wsl.md.                 */ -}}
+{{- $opSshSignProgram := "" -}}
+{{- if hasKey . "opSshSignProgram" -}}
+{{-   $opSshSignProgram = .opSshSignProgram -}}
+{{- end -}}
+
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
 {{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
@@ -237,6 +277,7 @@ data:
   entraIDTenantId: {{ $entraIDTenantId | quote }}
   entraIDTenantName: {{ $entraIDTenantName | quote }}
   firstname: {{ $firstname | quote }}
+  gitSigningKey: {{ $gitSigningKey | quote }}
   githubUsername: {{ $githubUsername | quote }}
   installType: {{ $installType | quote }}
   interactive: {{ $interactive }}
@@ -249,6 +290,8 @@ data:
   lastname: {{ $lastname | quote }}
   name: {{ $name | quote }}
   opCopilotEnvironmentId: {{ $opCopilotEnvironmentId | quote }}
+  opShellPlugins: {{ $opShellPluginList | toJson }}
+  opSshSignProgram: {{ $opSshSignProgram | quote }}
   privateDomain: {{ $privateDomain | quote }}
   useYubiKey: {{ $useYubiKey }}
   username: {{ $username | quote }}
