@@ -286,6 +286,9 @@ Describe "DotfilesHelpers Module" {
             'Test-CopilotSshPreflight'
             'Get-ChezmoiConfigTemplate'
             'Test-ChezmoiConfigChanged'
+            'Get-ChezmoiExpectedBranch'
+            'Get-ChezmoiBranchConfirmation'
+            'Test-ChezmoiSourceBranch'
         )
 
         # Discover every top-level function defined across the Public files using

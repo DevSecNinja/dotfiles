@@ -6,6 +6,10 @@
 # never be followed by an apply of half-updated source.
 #
 # The steps are:
+#   0. Branch guard — warn when the source repo is not on its default branch
+#      (usually main), and offer to switch and pull. `chezmoi update` pulls
+#      whatever branch is checked out, so a forgotten feature branch would
+#      otherwise be applied to the machine silently.
 #   1. `chezmoi update --apply=false` — pull the source repo only. Applying
 #      here would use the OLD config, which breaks when the pull introduces a
 #      template variable the current config does not have yet.
@@ -18,6 +22,13 @@
 # Usage: chezmoi-up [-f|--force-init] [-h|--help]
 #   -f, --force-init   Run `chezmoi init` even if the template is unchanged
 #   -h, --help         Show this help message
+#
+# Environment:
+#   CHEZMOI_UP_BRANCH             Expected branch (default: the source repo's
+#                                 default branch, else main)
+#   CHEZMOI_UP_SKIP_BRANCH_CHECK  Set to 1 to skip the branch guard entirely
+#   CHEZMOI_UP_ASSUME_YES=1       Switch branch without asking
+#   CHEZMOI_UP_ASSUME_NO=1        Never switch, even on a TTY
 #
 # Alias: czu
 
@@ -73,6 +84,102 @@ _chezmoi_up_needs_init() {
     [ "${stored}" != "${actual}" ]
 }
 
+# _chezmoi_up_expected_branch -> print the branch the source repo should be on.
+# Honours CHEZMOI_UP_BRANCH, else asks git which branch origin's HEAD points at
+# (so a repo that renames its default branch keeps working), else falls back to
+# main.
+_chezmoi_up_expected_branch() {
+    local source_dir="${1}" head=""
+
+    if [ -n "${CHEZMOI_UP_BRANCH:-}" ]; then
+        printf '%s\n' "${CHEZMOI_UP_BRANCH}"
+        return 0
+    fi
+
+    head="$(git -C "${source_dir}" symbolic-ref --short -q refs/remotes/origin/HEAD 2>/dev/null || true)"
+    if [ -n "${head}" ]; then
+        printf '%s\n' "${head#origin/}"
+        return 0
+    fi
+
+    printf 'main\n'
+}
+
+# _chezmoi_up_confirm PROMPT -> 0 when the user answers yes. Non-interactive
+# shells always answer no, so an automated run is warned but never blocked.
+_chezmoi_up_confirm() {
+    [ "${CHEZMOI_UP_ASSUME_YES:-0}" = "1" ] && return 0
+    [ "${CHEZMOI_UP_ASSUME_NO:-0}" = "1" ] && return 1
+    [ -t 0 ] || return 1
+
+    local reply=""
+    printf '%s [y/N] ' "${1}" >&2
+    read -r reply || return 1
+    case "${reply}" in
+    [yY] | [yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+    esac
+}
+
+# _chezmoi_up_check_branch -> warn when the source repo is off its default
+# branch, and offer to switch and pull.
+#
+# Always returns 0: being on a feature branch is a legitimate way to test
+# dotfiles changes, so this warns and offers rather than blocking the run.
+_chezmoi_up_check_branch() {
+    [ "${CHEZMOI_UP_SKIP_BRANCH_CHECK:-0}" = "1" ] && return 0
+
+    local source_dir
+    source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+    [ -n "${source_dir}" ] && [ -d "${source_dir}" ] || return 0
+
+    # A source directory that is not a git checkout has no branch to be wrong.
+    git -C "${source_dir}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+
+    local expected current
+    expected="$(_chezmoi_up_expected_branch "${source_dir}")"
+    current="$(git -C "${source_dir}" symbolic-ref --short -q HEAD 2>/dev/null || true)"
+
+    [ "${current}" = "${expected}" ] && return 0
+
+    if [ -z "${current}" ]; then
+        _chezmoi_up_say warn "Source repository is in detached HEAD state, not on '${expected}'."
+    else
+        _chezmoi_up_say warn "Source repository is on '${current}', not '${expected}'."
+    fi
+    _chezmoi_up_say warn "chezmoi update pulls whichever branch is checked out."
+
+    if ! _chezmoi_up_confirm "Switch to '${expected}' and pull?"; then
+        _chezmoi_up_say info "Staying on '${current:-detached HEAD}'."
+        return 0
+    fi
+
+    # Switching with uncommitted changes would either fail or drag the changes
+    # onto the default branch; neither is something to do behind the user's back.
+    local dirty=""
+    dirty="$(git -C "${source_dir}" status --porcelain 2>/dev/null || true)"
+    if [ -n "${dirty}" ]; then
+        _chezmoi_up_say error "Source repository has uncommitted changes; commit or stash them first."
+        _chezmoi_up_say info "Continuing on '${current:-detached HEAD}'."
+        return 0
+    fi
+
+    _chezmoi_up_say step "Switching to '${expected}'"
+    if ! git -C "${source_dir}" checkout "${expected}"; then
+        _chezmoi_up_say error "Could not check out '${expected}'; continuing on '${current:-detached HEAD}'."
+        return 0
+    fi
+
+    # --ff-only: never create a merge commit in the dotfiles source behind the
+    # user's back. A diverged branch is reported instead.
+    if ! git -C "${source_dir}" pull --ff-only; then
+        _chezmoi_up_say error "Could not fast-forward '${expected}'; resolve it manually."
+        return 0
+    fi
+
+    return 0
+}
+
 # _chezmoi_up_load_log -> make log.sh's helpers available when we can.
 # config.bash/config.zsh source every file in this directory, but this one
 # sorts before log.sh, so pull it in on first use. Falls back to the copy next
@@ -107,6 +214,9 @@ _chezmoi_up_say() {
         ;;
     info)
         if command -v log_info >/dev/null 2>&1; then log_info "$*"; else printf '==> %s\n' "$*"; fi
+        ;;
+    warn)
+        if command -v log_warn >/dev/null 2>&1; then log_warn "$*"; else printf '! %s\n' "$*" >&2; fi
         ;;
     result)
         if command -v log_result >/dev/null 2>&1; then log_result "$*"; else printf '\342\234\223 %s\n' "$*"; fi
@@ -152,6 +262,8 @@ chezmoi-up() {
     _chezmoi_up_load_log
     # shellcheck disable=SC2034  # consumed by log.sh
     local LOG_TAG="chezmoi-up"
+
+    _chezmoi_up_check_branch
 
     _chezmoi_up_say step "Pulling the source repository"
     if ! chezmoi update --apply=false; then

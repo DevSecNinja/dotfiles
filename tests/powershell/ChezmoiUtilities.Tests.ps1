@@ -170,6 +170,112 @@ Describe "Get-ChezmoiConfigTemplate" -Tag "Unit" {
     }
 }
 
+
+Describe "Get-ChezmoiExpectedBranch" -Tag "Unit" {
+    AfterEach {
+        Remove-Item Env:CHEZMOI_UP_BRANCH -ErrorAction SilentlyContinue
+    }
+
+    It "Prefers CHEZMOI_UP_BRANCH when it is set" {
+        $env:CHEZMOI_UP_BRANCH = 'develop'
+        InModuleScope DotfilesHelpers {
+            Get-ChezmoiExpectedBranch -SourceDir '/tmp' | Should -Be 'develop'
+        }
+    }
+
+    It "Falls back to main when git cannot resolve origin/HEAD" {
+        InModuleScope DotfilesHelpers {
+            # A directory that is not a git repo: git writes to stderr and the
+            # helper must not surface that as a branch name.
+            $tmp = [System.IO.Path]::GetTempPath()
+            Get-ChezmoiExpectedBranch -SourceDir $tmp | Should -Be 'main'
+        }
+    }
+}
+
+Describe "Get-ChezmoiBranchConfirmation" -Tag "Unit" {
+    AfterEach {
+        Remove-Item Env:CHEZMOI_UP_ASSUME_YES -ErrorAction SilentlyContinue
+        Remove-Item Env:CHEZMOI_UP_ASSUME_NO -ErrorAction SilentlyContinue
+    }
+
+    It "Answers yes when CHEZMOI_UP_ASSUME_YES is 1" {
+        $env:CHEZMOI_UP_ASSUME_YES = '1'
+        InModuleScope DotfilesHelpers {
+            Get-ChezmoiBranchConfirmation -Message 'Switch?' | Should -BeTrue
+        }
+    }
+
+    It "Answers no when CHEZMOI_UP_ASSUME_NO is 1" {
+        $env:CHEZMOI_UP_ASSUME_NO = '1'
+        InModuleScope DotfilesHelpers {
+            Get-ChezmoiBranchConfirmation -Message 'Switch?' | Should -BeFalse
+        }
+    }
+
+    It "Prefers an explicit yes over an explicit no" {
+        $env:CHEZMOI_UP_ASSUME_YES = '1'
+        $env:CHEZMOI_UP_ASSUME_NO = '1'
+        InModuleScope DotfilesHelpers {
+            Get-ChezmoiBranchConfirmation -Message 'Switch?' | Should -BeTrue
+        }
+    }
+}
+
+Describe "Test-ChezmoiSourceBranch" -Tag "Unit" {
+    AfterEach {
+        Remove-Item Env:CHEZMOI_UP_SKIP_BRANCH_CHECK -ErrorAction SilentlyContinue
+    }
+
+    It "Should be available as a function" {
+        InModuleScope DotfilesHelpers {
+            Get-Command Test-ChezmoiSourceBranch -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    It "Returns immediately when CHEZMOI_UP_SKIP_BRANCH_CHECK is 1" {
+        $env:CHEZMOI_UP_SKIP_BRANCH_CHECK = '1'
+        InModuleScope DotfilesHelpers {
+            Mock Get-Command { throw 'the guard ran past its skip check' }
+            { Test-ChezmoiSourceBranch } | Should -Not -Throw
+        }
+    }
+
+    It "Does not throw when the source path cannot be determined" {
+        InModuleScope DotfilesHelpers {
+            { Test-ChezmoiSourceBranch } | Should -Not -Throw
+        }
+    }
+
+    It "Uses --ff-only so it never creates a merge commit unattended" {
+        InModuleScope DotfilesHelpers {
+            (Get-Command Test-ChezmoiSourceBranch).Definition | Should -Match '--ff-only'
+        }
+    }
+
+    It "Checks for uncommitted changes before switching branches" {
+        InModuleScope DotfilesHelpers {
+            $body = (Get-Command Test-ChezmoiSourceBranch).Definition
+            $body | Should -Match 'status --porcelain'
+            $body | Should -Match 'uncommitted changes'
+            $body.IndexOf('status --porcelain') | Should -BeLessThan $body.IndexOf('checkout $expected')
+        }
+    }
+}
+
+Describe "Update-Chezmoi branch guard wiring" -Tag "Unit" {
+    It "Runs the branch guard before pulling" {
+        # Match the invocations, not the comment-based help above them, which
+        # also names `chezmoi update --apply=false`.
+        $body = (Get-Command Update-Chezmoi).Definition
+        $guard = $body.IndexOf('Test-ChezmoiSourceBranch' + [Environment]::NewLine)
+        $pull = $body.IndexOf('& chezmoi update --apply=false')
+        $guard | Should -BeGreaterThan -1
+        $pull | Should -BeGreaterThan -1
+        $guard | Should -BeLessThan $pull
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

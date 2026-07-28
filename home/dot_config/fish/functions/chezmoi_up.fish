@@ -6,6 +6,10 @@ function chezmoi_up --description 'Pull, re-init when the config template change
     # pull can never be followed by an apply of half-updated source.
     #
     # The steps are:
+    #   0. Branch guard — warn when the source repo is not on its default
+    #      branch (usually main), and offer to switch and pull. `chezmoi
+    #      update` pulls whichever branch is checked out, so a forgotten
+    #      feature branch would otherwise be applied to the machine silently.
     #   1. `chezmoi update --apply=false` — pull the source repo only. Applying
     #      here would use the OLD config, which breaks when the pull introduces
     #      a template variable the current config does not have yet.
@@ -16,6 +20,13 @@ function chezmoi_up --description 'Pull, re-init when the config template change
     #   3. `chezmoi apply` — apply with the freshly generated config.
     #
     # Usage: chezmoi_up [-f|--force-init] [-h|--help]   (alias: czu)
+    #
+    # Environment:
+    #   CHEZMOI_UP_BRANCH             Expected branch (default: the source
+    #                                 repo's default branch, else main)
+    #   CHEZMOI_UP_SKIP_BRANCH_CHECK  Set to 1 to skip the branch guard
+    #   CHEZMOI_UP_ASSUME_YES=1       Switch branch without asking
+    #   CHEZMOI_UP_ASSUME_NO=1        Never switch, even on a TTY
 
     argparse --name=chezmoi_up h/help f/force-init -- $argv
     or return 1
@@ -37,6 +48,8 @@ function chezmoi_up --description 'Pull, re-init when the config template change
         set_color normal
         return 1
     end
+
+    _chezmoi_up_check_branch
 
     set_color --bold blue
     echo "==> Pulling the source repository"
@@ -85,6 +98,108 @@ function chezmoi_up --description 'Pull, re-init when the config template change
     set_color --bold green
     echo "✓ Dotfiles are up to date"
     set_color normal
+    return 0
+end
+
+# _chezmoi_up_expected_branch -> print the branch the source repo should be on.
+# Honours CHEZMOI_UP_BRANCH, else asks git which branch origin's HEAD points at
+# (so a repo that renames its default branch keeps working), else falls back to
+# main.
+function _chezmoi_up_expected_branch --description 'Branch the chezmoi source repo should be on' --argument-names source_dir
+    if set -q CHEZMOI_UP_BRANCH; and test -n "$CHEZMOI_UP_BRANCH"
+        echo $CHEZMOI_UP_BRANCH
+        return 0
+    end
+
+    set -l head (git -C $source_dir symbolic-ref --short -q refs/remotes/origin/HEAD 2>/dev/null)
+    if test -n "$head"
+        string replace -r '^origin/' '' -- $head
+        return 0
+    end
+
+    echo main
+end
+
+# _chezmoi_up_confirm PROMPT -> success when the user answers yes.
+# Non-interactive shells always answer no, so an automated run is warned but
+# never blocked.
+function _chezmoi_up_confirm --description 'Ask a yes/no question; always no when non-interactive' --argument-names prompt
+    test "$CHEZMOI_UP_ASSUME_YES" = 1; and return 0
+    test "$CHEZMOI_UP_ASSUME_NO" = 1; and return 1
+    isatty stdin; or return 1
+
+    read -l -P "$prompt [y/N] " reply
+    or return 1
+    string match -qir '^(y|yes)$' -- $reply
+end
+
+# _chezmoi_up_check_branch -> warn when the source repo is off its default
+# branch, and offer to switch and pull.
+#
+# Always succeeds: being on a feature branch is a legitimate way to test
+# dotfiles changes, so this warns and offers rather than blocking the run.
+function _chezmoi_up_check_branch --description 'Warn when the chezmoi source repo is off its default branch'
+    test "$CHEZMOI_UP_SKIP_BRANCH_CHECK" = 1; and return 0
+
+    set -l source_dir (chezmoi source-path 2>/dev/null)
+    or return 0
+    test -n "$source_dir" -a -d "$source_dir"; or return 0
+
+    # A source directory that is not a git checkout has no branch to be wrong.
+    git -C $source_dir rev-parse --is-inside-work-tree >/dev/null 2>&1; or return 0
+
+    set -l expected (_chezmoi_up_expected_branch $source_dir)
+    set -l current (git -C $source_dir symbolic-ref --short -q HEAD 2>/dev/null)
+
+    test "$current" = "$expected"; and return 0
+
+    set -l where "detached HEAD"
+    test -n "$current"; and set where "'$current'"
+
+    set_color yellow
+    if test -z "$current"
+        echo "! Source repository is in detached HEAD state, not on '$expected'." >&2
+    else
+        echo "! Source repository is on '$current', not '$expected'." >&2
+    end
+    echo "! chezmoi update pulls whichever branch is checked out." >&2
+    set_color normal
+
+    if not _chezmoi_up_confirm "Switch to '$expected' and pull?"
+        echo "==> Staying on $where."
+        return 0
+    end
+
+    # Switching with uncommitted changes would either fail or drag the changes
+    # onto the default branch; neither is something to do behind the user's back.
+    set -l dirty (git -C $source_dir status --porcelain 2>/dev/null)
+    if test (count $dirty) -gt 0
+        set_color red
+        echo "✗ Source repository has uncommitted changes; commit or stash them first." >&2
+        set_color normal
+        echo "==> Continuing on $where."
+        return 0
+    end
+
+    set_color --bold blue
+    echo "==> Switching to '$expected'"
+    set_color normal
+    if not git -C $source_dir checkout $expected
+        set_color red
+        echo "✗ Could not check out '$expected'; continuing on $where." >&2
+        set_color normal
+        return 0
+    end
+
+    # --ff-only: never create a merge commit in the dotfiles source behind the
+    # user's back. A diverged branch is reported instead.
+    if not git -C $source_dir pull --ff-only
+        set_color red
+        echo "✗ Could not fast-forward '$expected'; resolve it manually." >&2
+        set_color normal
+        return 0
+    end
+
     return 0
 end
 

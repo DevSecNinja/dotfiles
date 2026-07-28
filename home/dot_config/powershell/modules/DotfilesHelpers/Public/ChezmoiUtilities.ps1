@@ -125,6 +125,135 @@ function Test-ChezmoiConfigChanged {
     return ($stored -ne $actual)
 }
 
+function Get-ChezmoiExpectedBranch {
+    <#
+    .SYNOPSIS
+    The branch the chezmoi source repository should be on.
+
+    .DESCRIPTION
+    Honours CHEZMOI_UP_BRANCH, else asks git which branch origin's HEAD points
+    at (so a repository that renames its default branch keeps working), else
+    falls back to main. Private helper for Update-Chezmoi.
+
+    .PARAMETER SourceDir
+    The chezmoi source directory.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory = $true)][string]$SourceDir)
+
+    if (-not [string]::IsNullOrWhiteSpace($env:CHEZMOI_UP_BRANCH)) {
+        return $env:CHEZMOI_UP_BRANCH
+    }
+
+    $head = (& git -C $SourceDir symbolic-ref --short -q refs/remotes/origin/HEAD 2>$null | Out-String).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($head)) {
+        return ($head -replace '^origin/', '')
+    }
+
+    return 'main'
+}
+
+function Get-ChezmoiBranchConfirmation {
+    <#
+    .SYNOPSIS
+    Ask a yes/no question, defaulting to "no" when nobody can answer.
+
+    .DESCRIPTION
+    Non-interactive sessions always answer "no" so an automated run is warned
+    but never blocked. CHEZMOI_UP_ASSUME_YES=1 answers yes,
+    CHEZMOI_UP_ASSUME_NO=1 answers no. Private helper for Update-Chezmoi.
+
+    .PARAMETER Message
+    The question to ask.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory = $true)][string]$Message)
+
+    if ($env:CHEZMOI_UP_ASSUME_YES -eq '1') { return $true }
+    if ($env:CHEZMOI_UP_ASSUME_NO -eq '1') { return $false }
+    if (-not [Environment]::UserInteractive) { return $false }
+    if ([Console]::IsInputRedirected) { return $false }
+
+    $answer = Read-Host "$Message [y/N]"
+    return ($answer -match '^\s*(y|yes)\s*$')
+}
+
+function Test-ChezmoiSourceBranch {
+    <#
+    .SYNOPSIS
+    Warn when the chezmoi source repository is off its default branch, and
+    offer to switch and pull.
+
+    .DESCRIPTION
+    `chezmoi update` pulls whichever branch is checked out, so a forgotten
+    feature branch would otherwise be applied to the machine silently.
+
+    Always returns without failing: working on a feature branch is a legitimate
+    way to test dotfiles changes, so this warns and offers rather than blocking
+    the run. Private helper for Update-Chezmoi.
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Interactive helper; progress output is the point.')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Prompts for the branch switch itself; -WhatIf would be redundant.')]
+    [CmdletBinding()]
+    param()
+
+    if ($env:CHEZMOI_UP_SKIP_BRANCH_CHECK -eq '1') { return }
+    if (-not (Get-Command git -CommandType Application -ErrorAction SilentlyContinue)) { return }
+
+    try { $sourceDir = (& chezmoi source-path 2>$null | Out-String).Trim() }
+    catch { return }
+    if ([string]::IsNullOrWhiteSpace($sourceDir) -or -not (Test-Path -LiteralPath $sourceDir)) { return }
+
+    # A source directory that is not a git checkout has no branch to be wrong.
+    $null = & git -C $sourceDir rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0) { return }
+
+    $expected = Get-ChezmoiExpectedBranch -SourceDir $sourceDir
+    $current = (& git -C $sourceDir symbolic-ref --short -q HEAD 2>$null | Out-String).Trim()
+
+    if ($current -eq $expected) { return }
+
+    $where = if ([string]::IsNullOrWhiteSpace($current)) { 'detached HEAD' } else { "'$current'" }
+    if ([string]::IsNullOrWhiteSpace($current)) {
+        Write-Host "[WARN] Source repository is in detached HEAD state, not on '$expected'." -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "[WARN] Source repository is on '$current', not '$expected'." -ForegroundColor Yellow
+    }
+    Write-Host '[WARN] chezmoi update pulls whichever branch is checked out.' -ForegroundColor Yellow
+
+    if (-not (Get-ChezmoiBranchConfirmation -Message "Switch to '$expected' and pull?")) {
+        Write-Host "==> Staying on $where."
+        return
+    }
+
+    # Switching with uncommitted changes would either fail or drag the changes
+    # onto the default branch; neither is something to do behind the user's back.
+    $dirty = (& git -C $sourceDir status --porcelain 2>$null | Out-String).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($dirty)) {
+        Write-Error 'Source repository has uncommitted changes; commit or stash them first.' -ErrorAction Continue
+        Write-Host "==> Continuing on $where."
+        return
+    }
+
+    Write-Host "==> Switching to '$expected'" -ForegroundColor Blue
+    & git -C $sourceDir checkout $expected
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Could not check out '$expected'; continuing on $where." -ErrorAction Continue
+        return
+    }
+
+    # --ff-only: never create a merge commit in the dotfiles source behind the
+    # user's back. A diverged branch is reported instead.
+    & git -C $sourceDir pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Could not fast-forward '$expected'; resolve it manually." -ErrorAction Continue
+        return
+    }
+}
+
 function Update-Chezmoi {
     <#
     .SYNOPSIS
@@ -137,6 +266,8 @@ function Update-Chezmoi {
     never be followed by an apply of half-updated source.
 
     The steps are:
+      0. Branch guard - warn when the source repo is not on its default branch
+         (usually main) and offer to switch and pull.
       1. `chezmoi update --apply=false` - pull the source repo only. Applying
          here would use the OLD config, which breaks when the pull introduces a
          template variable the current config does not have yet.
@@ -167,6 +298,8 @@ function Update-Chezmoi {
         Write-Error 'chezmoi is not installed or not in PATH' -ErrorAction Continue
         return
     }
+
+    Test-ChezmoiSourceBranch
 
     Write-Host '==> Pulling the source repository' -ForegroundColor Blue
     & chezmoi update --apply=false
