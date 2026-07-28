@@ -191,6 +191,27 @@ Get-GitHubRepoConfig -Repository docker, blog, dotfiles
 Get-GitHubRepoConfig -All -Check Ruleset | Set-GitHubRepoConfig -WhatIf
 ```
 
+### Forks
+
+Forks are **included by default**, because a fork you have adopted as your own
+project still wants the baseline. Skip them with `-ExcludeForks`:
+
+```powershell
+Get-GitHubRepoConfig -All -ExcludeForks | Set-GitHubRepoConfig -WhatIf
+```
+
+Every result also carries an `IsFork` property, so they can be filtered after
+the fact:
+
+```powershell
+Get-GitHubRepoConfig -All | Where-Object { $_.IsFork }        # only forks
+Get-GitHubRepoConfig -All | Where-Object { -not $_.IsFork }   # same as -ExcludeForks
+```
+
+Unlike archived repositories — which reject writes and are therefore excluded
+by default — forks are perfectly writable, so excluding them is a judgement
+call rather than a technical constraint.
+
 `-Check` selects what to audit; `-Category` selects what to remediate.
 Repository names may be bare (`docker`), qualified (`DevSecNinja/docker`) or a
 full URL. Bare names are qualified with `-Owner`, which defaults to
@@ -271,16 +292,16 @@ standard input, so the PEM never appears in a process argument list or on disk.
 
 `Get-GitHubRepoConfig` emits one object per repository:
 
-| Property                   | Description                                              |
-| -------------------------- | -------------------------------------------------------- |
-| `Repository`               | `owner/name`                                             |
-| `IsCompliant`              | `$true` when nothing drifted                             |
-| `DriftCount`               | Number of drifted settings                               |
-| `Drift`                    | Records with `Category`, `Setting`, `Current`, `Desired` |
-| `Current`                  | The values read from GitHub                              |
-| `Baseline`                 | The desired state used for this comparison               |
-| `RulesetId`                | Existing ruleset id, so `Set` updates in place           |
-| `Visibility`, `IsArchived` | Repository metadata                                      |
+| Property                             | Description                                              |
+| ------------------------------------ | -------------------------------------------------------- |
+| `Repository`                         | `owner/name`                                             |
+| `IsCompliant`                        | `$true` when nothing drifted                             |
+| `DriftCount`                         | Number of drifted settings                               |
+| `Drift`                              | Records with `Category`, `Setting`, `Current`, `Desired` |
+| `Current`                            | The values read from GitHub                              |
+| `Baseline`                           | The desired state used for this comparison               |
+| `RulesetId`                          | Existing ruleset id, so `Set` updates in place           |
+| `Visibility`, `IsArchived`, `IsFork` | Repository metadata                                      |
 
 `Set-GitHubRepoConfig -PassThru` reports `Applied` and `Skipped` per repository.
 

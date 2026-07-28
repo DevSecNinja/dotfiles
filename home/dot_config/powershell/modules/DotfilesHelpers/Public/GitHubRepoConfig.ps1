@@ -872,7 +872,8 @@ function Get-GitHubRepoConfig {
 
     .PARAMETER All
         Audit every repository owned by -Owner. Archived repositories are
-        skipped unless -IncludeArchived is supplied.
+        skipped unless -IncludeArchived is supplied; forks are included unless
+        -ExcludeForks is supplied.
 
     .PARAMETER Owner
         Account that owns the repositories. Defaults to
@@ -881,6 +882,12 @@ function Get-GitHubRepoConfig {
     .PARAMETER IncludeArchived
         Include archived repositories when used with -All. Archived
         repositories reject writes, so they are excluded by default.
+
+    .PARAMETER ExcludeForks
+        Skip forks when used with -All. Forks are included by default, because
+        a fork you maintain as your own project still wants the baseline; use
+        this to leave upstream clones alone. Every result carries an IsFork
+        property, so forks can also be filtered after the fact.
 
     .PARAMETER Check
         Categories to audit. Defaults to Settings, Actions and Ruleset.
@@ -911,6 +918,17 @@ function Get-GitHubRepoConfig {
 
         Audit everything, including whether the App credential is present.
 
+    .EXAMPLE
+        Get-GitHubRepoConfig -All -ExcludeForks | Set-GitHubRepoConfig -WhatIf
+
+        Remediate only repositories you started yourself, leaving forks of
+        other people's projects untouched.
+
+    .EXAMPLE
+        Get-GitHubRepoConfig -All | Where-Object { $_.IsFork }
+
+        Audit only the forks.
+
     .OUTPUTS
         PSCustomObject (Dotfiles.GitHubRepoConfig)
     #>
@@ -930,6 +948,9 @@ function Get-GitHubRepoConfig {
 
         [Parameter(Mandatory = $false, ParameterSetName = 'All')]
         [switch]$IncludeArchived,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'All')]
+        [switch]$ExcludeForks,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential')]
@@ -957,11 +978,15 @@ function Get-GitHubRepoConfig {
 
         if ($PSCmdlet.ParameterSetName -eq 'All') {
             Write-Verbose "Listing repositories for $Owner"
-            $listed = Invoke-GitHubCli -Arguments @('repo', 'list', $Owner, '--limit', '1000', '--json', 'nameWithOwner,isArchived') -ErrorContext "gh repo list $Owner"
+            $listed = Invoke-GitHubCli -Arguments @('repo', 'list', $Owner, '--limit', '1000', '--json', 'nameWithOwner,isArchived,isFork') -ErrorContext "gh repo list $Owner"
             $repos = $listed | ConvertFrom-Json
             foreach ($repo in $repos) {
                 if ($repo.isArchived -and -not $IncludeArchived) {
                     Write-Verbose "Skipping archived repository $($repo.nameWithOwner)"
+                    continue
+                }
+                if ($repo.isFork -and $ExcludeForks) {
+                    Write-Verbose "Skipping fork $($repo.nameWithOwner)"
                     continue
                 }
                 $targets.Add($repo.nameWithOwner)
@@ -1126,6 +1151,7 @@ function Get-GitHubRepoConfig {
                 Name        = ($target -split '/')[1]
                 Visibility  = $repo.visibility
                 IsArchived  = [bool]$repo.archived
+                IsFork      = [bool]$repo.fork
                 IsCompliant = ($drift.Count -eq 0)
                 DriftCount  = $drift.Count
                 Drift       = $drift.ToArray()

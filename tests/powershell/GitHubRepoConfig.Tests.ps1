@@ -731,6 +731,28 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
             $result.PSObject.TypeNames | Should -Contain 'Dotfiles.GitHubRepoConfig'
         }
 
+        It "surfaces IsFork so results can be filtered after the fact" {
+            (Get-GitHubRepoConfig -Repository 'compliant').PSObject.Properties.Name |
+                Should -Contain 'IsFork'
+        }
+
+        It "reports a fork as IsFork" {
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                $repo = script:New-CompliantRepoResponse
+                $repo | Add-Member -NotePropertyName fork -NotePropertyValue $true -Force
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo $repo `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail (script:New-CompliantRulesetDetail)
+            }
+
+            (Get-GitHubRepoConfig -Repository 'compliant').IsFork | Should -BeTrue
+        }
+
+        It "reports a non-fork as not IsFork" {
+            (Get-GitHubRepoConfig -Repository 'compliant').IsFork | Should -BeFalse
+        }
+
         It "records the ruleset id so Set can update in place" {
             (Get-GitHubRepoConfig -Repository 'compliant').RulesetId | Should -Be 42
         }
@@ -913,9 +935,11 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
         BeforeEach {
             Mock -ModuleName DotfilesHelpers Invoke-GitHubCli {
                 @(
-                    @{ nameWithOwner = 'DevSecNinja/one'; isArchived = $false }
-                    @{ nameWithOwner = 'DevSecNinja/two'; isArchived = $false }
-                    @{ nameWithOwner = 'DevSecNinja/old'; isArchived = $true }
+                    @{ nameWithOwner = 'DevSecNinja/one'; isArchived = $false; isFork = $false }
+                    @{ nameWithOwner = 'DevSecNinja/two'; isArchived = $false; isFork = $false }
+                    @{ nameWithOwner = 'DevSecNinja/forked'; isArchived = $false; isFork = $true }
+                    @{ nameWithOwner = 'DevSecNinja/old'; isArchived = $true; isFork = $false }
+                    @{ nameWithOwner = 'DevSecNinja/oldfork'; isArchived = $true; isFork = $true }
                 ) | ConvertTo-Json -Compress
             } -ParameterFilter { $Arguments -contains 'list' }
 
@@ -930,12 +954,43 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
 
         It "excludes archived repositories by default" {
             $result = @(Get-GitHubRepoConfig -All)
-            $result.Count | Should -Be 2
             @($result | ForEach-Object { $_.Repository }) | Should -Not -Contain 'DevSecNinja/old'
         }
 
         It "includes archived repositories with -IncludeArchived" {
-            @(Get-GitHubRepoConfig -All -IncludeArchived).Count | Should -Be 3
+            @(Get-GitHubRepoConfig -All -IncludeArchived).Count | Should -Be 5
+        }
+
+        It "includes forks by default, since a fork you maintain still wants the baseline" {
+            $result = @(Get-GitHubRepoConfig -All)
+            $result.Count | Should -Be 3
+            @($result | ForEach-Object { $_.Repository }) | Should -Contain 'DevSecNinja/forked'
+        }
+
+        It "excludes forks with -ExcludeForks" {
+            $result = @(Get-GitHubRepoConfig -All -ExcludeForks)
+            $result.Count | Should -Be 2
+            @($result | ForEach-Object { $_.Repository }) | Should -Not -Contain 'DevSecNinja/forked'
+        }
+
+        It "applies -ExcludeForks and the archived filter together" {
+            $result = @(Get-GitHubRepoConfig -All -ExcludeForks -IncludeArchived)
+            $names = @($result | ForEach-Object { $_.Repository })
+            $names | Should -Contain 'DevSecNinja/old'
+            $names | Should -Not -Contain 'DevSecNinja/forked'
+            $names | Should -Not -Contain 'DevSecNinja/oldfork'
+        }
+
+        It "asks gh for the isFork field" {
+            $null = Get-GitHubRepoConfig -All
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'list' -and ($Arguments -join ' ') -match 'isFork'
+            }
+        }
+
+        It "rejects -ExcludeForks outside the -All parameter set" {
+            { Get-GitHubRepoConfig -Repository 'one' -ExcludeForks -ErrorAction Stop } | Should -Throw
         }
 
         It "accepts several repositories from the pipeline" {
