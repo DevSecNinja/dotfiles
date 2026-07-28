@@ -172,10 +172,59 @@ esac
 EOF
 	run bash "${SCRIPT}" refresh
 	[ "$status" -eq 0 ]
+	# The cache stores absolute epoch tokens, not pre-rendered durations.
 	run cat "${XDG_CACHE_HOME}/fastfetch-status/ansible"
+	[[ "$output" =~ @ago:[0-9]+@ ]]
+	[[ "$output" =~ @in:[0-9]+@ ]]
+	[[ ! "$output" =~ "ran " ]]
+	# Emitting expands them against the current clock.
+	run bash "${SCRIPT}" ansible
+	[ "$status" -eq 0 ]
 	[[ "$output" =~ "ansible-pull OK" ]]
 	[[ "$output" =~ "ran 10m ago" ]]
 	[[ "$output" =~ "next in" ]]
+}
+
+@test "fastfetch-status: relative times advance without a cache refresh" {
+	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
+	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
+	printf 'ansible-pull OK \302\267 @ago:%s@\n' "$(($(date +%s) - 3540))" \
+		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
+
+	run bash "${SCRIPT}" ansible
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "ran 59m ago" ]]
+
+	# Same cache file, later clock -> a different rendered duration.
+	printf 'ansible-pull OK \302\267 @ago:%s@\n' "$(($(date +%s) - 3660))" \
+		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
+	run bash "${SCRIPT}" ansible
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "ran 1h ago" ]]
+}
+
+@test "fastfetch-status: elapsed next-run token renders as due" {
+	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
+	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
+	printf 'ansible-pull OK \302\267 @in:%s@\n' "$(($(date +%s) - 60))" \
+		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
+
+	run bash "${SCRIPT}" ansible
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "next due" ]]
+}
+
+@test "fastfetch-status: lines without tokens are emitted verbatim" {
+	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
+	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
+	printf 'user@host \302\267 @nope:1@ \302\267 100%% done\n' \
+		>"${XDG_CACHE_HOME}/fastfetch-status/updates"
+
+	run bash "${SCRIPT}" updates
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "user@host" ]]
+	[[ "$output" =~ "@nope:1@" ]]
+	[[ "$output" =~ "100% done" ]]
 }
 
 @test "fastfetch-status: reports ansible-pull failure from systemd" {
