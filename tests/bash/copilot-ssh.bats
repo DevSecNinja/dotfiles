@@ -179,6 +179,19 @@ EOF
 	chmod +x "$TEST_DIR/az"
 }
 
+# Build a PATH containing only the stubs plus the handful of real tools the
+# helper needs, so a command can be made genuinely absent. `/usr/bin:/bin` is
+# not enough for that: GitHub Actions runners ship the Azure CLI in /usr/bin.
+_minimal_path() {
+	local tool
+	for tool in awk sed grep cat wc tr date sleep rm mkdir chmod; do
+		if command -v "$tool" >/dev/null 2>&1; then
+			ln -sf "$(command -v "$tool")" "$TEST_DIR/$tool"
+		fi
+	done
+	PATH="$TEST_DIR"
+}
+
 @test "copilot-ssh: pre-flight resolves host and port from ssh -G" {
 	_stub_ssh_config "vm01.example.com" "2222"
 	PATH="$TEST_DIR:$ORIGINAL_PATH"
@@ -191,8 +204,8 @@ EOF
 	_stub_ssh_config "vm01.example.com" "22"
 	_stub_nc 1
 	_stub_op "ctok" "gtok"
-	# PATH without az.
-	PATH="$TEST_DIR:/usr/bin:/bin"
+	# PATH with the stubs but genuinely without az.
+	_minimal_path
 	run copilot-ssh myhost
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "vm01.example.com:22 is not reachable" ]]
