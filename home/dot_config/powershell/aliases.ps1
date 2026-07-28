@@ -48,6 +48,11 @@ function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> 
 Set-Alias -Name copilot-ssh -Value Connect-CopilotSsh
 Set-Alias -Name copilot_ssh -Value Connect-CopilotSsh
 
+# Chezmoi shortcuts
+Set-Alias -Name chezmoi-up -Value Update-Chezmoi
+Set-Alias -Name chezmoi_up -Value Update-Chezmoi
+Set-Alias -Name czu -Value Update-Chezmoi
+
 # Winget shortcuts
 Set-Alias -Name wup -Value Invoke-WingetUpgrade
 Set-Alias -Name winup -Value Invoke-WingetUpgrade

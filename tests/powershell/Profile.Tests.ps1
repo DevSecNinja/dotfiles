@@ -284,6 +284,8 @@ Describe "DotfilesHelpers Module" {
             'Wait-CopilotSshPort'
             'Invoke-CopilotSshAzureRecovery'
             'Test-CopilotSshPreflight'
+            'Get-ChezmoiConfigTemplate'
+            'Test-ChezmoiConfigChanged'
         )
 
         # Discover every top-level function defined across the Public files using

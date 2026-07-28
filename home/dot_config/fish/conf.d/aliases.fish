@@ -35,6 +35,7 @@ alias cz 'chezmoi'
 alias czd 'chezmoi diff'
 alias cza 'chezmoi apply'
 alias cze 'chezmoi edit'
+alias czu 'chezmoi_up'
 
 # Docker shortcuts
 alias d 'docker'
