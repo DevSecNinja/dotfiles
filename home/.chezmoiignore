@@ -34,3 +34,12 @@ dot_config/fastfetch/**
 Documents
 AppData
 {{ end }}
+
+{{ if .wsl }}
+# 1Password shell plugins are unsupported in WSL: `op plugin run` refuses to
+# run there (1Password/shell-plugins#402), and wrapping a CLI with a command
+# that always fails would be worse than not wrapping it at all. WSL instead
+# reaches 1Password through the Windows SSH agent (see docs/wsl.md).
+dot_config/shell/functions/op-plugins.sh
+dot_config/fish/conf.d/op-plugins.fish
+{{ end }}

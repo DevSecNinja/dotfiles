@@ -1,0 +1,37 @@
+# 1Password shell plugins for fish.
+#
+# Instead of letting `op plugin init` manage ~/.config/op/plugins.sh, the
+# wrapper functions live here so the configuration is tracked in this repo.
+# See https://github.com/1Password/shell-plugins#managing-shell-plugins-in-your-own-dotfiles
+# and docs/1password-shell-plugins.md.
+#
+# Each wrapper routes the CLI through `op plugin run`, which injects the
+# credentials from 1Password (unlocked with biometrics) for the duration of
+# that single command, so no token is ever written to disk.
+#
+# The wrapped CLIs come from the chezmoi `opShellPlugins` variable; this file
+# is generated, edit dot_config/fish/conf.d/op-plugins.fish.tmpl instead.
+# Every CLI still needs a one-off `op plugin init <cli>` to pick the item.
+#
+# Shell plugins are not supported in WSL (op plugin run refuses to run there),
+# so chezmoi does not apply this file on WSL hosts.
+
+# Without `op` the wrappers would shadow the real CLIs with a broken command,
+# so define nothing at all when the 1Password CLI is missing.
+if command -q op
+    # Tells `op` the plugin aliases are already set up, so it does not ask us
+    # to source ~/.config/op/plugins.sh.
+    set -gx OP_PLUGIN_ALIASES_SOURCED 1
+
+{{ range .opShellPlugins }}
+    # Wrap {{ . }} only when it is actually installed: defining the function
+    # unconditionally would make `command -q {{ . }}` succeed on machines that
+    # do not have it, breaking the usual "is it installed?" checks.
+    # --wraps keeps the CLI's own completions working through the wrapper.
+    if command -q {{ . }}
+        function {{ . }} --wraps {{ . }} --description "1Password shell plugin for {{ . }}"
+            op plugin run -- {{ . }} $argv
+        end
+    end
+{{ end }}
+end
