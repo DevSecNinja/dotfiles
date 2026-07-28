@@ -142,6 +142,7 @@ Environment variables:
 | `COPILOT_SSH_PREFLIGHT_TIMEOUT` | `3`     | TCP probe timeout in seconds                    |
 | `COPILOT_SSH_START_TIMEOUT`     | `180`   | How long to wait for SSH after `az vm start`    |
 | `COPILOT_SSH_ASSUME_YES`        | unset   | `1` auto-confirms starting a stopped VM         |
+| `COPILOT_SSH_ASSUME_NO`         | unset   | `1` never starts a VM, even on a TTY            |
 
 ## Security notes
 

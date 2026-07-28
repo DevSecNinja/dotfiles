@@ -30,6 +30,7 @@ function copilot_ssh --description "SSH with COPILOT_GITHUB_TOKEN and GH_TOKEN f
     #   COPILOT_SSH_PREFLIGHT_TIMEOUT  TCP probe timeout in seconds (default 3)
     #   COPILOT_SSH_START_TIMEOUT      Wait for SSH after `az vm start` (def. 180)
     #   COPILOT_SSH_ASSUME_YES=1       Start a stopped VM without asking
+    #   COPILOT_SSH_ASSUME_NO=1        Never start a VM, even on a TTY
 
     if contains -- -h $argv; or contains -- --help $argv
         echo "Usage: copilot_ssh [ssh options...] <host>"
@@ -171,6 +172,7 @@ end
 
 function _copilot_ssh_confirm --description "Ask a yes/no question; always no when non-interactive" --argument-names prompt
     test "$COPILOT_SSH_ASSUME_YES" = 1; and return 0
+    test "$COPILOT_SSH_ASSUME_NO" = 1; and return 1
     isatty stdin; or return 1
     read -l -P "$prompt [y/N] " reply
     or return 1
@@ -183,9 +185,16 @@ function _copilot_ssh_wait_for_ssh --description "Poll an SSH port until it answ
 
     printf 'copilot_ssh: waiting for %s:%s to accept connections' $host $port >&2
     while test $waited -lt $limit
-        if _copilot_ssh_tcp_probe $host $port 3
-            printf ' up\n' >&2
-            return 0
+        _copilot_ssh_tcp_probe $host $port 3
+        switch $status
+            case 0
+                printf ' up\n' >&2
+                return 0
+            case 2
+                # No probe tool available: don't spin for the whole timeout,
+                # let ssh report the real state instead.
+                printf ' (cannot probe)\n' >&2
+                return 0
         end
         printf '.' >&2
         sleep 5

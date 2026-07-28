@@ -37,6 +37,7 @@
 #   COPILOT_SSH_PREFLIGHT_TIMEOUT  TCP probe timeout in seconds (default 3)
 #   COPILOT_SSH_START_TIMEOUT      Wait for SSH after `az vm start` (default 180)
 #   COPILOT_SSH_ASSUME_YES=1       Start a stopped VM without asking
+#   COPILOT_SSH_ASSUME_NO=1        Never start a VM, even on a TTY
 
 # _copilot_ssh_tcp_probe HOST PORT TIMEOUT -> 0 open, 1 closed, 2 undetermined.
 _copilot_ssh_tcp_probe() {
@@ -97,9 +98,11 @@ _copilot_ssh_az_lookup() {
 
 # _copilot_ssh_confirm PROMPT -> 0 when the user answers yes (non-interactive
 # shells always answer no, so scripts never block on the prompt;
-# COPILOT_SSH_ASSUME_YES=1 answers yes without asking).
+# COPILOT_SSH_ASSUME_YES=1 answers yes and COPILOT_SSH_ASSUME_NO=1 answers no
+# without asking).
 _copilot_ssh_confirm() {
     [ "${COPILOT_SSH_ASSUME_YES:-0}" = "1" ] && return 0
+    [ "${COPILOT_SSH_ASSUME_NO:-0}" = "1" ] && return 1
     [ -t 0 ] || return 1
     local reply=""
     printf '%s [y/N] ' "${1}" >&2
@@ -117,10 +120,20 @@ _copilot_ssh_wait_for_ssh() {
 
     printf 'copilot-ssh: waiting for %s:%s to accept connections' "${host}" "${port}" >&2
     while [ "${waited}" -lt "${limit}" ]; do
-        if _copilot_ssh_tcp_probe "${host}" "${port}" 3; then
+        _copilot_ssh_tcp_probe "${host}" "${port}" 3
+        case $? in
+        0)
             printf ' up\n' >&2
             return 0
-        fi
+            ;;
+        2)
+            # No probe tool available: don't spin for the whole timeout,
+            # let ssh report the real state instead.
+            printf ' (cannot probe)\n' >&2
+            return 0
+            ;;
+        *) ;;
+        esac
         printf '.' >&2
         sleep 5
         waited=$((waited + 5))

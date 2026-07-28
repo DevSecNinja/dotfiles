@@ -19,8 +19,10 @@
 # Relative times ("ran 5m ago", "next in 20m") are NOT baked into the cache
 # — that would freeze them until the next refresh. The collectors store
 # absolute epoch tokens (@ago:<epoch>@ / @in:<epoch>@) and the section
-# commands expand them against the current clock on every fastfetch run,
-# using bash builtins only (no forks).
+# commands expand them against the current clock on every fastfetch run.
+# Expansion itself is pure shell arithmetic; reading the clock uses the
+# EPOCHSECONDS builtin on bash >= 5.0 and falls back to one `date` call on
+# older bash, so the emit path costs at most a single fork.
 #
 # Usage: status.sh <section|command>
 #   updates            Print cached "updates available" line (may be empty)
@@ -77,7 +79,8 @@ _fmt_duration() {
     fi
 }
 
-# _now -> current epoch seconds (bash 5 builtin when available).
+# _now -> current epoch seconds. Uses the EPOCHSECONDS builtin on bash >= 5.0
+# and falls back to a single `date` fork on older bash.
 _now() {
     if [ -n "${EPOCHSECONDS:-}" ]; then
         printf '%s\n' "${EPOCHSECONDS}"

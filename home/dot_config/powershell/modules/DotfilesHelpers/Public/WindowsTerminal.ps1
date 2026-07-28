@@ -440,8 +440,23 @@ function Set-WindowsTerminalCopilotProfile {
                 $list = @($json.profiles.list)
             }
 
-            $copilotProfile = $list | Where-Object { $null -ne $_ -and $_.PSObject.Properties['guid'] -and $_.guid -eq $profileGuid } | Select-Object -First 1
+            $existing = @($list | Where-Object { $null -ne $_ -and $_.PSObject.Properties['guid'] -and $_.guid -eq $profileGuid })
+            $copilotProfile = $existing | Select-Object -First 1
             $changed = $false
+
+            # Windows Terminal ignores all but one profile per GUID, so collapse
+            # any duplicates left behind by manual edits into the first entry.
+            if ($existing.Count -gt 1) {
+                $duplicates = $existing | Select-Object -Skip 1
+                $list = @($list | Where-Object { -not ($duplicates -contains $_) })
+                if ($null -eq $listProperty) {
+                    $json.profiles | Add-Member -NotePropertyName list -NotePropertyValue $list -Force
+                }
+                else {
+                    $json.profiles.list = $list
+                }
+                $changed = $true
+            }
 
             if (-not $copilotProfile) {
                 $copilotProfile = [pscustomobject]@{

@@ -311,3 +311,16 @@ vm01	rg-b	VM stopped"
 	[ "$status" -eq 1 ]
 	[[ "$output" =~ "no Azure VM matches 'vm01.example.com'" ]]
 }
+
+@test "copilot-ssh: wait loop bails out immediately when nothing can probe" {
+	# No nc and no timeout/bash on PATH: the probe is undetermined, so waiting
+	# must not spin for the full COPILOT_SSH_START_TIMEOUT.
+	_minimal_path
+	local start elapsed
+	start="$(date +%s)"
+	COPILOT_SSH_START_TIMEOUT=60 run _copilot_ssh_wait_for_ssh vm01.example.com 22
+	elapsed=$(($(date +%s) - start))
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "cannot probe" ]]
+	[ "$elapsed" -lt 10 ]
+}

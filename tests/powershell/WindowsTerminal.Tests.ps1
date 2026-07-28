@@ -396,6 +396,32 @@ Describe "Set-WindowsTerminalCopilotProfile Function" -Tag "Unit" {
         $profile.commandline | Should -Be $script:CopilotCommandLine
     }
 
+    It "Should collapse duplicate profiles that share the fixed GUID" {
+        $duplicated = @'
+{
+    "profiles": {
+        "list": [
+            { "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}", "name": "PowerShell" },
+            { "guid": "{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}", "name": "Stale One", "commandline": "cmd.exe" },
+            { "guid": "{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}", "name": "Stale Two", "commandline": "cmd.exe" }
+        ]
+    }
+}
+'@
+        $duplicated | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $copilotProfiles = @($json.profiles.list) | Where-Object { $_.guid -eq $script:CopilotProfileGuid }
+        $copilotProfiles.Count | Should -Be 1
+        $copilotProfiles[0].name | Should -Be 'Copilot SSH (svlazdev.example.test)'
+        $copilotProfiles[0].commandline | Should -Be $script:CopilotCommandLine
+        # Unrelated profiles must survive the de-duplication.
+        @($json.profiles.list).Count | Should -Be 2
+    }
+
     It "Should be idempotent on re-run" {
         $script:CopilotSampleSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
         Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath | Out-Null
