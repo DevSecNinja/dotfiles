@@ -116,15 +116,15 @@ audit and the remediation read from it, so an edit propagates to both.
 
 Protects the default branch while keeping **you** able to bypass it.
 
-| Setting                    | Value                    |
-| -------------------------- | ------------------------ |
-| `Name`                     | `Protect default branch` |
-| `RequirePullRequest`       | `true`                   |
-| `RequiredApprovingReviews` | `0`                      |
-| `BlockDeletion`            | `true`                   |
-| `BlockForcePush`           | `true`                   |
-| `AllowedMergeMethods`      | `squash`                 |
-| `AdminCanBypass`           | `true`                   |
+| Setting                    | Value     |
+| -------------------------- | --------- |
+| `Name`                     | `Default` |
+| `RequirePullRequest`       | `true`    |
+| `RequiredApprovingReviews` | `0`       |
+| `BlockDeletion`            | `true`    |
+| `BlockForcePush`           | `true`    |
+| `AllowedMergeMethods`      | `squash`  |
+| `AdminCanBypass`           | `true`    |
 
 The name matches what GitHub's own UI creates, so a repository that already has
 a ruleset is updated in place rather than gaining a second, competing one. If

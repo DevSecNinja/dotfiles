@@ -1195,6 +1195,98 @@ Describe "Set-GitHubRepoConfig" -Tag "Unit" {
     }
 }
 
+Describe "Invoke-GitHubApi response shaping" -Tag "Unit" {
+    It "returns a JSON list as a usable array, not nested one level deeper" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '[{"id":1},{"id":2},{"id":3}]' }
+
+            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
+
+            @($result).Count | Should -Be 3
+            $result[0].id | Should -Be 1
+            $result[2].id | Should -Be 3
+        }
+    }
+
+    It "preserves an empty JSON list as an empty array rather than collapsing to null" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '[]' }
+
+            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
+
+            # Deliberately not -BeNullOrEmpty: an empty array *is* empty by that
+            # assertion, but it must stay distinguishable from $null, which is
+            # what a failed call returns.
+            $null -eq $result | Should -BeFalse -Because 'an empty list must not be confused with a failed call'
+            @($result).Count | Should -Be 0
+        }
+    }
+
+    It "returns a single-element JSON list as an array, not a bare object" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '[{"id":42,"name":"Default"}]' }
+
+            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
+
+            @($result).Count | Should -Be 1
+            $result[0].name | Should -Be 'Default'
+        }
+    }
+
+    It "returns a JSON object unwrapped" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '{"name":"docker","archived":false}' }
+
+            $result = Invoke-GitHubApi -Endpoint 'repos/o/r'
+
+            $result.name | Should -Be 'docker'
+            $result | Should -Not -BeOfType [System.Object[]]
+        }
+    }
+
+    It "returns null when the call fails under -AllowFailure" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { $null }
+
+            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets' -AllowFailure
+
+            $null -eq $result | Should -BeTrue
+        }
+    }
+
+    It "sends a request body on stdin rather than as arguments" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '{}' }
+
+            $null = Invoke-GitHubApi -Endpoint 'repos/o/r' -Method PATCH -Body @{ has_wiki = $false }
+
+            Should -Invoke Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $StdIn -match '"has_wiki"' -and $Arguments -contains '--input'
+            }
+        }
+    }
+
+    It "preserves booleans as real JSON booleans in the body" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { '{}' }
+
+            $null = Invoke-GitHubApi -Endpoint 'repos/o/r' -Method PATCH -Body @{ has_wiki = $false }
+
+            Should -Invoke Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                ($StdIn | ConvertFrom-Json).has_wiki -eq $false -and $StdIn -notmatch '"False"'
+            }
+        }
+    }
+
+    It "throws on a malformed response" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubCli { 'not json at all' }
+
+            { Invoke-GitHubApi -Endpoint 'repos/o/r' } | Should -Throw -ExpectedMessage "*as JSON*"
+        }
+    }
+}
+
 Describe "GitHubRepoConfig static analysis" -Tag "Unit" {
     BeforeAll {
         $script:SourcePath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/Public/GitHubRepoConfig.ps1"

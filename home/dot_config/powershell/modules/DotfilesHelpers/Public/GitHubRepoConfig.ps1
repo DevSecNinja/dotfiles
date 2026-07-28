@@ -300,17 +300,29 @@ function Invoke-GitHubApi {
 
     if ($null -eq $text -or [string]::IsNullOrWhiteSpace($text)) { return $null }
 
+    # A JSON array has to be reassembled explicitly. Piping into
+    # ConvertFrom-Json enumerates the result, so `$x = '[]' | ConvertFrom-Json`
+    # yields $null - indistinguishable from a failed call - and a single-element
+    # list would arrive as a bare object. Wrapping in @() fixes both, and the
+    # unary comma on return stops the pipeline unrolling it again. (PowerShell
+    # unwraps exactly one level on the way out, so the caller still receives the
+    # array itself, not a nested one. ConvertFrom-Json -NoEnumerate would be
+    # tidier but does not exist on Windows PowerShell 5.1, which this module
+    # supports.)
+    $looksLikeArray = $text.TrimStart().StartsWith('[')
+
     try {
-        $parsed = $text | ConvertFrom-Json
+        $parsed = @($text | ConvertFrom-Json)
     }
     catch {
         throw "Could not parse the response from gh api $Endpoint as JSON: $_"
     }
 
-    # Wrapped in a single-element array so that an empty JSON list survives the
-    # return unrolled as an empty array rather than collapsing to $null, which
-    # would be indistinguishable from a failed call.
-    return , $parsed
+    if ($looksLikeArray) {
+        return , $parsed
+    }
+
+    return $parsed[0]
 }
 
 function Get-GitHubRulesetList {
