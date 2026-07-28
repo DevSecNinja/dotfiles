@@ -277,6 +277,13 @@ Describe "DotfilesHelpers Module" {
             'Save-WindowsTerminalSettings'
             'Invoke-NerdFontInstaller'
             'Get-DotfilesSshHost'
+            'ConvertFrom-SshConfigOutput'
+            'Select-CopilotSshAzureVm'
+            'Test-CopilotSshPort'
+            'Get-CopilotSshConfirmation'
+            'Wait-CopilotSshPort'
+            'Invoke-CopilotSshAzureRecovery'
+            'Test-CopilotSshPreflight'
         )
 
         # Discover every top-level function defined across the Public files using

@@ -16,6 +16,14 @@
 # module entirely when it prints nothing, so a section with nothing to
 # report simply disappears.
 #
+# Relative times ("ran 5m ago", "next in 20m") are NOT baked into the cache
+# — that would freeze them until the next refresh. The collectors store
+# absolute epoch tokens (@ago:<epoch>@ / @in:<epoch>@) and the section
+# commands expand them against the current clock on every fastfetch run.
+# Expansion itself is pure shell arithmetic; reading the clock uses the
+# EPOCHSECONDS builtin on bash >= 5.0 and falls back to one `date` call on
+# older bash, so the emit path costs at most a single fork.
+#
 # Usage: status.sh <section|command>
 #   updates            Print cached "updates available" line (may be empty)
 #   reboot             Print cached "reboot required" line (may be empty)
@@ -55,26 +63,64 @@ _epoch_of() {
     stat -c %Y "${1}" 2>/dev/null || stat -f %m "${1}" 2>/dev/null || echo 0
 }
 
-# _reltime SECONDS -> compact human duration (e.g. 45s, 12m, 3h, 2d).
-_reltime() {
+# _fmt_duration SECONDS -> set REL_DURATION to a compact human duration
+# (e.g. 45s, 12m, 3h, 2d). Fork-free so it is cheap on the emit path.
+_fmt_duration() {
     local s="${1}"
     [ "${s}" -lt 0 ] && s=0
     if [ "${s}" -lt 60 ]; then
-        echo "${s}s"
+        REL_DURATION="${s}s"
     elif [ "${s}" -lt 3600 ]; then
-        echo "$((s / 60))m"
+        REL_DURATION="$((s / 60))m"
     elif [ "${s}" -lt 86400 ]; then
-        echo "$((s / 3600))h"
+        REL_DURATION="$((s / 3600))h"
     else
-        echo "$((s / 86400))d"
+        REL_DURATION="$((s / 86400))d"
     fi
+}
+
+# _now -> current epoch seconds. Uses the EPOCHSECONDS builtin on bash >= 5.0
+# and falls back to a single `date` fork on older bash.
+_now() {
+    if [ -n "${EPOCHSECONDS:-}" ]; then
+        printf '%s\n' "${EPOCHSECONDS}"
+    else
+        date +%s
+    fi
+}
+
+# _render LINE NOW -> print LINE with relative-time tokens expanded:
+#   @ago:<epoch>@  -> "ran 5m ago"   (elapsed since <epoch>)
+#   @in:<epoch>@   -> "next in 20m", or "next due" once <epoch> has passed
+# Unknown or malformed tokens are left untouched.
+_render() {
+    local line="${1}" now="${2}" tail="" pre kind epoch token
+    local re='^(.*)@(ago|in):([0-9]+)@(.*)$'
+    while [[ "${line}" =~ ${re} ]]; do
+        pre="${BASH_REMATCH[1]}"
+        kind="${BASH_REMATCH[2]}"
+        epoch="${BASH_REMATCH[3]}"
+        token=""
+        if [ "${kind}" = "ago" ]; then
+            _fmt_duration "$((now - epoch))"
+            token="ran ${REL_DURATION} ago"
+        elif [ "${epoch}" -gt "${now}" ]; then
+            _fmt_duration "$((epoch - now))"
+            token="next in ${REL_DURATION}"
+        else
+            token="next due"
+        fi
+        tail="${token}${BASH_REMATCH[4]}${tail}"
+        line="${pre}"
+    done
+    printf '%s%s\n' "${line}" "${tail}"
 }
 
 # _is_stale -> 0 (true) when the cache is missing or older than the TTL.
 _is_stale() {
     [ -f "${STAMP}" ] || return 0
     local now stamp_epoch
-    now="$(date +%s)"
+    now="$(_now)"
     stamp_epoch="$(_epoch_of "${STAMP}")"
     [ "$((now - stamp_epoch))" -ge "${TTL}" ]
 }
@@ -90,15 +136,26 @@ _spawn_refresh() {
     fi
 }
 
-# _emit SECTION -> print the cached section and trigger a background refresh
-# when the cache is stale.
+# _emit SECTION -> print the cached section (with relative-time tokens
+# expanded against the current clock) and trigger a background refresh when
+# the cache is stale.
 _emit() {
     [ "${FASTFETCH_STATUS_DISABLE:-0}" = "1" ] && return 0
     if _is_stale; then
         _spawn_refresh
     fi
     local file="${CACHE_DIR}/${1}"
-    [ -f "${file}" ] && cat "${file}"
+    [ -f "${file}" ] || return 0
+
+    local now="" line
+    while IFS= read -r line || [ -n "${line}" ]; do
+        if [[ "${line}" == *@* ]]; then
+            [ -n "${now}" ] || now="$(_now)"
+            _render "${line}" "${now}"
+        else
+            printf '%s\n' "${line}"
+        fi
+    done <"${file}"
     return 0
 }
 
@@ -209,12 +266,14 @@ _collect_ansible() {
     result="$(_systemd_prop ansible-pull.service Result)"
     exit_code="$(_systemd_prop ansible-pull.service ExecMainStatus)"
     finished_ts="$(_systemd_prop ansible-pull.service InactiveEnterTimestamp)"
-    now="$(date +%s)"
+    now="$(_now)"
 
+    # Relative times are stored as absolute epoch tokens and rendered on
+    # every emit, so a cached line never shows a frozen "ran 29s ago".
     if [ -n "${finished_ts}" ]; then
         local finished_epoch
         finished_epoch="$(date -d "${finished_ts}" +%s 2>/dev/null || echo 0)"
-        [ "${finished_epoch}" -gt 0 ] && ran="ran $(_reltime "$((now - finished_epoch))") ago"
+        [ "${finished_epoch}" -gt 0 ] && ran="@ago:${finished_epoch}@"
     fi
 
     # Next scheduled run from the timer (microseconds since epoch).
@@ -223,7 +282,7 @@ _collect_ansible() {
     next_us="${next_us//[!0-9]/}"
     if [ -n "${next_us}" ] && [ "${next_us}" -gt 0 ]; then
         next_epoch=$((next_us / 1000000))
-        [ "${next_epoch}" -gt "${now}" ] && next="next in $(_reltime "$((next_epoch - now))")"
+        [ "${next_epoch}" -gt "${now}" ] && next="@in:${next_epoch}@"
     fi
 
     local head tail="" part
@@ -267,7 +326,7 @@ _refresh() {
             mkdir "${LOCK_DIR}" 2>/dev/null || return 0
         else
             local now lock_epoch
-            now="$(date +%s)"
+            now="$(_now)"
             lock_epoch="$(_epoch_of "${LOCK_DIR}")"
             if [ "$((now - lock_epoch))" -gt 600 ]; then
                 rmdir "${LOCK_DIR}" 2>/dev/null || true
@@ -291,7 +350,7 @@ _refresh() {
 }
 
 _usage() {
-    sed -n '2,40p' "${0}" | sed 's/^# \{0,1\}//'
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${0}"
 }
 
 # --- dispatch ---------------------------------------------------------------

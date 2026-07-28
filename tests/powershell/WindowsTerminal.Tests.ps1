@@ -7,7 +7,7 @@
 
 .DESCRIPTION
     Validates the surgical, non-destructive patching of Windows Terminal
-    settings.json against real temporary files: only the targeted value is
+    settings.json against disposable fixture files: only the targeted value is
     changed, JSONC (comments / trailing commas) parses, and missing files or
     missing profiles are skipped without error.
 #>
@@ -25,14 +25,17 @@ BeforeAll {
         throw "DotfilesHelpers module not found at: $modulePath"
     }
 
-    $tmpRoot = if ($env:TEMP) { $env:TEMP } else { '/tmp' }
-    $script:TestDir = New-Item -ItemType Directory -Path (Join-Path $tmpRoot "wt-settings-tests-$(Get-Random)") -Force
+    $script:ArtifactsRoot = Join-Path $script:RepoRoot ".test-artifacts"
+    $script:TestDir = New-Item -ItemType Directory -Path (Join-Path $script:ArtifactsRoot "wt-settings-tests-$(Get-Random)") -Force
 }
 
 AfterAll {
     Pop-Location
     if (Test-Path $script:TestDir) {
         Remove-Item -Recurse -Force $script:TestDir.FullName -ErrorAction SilentlyContinue
+    }
+    if ((Test-Path $script:ArtifactsRoot) -and -not (Get-ChildItem -LiteralPath $script:ArtifactsRoot -Force -ErrorAction SilentlyContinue)) {
+        Remove-Item -LiteralPath $script:ArtifactsRoot -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -337,6 +340,168 @@ Describe "Set-WindowsTerminalDefaultProfile Function" -Tag "Unit" {
         $result.Status | Should -Be 'WhatIf'
         $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
         $json.defaultProfile | Should -Be '{61c54bbd-c2c6-5271-96e7-009a87ff44bf}'
+    }
+}
+
+Describe "Set-WindowsTerminalCopilotProfile Function" -Tag "Unit" {
+    BeforeEach {
+        $script:settingsPath = Join-Path $script:TestDir.FullName "settings-$(Get-Random).json"
+    }
+
+    AfterEach {
+        Remove-Item -LiteralPath $script:settingsPath -ErrorAction SilentlyContinue
+    }
+
+    BeforeAll {
+        $script:CopilotProfileGuid = '{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}'
+        $script:CopilotCommandLine = 'pwsh -NoExit -NoLogo -Command "copilot-ssh ''svlazdev.example.test''"'
+        $script:CopilotSampleSettings = @'
+{
+    "theme": "dark",
+    "profiles": {
+        "defaults": { "font": { "face": "FiraCode Nerd Font" } },
+        "list": [
+            {
+                "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+                "name": "PowerShell",
+                "source": "Windows.Terminal.PowershellCore"
+            }
+        ]
+    }
+}
+'@
+    }
+
+    It "Should be available with HostName, ProfileName, SettingsPath, and WhatIf parameters" {
+        $cmd = Get-Command Set-WindowsTerminalCopilotProfile
+        $cmd | Should -Not -BeNullOrEmpty
+        $cmd.Parameters.ContainsKey('HostName') | Should -Be $true
+        $cmd.Parameters.ContainsKey('ProfileName') | Should -Be $true
+        $cmd.Parameters.ContainsKey('SettingsPath') | Should -Be $true
+        $cmd.Parameters.ContainsKey('WhatIf') | Should -Be $true
+    }
+
+    It "Should add a Copilot SSH profile" {
+        $script:CopilotSampleSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $result.Guid | Should -Be $script:CopilotProfileGuid
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $profile = @($json.profiles.list) | Where-Object { $_.guid -eq $script:CopilotProfileGuid } | Select-Object -First 1
+        $profile | Should -Not -BeNullOrEmpty
+        $profile.name | Should -Be 'Copilot SSH (svlazdev.example.test)'
+        $profile.hidden | Should -Be $false
+        $profile.commandline | Should -Be $script:CopilotCommandLine
+    }
+
+    It "Should collapse duplicate profiles that share the fixed GUID" {
+        $duplicated = @'
+{
+    "profiles": {
+        "list": [
+            { "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}", "name": "PowerShell" },
+            { "guid": "{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}", "name": "Stale One", "commandline": "cmd.exe" },
+            { "guid": "{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}", "name": "Stale Two", "commandline": "cmd.exe" }
+        ]
+    }
+}
+'@
+        $duplicated | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $copilotProfiles = @($json.profiles.list) | Where-Object { $_.guid -eq $script:CopilotProfileGuid }
+        $copilotProfiles.Count | Should -Be 1
+        $copilotProfiles[0].name | Should -Be 'Copilot SSH (svlazdev.example.test)'
+        $copilotProfiles[0].commandline | Should -Be $script:CopilotCommandLine
+        # Unrelated profiles must survive the de-duplication.
+        @($json.profiles.list).Count | Should -Be 2
+    }
+
+    It "Should be idempotent on re-run" {
+        $script:CopilotSampleSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+        Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath | Out-Null
+        $afterFirstRun = Get-Content -LiteralPath $script:settingsPath -Raw
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'AlreadySet'
+        $result.Changed | Should -Be $false
+        (Get-Content -LiteralPath $script:settingsPath -Raw) | Should -BeExactly $afterFirstRun
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        @($json.profiles.list | Where-Object { $_.guid -eq $script:CopilotProfileGuid }).Count | Should -Be 1
+    }
+
+    It "Should update an existing fixed-GUID profile instead of duplicating it" {
+        $existing = @'
+{
+    "profiles": {
+        "list": [
+            {
+                "guid": "{2fe4cbf1-8986-519c-9aa1-8f5a543c440d}",
+                "hidden": true,
+                "name": "Old Copilot SSH",
+                "commandline": "pwsh -NoExit -NoLogo -Command \"copilot-ssh 'oldhost'\""
+            }
+        ]
+    }
+}
+'@
+        $existing | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        @($json.profiles.list | Where-Object { $_.guid -eq $script:CopilotProfileGuid }).Count | Should -Be 1
+        @($json.profiles.list)[0].name | Should -Be 'Copilot SSH (svlazdev.example.test)'
+        @($json.profiles.list)[0].hidden | Should -Be $false
+        @($json.profiles.list)[0].commandline | Should -Be $script:CopilotCommandLine
+    }
+
+    It "Should preserve unrelated settings when adding the profile" {
+        $script:CopilotSampleSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath | Out-Null
+
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $json.theme | Should -Be 'dark'
+        $json.profiles.defaults.font.face | Should -Be 'FiraCode Nerd Font'
+        @($json.profiles.list).Count | Should -Be 2
+        (@($json.profiles.list) | Where-Object { $_.name -eq 'PowerShell' }).source | Should -Be 'Windows.Terminal.PowershellCore'
+    }
+
+    It "Should not write under -WhatIf" {
+        $script:CopilotSampleSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+        $before = Get-Content -LiteralPath $script:settingsPath -Raw
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath -WhatIf
+
+        $result.Status | Should -Be 'WhatIf'
+        (Get-Content -LiteralPath $script:settingsPath -Raw) | Should -BeExactly $before
+    }
+
+    It "Should skip paths that do not exist" {
+        $missing = Join-Path $script:TestDir.FullName "does-not-exist-$(Get-Random).json"
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $missing
+
+        $result | Should -BeNullOrEmpty
+    }
+
+    It "Should add profiles.list when settings has no profiles section" {
+        '{ "theme": "system" }' | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalCopilotProfile -HostName 'svlazdev.example.test' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $json.theme | Should -Be 'system'
+        @($json.profiles.list | Where-Object { $_.guid -eq $script:CopilotProfileGuid }).Count | Should -Be 1
     }
 }
 

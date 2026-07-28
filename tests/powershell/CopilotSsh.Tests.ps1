@@ -299,6 +299,130 @@ Describe "Get-DotfilesSshHost (tab-completion source)" -Tag "Unit" {
     }
 }
 
+Describe "Connect-CopilotSsh reachability pre-flight" -Tag "Unit" {
+    BeforeAll {
+        $script:Module = Get-Module DotfilesHelpers
+        $script:Rows = @(
+            "vm01`trg-dev`tVM deallocated`t`t10.0.0.4"
+            "othervm`trg-x`tVM running`t20.1.2.3`t10.0.0.9"
+            "malformed-row"
+        )
+    }
+
+    AfterEach {
+        Remove-Item Env:COPILOT_SSH_ASSUME_YES -ErrorAction SilentlyContinue
+        Remove-Item Env:COPILOT_SSH_ASSUME_NO -ErrorAction SilentlyContinue
+        Remove-Item Env:COPILOT_SSH_SKIP_PREFLIGHT -ErrorAction SilentlyContinue
+    }
+
+    It "Should keep the pre-flight helpers private (not exported by the manifest)" {
+        $manifestPath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/DotfilesHelpers.psd1"
+        $exported = (Import-PowerShellDataFile -Path $manifestPath).FunctionsToExport
+        foreach ($name in @('Test-CopilotSshPreflight', 'Test-CopilotSshPort', 'ConvertFrom-SshConfigOutput',
+                'Select-CopilotSshAzureVm', 'Invoke-CopilotSshAzureRecovery', 'Get-CopilotSshConfirmation',
+                'Wait-CopilotSshPort')) {
+            $exported | Should -Not -Contain $name
+        }
+    }
+
+    It "Should run the pre-flight before reading tokens from 1Password" {
+        $body = (Get-Command Connect-CopilotSsh).ScriptBlock.ToString()
+        $body | Should -Match 'Test-CopilotSshPreflight'
+        # Compare against the real invocation, not the mention in the help text.
+        $body.IndexOf('Test-CopilotSshPreflight') | Should -BeLessThan $body.IndexOf('op run --environment')
+    }
+
+    Context "ConvertFrom-SshConfigOutput" {
+        It "Should extract the resolved hostname and port" {
+            $endpoint = & $script:Module { param($l) ConvertFrom-SshConfigOutput -Lines $l } @('user someone', 'hostname vm01.example.com', 'port 2222')
+            $endpoint.HostName | Should -Be 'vm01.example.com'
+            $endpoint.Port | Should -Be 2222
+        }
+
+        It "Should default to port 22 when ssh reports none" {
+            $endpoint = & $script:Module { param($l) ConvertFrom-SshConfigOutput -Lines $l } @('hostname vm01')
+            $endpoint.Port | Should -Be 22
+        }
+
+        It "Should return null when no hostname was resolved" {
+            $endpoint = & $script:Module { param($l) ConvertFrom-SshConfigOutput -Lines $l } @('user someone', '')
+            $endpoint | Should -BeNullOrEmpty
+        }
+    }
+
+    Context "Select-CopilotSshAzureVm" {
+        It "Should match a VM by its exact name" {
+            $found = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows 'vm01'
+            $found.Count | Should -Be 1
+            $found[0].ResourceGroup | Should -Be 'rg-dev'
+            $found[0].PowerState | Should -Be 'VM deallocated'
+        }
+
+        It "Should match the short name of an FQDN host (vm01.example.com -> vm01)" {
+            $found = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows 'vm01.example.com'
+            $found.Count | Should -Be 1
+            $found[0].Name | Should -Be 'vm01'
+        }
+
+        It "Should match case-insensitively" {
+            $found = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows 'VM01.Example.COM'
+            $found.Count | Should -Be 1
+        }
+
+        It "Should fall back to matching public or private IP addresses" {
+            $public = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows '20.1.2.3'
+            $public[0].Name | Should -Be 'othervm'
+            $private = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows '10.0.0.4'
+            $private[0].Name | Should -Be 'vm01'
+        }
+
+        It "Should return nothing when no VM matches" {
+            $found = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $script:Rows 'unknown-host'
+            @($found).Count | Should -Be 0
+        }
+
+        It "Should return every match so the caller can refuse to guess" {
+            $rows = @("vm01`trg-a`tVM stopped", "vm01`trg-b`tVM stopped")
+            $found = & $script:Module { param($r, $h) Select-CopilotSshAzureVm -Row $r -HostName $h } $rows 'vm01'
+            $found.Count | Should -Be 2
+        }
+    }
+
+    Context "Test-CopilotSshPort" {
+        It "Should report a closed port as unreachable within the timeout" {
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $result = & $script:Module { Test-CopilotSshPort -HostName '127.0.0.1' -Port 9 -TimeoutSeconds 3 }
+            $sw.Stop()
+            $result | Should -BeFalse
+            $sw.Elapsed.TotalSeconds | Should -BeLessThan 10
+        }
+
+        It "Should report an unresolvable host as unreachable" {
+            $result = & $script:Module { Test-CopilotSshPort -HostName 'this-host-does-not-exist.invalid' -Port 22 -TimeoutSeconds 3 }
+            $result | Should -BeFalse
+        }
+    }
+
+    Context "Get-CopilotSshConfirmation" {
+        It "Should answer yes when COPILOT_SSH_ASSUME_YES is set" {
+            $env:COPILOT_SSH_ASSUME_YES = '1'
+            & $script:Module { Get-CopilotSshConfirmation -Message 'start?' } | Should -BeTrue
+        }
+
+        It "Should answer no when COPILOT_SSH_ASSUME_NO is set" {
+            $env:COPILOT_SSH_ASSUME_NO = '1'
+            & $script:Module { Get-CopilotSshConfirmation -Message 'start?' } | Should -BeFalse
+        }
+    }
+
+    Context "Test-CopilotSshPreflight" {
+        It "Should be skipped entirely via COPILOT_SSH_SKIP_PREFLIGHT" {
+            $env:COPILOT_SSH_SKIP_PREFLIGHT = '1'
+            & $script:Module { Test-CopilotSshPreflight -SshArgument @('unreachable.invalid') } | Should -BeTrue
+        }
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

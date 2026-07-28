@@ -49,6 +49,7 @@
 
         # Windows Terminal settings
         'Set-WindowsTerminalDefaultProfile'
+        'Set-WindowsTerminalCopilotProfile'
 
         # Office 365 mail aliases
         'New-MailAlias'

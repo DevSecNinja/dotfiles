@@ -109,6 +109,41 @@ never opens a token-less session. When the 1Password CLI is not found it tells
 you to (1) install it and (2) enable it in
 **1Password → Settings → Developer → "Integrate with 1Password CLI"**.
 
+## Reachability pre-flight (and stopped Azure VMs)
+
+Before unlocking 1Password, all three helpers run a fast reachability check so
+an unreachable host fails in about three seconds instead of hanging on ssh's
+own connect timeout:
+
+1. The destination is resolved with `ssh -G <args>`, so `~/.ssh/config`
+   aliases, `HostName`/`Port` overrides and `-o` flags are all honoured.
+2. Its TCP port is probed with a hard timeout (`nc`, or bash `/dev/tcp`, or a
+   .NET `TcpClient` on Windows). If nothing can probe, the check is skipped and
+   `ssh` decides.
+3. When the probe fails **and** the Azure CLI (`az`) is installed, the host is
+   looked up with `az vm list -d`: first by VM name — matching both the full
+   host and its short form, so `vm01.example.com` also matches a VM named
+   `vm01` — then by the VM's public/private IP addresses.
+4. If that VM is **stopped** or **deallocated**, you are asked whether to start
+   it. On yes, the helper runs `az vm start`, waits for the SSH port to answer
+   and then connects as usual. On no (or in a non-interactive shell, which
+   always answers no) it aborts.
+5. If the VM is **running** but the port is closed, it says so and points at
+   NSG rules, the VPN/network path or `sshd` — no VM is touched.
+
+Ambiguous matches (several VMs with the same name in different resource
+groups) are listed and the helper refuses to guess.
+
+Environment variables:
+
+| Variable                        | Default | Effect                                          |
+| ------------------------------- | ------- | ----------------------------------------------- |
+| `COPILOT_SSH_SKIP_PREFLIGHT`    | unset   | `1` skips the reachability check entirely       |
+| `COPILOT_SSH_PREFLIGHT_TIMEOUT` | `3`     | TCP probe timeout in seconds                    |
+| `COPILOT_SSH_START_TIMEOUT`     | `180`   | How long to wait for SSH after `az vm start`    |
+| `COPILOT_SSH_ASSUME_YES`        | unset   | `1` auto-confirms starting a stopped VM         |
+| `COPILOT_SSH_ASSUME_NO`         | unset   | `1` never starts a VM, even on a TTY            |
+
 ## Security notes
 
 - The tokens live only in 1Password (at rest), transiently in the helper's
