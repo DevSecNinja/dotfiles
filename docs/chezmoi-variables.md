@@ -67,6 +67,10 @@ templates and scripts.
   which leaves signing off; ignored when `useYubiKey` is `true`, since the
   YubiKey flow derives its key from `~/.ssh/id_*_sk*.pub` instead.
   See [wsl.md](wsl.md).
+- `opSshSignProgram` — Explicit path to the 1Password SSH signer used in WSL.
+  Empty by default, which auto-detects the MSIX `WindowsApps` path and then the
+  pre-8.11.18 one. Set it only for a non-standard 1Password install. When no
+  signer is found, signing stays off rather than breaking every `git commit`.
 
 ## Windows Enterprise (Windows and WSL)
 

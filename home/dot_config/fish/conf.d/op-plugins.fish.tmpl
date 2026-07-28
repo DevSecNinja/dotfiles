@@ -15,10 +15,17 @@
 #
 # Shell plugins are not supported in WSL (op plugin run refuses to run there),
 # so chezmoi does not apply this file on WSL hosts.
-
-# Without `op` the wrappers would shadow the real CLIs with a broken command,
-# so define nothing at all when the 1Password CLI is missing.
-if command -q op
+#
+# Two guards, both deliberate:
+#   - Without `op` the wrappers would shadow the real CLIs with a broken
+#     command, so define nothing at all when the 1Password CLI is missing.
+#   - Inside an SSH session `op plugin run` cannot work either: it needs the
+#     1Password desktop app for biometric unlock, which only exists on a local
+#     workstation. Wrapping there would actively break the `copilot_ssh`
+#     helper, which forwards COPILOT_GITHUB_TOKEN / GH_TOKEN to headless hosts
+#     precisely because they have no vault. Leaving the CLIs unwrapped lets
+#     those forwarded tokens do their job. See docs/copilot-cli.md.
+if command -q op; and not set -q SSH_CONNECTION
     # Tells `op` the plugin aliases are already set up, so it does not ask us
     # to source ~/.config/op/plugins.sh.
     set -gx OP_PLUGIN_ALIASES_SOURCED 1

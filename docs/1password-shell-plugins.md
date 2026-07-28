@@ -90,6 +90,22 @@ cannot run would otherwise *replace* a working CLI:
 - **Completions keep working.** The fish wrappers use `--wraps`, and the
   bash/zsh completion files load *before* the wrappers, so generating
   completions never triggers a 1Password prompt at shell startup.
+- **Not in SSH sessions.** `op plugin run` needs the 1Password desktop app for
+  biometric unlock, which a headless host does not have. The wrappers are
+  therefore guarded on `SSH_CONNECTION`, so they never shadow a CLI on a
+  server — see below.
+
+## Interaction with `copilot-ssh`
+
+[`copilot-ssh`](copilot-cli.md) forwards `COPILOT_GITHUB_TOKEN` (and
+optionally `GH_TOKEN`) to a headless server over SSH, precisely because that
+server has no vault to unlock. A plugin wrapper on the remote side would
+hijack `copilot` / `gh` and route them through `op plugin run`, which cannot
+work there — breaking the forwarded-token flow.
+
+The `SSH_CONNECTION` guard prevents this: inside a `copilot-ssh` session the
+real binaries run and pick up the forwarded tokens, while on your workstation
+the plugin still authenticates you with biometrics.
 
 ## WSL is not supported
 

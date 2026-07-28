@@ -105,13 +105,16 @@
 {{-   $opShellPlugins = .opShellPlugins -}}
 {{- end -}}
 {{- if kindIs "string" $opShellPlugins -}}
-{{-   $opShellPlugins = compact (splitList "," $opShellPlugins | sortAlpha | uniq) -}}
+{{-   $opShellPlugins = splitList "," $opShellPlugins -}}
 {{- end -}}
+{{- /* Trim before de-duplicating: "aws, aws " would otherwise survive uniq as */ -}}
+{{- /* two distinct strings and only collapse to duplicates afterwards.        */ -}}
 {{- $opShellPluginList := list -}}
 {{- range $opShellPlugins -}}
 {{-   $entry := . | toString | trim -}}
 {{-   if $entry -}}{{- $opShellPluginList = append $opShellPluginList $entry -}}{{- end -}}
 {{- end -}}
+{{- $opShellPluginList = $opShellPluginList | sortAlpha | uniq -}}
 
 {{- /* SSH public key used to sign Git commits when the 1Password SSH agent is  */ -}}
 {{- /* driving signing (notably in WSL, where signing runs through              */ -}}
@@ -121,6 +124,14 @@
 {{- $gitSigningKey := "" -}}
 {{- if hasKey . "gitSigningKey" -}}
 {{-   $gitSigningKey = .gitSigningKey -}}
+{{- end -}}
+
+{{- /* Path to the 1Password SSH signer used in WSL. Empty means auto-detect  */ -}}
+{{- /* (the MSIX WindowsApps path, then the pre-8.11.18 one). Set this only   */ -}}
+{{- /* for a non-standard 1Password install. See docs/wsl.md.                 */ -}}
+{{- $opSshSignProgram := "" -}}
+{{- if hasKey . "opSshSignProgram" -}}
+{{-   $opSshSignProgram = .opSshSignProgram -}}
 {{- end -}}
 
 {{- /* Extract GitHub username from email or prompt */ -}}
@@ -280,6 +291,7 @@ data:
   name: {{ $name | quote }}
   opCopilotEnvironmentId: {{ $opCopilotEnvironmentId | quote }}
   opShellPlugins: {{ $opShellPluginList | toJson }}
+  opSshSignProgram: {{ $opSshSignProgram | quote }}
   privateDomain: {{ $privateDomain | quote }}
   useYubiKey: {{ $useYubiKey }}
   username: {{ $username | quote }}

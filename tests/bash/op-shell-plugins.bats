@@ -154,7 +154,7 @@ _render() {
 	printf '#!/bin/bash\necho "REAL_GH: $*"\n' >"${TEST_DIR}/gh"
 	chmod +x "${TEST_DIR}/op" "${TEST_DIR}/gh"
 
-	PATH="${TEST_DIR}:${ORIGINAL_PATH}" run bash -c "source '${out}'; gh auth status"
+	PATH="${TEST_DIR}:${ORIGINAL_PATH}" run env -u SSH_CONNECTION bash -c "source '${out}'; gh auth status"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "OP_RUN: plugin run -- gh auth status" ]]
 	[[ ! "$output" =~ "REAL_GH:" ]]
@@ -170,7 +170,7 @@ _render() {
 	chmod +x "${TEST_DIR}/gh"
 
 	# A PATH with gh but deliberately without op.
-	PATH="${TEST_DIR}:/usr/bin:/bin" run bash -c "source '${out}'; gh auth status; echo \"sourced=\${OP_PLUGIN_ALIASES_SOURCED:-unset}\""
+	PATH="${TEST_DIR}:/usr/bin:/bin" run env -u SSH_CONNECTION bash -c "source '${out}'; gh auth status; echo \"sourced=\${OP_PLUGIN_ALIASES_SOURCED:-unset}\""
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "REAL_GH: auth status" ]]
 	[[ "$output" =~ "sourced=unset" ]]
@@ -185,28 +185,51 @@ _render() {
 	printf '#!/bin/bash\necho "OP_RUN: $*"\n' >"${TEST_DIR}/op"
 	chmod +x "${TEST_DIR}/op"
 
-	PATH="${TEST_DIR}:${ORIGINAL_PATH}" run bash -c "source '${out}'; type -t definitely-not-installed || echo 'not-wrapped'"
+	PATH="${TEST_DIR}:${ORIGINAL_PATH}" run env -u SSH_CONNECTION bash -c "source '${out}'; type -t definitely-not-installed || echo 'not-wrapped'"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "not-wrapped" ]]
 }
 
 @test "op-plugins: chezmoi skips the wrappers on WSL (plugins unsupported there)" {
 	_skip_without_chezmoi
-	local cfg
-	cfg="$(_config 's|^  wsl: .*|  wsl: true|')"
-	run _render "${cfg}" "${REPO_ROOT}/home/.chezmoiignore"
+	local cfg="${TEST_DIR}/wsl.yaml"
+	printf 'data:\n  wsl: true\n' >"${cfg}"
+	# Assert real ignore behaviour, not the rendered text: .chezmoiignore
+	# patterns match the TARGET path, so a dot_config/... pattern would render
+	# fine yet never match anything.
+	cd "${REPO_ROOT}/home"
+	run chezmoi --config "${cfg}" ignored --source=. --no-tty
 	[ "$status" -eq 0 ]
-	[[ "$output" =~ "dot_config/shell/functions/op-plugins.sh" ]]
-	[[ "$output" =~ "dot_config/fish/conf.d/op-plugins.fish" ]]
+	printf '%s\n' "${lines[@]}" | grep -Fxq -- ".config/shell/functions/op-plugins.sh"
+	printf '%s\n' "${lines[@]}" | grep -Fxq -- ".config/fish/conf.d/op-plugins.fish"
 }
 
 @test "op-plugins: wrappers are applied on a non-WSL host" {
 	_skip_without_chezmoi
-	local cfg
-	cfg="$(_config 's|^  wsl: .*|  wsl: false|')"
-	run _render "${cfg}" "${REPO_ROOT}/home/.chezmoiignore"
+	local cfg="${TEST_DIR}/nowsl.yaml"
+	printf 'data:\n  wsl: false\n' >"${cfg}"
+	cd "${REPO_ROOT}/home"
+	run chezmoi --config "${cfg}" ignored --source=. --no-tty
 	[ "$status" -eq 0 ]
 	[[ ! "$output" =~ "op-plugins" ]]
+
+	run chezmoi --config "${cfg}" managed --source=. --no-tty
+	[ "$status" -eq 0 ]
+	printf '%s\n' "${lines[@]}" | grep -Fxq -- ".config/shell/functions/op-plugins.sh"
+	printf '%s\n' "${lines[@]}" | grep -Fxq -- ".config/fish/conf.d/op-plugins.fish"
+}
+
+@test "op-plugins: .chezmoiignore evaluates without a rendered config" {
+	_skip_without_chezmoi
+	# `chezmoi ignored/managed` is run in CI without the config generated from
+	# .chezmoi.yaml.tmpl, so custom data keys such as .wsl are absent and a
+	# bare {{ if .wsl }} would abort the whole template.
+	local cfg="${TEST_DIR}/empty.yaml"
+	printf '{}\n' >"${cfg}"
+	cd "${REPO_ROOT}/home"
+	run chezmoi --config "${cfg}" ignored --source=. --no-tty
+	[ "$status" -eq 0 ]
+	[[ ! "$output" =~ "map has no entry for key" ]]
 }
 
 # --- WSL SSH / commit signing ------------------------------------------------
@@ -242,21 +265,41 @@ _render() {
 	[[ "$output" =~ "ssh-add.exe" ]]
 }
 
-@test "wsl-signing: WSL with a signing key enables 1Password SSH signing" {
+@test "wsl-signing: WSL with a signing key and a signer enables 1Password signing" {
 	_skip_without_chezmoi
 	local cfg
 	cfg="$(_config \
 		's|^  wsl: .*|  wsl: true|' \
 		's|^  useYubiKey: .*|  useYubiKey: false|' \
-		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|')"
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|' \
+		"s|^  opSshSignProgram: .*|  opSshSignProgram: \"${TEST_DIR}/op-ssh-sign-wsl.exe\"|")"
 	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
 	[ "$status" -eq 0 ]
 	# git needs the key:: prefix to read a literal public key rather than a path.
 	[[ "$output" =~ "signingkey = key::ssh-ed25519 AAAATESTKEY comment" ]]
 	[[ "$output" =~ "gpgsign = true" ]]
 	[[ "$output" =~ "format = ssh" ]]
+	[[ "$output" =~ "op-ssh-sign-wsl.exe" ]]
 	# WSL keeps routing ssh through the Windows client.
 	[[ "$output" =~ "sshCommand = ssh.exe" ]]
+}
+
+@test "wsl-signing: a missing signer leaves signing OFF rather than breaking commits" {
+	_skip_without_chezmoi
+	local cfg
+	# No signer override and no /mnt/c on this host, so auto-detection finds
+	# nothing. Enabling gpgsign anyway would make git fall back to the local
+	# ssh-keygen, which cannot reach the 1Password-held key: every commit fails.
+	cfg="$(_config \
+		's|^  wsl: .*|  wsl: true|' \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|' \
+		's|^  opSshSignProgram: .*|  opSshSignProgram: ""|')"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ ! "$output" =~ "gpgsign" ]]
+	[[ ! "$output" =~ "signingkey" ]]
+	[[ "$output" =~ "signing is left OFF on purpose" ]]
 }
 
 @test "wsl-signing: no signing key means no signing configuration" {
@@ -305,4 +348,62 @@ _render() {
 	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/allowed_signers.tmpl"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "ssh-ed25519 AAAATESTKEY comment" ]]
+}
+
+@test "op-plugins: wrappers stay out of the way in an SSH session" {
+	_skip_without_chezmoi
+	local cfg out="${TEST_DIR}/op-plugins.sh"
+	cfg="$(_config)"
+	_render "${cfg}" "${BASH_TMPL}" >"${out}"
+
+	printf '#!/bin/bash\necho "OP_RUN: $*"\n' >"${TEST_DIR}/op"
+	printf '#!/bin/bash\necho "REAL_GH: $*"\n' >"${TEST_DIR}/gh"
+	chmod +x "${TEST_DIR}/op" "${TEST_DIR}/gh"
+
+	# `op plugin run` needs the 1Password desktop app, which a headless host
+	# reached over SSH does not have. Wrapping there would break copilot-ssh,
+	# whose whole job is forwarding COPILOT_GITHUB_TOKEN / GH_TOKEN to it.
+	PATH="${TEST_DIR}:${ORIGINAL_PATH}" SSH_CONNECTION="10.0.0.1 22 10.0.0.2 22" \
+		run bash -c "source '${out}'; gh auth status; echo \"sourced=\${OP_PLUGIN_ALIASES_SOURCED:-unset}\""
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "REAL_GH: auth status" ]]
+	[[ ! "$output" =~ "OP_RUN:" ]]
+	[[ "$output" =~ "sourced=unset" ]]
+}
+
+@test "op-plugins: fish wrappers also stay out of the way over SSH" {
+	_skip_without_chezmoi
+	command -v fish >/dev/null 2>&1 || skip "fish not installed"
+	local cfg out="${TEST_DIR}/op-plugins.fish"
+	cfg="$(_config)"
+	_render "${cfg}" "${FISH_TMPL}" >"${out}"
+
+	printf '#!/bin/bash\necho "OP_RUN: $*"\n' >"${TEST_DIR}/op"
+	printf '#!/bin/bash\necho "REAL_GH: $*"\n' >"${TEST_DIR}/gh"
+	chmod +x "${TEST_DIR}/op" "${TEST_DIR}/gh"
+
+	run fish --no-config -c "set -gx PATH '${TEST_DIR}' \$PATH; set -gx SSH_CONNECTION '10.0.0.1 22 10.0.0.2 22'; source '${out}'; gh auth status"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "REAL_GH: auth status" ]]
+	[[ ! "$output" =~ "OP_RUN:" ]]
+}
+
+@test "op-plugins: copilot-ssh forwarded tokens survive on the remote host" {
+	_skip_without_chezmoi
+	local cfg out="${TEST_DIR}/op-plugins.sh"
+	cfg="$(_config)"
+	_render "${cfg}" "${BASH_TMPL}" >"${out}"
+
+	printf '#!/bin/bash\necho "OP_RUN: $*"\n' >"${TEST_DIR}/op"
+	printf '#!/bin/bash\necho "COPILOT_TOKEN=${COPILOT_GITHUB_TOKEN:-unset}"\n' >"${TEST_DIR}/copilot"
+	chmod +x "${TEST_DIR}/op" "${TEST_DIR}/copilot"
+
+	# Simulates the session copilot-ssh opens: token forwarded via SendEnv, and
+	# op present on the remote. The real copilot must run and see the token.
+	PATH="${TEST_DIR}:${ORIGINAL_PATH}" SSH_CONNECTION="10.0.0.1 22 10.0.0.2 22" \
+		COPILOT_GITHUB_TOKEN="forwarded-token" \
+		run bash -c "source '${out}'; copilot"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "COPILOT_TOKEN=forwarded-token" ]]
+	[[ ! "$output" =~ "OP_RUN:" ]]
 }

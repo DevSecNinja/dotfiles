@@ -70,9 +70,19 @@ and falling back to the pre-8.11.18 one:
 /mnt/c/Users/<you>/AppData/Local/1Password/app/8/op-ssh-sign-wsl
 ```
 
-If neither exists, the rendered config says so in a comment instead of
-silently producing a broken `gpg.ssh.program`. Install or update 1Password for
+If neither exists, signing is left **off** and the rendered config explains
+why. Turning `commit.gpgsign` on without a signer would make git fall back to
+the local `ssh-keygen`, which cannot reach the key held by 1Password on
+Windows — every `git commit` would fail. Install or update 1Password for
 Windows, then re-run `chezmoi apply`.
+
+For a non-standard install you can point at the signer explicitly instead of
+relying on auto-detection:
+
+```yaml
+data:
+  opSshSignProgram: "/mnt/c/path/to/op-ssh-sign-wsl.exe"
+```
 
 !!! note
 

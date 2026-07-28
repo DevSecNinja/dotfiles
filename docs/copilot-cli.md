@@ -164,6 +164,22 @@ are complementary and use the same variable name:
 Note that the plugin wrappers are not applied on WSL, where shell plugins are
 unsupported — `copilot-ssh` still works there.
 
+### They cannot collide
+
+The wrappers deliberately do **not** activate in an SSH session (they are
+guarded on `SSH_CONNECTION`). `op plugin run` needs the 1Password desktop app
+for biometric unlock, which a headless server does not have, so a wrapper on
+the far side of `copilot-ssh` would replace a working CLI with one that always
+fails — exactly the situation `copilot-ssh` exists to avoid.
+
+| Session | `copilot` resolves to | Credential |
+| --- | --- | --- |
+| Local workstation | `op plugin run -- copilot` | 1Password, per command |
+| Inside `copilot-ssh` | the real `copilot` binary | forwarded `COPILOT_GITHUB_TOKEN` |
+
+In practice the remote host usually has no `op` installed either, which is a
+second, independent guard. The same reasoning applies to `gh` and `GH_TOKEN`.
+
 [opcopilot]: https://www.1password.dev/cli/shell-plugins/github-copilot
 
 ## Security notes
