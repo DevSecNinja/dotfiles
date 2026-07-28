@@ -144,6 +144,28 @@ Environment variables:
 | `COPILOT_SSH_ASSUME_YES`        | unset   | `1` auto-confirms starting a stopped VM         |
 | `COPILOT_SSH_ASSUME_NO`         | unset   | `1` never starts a VM, even on a TTY            |
 
+## Local authentication with the 1Password shell plugin
+
+`copilot-ssh` solves the *remote* case: forwarding a token to a headless
+server. On your **workstation** you don't need to forward anything — the
+[1Password Copilot shell plugin][opcopilot] authenticates the local `copilot`
+command with biometrics, injecting the same `COPILOT_GITHUB_TOKEN` for the
+duration of each command.
+
+This repo wraps `copilot` (and `gh`) automatically; see
+[1password-shell-plugins.md](1password-shell-plugins.md). The two mechanisms
+are complementary and use the same variable name:
+
+| Where | Mechanism | Token source |
+| --- | --- | --- |
+| Workstation | `op plugin run -- copilot` | 1Password item, per command |
+| Headless server | `copilot-ssh` + SSH `SendEnv` | 1Password Environment |
+
+Note that the plugin wrappers are not applied on WSL, where shell plugins are
+unsupported — `copilot-ssh` still works there.
+
+[opcopilot]: https://www.1password.dev/cli/shell-plugins/github-copilot
+
 ## Security notes
 
 - The tokens live only in 1Password (at rest), transiently in the helper's
