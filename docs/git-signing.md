@@ -10,12 +10,19 @@ everything on this page.
 
 ## Setup
 
+The repository owner's public key ships as the default for `gitSigningKey`, so
+signing switches itself on as soon as a 1Password signer binary is present —
+nothing to configure. (That key is public and already published at
+<https://github.com/DevSecNinja.keys>.)
+
+**Using your own key instead:**
+
 1. In the 1Password app, open the SSH key item.
 2. Choose **⋮ → Configure Commit Signing**. On Windows, tick
    **Configure for Windows Subsystem for Linux (WSL)** if you want the WSL
    variant.
 3. Select **Copy Snippet** and take the public key from it.
-4. Put that key in your local chezmoi config:
+4. Put that key in your local chezmoi config, which overrides the default:
 
    ```yaml
    data:

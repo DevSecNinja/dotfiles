@@ -454,3 +454,32 @@ _render() {
 	[[ "$output" =~ "gpgsign = true" ]]
 	[[ "$output" =~ "format = ssh" ]]
 }
+
+@test "signing: the public signing key ships as a default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/fresh.yaml"
+	printf '{}\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 ' ]]
+}
+
+@test "signing: an existing empty value still picks up the default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/empty-key.yaml"
+	# A config written by an earlier init already carries gitSigningKey: "",
+	# so `hasKey` would be permanently true and the default never apply.
+	printf 'data:\n  gitSigningKey: ""\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 ' ]]
+}
+
+@test "signing: a per-machine key overrides the default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/other-key.yaml"
+	printf 'data:\n  gitSigningKey: "ssh-ed25519 OTHERKEY someone@example.com"\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 OTHERKEY someone@example.com"' ]]
+}
