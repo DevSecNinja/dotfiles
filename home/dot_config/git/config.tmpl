@@ -117,4 +117,42 @@
 # No FIDO2 SSH pubkey found yet. Run `yk-enroll` then re-run `chezmoi apply`
 # to enable signing.
 {{- end }}
+{{ else if and .wsl .gitSigningKey }}
+# SSH-based commit signing through the 1Password SSH agent running on the
+# Windows host. In WSL, signing is performed by op-ssh-sign-wsl.exe rather
+# than the local ssh-keygen, because the private key never leaves 1Password
+# on Windows. See docs/wsl.md.
+#
+# The signer path moved with the 8.11.18 MSIX installer, so probe the current
+# location first and fall back to the pre-MSIX one.
+{{- $signer := "" -}}
+{{- range glob "/mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/op-ssh-sign-wsl.exe" -}}
+{{-   if not $signer -}}{{- $signer = . -}}{{- end -}}
+{{- end -}}
+{{- if not $signer -}}
+{{-   range glob "/mnt/c/Users/*/AppData/Local/1Password/app/8/op-ssh-sign-wsl" -}}
+{{-     if not $signer -}}{{- $signer = . -}}{{- end -}}
+{{-   end -}}
+{{- end -}}
+{{- /* `user.signingkey` may hold a literal public key or a path; git needs the */ -}}
+{{- /* `key::` prefix to read a literal key unambiguously.                      */ -}}
+{{- $signingKey := .gitSigningKey | trim -}}
+{{- if hasPrefix "ssh-" $signingKey -}}{{- $signingKey = printf "key::%s" $signingKey -}}{{- end }}
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
+{{- if $signer }}
+	program = "{{ $signer }}"
+{{- end }}
+[user]
+	signingkey = {{ $signingKey }}
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true
+{{- if not $signer }}
+# op-ssh-sign-wsl.exe was not found under /mnt/c/Users/*/AppData/Local. Install
+# or update 1Password for Windows, then re-run `chezmoi apply` to pick it up.
+{{- end }}
 {{ end -}}
