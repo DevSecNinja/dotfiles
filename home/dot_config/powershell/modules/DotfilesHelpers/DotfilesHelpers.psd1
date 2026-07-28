@@ -58,6 +58,10 @@
         'Get-UsedMailAlias'
         'Get-UnusedMailAlias'
         'Set-MailAliasToArchived'
+        'Get-GitHubRepoBaseline'
+        'Get-GitHubRepoConfig'
+        'Set-GitHubRepoConfig'
+        'Get-GitHubAppCredential'
     )
 
     # No cmdlets, variables, or aliases exported from this module

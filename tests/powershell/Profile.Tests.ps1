@@ -289,6 +289,16 @@ Describe "DotfilesHelpers Module" {
             'Get-ChezmoiExpectedBranch'
             'Get-ChezmoiBranchConfirmation'
             'Test-ChezmoiSourceBranch'
+            'Invoke-GitHubCli'
+            'Invoke-OnePasswordCli'
+            'Test-GitHubCliReady'
+            'Invoke-GitHubApi'
+            'Get-GitHubRulesetList'
+            'Resolve-GitHubRepoName'
+            'Get-GitHubCurrentOwner'
+            'ConvertFrom-DotfilesSecureString'
+            'New-GitHubRulesetPayload'
+            'New-GitHubConfigDrift'
         )
 
         # Discover every top-level function defined across the Public files using
