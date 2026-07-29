@@ -394,30 +394,49 @@ Describe "PowerShell Aliases" {
     }
 }
 
-Describe "Profile horizonfetch timeout guard" {
+Describe "Profile fastfetch startup guard" {
     BeforeAll {
         $script:ProfileContent = Get-Content $script:ProfilePath -Raw
     }
 
-    It "Profile should invoke horizonfetch with a timeout guard" {
-        # Ensure the raw bare invocation has been replaced by a guarded one.
-        # A bare `horizonfetch` call that is not preceded by a CommandType check
+    It "Profile should run fastfetch at startup" {
+        $script:ProfileContent | Should -Match 'Get-Command fastfetch'
+    }
+
+    It "Profile should only run fastfetch in interactive sessions" {
+        # Importing the module from a script must not print a system info banner.
+        $script:ProfileContent | Should -Match '\[Environment\]::UserInteractive'
+    }
+
+    It "Profile should invoke fastfetch with a timeout guard" {
+        # A bare `fastfetch` call that is not preceded by a CommandType check
         # would allow a hang to block the profile.
         $script:ProfileContent | Should -Match 'Start-Process'
         $script:ProfileContent | Should -Match 'WaitForExit'
     }
 
-    It "Profile should kill horizonfetch when the timeout elapses" {
-        $script:ProfileContent | Should -Match '\$horizonfetchProc\.Kill\(\)'
+    It "Profile should kill fastfetch when the timeout elapses" {
+        $script:ProfileContent | Should -Match '\$fastfetchProc\.Kill\(\)'
     }
 
-    It "Profile should support overriding the horizonfetch timeout via env var" {
-        $script:ProfileContent | Should -Match 'HORIZONFETCH_TIMEOUT_MS'
+    It "Profile should support overriding the fastfetch timeout via env var" {
+        $script:ProfileContent | Should -Match 'FASTFETCH_TIMEOUT_MS'
     }
 
-    It "Profile should only start horizonfetch for Application or ExternalScript commands" {
+    It "Profile should only start fastfetch for Application or ExternalScript commands" {
         $script:ProfileContent | Should -Match 'CommandTypes\]::Application'
         $script:ProfileContent | Should -Match 'CommandTypes\]::ExternalScript'
+    }
+
+    It "Profile should no longer reference horizonfetch" {
+        # Replaced by fastfetch, which is the tool the dotfiles actually install.
+        $script:ProfileContent | Should -Not -Match 'horizonfetch'
+    }
+
+    It "Profile should tolerate fastfetch being absent" {
+        # -ErrorAction SilentlyContinue plus the if () guard is what keeps a
+        # light install (no fastfetch) from erroring on every shell start.
+        $script:ProfileContent | Should -Match 'Get-Command fastfetch -ErrorAction SilentlyContinue'
     }
 }
 
