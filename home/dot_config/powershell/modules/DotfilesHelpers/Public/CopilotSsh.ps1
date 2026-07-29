@@ -288,8 +288,25 @@ function Invoke-CopilotSshAzureRecovery {
     $vmMatches = @(Select-CopilotSshAzureVm -Row $rows -HostName $HostName)
 
     if ($vmMatches.Count -eq 0) {
-        Write-Host "copilot-ssh: no Azure VM matches '$HostName' in the current subscription."
-        Write-Host "            Check 'az account show' / 'az login', or the host may not be an Azure VM."
+        # Name the subscription and the VM count: by far the most common cause
+        # is the wrong subscription being active, and the old message gave no
+        # way to tell that apart from "the VM really isn't there".
+        $short = $HostName.Split('.')[0]
+        $subName = (& az account show --only-show-errors --query name -o tsv 2>$null | Out-String).Trim()
+        $subId = (& az account show --only-show-errors --query id -o tsv 2>$null | Out-String).Trim()
+        $subscription = if ([string]::IsNullOrWhiteSpace($subName)) { '' } else { "$subName ($subId)" }
+        $vmCount = (& az vm list --only-show-errors --query 'length(@)' -o tsv 2>$null | Out-String).Trim()
+        if ([string]::IsNullOrWhiteSpace($subscription)) { $subscription = "<unknown; run 'az login'>" }
+        if ([string]::IsNullOrWhiteSpace($vmCount)) { $vmCount = '0' }
+
+        Write-Host "copilot-ssh: no Azure VM matches '$HostName' (also searched for the short name '$short')."
+        Write-Host "            Subscription: $subscription ($vmCount VMs)."
+        if ($vmCount -eq '0') {
+            Write-Host "            That subscription has no VMs at all - check 'az login' / 'az account show'."
+        }
+        else {
+            Write-Host "            Wrong subscription? Switch with: az account set --subscription <name-or-id>"
+        }
         return $false
     }
 

@@ -68,6 +68,7 @@ nav:
       - Development Tools: development-tools.md
       - Shell Logging: logging.md
       - GitHub Copilot CLI: copilot-cli.md
+      - GitHub Repository Configuration: github-repo-config.md
       - 1Password Shell Plugins: 1password-shell-plugins.md
       - Git Commit Signing: git-signing.md
       - WSL: wsl.md

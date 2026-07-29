@@ -157,8 +157,22 @@ _copilot_ssh_recover_azure() {
     matches="$(_copilot_ssh_az_lookup "${host}")"
 
     if [ -z "${matches}" ]; then
-        echo "copilot-ssh: no Azure VM matches '${host}' in the current subscription." >&2
-        echo "            Check 'az account show' / 'az login', or the host may not be an Azure VM." >&2
+        # Name the subscription and the VM count: by far the most common cause
+        # is the wrong subscription being active, and the old message gave no
+        # way to tell that apart from "the VM really isn't there".
+        local sub_name sub_id sub vm_count
+        sub_name="$(az account show --only-show-errors --query name -o tsv 2>/dev/null)"
+        sub_id="$(az account show --only-show-errors --query id -o tsv 2>/dev/null)"
+        vm_count="$(az vm list --only-show-errors --query 'length(@)' -o tsv 2>/dev/null)"
+        sub=""
+        [ -n "${sub_name}" ] && sub="${sub_name} (${sub_id})"
+        echo "copilot-ssh: no Azure VM matches '${host}' (also searched for the short name '${host%%.*}')." >&2
+        echo "            Subscription: ${sub:-<unknown; run 'az login'>} (${vm_count:-0} VMs)." >&2
+        if [ "${vm_count:-0}" = "0" ]; then
+            echo "            That subscription has no VMs at all - check 'az login' / 'az account show'." >&2
+        else
+            echo "            Wrong subscription? Switch with: az account set --subscription <name-or-id>" >&2
+        fi
         return 1
     fi
 
