@@ -28,6 +28,7 @@
 
         # Copilot CLI
         'Connect-CopilotSsh'
+        'Invoke-Copilot'
 
         # Winget utilities
         'Test-WingetUpdates'
