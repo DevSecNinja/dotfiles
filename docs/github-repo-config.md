@@ -257,9 +257,14 @@ op item create --category 'API Credential' --vault Private --title 'GitHub Autom
 
 Use the **App ID**, not the client ID or the slug — the value is validated.
 
-To keep the credential somewhere else, override per call or via environment
-variables. Secret references are non-secret identifiers, useless without
-authenticating to 1Password:
+All four references (both GitHub App fields and both Cloudflare fields) are
+hardcoded in one place near the top of `GitHubRepoConfig.ps1`
+(`$script:OnePasswordReferences`), so nothing needs configuring on a new
+machine — just create the items. They are secret _references_, not secrets:
+useless without authenticating to 1Password.
+
+To keep a credential somewhere else, edit that table, or override per call or
+via environment variables:
 
 ```powershell
 Get-GitHubAppCredential -AppIdReference 'op://Work/Bot/app-id' -PrivateKeyReference 'op://Work/Bot/private-key'

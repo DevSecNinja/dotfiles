@@ -464,6 +464,25 @@ function ConvertFrom-DotfilesSecureString {
 # 5 = Repository admin, i.e. the repository owner on a personal account.
 $script:GitHubRepositoryRoleAdmin = 5
 
+# Where the credentials live in 1Password. These are secret *references*, not
+# secrets: they are useless without authenticating to 1Password, so they are
+# hardcoded here rather than configured per machine. Edit these to move an item;
+# the matching environment variables below override them for a one-off.
+#
+#   Vault    Private
+#   Item     GitHub Automation App     (API Credential)
+#   Fields   app-id, private-key
+#
+#   Vault    Private
+#   Item     Cloudflare Pages Deploy   (API Credential)
+#   Fields   account-id, api-token
+$script:OnePasswordReferences = @{
+    GitHubAppId         = 'op://Private/GitHub Automation App/app-id'
+    GitHubPrivateKey    = 'op://Private/GitHub Automation App/private-key'
+    CloudflareAccountId = 'op://Private/Cloudflare Pages Deploy/account-id'
+    CloudflareApiToken  = 'op://Private/Cloudflare Pages Deploy/api-token'
+}
+
 function New-GitHubRulesetPayload {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a hashtable; does not change system state.')]
     <#
@@ -971,14 +990,14 @@ function Get-GitHubAppCredential {
         $AppIdReference = $env:OP_GITHUB_APP_ID_REF
     }
     if ([string]::IsNullOrWhiteSpace($AppIdReference)) {
-        $AppIdReference = 'op://Private/GitHub Automation App/app-id'
+        $AppIdReference = $script:OnePasswordReferences.GitHubAppId
     }
 
     if ([string]::IsNullOrWhiteSpace($PrivateKeyReference)) {
         $PrivateKeyReference = $env:OP_GITHUB_APP_KEY_REF
     }
     if ([string]::IsNullOrWhiteSpace($PrivateKeyReference)) {
-        $PrivateKeyReference = 'op://Private/GitHub Automation App/private-key'
+        $PrivateKeyReference = $script:OnePasswordReferences.GitHubPrivateKey
     }
 
     Test-OnePasswordSession
@@ -1081,10 +1100,10 @@ function Get-CloudflareCredential {
     )
 
     if ([string]::IsNullOrWhiteSpace($AccountIdReference)) { $AccountIdReference = $env:OP_CLOUDFLARE_ACCOUNT_REF }
-    if ([string]::IsNullOrWhiteSpace($AccountIdReference)) { $AccountIdReference = 'op://Private/Cloudflare Pages Deploy/account-id' }
+    if ([string]::IsNullOrWhiteSpace($AccountIdReference)) { $AccountIdReference = $script:OnePasswordReferences.CloudflareAccountId }
 
     if ([string]::IsNullOrWhiteSpace($ApiTokenReference)) { $ApiTokenReference = $env:OP_CLOUDFLARE_TOKEN_REF }
-    if ([string]::IsNullOrWhiteSpace($ApiTokenReference)) { $ApiTokenReference = 'op://Private/Cloudflare Pages Deploy/api-token' }
+    if ([string]::IsNullOrWhiteSpace($ApiTokenReference)) { $ApiTokenReference = $script:OnePasswordReferences.CloudflareApiToken }
 
     Test-OnePasswordSession
 

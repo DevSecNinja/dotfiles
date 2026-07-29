@@ -1922,6 +1922,71 @@ Describe "Skipped check reporting" -Tag "Unit" {
     }
 }
 
+Describe "Hardcoded 1Password references" -Tag "Unit" {
+    It "pins <Name> to <Expected>" -ForEach @(
+        @{ Name = 'GitHubAppId'; Expected = 'op://Private/GitHub Automation App/app-id' }
+        @{ Name = 'GitHubPrivateKey'; Expected = 'op://Private/GitHub Automation App/private-key' }
+        @{ Name = 'CloudflareAccountId'; Expected = 'op://Private/Cloudflare Pages Deploy/account-id' }
+        @{ Name = 'CloudflareApiToken'; Expected = 'op://Private/Cloudflare Pages Deploy/api-token' }
+    ) {
+        $key = $Name
+        $want = $Expected
+        InModuleScope DotfilesHelpers -Parameters @{ Key = $key; Want = $want } {
+            param($Key, $Want)
+            $script:OnePasswordReferences[$Key] | Should -Be $Want
+        }
+    }
+
+    It "keeps every reference in valid op://Vault/Item/field form" {
+        InModuleScope DotfilesHelpers {
+            foreach ($ref in $script:OnePasswordReferences.Values) {
+                { ConvertFrom-OnePasswordReference -Reference $ref } | Should -Not -Throw
+            }
+        }
+    }
+
+    It "uses the hardcoded App reference when nothing is configured" {
+        InModuleScope DotfilesHelpers {
+            $pem = "-----BEGIN RSA PRIVATE KEY-----`nX`n-----END RSA PRIVATE KEY-----"
+            $json = @{ fields = @(@{ id = 'app-id'; label = 'app-id' }, @{ id = 'private-key'; label = 'private-key' }) } | ConvertTo-Json -Depth 5
+
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
+            Mock Invoke-OnePasswordCli {
+                if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
+                return $pem
+            } -ParameterFilter { $Arguments -contains 'read' }
+
+            $null = Get-GitHubAppCredential
+
+            Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'read' -and $Arguments -contains 'op://Private/GitHub Automation App/private-key'
+            }
+        }
+    }
+
+    It "uses the hardcoded Cloudflare reference when nothing is configured" {
+        InModuleScope DotfilesHelpers {
+            $json = @{ fields = @(@{ id = 'account-id'; label = 'account-id' }, @{ id = 'api-token'; label = 'api-token' }) } | ConvertTo-Json -Depth 5
+
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
+            Mock Invoke-OnePasswordCli {
+                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return '0123456789abcdef0123456789abcdef' }
+                return 'cf-token'
+            } -ParameterFilter { $Arguments -contains 'read' }
+
+            $null = Get-CloudflareCredential
+
+            Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'read' -and $Arguments -contains 'op://Private/Cloudflare Pages Deploy/api-token'
+            }
+        }
+    }
+}
+
 Describe "GitHubRepoConfig static analysis" -Tag "Unit" {
     BeforeAll {
         $script:SourcePath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/Public/GitHubRepoConfig.ps1"
