@@ -4,8 +4,7 @@
 param()
 <#
 .SYNOPSIS
-    Pester tests for the GitHub repository configuration helpers in the
-    DotfilesHelpers module.
+    Pester tests for the GitHub repository configuration audit and remediation.
 
 .DESCRIPTION
     Covers Get-GitHubRepoBaseline, Get-GitHubAppCredential,
@@ -234,484 +233,6 @@ Describe "Get-GitHubRepoBaseline" -Tag "Unit" {
         $first = Get-GitHubRepoBaseline
         $first.Settings.has_wiki = $true
         (Get-GitHubRepoBaseline).Settings.has_wiki | Should -BeFalse
-    }
-}
-
-Describe "New-GitHubRulesetPayload" -Tag "Unit" {
-    It "includes the repository admin role as a bypass actor" {
-        InModuleScope DotfilesHelpers {
-            $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-            $payload.bypass_actors.Count | Should -Be 1
-            $payload.bypass_actors[0].actor_type | Should -Be 'RepositoryRole'
-            $payload.bypass_actors[0].actor_id | Should -Be 5
-            $payload.bypass_actors[0].bypass_mode | Should -Be 'always'
-        }
-    }
-
-    It "omits bypass actors when AdminCanBypass is false" {
-        InModuleScope DotfilesHelpers {
-            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ AdminCanBypass = $false } }).Ruleset
-            $payload = New-GitHubRulesetPayload -Ruleset $ruleset
-            @($payload.bypass_actors).Count | Should -Be 0
-        }
-    }
-
-    It "targets the default branch" {
-        InModuleScope DotfilesHelpers {
-            $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-            $payload.target | Should -Be 'branch'
-            $payload.conditions.ref_name.include | Should -Contain '~DEFAULT_BRANCH'
-        }
-    }
-
-    It "emits the deletion, non_fast_forward and pull_request rules" {
-        InModuleScope DotfilesHelpers {
-            $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-            $types = @($payload.rules | ForEach-Object { $_.type })
-            $types | Should -Contain 'deletion'
-            $types | Should -Contain 'non_fast_forward'
-            $types | Should -Contain 'pull_request'
-        }
-    }
-
-    It "drops rules that the baseline disables" {
-        InModuleScope DotfilesHelpers {
-            $ruleset = (Get-GitHubRepoBaseline -Override @{
-                    Ruleset = @{ BlockDeletion = $false; RequirePullRequest = $false }
-                }).Ruleset
-            $payload = New-GitHubRulesetPayload -Ruleset $ruleset
-            $types = @($payload.rules | ForEach-Object { $_.type })
-            $types | Should -Not -Contain 'deletion'
-            $types | Should -Not -Contain 'pull_request'
-            $types | Should -Contain 'non_fast_forward'
-        }
-    }
-
-    It "carries the required approving review count into the pull_request rule" {
-        InModuleScope DotfilesHelpers {
-            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ RequiredApprovingReviews = 2 } }).Ruleset
-            $payload = New-GitHubRulesetPayload -Ruleset $ruleset
-            $prRule = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-            $prRule.parameters.required_approving_review_count | Should -Be 2
-        }
-    }
-
-    It "serialises to JSON that GitHub's rulesets API accepts" {
-        InModuleScope DotfilesHelpers {
-            $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-            $json = $payload | ConvertTo-Json -Depth 10
-            { $json | ConvertFrom-Json } | Should -Not -Throw
-            ($json | ConvertFrom-Json).enforcement | Should -Be 'active'
-        }
-    }
-
-    Context "updating an existing ruleset" {
-        It "preserves rules the baseline does not manage" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules = @(
-                        [PSCustomObject]@{ type = 'deletion' }
-                        [PSCustomObject]@{
-                            type       = 'required_status_checks'
-                            parameters = [PSCustomObject]@{
-                                required_status_checks = @(
-                                    [PSCustomObject]@{ context = 'lint / yamllint'; integration_id = 15368 }
-                                )
-                            }
-                        }
-                        [PSCustomObject]@{ type = 'copilot_code_review' }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                $types = @($payload.rules | ForEach-Object { $_.type })
-
-                $types | Should -Contain 'required_status_checks'
-                $types | Should -Contain 'copilot_code_review'
-            }
-        }
-
-        It "keeps the configured status check contexts intact" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules = @(
-                        [PSCustomObject]@{
-                            type       = 'required_status_checks'
-                            parameters = [PSCustomObject]@{
-                                required_status_checks = @(
-                                    [PSCustomObject]@{ context = 'lint / yamllint'; integration_id = 15368 }
-                                    [PSCustomObject]@{ context = 'lint / zizmor'; integration_id = 15368 }
-                                )
-                            }
-                        }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                $checks = @($payload.rules | Where-Object { $_.type -eq 'required_status_checks' })[0]
-                @($checks.parameters.required_status_checks).Count | Should -Be 2
-            }
-        }
-
-        It "does not duplicate a managed rule that already exists" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules = @(
-                        [PSCustomObject]@{ type = 'deletion' }
-                        [PSCustomObject]@{ type = 'non_fast_forward' }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                @($payload.rules | Where-Object { $_.type -eq 'deletion' }).Count | Should -Be 1
-                @($payload.rules | Where-Object { $_.type -eq 'non_fast_forward' }).Count | Should -Be 1
-            }
-        }
-
-        It "adds the admin bypass without dropping other bypass actors" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules         = @()
-                    bypass_actors = @(
-                        [PSCustomObject]@{ actor_id = 99; actor_type = 'Integration'; bypass_mode = 'always' }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                @($payload.bypass_actors).Count | Should -Be 2
-                @($payload.bypass_actors | Where-Object { $_.actor_type -eq 'Integration' }).Count | Should -Be 1
-                @($payload.bypass_actors | Where-Object { $_.actor_id -eq 5 }).Count | Should -Be 1
-            }
-        }
-
-        It "does not add a second admin bypass when one is already present" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules         = @()
-                    bypass_actors = @(
-                        [PSCustomObject]@{ actor_id = 5; actor_type = 'RepositoryRole'; bypass_mode = 'always' }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                @($payload.bypass_actors | Where-Object { $_.actor_id -eq 5 }).Count | Should -Be 1
-            }
-        }
-
-        It "removes the admin bypass when the baseline disables it" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules         = @()
-                    bypass_actors = @(
-                        [PSCustomObject]@{ actor_id = 5; actor_type = 'RepositoryRole'; bypass_mode = 'always' }
-                        [PSCustomObject]@{ actor_id = 99; actor_type = 'Integration'; bypass_mode = 'always' }
-                    )
-                }
-                $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ AdminCanBypass = $false } }).Ruleset
-
-                $payload = New-GitHubRulesetPayload -Ruleset $ruleset -ExistingRuleset $existing
-                @($payload.bypass_actors | Where-Object { $_.actor_id -eq 5 }).Count | Should -Be 0
-                @($payload.bypass_actors | Where-Object { $_.actor_type -eq 'Integration' }).Count | Should -Be 1
-            }
-        }
-
-        It "keeps a custom ref condition rather than retargeting the ruleset" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules      = @()
-                    conditions = [PSCustomObject]@{
-                        ref_name = [PSCustomObject]@{
-                            include = @('refs/heads/release/*')
-                            exclude = @('refs/heads/release/legacy')
-                        }
-                    }
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                $payload.conditions.ref_name.include | Should -Contain 'refs/heads/release/*'
-                $payload.conditions.ref_name.exclude | Should -Contain 'refs/heads/release/legacy'
-            }
-        }
-
-        It "targets the default branch when creating a brand new ruleset" {
-            InModuleScope DotfilesHelpers {
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-                $payload.conditions.ref_name.include | Should -Contain '~DEFAULT_BRANCH'
-            }
-        }
-    }
-}
-
-Describe "Resolve-GitHubRepoName" -Tag "Unit" {
-    It "qualifies a bare name with the owner" {
-        InModuleScope DotfilesHelpers {
-            Resolve-GitHubRepoName -Repository 'docker' -Owner 'DevSecNinja' | Should -Be 'DevSecNinja/docker'
-        }
-    }
-
-    It "passes an already-qualified name through" {
-        InModuleScope DotfilesHelpers {
-            Resolve-GitHubRepoName -Repository 'someone/docker' -Owner 'DevSecNinja' | Should -Be 'someone/docker'
-        }
-    }
-
-    It "accepts a full GitHub URL" {
-        InModuleScope DotfilesHelpers {
-            Resolve-GitHubRepoName -Repository 'https://github.com/DevSecNinja/docker' | Should -Be 'DevSecNinja/docker'
-        }
-    }
-
-    It "strips a trailing .git suffix" {
-        InModuleScope DotfilesHelpers {
-            Resolve-GitHubRepoName -Repository 'https://github.com/DevSecNinja/docker.git' | Should -Be 'DevSecNinja/docker'
-        }
-    }
-
-    It "throws for a bare name with no owner" {
-        InModuleScope DotfilesHelpers {
-            { Resolve-GitHubRepoName -Repository 'docker' } | Should -Throw -ExpectedMessage "*has no owner*"
-        }
-    }
-
-    It "throws for a malformed reference" {
-        InModuleScope DotfilesHelpers {
-            { Resolve-GitHubRepoName -Repository 'a/b/c' -Owner 'x' } |
-                Should -Throw -ExpectedMessage "*not a valid repository reference*"
-        }
-    }
-}
-
-Describe "ConvertFrom-DotfilesSecureString" -Tag "Unit" {
-    It "round-trips a secure string" {
-        InModuleScope DotfilesHelpers {
-            $secure = ConvertTo-SecureString -String 'hunter2' -AsPlainText -Force
-            ConvertFrom-DotfilesSecureString -SecureString $secure | Should -Be 'hunter2'
-        }
-    }
-
-    It "preserves multi-line PEM content" {
-        InModuleScope DotfilesHelpers {
-            $pem = "-----BEGIN RSA PRIVATE KEY-----`nMIIabc`n-----END RSA PRIVATE KEY-----"
-            $secure = ConvertTo-SecureString -String $pem -AsPlainText -Force
-            ConvertFrom-DotfilesSecureString -SecureString $secure | Should -Be $pem
-        }
-    }
-}
-
-Describe "Get-GitHubAppCredential" -Tag "Unit" {
-    BeforeAll {
-        $script:FakePem = "-----BEGIN RSA PRIVATE KEY-----`nMIIFAKE`n-----END RSA PRIVATE KEY-----"
-
-        # Shape of `op item get --format json` for a well-formed entry.
-        $script:ItemJson = @{
-            id     = 'abc123'
-            title  = 'GitHub Automation App'
-            fields = @(
-                @{ id = 'app-id'; label = 'app-id'; type = 'STRING' }
-                @{ id = 'private-key'; label = 'private-key'; type = 'CONCEALED' }
-            )
-        } | ConvertTo-Json -Depth 5
-    }
-
-    Context "reference parsing" {
-        It "splits a well-formed reference into vault, item and field" {
-            InModuleScope DotfilesHelpers {
-                $parsed = ConvertFrom-OnePasswordReference -Reference 'op://Private/GitHub Automation App/app-id'
-                $parsed.Vault | Should -Be 'Private'
-                $parsed.Item | Should -Be 'GitHub Automation App'
-                $parsed.Field | Should -Be 'app-id'
-            }
-        }
-
-        It "throws on <_>" -ForEach @(
-            'Private/Item/field'
-            'op://Private/Item'
-            'op://'
-            'nonsense'
-        ) {
-            $reference = $_
-            InModuleScope DotfilesHelpers -Parameters @{ Reference = $reference } {
-                param($Reference)
-                { ConvertFrom-OnePasswordReference -Reference $Reference } |
-                    Should -Throw -ExpectedMessage "*not a valid 1Password secret reference*"
-            }
-        }
-    }
-
-    Context "pre-flight checks" {
-        It "throws when the op CLI is missing" {
-            InModuleScope DotfilesHelpers {
-                Mock Get-Command { $null } -ParameterFilter { $Name -eq 'op' }
-                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*1Password CLI (op) was not found*"
-            }
-        }
-
-        It "throws when 1Password is locked or signed out" {
-            InModuleScope DotfilesHelpers {
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'whoami' }
-
-                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*not signed in*"
-            }
-        }
-
-        It "names the missing item and how to create it" {
-            InModuleScope DotfilesHelpers {
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
-
-                { Get-GitHubAppCredential } |
-                    Should -Throw -ExpectedMessage "*'GitHub Automation App' was not found in vault 'Private'*"
-            }
-        }
-
-        It "suggests an op item create command when the item is missing" {
-            InModuleScope DotfilesHelpers {
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
-
-                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*op item create*"
-            }
-        }
-
-        It "names the missing field and lists the ones that do exist" {
-            InModuleScope DotfilesHelpers {
-                $json = @{
-                    fields = @(@{ id = 'username'; label = 'username' })
-                } | ConvertTo-Json -Depth 5
-
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
-
-                { Get-GitHubAppCredential } |
-                    Should -Throw -ExpectedMessage "*has no field named 'app-id'*username*"
-            }
-        }
-
-        It "verifies both references before reading any value" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
-                param($Json, $Pem)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
-                    return $Pem
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                $null = Get-GitHubAppCredential
-
-                Should -Invoke Invoke-OnePasswordCli -Times 2 -Exactly -ParameterFilter { $Arguments -contains 'item' }
-            }
-        }
-    }
-
-    Context "reading the credential" {
-        It "returns the App ID and the key as a SecureString" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
-                param($Json, $Pem)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
-                    return $Pem
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                $cred = Get-GitHubAppCredential
-
-                $cred.AppId | Should -Be '123456'
-                $cred.PrivateKey | Should -BeOfType [System.Security.SecureString]
-                ConvertFrom-DotfilesSecureString -SecureString $cred.PrivateKey | Should -Be $Pem
-            }
-        }
-
-        It "defaults to the Private vault entry when nothing is configured" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
-                param($Json, $Pem)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
-                    return $Pem
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                $null = Get-GitHubAppCredential
-
-                Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
-                    $Arguments -contains 'read' -and $Arguments -contains 'op://Private/GitHub Automation App/private-key'
-                }
-            }
-        }
-
-        It "honours an explicit reference override" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
-                param($Json, $Pem)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Work/Bot/app-id') { return '999' }
-                    return $Pem
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                $cred = Get-GitHubAppCredential -AppIdReference 'op://Work/Bot/app-id' -PrivateKeyReference 'op://Work/Bot/private-key'
-                $cred.AppId | Should -Be '999'
-
-                # Both overridden references live in the Work vault, so the
-                # item check runs once per reference.
-                Should -Invoke Invoke-OnePasswordCli -Times 2 -Exactly -ParameterFilter {
-                    $Arguments -contains 'item' -and $Arguments -contains 'Work'
-                }
-            }
-        }
-
-        It "rejects an App ID that is not numeric" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson; Pem = $script:FakePem } {
-                param($Json, $Pem)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return 'Iv1.abc123' }
-                    return $Pem
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*not a numeric GitHub App ID*"
-            }
-        }
-
-        It "rejects an empty App ID" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson } {
-                param($Json)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli { '' } -ParameterFilter { $Arguments -contains 'read' }
-
-                { Get-GitHubAppCredential } | Should -Throw -ExpectedMessage "*is empty*"
-            }
-        }
-
-        It "rejects a value that is not a PEM private key" {
-            InModuleScope DotfilesHelpers -Parameters @{ Json = $script:ItemJson } {
-                param($Json)
-                Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-                Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-                Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-                Mock Invoke-OnePasswordCli {
-                    if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
-                    return 'this is not a key'
-                } -ParameterFilter { $Arguments -contains 'read' }
-
-                { Get-GitHubAppCredential } |
-                    Should -Throw -ExpectedMessage "*does not look like a PEM-encoded private key*"
-            }
-        }
     }
 }
 
@@ -1494,359 +1015,6 @@ Describe "Set-GitHubRepoConfig" -Tag "Unit" {
     }
 }
 
-Describe "Invoke-GitHubApi response shaping" -Tag "Unit" {
-    It "returns a JSON list as a usable array, not nested one level deeper" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '[{"id":1},{"id":2},{"id":3}]' }
-
-            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
-
-            @($result).Count | Should -Be 3
-            $result[0].id | Should -Be 1
-            $result[2].id | Should -Be 3
-        }
-    }
-
-    It "preserves an empty JSON list as an empty array rather than collapsing to null" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '[]' }
-
-            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
-
-            # Deliberately not -BeNullOrEmpty: an empty array *is* empty by that
-            # assertion, but it must stay distinguishable from $null, which is
-            # what a failed call returns.
-            $null -eq $result | Should -BeFalse -Because 'an empty list must not be confused with a failed call'
-            @($result).Count | Should -Be 0
-        }
-    }
-
-    It "returns a single-element JSON list as an array, not a bare object" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '[{"id":42,"name":"Default"}]' }
-
-            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets'
-
-            @($result).Count | Should -Be 1
-            $result[0].name | Should -Be 'Default'
-        }
-    }
-
-    It "returns a JSON object unwrapped" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '{"name":"docker","archived":false}' }
-
-            $result = Invoke-GitHubApi -Endpoint 'repos/o/r'
-
-            $result.name | Should -Be 'docker'
-            $result | Should -Not -BeOfType [System.Object[]]
-        }
-    }
-
-    It "returns null when the call fails under -AllowFailure" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { $null }
-
-            $result = Invoke-GitHubApi -Endpoint 'repos/o/r/rulesets' -AllowFailure
-
-            $null -eq $result | Should -BeTrue
-        }
-    }
-
-    It "sends a request body on stdin rather than as arguments" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '{}' }
-
-            $null = Invoke-GitHubApi -Endpoint 'repos/o/r' -Method PATCH -Body @{ has_wiki = $false }
-
-            Should -Invoke Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
-                $StdIn -match '"has_wiki"' -and $Arguments -contains '--input'
-            }
-        }
-    }
-
-    It "preserves booleans as real JSON booleans in the body" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { '{}' }
-
-            $null = Invoke-GitHubApi -Endpoint 'repos/o/r' -Method PATCH -Body @{ has_wiki = $false }
-
-            Should -Invoke Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
-                ($StdIn | ConvertFrom-Json).has_wiki -eq $false -and $StdIn -notmatch '"False"'
-            }
-        }
-    }
-
-    It "throws on a malformed response" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubCli { 'not json at all' }
-
-            { Invoke-GitHubApi -Endpoint 'repos/o/r' } | Should -Throw -ExpectedMessage "*as JSON*"
-        }
-    }
-}
-
-Describe "Get-GitHubCredentialScope" -Tag "Unit" {
-    It "uses the environment on a public repository" {
-        InModuleScope DotfilesHelpers {
-            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment 'production' -Visibility 'public'
-            $scope.UseEnvironment | Should -BeTrue
-            $scope.Environment | Should -Be 'production'
-        }
-    }
-
-    It "falls back to repository level on a <_> repository" -ForEach @('private', 'internal') {
-        $visibility = $_
-        InModuleScope DotfilesHelpers -Parameters @{ Visibility = $visibility } {
-            param($Visibility)
-            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment 'production' -Visibility $Visibility
-            $scope.UseEnvironment | Should -BeFalse
-            $scope.Reason | Should -Match 'Free plan'
-        }
-    }
-
-    It "stays at repository level when the baseline asks for no environment" {
-        InModuleScope DotfilesHelpers {
-            $scope = Get-GitHubCredentialScope -Repository 'o/r' -Environment '' -Visibility 'public'
-            $scope.UseEnvironment | Should -BeFalse
-            $scope.Reason | Should -Match 'baseline'
-        }
-    }
-}
-
-Describe "Get-GitHubEnvironmentState" -Tag "Unit" {
-    It "reports an absent environment" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi { $null }
-            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
-            $state.Exists | Should -BeFalse
-            $state.PinnedToDefaultBranch | Should -BeFalse
-        }
-    }
-
-    It "reports an environment with no branch policy as unpinned" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi { [PSCustomObject]@{ name = 'production'; deployment_branch_policy = $null } }
-            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
-            $state.Exists | Should -BeTrue
-            $state.PinnedToDefaultBranch | Should -BeFalse
-        }
-    }
-
-    It "reports an environment pinned to the default branch" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*deployment-branch-policies*') {
-                    return [PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'main' }) }
-                }
-                return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
-            }
-            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
-            $state.PinnedToDefaultBranch | Should -BeTrue
-        }
-    }
-
-    It "does not treat a policy for another branch as pinned" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*deployment-branch-policies*') {
-                    return [PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'develop' }) }
-                }
-                return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
-            }
-            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
-            $state.PinnedToDefaultBranch | Should -BeFalse
-        }
-    }
-
-    It "treats protected_branches-only policy as not pinned to the default branch" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi {
-                [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $false; protected_branches = $true } }
-            }
-            $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
-            $state.PinnedToDefaultBranch | Should -BeFalse
-        }
-    }
-}
-
-Describe "Test-GitHubPagesWorkflow" -Tag "Unit" {
-    BeforeAll {
-        $script:PagesCaller = @'
-jobs:
-  pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@abc123 # v1.9.0
-'@
-        $script:OtherWorkflow = @'
-jobs:
-  lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@abc123
-'@
-    }
-
-    It "detects a repository that calls the central Pages workflow" {
-        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller } {
-            param($Yaml)
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*/workflows') {
-                    return @([PSCustomObject]@{ type = 'file'; name = 'pages.yml'; path = '.github/workflows/pages.yml' })
-                }
-                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
-            }
-
-            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeTrue
-        }
-    }
-
-    It "returns false when no workflow references it" {
-        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:OtherWorkflow } {
-            param($Yaml)
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*/workflows') {
-                    return @([PSCustomObject]@{ type = 'file'; name = 'lint.yml'; path = '.github/workflows/lint.yml' })
-                }
-                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
-            }
-
-            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
-        }
-    }
-
-    It "returns false when the repository has no workflows directory" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi { $null }
-            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
-        }
-    }
-
-    It "finds the caller under a non-conventional file name" {
-        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller; Other = $script:OtherWorkflow } {
-            param($Yaml, $Other)
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*/workflows') {
-                    return @(
-                        [PSCustomObject]@{ type = 'file'; name = 'lint.yml'; path = '.github/workflows/lint.yml' }
-                        [PSCustomObject]@{ type = 'file'; name = 'site.yml'; path = '.github/workflows/site.yml' }
-                    )
-                }
-                if ($Endpoint -like '*site.yml') {
-                    return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
-                }
-                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Other)) }
-            }
-
-            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeTrue
-        }
-    }
-
-    It "checks pages-named files first so the common case costs one fetch" {
-        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller } {
-            param($Yaml)
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*/workflows') {
-                    return @(
-                        [PSCustomObject]@{ type = 'file'; name = 'aaa.yml'; path = '.github/workflows/aaa.yml' }
-                        [PSCustomObject]@{ type = 'file'; name = 'bbb.yml'; path = '.github/workflows/bbb.yml' }
-                        [PSCustomObject]@{ type = 'file'; name = 'pages.yml'; path = '.github/workflows/pages.yml' }
-                    )
-                }
-                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
-            }
-
-            $null = Test-GitHubPagesWorkflow -Repository 'o/r'
-
-            # Listing plus exactly one file fetch: pages.yml was tried first.
-            Should -Invoke Invoke-GitHubApi -Times 2 -Exactly
-        }
-    }
-
-    It "ignores directories in the workflows listing" {
-        InModuleScope DotfilesHelpers {
-            Mock Invoke-GitHubApi {
-                if ($Endpoint -like '*/workflows') {
-                    return @([PSCustomObject]@{ type = 'dir'; name = 'pages'; path = '.github/workflows/pages' })
-                }
-                throw 'should not fetch a directory'
-            }
-
-            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
-        }
-    }
-}
-
-Describe "Get-CloudflareCredential" -Tag "Unit" {
-    BeforeAll {
-        $script:CfItemJson = @{
-            fields = @(
-                @{ id = 'account-id'; label = 'account-id' }
-                @{ id = 'api-token'; label = 'api-token' }
-            )
-        } | ConvertTo-Json -Depth 5
-        $script:ValidAccount = '0123456789abcdef0123456789abcdef'
-    }
-
-    It "returns both values as SecureStrings" {
-        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson; Account = $script:ValidAccount } {
-            param($Json, $Account)
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-            Mock Invoke-OnePasswordCli {
-                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return $Account }
-                return 'cf-token-value'
-            } -ParameterFilter { $Arguments -contains 'read' }
-
-            $cred = Get-CloudflareCredential
-
-            $cred.AccountId | Should -BeOfType [System.Security.SecureString]
-            $cred.ApiToken | Should -BeOfType [System.Security.SecureString]
-            ConvertFrom-DotfilesSecureString -SecureString $cred.AccountId | Should -Be $Account
-            ConvertFrom-DotfilesSecureString -SecureString $cred.ApiToken | Should -Be 'cf-token-value'
-        }
-    }
-
-    It "rejects an account ID that is not 32 hex characters" {
-        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson } {
-            param($Json)
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-            Mock Invoke-OnePasswordCli {
-                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return 'my-project-name' }
-                return 'cf-token-value'
-            } -ParameterFilter { $Arguments -contains 'read' }
-
-            { Get-CloudflareCredential } | Should -Throw -ExpectedMessage "*not a Cloudflare account ID*"
-        }
-    }
-
-    It "rejects an empty API token" {
-        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson; Account = $script:ValidAccount } {
-            param($Json, $Account)
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
-            Mock Invoke-OnePasswordCli {
-                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return $Account }
-                return ''
-            } -ParameterFilter { $Arguments -contains 'read' }
-
-            { Get-CloudflareCredential } | Should -Throw -ExpectedMessage "*Cloudflare Pages:Edit*"
-        }
-    }
-
-    It "verifies the 1Password item before reading anything" {
-        InModuleScope DotfilesHelpers {
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
-
-            { Get-CloudflareCredential } |
-                Should -Throw -ExpectedMessage "*'Cloudflare Pages Deploy' was not found in vault 'Private'*"
-        }
-    }
-}
-
 Describe "Skipped check reporting" -Tag "Unit" {
     BeforeEach {
         Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
@@ -1925,71 +1093,6 @@ Describe "Skipped check reporting" -Tag "Unit" {
         $null -eq $result.IsCompliant | Should -BeTrue
         -not $result.IsCompliant | Should -BeTrue -Because 'a skipped check must not read as compliant'
         @($result.SkippedChecks).Count | Should -BeGreaterThan 0
-    }
-}
-
-Describe "Hardcoded 1Password references" -Tag "Unit" {
-    It "pins <Name> to <Expected>" -ForEach @(
-        @{ Name = 'GitHubAppId'; Expected = 'op://Private/GitHub Automation App/app-id' }
-        @{ Name = 'GitHubPrivateKey'; Expected = 'op://Private/GitHub Automation App/private-key' }
-        @{ Name = 'CloudflareAccountId'; Expected = 'op://Private/Cloudflare Pages Deploy/account-id' }
-        @{ Name = 'CloudflareApiToken'; Expected = 'op://Private/Cloudflare Pages Deploy/api-token' }
-    ) {
-        $key = $Name
-        $want = $Expected
-        InModuleScope DotfilesHelpers -Parameters @{ Key = $key; Want = $want } {
-            param($Key, $Want)
-            $script:OnePasswordReferences[$Key] | Should -Be $Want
-        }
-    }
-
-    It "keeps every reference in valid op://Vault/Item/field form" {
-        InModuleScope DotfilesHelpers {
-            foreach ($ref in $script:OnePasswordReferences.Values) {
-                { ConvertFrom-OnePasswordReference -Reference $ref } | Should -Not -Throw
-            }
-        }
-    }
-
-    It "uses the hardcoded App reference when nothing is configured" {
-        InModuleScope DotfilesHelpers {
-            $pem = "-----BEGIN RSA PRIVATE KEY-----`nX`n-----END RSA PRIVATE KEY-----"
-            $json = @{ fields = @(@{ id = 'app-id'; label = 'app-id' }, @{ id = 'private-key'; label = 'private-key' }) } | ConvertTo-Json -Depth 5
-
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
-            Mock Invoke-OnePasswordCli {
-                if ($Arguments -contains 'op://Private/GitHub Automation App/app-id') { return '123456' }
-                return $pem
-            } -ParameterFilter { $Arguments -contains 'read' }
-
-            $null = Get-GitHubAppCredential
-
-            Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
-                $Arguments -contains 'read' -and $Arguments -contains 'op://Private/GitHub Automation App/private-key'
-            }
-        }
-    }
-
-    It "uses the hardcoded Cloudflare reference when nothing is configured" {
-        InModuleScope DotfilesHelpers {
-            $json = @{ fields = @(@{ id = 'account-id'; label = 'account-id' }, @{ id = 'api-token'; label = 'api-token' }) } | ConvertTo-Json -Depth 5
-
-            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
-            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
-            Mock Invoke-OnePasswordCli { $json } -ParameterFilter { $Arguments -contains 'item' }
-            Mock Invoke-OnePasswordCli {
-                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return '0123456789abcdef0123456789abcdef' }
-                return 'cf-token'
-            } -ParameterFilter { $Arguments -contains 'read' }
-
-            $null = Get-CloudflareCredential
-
-            Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
-                $Arguments -contains 'read' -and $Arguments -contains 'op://Private/Cloudflare Pages Deploy/api-token'
-            }
-        }
     }
 }
 
@@ -2148,26 +1251,80 @@ Describe "Rubber-duck regressions" -Tag "Unit" {
     }
 }
 
-Describe "GitHubRepoConfig static analysis" -Tag "Unit" {
+Describe "External command containment" -Tag "Unit" {
     BeforeAll {
-        $script:SourcePath = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/Public/GitHubRepoConfig.ps1"
+        # Covers the whole GitHub tooling surface, not one file, so moving a
+        # function between files cannot quietly drop it from this check.
+        $script:ToolingFiles = @(
+            'GitHubApi.ps1'
+            'GitHubCredentialPlacement.ps1'
+            'GitHubRepoConfig.ps1'
+            'GitHubRuleset.ps1'
+            'OnePasswordCredential.ps1'
+        ) | ForEach-Object {
+            Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/Public/$_"
+        }
+
+        # Returns "FunctionName" for every invocation of $Command in $Path, so a
+        # violation names the offender instead of moving a magic number.
+        function script:Get-CommandCallSite {
+            param([string]$Path, [string]$Command)
+
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$null)
+            $calls = $ast.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq $Command
+                }, $true)
+
+            $calls | ForEach-Object {
+                $parent = $_.Parent
+                while ($null -ne $parent -and -not ($parent -is [System.Management.Automation.Language.FunctionDefinitionAst])) {
+                    $parent = $parent.Parent
+                }
+                if ($null -eq $parent) { '<file scope>' } else { $parent.Name }
+            }
+        }
     }
 
-    It "parses without syntax errors" {
-        $errors = $null
-        $tokens = $null
-        [System.Management.Automation.Language.Parser]::ParseFile($script:SourcePath, [ref]$tokens, [ref]$errors) | Out-Null
-        $errors | Should -BeNullOrEmpty
+    It "invokes gh only from the wrapper and the pre-flight check" {
+        # Everything else must go through Invoke-GitHubCli, so mocking that one
+        # function is enough to keep the suite off the network.
+        $allowed = @('Invoke-GitHubCli', 'Test-GitHubCliReady')
+        $offenders = @()
+        foreach ($file in $script:ToolingFiles) {
+            foreach ($fn in (script:Get-CommandCallSite -Path $file -Command 'gh')) {
+                if ($fn -notin $allowed) { $offenders += "$(Split-Path $file -Leaf):$fn" }
+            }
+        }
+        $offenders | Should -BeNullOrEmpty -Because "gh must only be invoked from $($allowed -join ' or ')"
     }
 
-    It "does not hardcode a GitHub token or PAT" {
-        $content = Get-Content $script:SourcePath -Raw
-        $content | Should -Not -Match 'gh[pousr]_[A-Za-z0-9]{16,}'
+    It "invokes op only from the wrapper" {
+        $offenders = @()
+        foreach ($file in $script:ToolingFiles) {
+            foreach ($fn in (script:Get-CommandCallSite -Path $file -Command 'op')) {
+                if ($fn -ne 'Invoke-OnePasswordCli') { $offenders += "$(Split-Path $file -Leaf):$fn" }
+            }
+        }
+        $offenders | Should -BeNullOrEmpty -Because 'op must only be invoked from Invoke-OnePasswordCli'
     }
 
-    It "routes every gh invocation through the Invoke-GitHubCli wrapper" {
-        $content = Get-Content $script:SourcePath -Raw
-        # Only the pre-flight check and the wrapper itself may call gh directly.
-        ([regex]::Matches($content, '&\s+gh\s')).Count | Should -BeLessOrEqual 3
+    It "actually finds the known call sites" {
+        # Guards the guard: if the AST walk silently matched nothing, the two
+        # tests above would pass no matter what the source did.
+        $ghFile = Join-Path $script:RepoRoot 'home/dot_config/powershell/modules/DotfilesHelpers/Public/GitHubApi.ps1'
+        @(script:Get-CommandCallSite -Path $ghFile -Command 'gh').Count | Should -BeGreaterThan 0
+    }
+
+    It "hardcodes no GitHub token in <_>" -ForEach @(
+        'GitHubApi.ps1'
+        'GitHubCredentialPlacement.ps1'
+        'GitHubRepoConfig.ps1'
+        'GitHubRuleset.ps1'
+        'OnePasswordCredential.ps1'
+    ) {
+        $path = Join-Path $script:RepoRoot "home/dot_config/powershell/modules/DotfilesHelpers/Public/$_"
+        Get-Content $path -Raw | Should -Not -Match 'gh[pousr]_[A-Za-z0-9]{16,}'
     }
 }
