@@ -100,42 +100,46 @@ if (Test-Path $completionsPath) {
     }
 }
 
-# Show horizonfetch only in interactive sessions (not when scripts import modules)
-# Guarded with a timeout because horizonfetch occasionally hangs on some
-# hardware probes (e.g. GPU query on Snapdragon X), which would otherwise
-# freeze the entire profile load and ignore Ctrl+C. See issue: pwsh session
-# hangs on profile load.
+# Show fastfetch only in interactive sessions (not when scripts import modules),
+# mirroring the fish_greeting behaviour on Linux/macOS. fastfetch is installed on
+# Windows via winget (Fastfetch-cli.Fastfetch) and simply does not run when it is
+# absent, so a light install stays quiet.
+#
+# Guarded with a timeout because a fetch tool occasionally hangs on a hardware
+# probe (e.g. the GPU query on Snapdragon X), which would otherwise freeze the
+# entire profile load and ignore Ctrl+C. See issue: pwsh session hangs on
+# profile load.
 if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
-    $horizonfetchCmd = Get-Command horizonfetch -ErrorAction SilentlyContinue
-    if ($horizonfetchCmd) {
+    $fastfetchCmd = Get-Command fastfetch -ErrorAction SilentlyContinue
+    if ($fastfetchCmd) {
         # Allow users to tune the timeout (milliseconds) via an env var.
-        $horizonfetchTimeoutMs = 5000
+        $fastfetchTimeoutMs = 5000
         $parsedTimeout = 0
-        if ($env:HORIZONFETCH_TIMEOUT_MS -and
-            [int]::TryParse($env:HORIZONFETCH_TIMEOUT_MS, [ref]$parsedTimeout) -and
+        if ($env:FASTFETCH_TIMEOUT_MS -and
+            [int]::TryParse($env:FASTFETCH_TIMEOUT_MS, [ref]$parsedTimeout) -and
             $parsedTimeout -gt 0) {
-            $horizonfetchTimeoutMs = $parsedTimeout
+            $fastfetchTimeoutMs = $parsedTimeout
         }
 
-        if ($horizonfetchCmd.CommandType -in @([System.Management.Automation.CommandTypes]::Application,
-                                               [System.Management.Automation.CommandTypes]::ExternalScript)) {
+        if ($fastfetchCmd.CommandType -in @([System.Management.Automation.CommandTypes]::Application,
+                                            [System.Management.Automation.CommandTypes]::ExternalScript)) {
             # External executable/script: launch it attached to the current
             # console so colors/unicode render normally, and kill it if it
             # doesn't finish within the timeout.
             try {
-                $horizonfetchProc = Start-Process -FilePath $horizonfetchCmd.Source `
+                $fastfetchProc = Start-Process -FilePath $fastfetchCmd.Source `
                     -NoNewWindow -PassThru -ErrorAction Stop
-                if (-not $horizonfetchProc.WaitForExit($horizonfetchTimeoutMs)) {
-                    try { $horizonfetchProc.Kill() } catch { }
-                    Write-Host "`n(horizonfetch timed out after $([math]::Round($horizonfetchTimeoutMs / 1000, 1))s; skipping)" -ForegroundColor DarkYellow
+                if (-not $fastfetchProc.WaitForExit($fastfetchTimeoutMs)) {
+                    try { $fastfetchProc.Kill() } catch { }
+                    Write-Host "`n(fastfetch timed out after $([math]::Round($fastfetchTimeoutMs / 1000, 1))s; skipping)" -ForegroundColor DarkYellow
                 }
             } catch {
-                Write-Host "(horizonfetch failed to start: $($_.Exception.Message))" -ForegroundColor DarkYellow
+                Write-Host "(fastfetch failed to start: $($_.Exception.Message))" -ForegroundColor DarkYellow
             }
         } else {
             # Function/alias/cmdlet: no reliable way to cancel cooperatively,
             # so just invoke it directly.
-            horizonfetch
+            fastfetch
         }
     }
 }

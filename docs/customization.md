@@ -130,6 +130,25 @@ but never blocked.
 | `CHEZMOI_UP_ASSUME_YES=1`        | Switch without asking                                             |
 | `CHEZMOI_UP_ASSUME_NO=1`         | Never switch, even on a TTY                                       |
 
+## System info at shell startup
+
+Both shells print a `fastfetch` banner when you open an interactive session:
+fish via `fish_greeting`, PowerShell via the profile. fastfetch is installed by
+the dotfiles (apt/brew on Unix, `Fastfetch-cli.Fastfetch` via winget on
+Windows), and when it is missing the banner is simply skipped — a light install
+stays quiet.
+
+The PowerShell side runs it behind a timeout, because a fetch tool can hang on a
+hardware probe (the GPU query on Snapdragon X, for instance) and would otherwise
+freeze the whole profile load while ignoring Ctrl+C. If that happens you get a
+notice instead of a hung shell:
+
+```console
+(fastfetch timed out after 5.0s; skipping)
+```
+
+Set `FASTFETCH_TIMEOUT_MS` to tune the limit (default 5000).
+
 ## Windows PATH
 
 On Windows, the setup adds `%OneDrive%\Portable Programs` to the user-scope
