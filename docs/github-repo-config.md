@@ -272,7 +272,7 @@ op item create --category 'API Credential' --vault Private --title 'GitHub Autom
 Use the **App ID**, not the client ID or the slug — the value is validated.
 
 All four references (both GitHub App fields and both Cloudflare fields) are
-hardcoded in one place near the top of `GitHubRepoConfig.ps1`
+hardcoded in one place near the top of `OnePasswordCredential.ps1`
 (`$script:OnePasswordReferences`), so nothing needs configuring on a new
 machine — just create the items. They are secret _references_, not secrets:
 useless without authenticating to 1Password.
@@ -443,6 +443,24 @@ Get-GitHubRepoConfig -All -Check CloudflareCredential | Set-GitHubRepoConfig -Cl
 | `Visibility`, `IsArchived`, `IsFork` | Repository metadata                                      |
 
 `Set-GitHubRepoConfig -PassThru` reports `Applied` and `Skipped` per repository.
+
+## Source layout
+
+The tooling is split by concern across the `DotfilesHelpers` module, each file
+paired with a matching `*.Tests.ps1`:
+
+| File                            | Responsibility                                     |
+| ------------------------------- | -------------------------------------------------- |
+| `GitHubApi.ps1`                 | `gh` transport, JSON shaping, repo-name resolution |
+| `OnePasswordCredential.ps1`     | Reading credentials from 1Password                 |
+| `GitHubRuleset.ps1`             | Building default-branch ruleset payloads           |
+| `GitHubCredentialPlacement.ps1` | Environment vs repository scope, Pages detection   |
+| `GitHubRepoConfig.ps1`          | Baseline and the public audit/remediate commands   |
+
+Every `gh` and `op` invocation is funnelled through a single wrapper
+(`Invoke-GitHubCli`, `Invoke-OnePasswordCli`). A test walks the AST of all five
+files and fails if either binary is invoked anywhere else, which is what keeps
+the suite runnable without them installed.
 
 ## Testing
 
