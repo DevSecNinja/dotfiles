@@ -276,3 +276,138 @@ source '${FISH_FUNC}'; chezmoi_up $*; echo \"rc=\$status\""
 	run grep -F "alias czu 'chezmoi_up'" "${REPO_ROOT}/home/dot_config/fish/conf.d/aliases.fish"
 	[ "$status" -eq 0 ]
 }
+
+# --- branch guard -----------------------------------------------------------
+#
+# `chezmoi update` pulls whichever branch is checked out, so chezmoi-up warns
+# when the source repo is not on its default branch. The source dir used by the
+# tests above is deliberately not a git repo, which is itself the "no branch to
+# be wrong" case asserted below.
+
+# _make_git_src -> turn ${TEST_DIR}/src into a clone of a bare origin on main.
+_make_git_src() {
+	git init -q --bare -b main "${TEST_DIR}/origin"
+	git -c init.defaultBranch=main init -q "${TEST_DIR}/src"
+	git -C "${TEST_DIR}/src" config user.email t@t.t
+	git -C "${TEST_DIR}/src" config user.name t
+	git -C "${TEST_DIR}/src" config commit.gpgsign false
+	git -C "${TEST_DIR}/src" add -A
+	git -C "${TEST_DIR}/src" commit -qm init
+	git -C "${TEST_DIR}/src" branch -M main
+	git -C "${TEST_DIR}/src" remote add origin "${TEST_DIR}/origin"
+	git -C "${TEST_DIR}/src" push -q -u origin main
+	git -C "${TEST_DIR}/src" remote set-head origin -a >/dev/null 2>&1 || true
+}
+
+_src_branch() {
+	git -C "${TEST_DIR}/src" symbolic-ref --short -q HEAD 2>/dev/null || echo "DETACHED"
+}
+
+@test "chezmoi-up: says nothing when the source repo is on the default branch" {
+	_make_git_src
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" _run_up
+	[[ ! "$output" =~ "not 'main'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: warns when the source repo is on another branch" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_NO=1 _run_up
+	[[ "$output" =~ "is on 'feature/x', not 'main'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: warns before pulling, not after" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_NO=1 _run_up
+	local warn_line update_line
+	warn_line="$(printf '%s\n' "$output" | grep -n "not 'main'" | head -1 | cut -d: -f1)"
+	update_line="$(printf '%s\n' "$output" | grep -n 'UPDATE:' | head -1 | cut -d: -f1)"
+	[ "${warn_line}" -lt "${update_line}" ]
+}
+
+@test "chezmoi-up: declining the switch keeps the branch and still applies" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_NO=1 _run_up
+	[[ "$output" =~ "Staying on 'feature/x'" ]]
+	[[ "$output" =~ "APPLY: apply" ]]
+	[ "$(_src_branch)" = "feature/x" ]
+}
+
+@test "chezmoi-up: accepting the switch checks out the default branch" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_YES=1 _run_up
+	[[ "$output" =~ "rc=0" ]]
+	[ "$(_src_branch)" = "main" ]
+}
+
+@test "chezmoi-up: refuses to switch with uncommitted changes and keeps them" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	printf 'dirty\n' >>"${TEST_DIR}/src/.chezmoi.yaml.tmpl"
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_YES=1 _run_up
+	[[ "$output" =~ "uncommitted changes" ]]
+	[ "$(_src_branch)" = "feature/x" ]
+	grep -q dirty "${TEST_DIR}/src/.chezmoi.yaml.tmpl"
+}
+
+@test "chezmoi-up: warns about a detached HEAD" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q --detach
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_NO=1 _run_up
+	[[ "$output" =~ "detached HEAD" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: CHEZMOI_UP_SKIP_BRANCH_CHECK skips the guard" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_SKIP_BRANCH_CHECK=1 _run_up
+	[[ ! "$output" =~ "not 'main'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: CHEZMOI_UP_BRANCH overrides the expected branch" {
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b develop
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_BRANCH=develop _run_up
+	[[ ! "$output" =~ "not 'develop'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi-up: says nothing when the source dir is not a git repo" {
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" _run_up
+	[[ ! "$output" =~ "not 'main'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi_up (fish): warns when the source repo is on another branch" {
+	_fish_available
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_NO=1 _run_up_fish
+	[[ "$output" =~ "is on 'feature/x', not 'main'" ]]
+	[[ "$output" =~ "rc=0" ]]
+}
+
+@test "chezmoi_up (fish): accepting the switch checks out the default branch" {
+	_fish_available
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_YES=1 _run_up_fish
+	[ "$(_src_branch)" = "main" ]
+}
+
+@test "chezmoi_up (fish): refuses to switch with uncommitted changes" {
+	_fish_available
+	_make_git_src
+	git -C "${TEST_DIR}/src" checkout -q -b feature/x
+	printf 'dirty\n' >>"${TEST_DIR}/src/.chezmoi.yaml.tmpl"
+	FAKE_STORED_SHA="${TEMPLATE_SHA}" CHEZMOI_UP_ASSUME_YES=1 _run_up_fish
+	[[ "$output" =~ "uncommitted changes" ]]
+	[ "$(_src_branch)" = "feature/x" ]
+}

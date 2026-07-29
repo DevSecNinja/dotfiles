@@ -63,21 +63,27 @@ chezmoi verify
 `chezmoi update && chezmoi init && chezmoi apply` is the usual dance after a
 change lands. The `chezmoi-up` helper does it for you, in every shell:
 
-| Shell | Command | Alias |
-| --- | --- | --- |
-| Bash / Zsh | `chezmoi-up` | `czu` |
-| fish | `chezmoi_up` | `czu` |
+| Shell      | Command          | Alias                             |
+| ---------- | ---------------- | --------------------------------- |
+| Bash / Zsh | `chezmoi-up`     | `czu`                             |
+| fish       | `chezmoi_up`     | `czu`                             |
 | PowerShell | `Update-Chezmoi` | `chezmoi-up`, `chezmoi_up`, `czu` |
 
-It runs three steps and **stops at the first failure**, so a failed pull can
-never be followed by an apply of half-updated source:
+Before those steps it checks which branch the source repository is on, then
+runs three steps and **stops at the first failure**, so a failed pull can never
+be followed by an apply of half-updated source:
 
+0. **Branch guard** — `chezmoi update` pulls whichever branch is checked out,
+   so a feature branch you forgot about would be applied to the machine
+   silently. When the source repo is not on its default branch you get a
+   warning and an offer to switch and pull. See
+   [Branch guard](#branch-guard) below.
 1. `chezmoi update --apply=false` — pull the source repo only. Applying here
-   would use the *old* config, which breaks when the pull introduces a
+   would use the _old_ config, which breaks when the pull introduces a
    template variable your current config does not have yet.
 2. `chezmoi init` — **only when the config template actually changed.** It
    compares the SHA256 chezmoi recorded in its `configState` bucket (the same
-   data behind its *"config file template has changed"* warning) with the
+   data behind its _"config file template has changed"_ warning) with the
    template on disk. When it skips, it says so; when the state cannot be read
    it re-inits anyway, since a redundant init is harmless and a skipped one is
    not.
@@ -93,6 +99,36 @@ $ czu
 ==> Applying
 ✓ Dotfiles are up to date
 ```
+
+### Branch guard
+
+When the source repository is on another branch, `czu` says so and offers to
+put it back:
+
+```console
+$ czu
+! Source repository is on 'feat/new-aliases', not 'main'.
+! chezmoi update pulls whichever branch is checked out.
+Switch to 'main' and pull? [y/N] y
+==> Switching to 'main'
+==> Pulling the source repository
+```
+
+Declining is fine — working on a branch is a legitimate way to test dotfiles
+changes, so the run continues either way. The guard never switches a branch
+with uncommitted changes; it tells you to commit or stash first and carries on
+where you are. Pulls use `--ff-only`, so it will never create a merge commit in
+your dotfiles behind your back.
+
+Non-interactive shells answer "no" automatically, so scripts and CI are warned
+but never blocked.
+
+| Variable                         | Effect                                                            |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `CHEZMOI_UP_BRANCH`              | Expected branch (default: the repo's default branch, else `main`) |
+| `CHEZMOI_UP_SKIP_BRANCH_CHECK=1` | Skip the guard entirely                                           |
+| `CHEZMOI_UP_ASSUME_YES=1`        | Switch without asking                                             |
+| `CHEZMOI_UP_ASSUME_NO=1`         | Never switch, even on a TTY                                       |
 
 ## Windows PATH
 
