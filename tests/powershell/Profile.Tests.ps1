@@ -302,6 +302,7 @@ Describe "DotfilesHelpers Module" {
             'ConvertFrom-DotfilesSecureString'
             'New-GitHubRulesetPayload'
             'New-GitHubConfigDrift'
+            'Test-GitHubPagesWorkflow'
             'Get-GitHubCredentialScope'
             'Get-GitHubEnvironmentState'
         )

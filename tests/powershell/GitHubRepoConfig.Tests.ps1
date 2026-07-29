@@ -113,10 +113,14 @@ BeforeAll {
             [object]$Variables,
             [object]$Secrets,
             [object]$EnvironmentDetail,
-            [object]$BranchPolicies
+            [object]$BranchPolicies,
+            [object]$WorkflowListing,
+            [object]$WorkflowFile
         )
 
         switch -Regex ($Endpoint) {
+            '/contents/\.github/workflows$' { return $WorkflowListing }
+            '/contents/\.github/workflows/' { return $WorkflowFile }
             '/actions/permissions/workflow$' { return $Actions }
             '/environments/[^/]+/variables$' { return $Variables }
             '/environments/[^/]+/secrets$' { return $Secrets }
@@ -946,6 +950,134 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
         }
     }
 
+    Context "Cloudflare credentials" {
+        BeforeEach {
+            Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListEmpty }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo (script:New-DriftedRepoResponse) `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail $null `
+                    -Variables ([PSCustomObject]@{ variables = @() }) `
+                    -Secrets ([PSCustomObject]@{ secrets = @() })
+            }
+        }
+
+        It "reports both secrets as drift when the repo uses the Pages workflow" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+
+            $result = Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential
+            $settings = @($result.Drift | ForEach-Object { $_.Setting })
+            $settings | Should -Contain 'CLOUDFLARE_ACCOUNT_ID'
+            $settings | Should -Contain 'CLOUDFLARE_API_TOKEN'
+        }
+
+        It "reports no drift when the repo does not use the Pages workflow" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $false }
+
+            $result = Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential
+            @($result.Drift | Where-Object { $_.Category -eq 'CloudflareCredential' }).Count | Should -Be 0
+            $result.UsesPagesWorkflow | Should -BeFalse
+        }
+
+        It "does not even list secrets when the repo has no Pages workflow" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $false }
+
+            $null = Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 0 -Exactly -ParameterFilter {
+                $Endpoint -like '*/actions/secrets'
+            }
+        }
+
+        It "reports no drift when both secrets already exist" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo (script:New-DriftedRepoResponse) `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail $null `
+                    -Secrets ([PSCustomObject]@{ secrets = @(
+                            [PSCustomObject]@{ name = 'CLOUDFLARE_ACCOUNT_ID' }
+                            [PSCustomObject]@{ name = 'CLOUDFLARE_API_TOKEN' }
+                        )
+                    })
+            }
+
+            $result = Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential
+            @($result.Drift | Where-Object { $_.Category -eq 'CloudflareCredential' }).Count | Should -Be 0
+        }
+
+        It "writes both secrets at repository scope, never with --env" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+
+            $cf = [PSCustomObject]@{
+                PSTypeName = 'Dotfiles.CloudflareCredential'
+                AccountId  = (ConvertTo-SecureString '0123456789abcdef0123456789abcdef' -AsPlainText -Force)
+                ApiToken   = (ConvertTo-SecureString 'cf-token' -AsPlainText -Force)
+            }
+
+            Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential |
+                Set-GitHubRepoConfig -CloudflareCredential $cf -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 2 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret' -and $Arguments -notcontains '--env'
+            }
+        }
+
+        It "pipes secret values on stdin rather than as arguments" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+
+            $cf = [PSCustomObject]@{
+                PSTypeName = 'Dotfiles.CloudflareCredential'
+                AccountId  = (ConvertTo-SecureString '0123456789abcdef0123456789abcdef' -AsPlainText -Force)
+                ApiToken   = (ConvertTo-SecureString 'cf-token' -AsPlainText -Force)
+            }
+
+            Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential |
+                Set-GitHubRepoConfig -CloudflareCredential $cf -Confirm:$false
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'CLOUDFLARE_API_TOKEN' -and $StdIn -eq 'cf-token' -and
+                ($Arguments -join ' ') -notmatch 'cf-token'
+            }
+        }
+
+        It "warns and skips when no credential is supplied" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+
+            $warnings = @()
+            Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential |
+                Set-GitHubRepoConfig -Confirm:$false -WarningVariable warnings -WarningAction SilentlyContinue
+
+            ($warnings -join ' ') | Should -Match 'Get-CloudflareCredential'
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 0 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret'
+            }
+        }
+
+        It "writes nothing under -WhatIf" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+
+            $cf = [PSCustomObject]@{
+                PSTypeName = 'Dotfiles.CloudflareCredential'
+                AccountId  = (ConvertTo-SecureString '0123456789abcdef0123456789abcdef' -AsPlainText -Force)
+                ApiToken   = (ConvertTo-SecureString 'cf-token' -AsPlainText -Force)
+            }
+
+            Get-GitHubRepoConfig -Repository 'drifted' -Check CloudflareCredential |
+                Set-GitHubRepoConfig -CloudflareCredential $cf -WhatIf
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 0 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret'
+            }
+        }
+    }
+
     Context "bulk enumeration" {
         BeforeEach {
             Mock -ModuleName DotfilesHelpers Invoke-GitHubCli {
@@ -1530,6 +1662,263 @@ Describe "Get-GitHubEnvironmentState" -Tag "Unit" {
             $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
             $state.PinnedToDefaultBranch | Should -BeFalse
         }
+    }
+}
+
+Describe "Test-GitHubPagesWorkflow" -Tag "Unit" {
+    BeforeAll {
+        $script:PagesCaller = @'
+jobs:
+  pages:
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@abc123 # v1.9.0
+'@
+        $script:OtherWorkflow = @'
+jobs:
+  lint:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@abc123
+'@
+    }
+
+    It "detects a repository that calls the central Pages workflow" {
+        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller } {
+            param($Yaml)
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/workflows') {
+                    return @([PSCustomObject]@{ type = 'file'; name = 'pages.yml'; path = '.github/workflows/pages.yml' })
+                }
+                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
+            }
+
+            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeTrue
+        }
+    }
+
+    It "returns false when no workflow references it" {
+        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:OtherWorkflow } {
+            param($Yaml)
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/workflows') {
+                    return @([PSCustomObject]@{ type = 'file'; name = 'lint.yml'; path = '.github/workflows/lint.yml' })
+                }
+                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
+            }
+
+            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
+        }
+    }
+
+    It "returns false when the repository has no workflows directory" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi { $null }
+            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
+        }
+    }
+
+    It "finds the caller under a non-conventional file name" {
+        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller; Other = $script:OtherWorkflow } {
+            param($Yaml, $Other)
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/workflows') {
+                    return @(
+                        [PSCustomObject]@{ type = 'file'; name = 'lint.yml'; path = '.github/workflows/lint.yml' }
+                        [PSCustomObject]@{ type = 'file'; name = 'site.yml'; path = '.github/workflows/site.yml' }
+                    )
+                }
+                if ($Endpoint -like '*site.yml') {
+                    return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
+                }
+                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Other)) }
+            }
+
+            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeTrue
+        }
+    }
+
+    It "checks pages-named files first so the common case costs one fetch" {
+        InModuleScope DotfilesHelpers -Parameters @{ Yaml = $script:PagesCaller } {
+            param($Yaml)
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/workflows') {
+                    return @(
+                        [PSCustomObject]@{ type = 'file'; name = 'aaa.yml'; path = '.github/workflows/aaa.yml' }
+                        [PSCustomObject]@{ type = 'file'; name = 'bbb.yml'; path = '.github/workflows/bbb.yml' }
+                        [PSCustomObject]@{ type = 'file'; name = 'pages.yml'; path = '.github/workflows/pages.yml' }
+                    )
+                }
+                return [PSCustomObject]@{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Yaml)) }
+            }
+
+            $null = Test-GitHubPagesWorkflow -Repository 'o/r'
+
+            # Listing plus exactly one file fetch: pages.yml was tried first.
+            Should -Invoke Invoke-GitHubApi -Times 2 -Exactly
+        }
+    }
+
+    It "ignores directories in the workflows listing" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/workflows') {
+                    return @([PSCustomObject]@{ type = 'dir'; name = 'pages'; path = '.github/workflows/pages' })
+                }
+                throw 'should not fetch a directory'
+            }
+
+            Test-GitHubPagesWorkflow -Repository 'o/r' | Should -BeFalse
+        }
+    }
+}
+
+Describe "Get-CloudflareCredential" -Tag "Unit" {
+    BeforeAll {
+        $script:CfItemJson = @{
+            fields = @(
+                @{ id = 'account-id'; label = 'account-id' }
+                @{ id = 'api-token'; label = 'api-token' }
+            )
+        } | ConvertTo-Json -Depth 5
+        $script:ValidAccount = '0123456789abcdef0123456789abcdef'
+    }
+
+    It "returns both values as SecureStrings" {
+        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson; Account = $script:ValidAccount } {
+            param($Json, $Account)
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+            Mock Invoke-OnePasswordCli {
+                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return $Account }
+                return 'cf-token-value'
+            } -ParameterFilter { $Arguments -contains 'read' }
+
+            $cred = Get-CloudflareCredential
+
+            $cred.AccountId | Should -BeOfType [System.Security.SecureString]
+            $cred.ApiToken | Should -BeOfType [System.Security.SecureString]
+            ConvertFrom-DotfilesSecureString -SecureString $cred.AccountId | Should -Be $Account
+            ConvertFrom-DotfilesSecureString -SecureString $cred.ApiToken | Should -Be 'cf-token-value'
+        }
+    }
+
+    It "rejects an account ID that is not 32 hex characters" {
+        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson } {
+            param($Json)
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+            Mock Invoke-OnePasswordCli {
+                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return 'my-project-name' }
+                return 'cf-token-value'
+            } -ParameterFilter { $Arguments -contains 'read' }
+
+            { Get-CloudflareCredential } | Should -Throw -ExpectedMessage "*not a Cloudflare account ID*"
+        }
+    }
+
+    It "rejects an empty API token" {
+        InModuleScope DotfilesHelpers -Parameters @{ Json = $script:CfItemJson; Account = $script:ValidAccount } {
+            param($Json, $Account)
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $Json } -ParameterFilter { $Arguments -contains 'item' }
+            Mock Invoke-OnePasswordCli {
+                if ($Arguments -contains 'op://Private/Cloudflare Pages Deploy/account-id') { return $Account }
+                return ''
+            } -ParameterFilter { $Arguments -contains 'read' }
+
+            { Get-CloudflareCredential } | Should -Throw -ExpectedMessage "*Cloudflare Pages:Edit*"
+        }
+    }
+
+    It "verifies the 1Password item before reading anything" {
+        InModuleScope DotfilesHelpers {
+            Mock Get-Command { [PSCustomObject]@{ Name = 'op' } } -ParameterFilter { $Name -eq 'op' }
+            Mock Invoke-OnePasswordCli { 'me@example.com' } -ParameterFilter { $Arguments -contains 'whoami' }
+            Mock Invoke-OnePasswordCli { $null } -ParameterFilter { $Arguments -contains 'item' }
+
+            { Get-CloudflareCredential } |
+                Should -Throw -ExpectedMessage "*'Cloudflare Pages Deploy' was not found in vault 'Private'*"
+        }
+    }
+}
+
+Describe "Skipped check reporting" -Tag "Unit" {
+    BeforeEach {
+        Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
+        Mock -ModuleName DotfilesHelpers Get-GitHubCurrentOwner { 'DevSecNinja' }
+    }
+
+    It "records Actions when workflow permissions cannot be read" {
+        Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListPresent }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-CompliantRepoResponse) `
+                -Actions $null `
+                -RulesetDetail (script:New-CompliantRulesetDetail)
+        }
+
+        $result = Get-GitHubRepoConfig -Repository 'compliant' -WarningAction SilentlyContinue
+        $result.SkippedChecks | Should -Contain 'Actions'
+    }
+
+    It "records Ruleset when rulesets are unavailable on the plan" {
+        Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListUnavailable }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-CompliantRepoResponse) `
+                -Actions (script:New-CompliantActionsResponse) `
+                -RulesetDetail $null
+        }
+
+        $result = Get-GitHubRepoConfig -Repository 'private-repo' -WarningAction SilentlyContinue
+        $result.SkippedChecks | Should -Contain 'Ruleset'
+    }
+
+    It "records CloudflareCredential when secrets cannot be listed" {
+        Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-CompliantRepoResponse) `
+                -Actions (script:New-CompliantActionsResponse) `
+                -RulesetDetail $null `
+                -Secrets $null
+        }
+
+        $result = Get-GitHubRepoConfig -Repository 'compliant' -Check CloudflareCredential -WarningAction SilentlyContinue
+        $result.SkippedChecks | Should -Contain 'CloudflareCredential'
+        $result.DriftCount | Should -Be 0
+    }
+
+    It "reports no skipped checks when everything is readable" {
+        Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListPresent }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-CompliantRepoResponse) `
+                -Actions (script:New-CompliantActionsResponse) `
+                -RulesetDetail (script:New-CompliantRulesetDetail)
+        }
+
+        $result = Get-GitHubRepoConfig -Repository 'compliant'
+        @($result.SkippedChecks).Count | Should -Be 0
+        $result.IsCompliant | Should -BeTrue
+    }
+
+    It "does not let a skipped category masquerade as compliance" {
+        Mock -ModuleName DotfilesHelpers Test-GitHubPagesWorkflow { $true }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-CompliantRepoResponse) `
+                -Actions (script:New-CompliantActionsResponse) `
+                -RulesetDetail $null `
+                -Secrets $null
+        }
+
+        $result = Get-GitHubRepoConfig -Repository 'compliant' -Check CloudflareCredential -WarningAction SilentlyContinue
+
+        # IsCompliant is true only because nothing could be checked; the
+        # SkippedChecks list is what makes that visible.
+        $result.IsCompliant | Should -BeTrue
+        @($result.SkippedChecks).Count | Should -BeGreaterThan 0
     }
 }
 

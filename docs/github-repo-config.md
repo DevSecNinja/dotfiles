@@ -33,6 +33,16 @@ Your `gh` token needs these fine-grained permissions:
 Categories whose permissions are missing are skipped with a warning rather than
 failing the run, so a token with narrower scopes still produces a useful audit.
 
+!!! warning "A skipped category is not a compliant one"
+
+    Anything that could not be evaluated is listed on `SkippedChecks`.
+    `IsCompliant` only means "nothing drifted among the categories that were
+    actually checked", so check both:
+
+    ```powershell
+    Get-GitHubRepoConfig -All | Where-Object { $_.SkippedChecks }
+    ```
+
 ## Quick start
 
 Audit everything and list what drifted:
@@ -325,6 +335,67 @@ standard input, so the PEM never appears in a process argument list or on disk.
     Keep the installation to Contents, Pull requests and Issues `write`. Drive
     repository settings from your own `gh` login instead, so the
     `administration` permission never lives inside CI.
+
+## Cloudflare Pages credentials
+
+`CloudflareCredential` is opt-in via `-Check CloudflareCredential`. It manages
+the two secrets the central reusable Pages workflow needs to deploy to
+Cloudflare Pages:
+
+| Secret                  | What it is                                               |
+| ----------------------- | -------------------------------------------------------- |
+| `CLOUDFLARE_ACCOUNT_ID` | The **account** ID from the Cloudflare dashboard sidebar |
+| `CLOUDFLARE_API_TOKEN`  | A token with the **Cloudflare Pages:Edit** permission    |
+
+The Cloudflare _project_ name is not a secret — it is the workflow input
+`cloudflare-project-name`, which defaults to the repository name.
+
+### Only repositories that deploy Pages
+
+The check first looks for a workflow in the repository that calls
+`DevSecNinja/.github/.github/workflows/pages.yml`. Repositories that do not are
+reported with `UsesPagesWorkflow = $false` and produce no drift, so the
+credential is never sprayed across repositories that have no use for it.
+
+The scan reads `.github/workflows`, tries files whose name mentions "pages"
+first and stops at the first match, so it also finds callers under a
+non-conventional file name without costing a fetch per workflow.
+
+!!! warning "These are repository secrets, not environment secrets"
+
+    Unlike the GitHub App credential, these deliberately stay at repository
+    level. The reusable workflow's `detect-cloudflare` job gates every deploy on
+    the secrets being non-empty and declares no `environment:`, and neither does
+    the caller job — so an environment secret would read as empty there and
+    silently disable deploys.
+
+### The 1Password entry
+
+|                    |                                                          |
+| ------------------ | -------------------------------------------------------- |
+| Vault              | `Private`                                                |
+| Item               | `Cloudflare Pages Deploy` (category: **API Credential**) |
+| Field `account-id` | Account ID from the Cloudflare dashboard                 |
+| Field `api-token`  | Token with the Cloudflare Pages:Edit permission          |
+
+```powershell
+op item create --category 'API Credential' --vault Private --title 'Cloudflare Pages Deploy' `
+    'account-id[text]=0123456789abcdef0123456789abcdef' `
+    'api-token[password]=YOUR_TOKEN'
+```
+
+Override with `-AccountIdReference` / `-ApiTokenReference`, or
+`OP_CLOUDFLARE_ACCOUNT_REF` / `OP_CLOUDFLARE_TOKEN_REF`.
+
+The account ID is validated as 32 hex characters, so pasting a project name or
+zone ID fails immediately rather than surfacing as a 403 inside a deploy job.
+
+### Rolling it out
+
+```powershell
+$cf = Get-CloudflareCredential
+Get-GitHubRepoConfig -All -Check CloudflareCredential | Set-GitHubRepoConfig -CloudflareCredential $cf -WhatIf
+```
 
 ## Output
 

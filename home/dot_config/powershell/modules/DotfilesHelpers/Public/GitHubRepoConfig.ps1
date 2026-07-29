@@ -670,6 +670,62 @@ function Get-GitHubEnvironmentState {
     return [PSCustomObject]@{ Exists = $true; PinnedToDefaultBranch = $pinned }
 }
 
+function Test-GitHubPagesWorkflow {
+    <#
+    .SYNOPSIS
+        Does this repository call the central reusable Pages workflow?
+    .DESCRIPTION
+        Cloudflare credentials are only meaningful in repositories that deploy
+        through DevSecNinja/.github's reusable pages workflow, so the audit is
+        gated on the caller actually being present rather than on the secret
+        merely being absent.
+
+        Scans .github/workflows for a file referencing the reusable workflow.
+        Files whose name mentions "pages" are checked first and the scan stops
+        at the first hit, so the conventional layout costs two API calls.
+    .PARAMETER Repository
+        Repository in 'owner/name' form.
+    .PARAMETER Marker
+        Substring identifying the reusable workflow reference.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Marker = 'DevSecNinja/.github/.github/workflows/pages.yml@'
+    )
+
+    $listing = Invoke-GitHubApi -Endpoint "repos/$Repository/contents/.github/workflows" -AllowFailure
+    if ($null -eq $listing) { return $false }
+
+    $candidates = @($listing | Where-Object { $_.type -eq 'file' -and $_.name -match '\.ya?ml$' })
+    if ($candidates.Count -eq 0) { return $false }
+
+    # Conventional names first so the common case exits after one fetch.
+    $ordered = @($candidates | Sort-Object @{ Expression = { $_.name -notmatch 'page' } }, Name)
+
+    foreach ($file in $ordered) {
+        $content = Invoke-GitHubApi -Endpoint "repos/$Repository/contents/$($file.path)" -AllowFailure
+        if ($null -eq $content -or [string]::IsNullOrWhiteSpace($content.content)) { continue }
+
+        try {
+            $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($content.content -replace '\s', '')))
+        }
+        catch {
+            continue
+        }
+
+        if ($decoded -like "*$Marker*") {
+            Write-Verbose "$Repository calls the central Pages workflow via $($file.path)"
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function New-GitHubConfigDrift {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns an object; does not change system state.')]
     <#
@@ -734,6 +790,16 @@ function Get-GitHubRepoBaseline {
             repositories transparently fall back to repository-level secrets
             (with a warning). Without a branch policy an environment secret is
             no safer than a repository secret, so the fallback loses nothing.
+          - CloudflareCredential only applies to repositories that call the
+            central reusable Pages workflow, so the credential is not sprayed
+            across repositories that have no use for it.
+
+            Both values are repository-level secrets, deliberately not
+            environment ones. The reusable workflow's `detect-cloudflare` job
+            gates every deploy on the secrets being non-empty and declares no
+            `environment:`, and the caller job does not either - so an
+            environment secret would read as empty and silently disable
+            deploys.
           - The Ruleset name matches what GitHub's UI creates ('Default'), so
             a repository that already has one is updated in place instead of
             gaining a second, competing ruleset. Override Name if yours differs.
@@ -809,6 +875,11 @@ function Get-GitHubRepoBaseline {
             VariableName = 'AUTOMATION_APP_ID'
             SecretName   = 'AUTOMATION_APP_PRIVATE_KEY'
             Environment  = 'production'
+        }
+        CloudflareCredential = [ordered]@{
+            AccountIdSecretName = 'CLOUDFLARE_ACCOUNT_ID'
+            ApiTokenSecretName  = 'CLOUDFLARE_API_TOKEN'
+            WorkflowMarker      = 'DevSecNinja/.github/.github/workflows/pages.yml@'
         }
     }
 
@@ -946,6 +1017,109 @@ function Get-GitHubAppCredential {
     }
 }
 
+function Get-CloudflareCredential {
+    <#
+    .SYNOPSIS
+        Read a Cloudflare account ID and API token from 1Password.
+
+    .DESCRIPTION
+        Both values are secrets used by the central reusable Pages workflow to
+        deploy to Cloudflare Pages. They are returned as SecureStrings so they
+        are not left as plain strings in the session.
+
+        Note this is the Cloudflare **account** ID, not a project ID: the
+        project name is a workflow input (`cloudflare-project-name`, defaulting
+        to the repository name), not a secret.
+
+        As with Get-GitHubAppCredential, everything is verified before a value
+        is read, so a missing entry fails immediately with a message naming what
+        to create rather than surfacing as an empty secret partway through a
+        rollout.
+
+        Expected 1Password entry (create it once):
+
+            Vault    Private
+            Item     Cloudflare Pages Deploy   (category: API Credential)
+            Fields   account-id   the Account ID from the Cloudflare dashboard
+                     api-token    a token with the Cloudflare Pages:Edit scope
+
+    .PARAMETER AccountIdReference
+        1Password secret reference for the account ID, in `op://Vault/Item/field`
+        form. Defaults to $env:OP_CLOUDFLARE_ACCOUNT_REF, then to
+        'op://Private/Cloudflare Pages Deploy/account-id'.
+
+    .PARAMETER ApiTokenReference
+        1Password secret reference for the API token. Defaults to
+        $env:OP_CLOUDFLARE_TOKEN_REF, then to
+        'op://Private/Cloudflare Pages Deploy/api-token'.
+
+    .EXAMPLE
+        Get-CloudflareCredential
+
+        Read the credential from the default 1Password location.
+
+    .EXAMPLE
+        $cf = Get-CloudflareCredential
+        Get-GitHubRepoConfig -All -Check CloudflareCredential | Set-GitHubRepoConfig -CloudflareCredential $cf
+
+        Roll the Cloudflare credential out to every repository that deploys
+        through the central Pages workflow and is missing it.
+
+    .OUTPUTS
+        PSCustomObject with AccountId and ApiToken (both SecureString).
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Read-only; does not change system state.')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The 1Password CLI returns the values as plain text; converting them to SecureStrings immediately is the hardening step, not a weakness.')]
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$AccountIdReference,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ApiTokenReference
+    )
+
+    if ([string]::IsNullOrWhiteSpace($AccountIdReference)) { $AccountIdReference = $env:OP_CLOUDFLARE_ACCOUNT_REF }
+    if ([string]::IsNullOrWhiteSpace($AccountIdReference)) { $AccountIdReference = 'op://Private/Cloudflare Pages Deploy/account-id' }
+
+    if ([string]::IsNullOrWhiteSpace($ApiTokenReference)) { $ApiTokenReference = $env:OP_CLOUDFLARE_TOKEN_REF }
+    if ([string]::IsNullOrWhiteSpace($ApiTokenReference)) { $ApiTokenReference = 'op://Private/Cloudflare Pages Deploy/api-token' }
+
+    Test-OnePasswordSession
+
+    Write-Verbose "Verifying $AccountIdReference"
+    Test-OnePasswordReference -Reference $AccountIdReference -Purpose 'Cloudflare account ID'
+
+    Write-Verbose "Verifying $ApiTokenReference"
+    Test-OnePasswordReference -Reference $ApiTokenReference -Purpose 'Cloudflare API token'
+
+    $accountId = Invoke-OnePasswordCli -Arguments @('read', $AccountIdReference) -ErrorContext "op read '$AccountIdReference'"
+    if ([string]::IsNullOrWhiteSpace($accountId)) {
+        throw "The field at '$AccountIdReference' is empty. Set it to the Account ID shown in the Cloudflare dashboard."
+    }
+    # Cloudflare account IDs are 32-character hex strings; catching a pasted
+    # project name or zone ID here beats a 403 inside a deploy job.
+    if ($accountId -notmatch '^[0-9a-fA-F]{32}$') {
+        throw "The value at '$AccountIdReference' is not a Cloudflare account ID (expected 32 hex characters). Use the Account ID from the dashboard sidebar, not a project or zone ID."
+    }
+
+    $apiToken = Invoke-OnePasswordCli -Arguments @('read', $ApiTokenReference) -ErrorContext "op read '$ApiTokenReference'"
+    if ([string]::IsNullOrWhiteSpace($apiToken)) {
+        throw "The field at '$ApiTokenReference' is empty. Create a token with the 'Cloudflare Pages:Edit' permission and paste it in."
+    }
+
+    $result = [PSCustomObject]@{
+        PSTypeName = 'Dotfiles.CloudflareCredential'
+        AccountId  = (ConvertTo-SecureString -String $accountId -AsPlainText -Force)
+        ApiToken   = (ConvertTo-SecureString -String $apiToken -AsPlainText -Force)
+    }
+    $accountId = $null
+    $apiToken = $null
+
+    return $result
+}
+
 function Get-GitHubRepoConfig {
     <#
     .SYNOPSIS
@@ -964,6 +1138,9 @@ function Get-GitHubRepoConfig {
           Actions       default workflow token permissions, PR-approval toggle
           Ruleset       default-branch protection, including your admin bypass
           AppCredential presence of the GitHub App variable and secret
+          CloudflareCredential
+                        presence of the Cloudflare Pages secrets, but only in
+                        repositories that call the central Pages workflow
 
     .PARAMETER Repository
         One or more repositories as 'name', 'owner/name' or a GitHub URL. Bare
@@ -1028,6 +1205,13 @@ function Get-GitHubRepoConfig {
 
         Audit only the forks.
 
+    .NOTES
+        A category that cannot be evaluated - a missing token permission, or a
+        plan limitation such as rulesets on a private repository - is reported
+        on the SkippedChecks property rather than counted as drift. IsCompliant
+        therefore means "nothing drifted among the categories that were actually
+        checked", so check SkippedChecks before treating it as a clean bill.
+
     .OUTPUTS
         PSCustomObject (Dotfiles.GitHubRepoConfig)
     #>
@@ -1052,7 +1236,7 @@ function Get-GitHubRepoConfig {
         [switch]$ExcludeForks,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential')]
+        [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential', 'CloudflareCredential')]
         [string[]]$Check = @('Settings', 'Actions', 'Ruleset'),
 
         [Parameter(Mandatory = $false)]
@@ -1112,6 +1296,10 @@ function Get-GitHubRepoConfig {
             }
 
             $drift = [System.Collections.Generic.List[PSObject]]::new()
+            # Categories that could not be evaluated (missing token permission,
+            # plan limitation). Tracked so a skipped category is never mistaken
+            # for a compliant one.
+            $skippedChecks = [System.Collections.Generic.List[string]]::new()
             $current = [ordered]@{}
 
             if ($Check -contains 'Settings') {
@@ -1128,6 +1316,7 @@ function Get-GitHubRepoConfig {
                 $perms = Invoke-GitHubApi -Endpoint "repos/$target/actions/permissions/workflow" -AllowFailure
                 if ($null -eq $perms) {
                     Write-Warning "Could not read Actions workflow permissions for $target. The gh token likely lacks the 'administration' permission; skipping the Actions category."
+                    $skippedChecks.Add('Actions')
                 }
                 else {
                     foreach ($key in $desired.Actions.Keys) {
@@ -1148,6 +1337,7 @@ function Get-GitHubRepoConfig {
 
                 if (-not $rulesetList.Available) {
                     Write-Warning "Could not list rulesets for $target. Private repositories need GitHub Pro for rulesets, and reading them needs the 'administration' permission; skipping the Ruleset category."
+                    $skippedChecks.Add('Ruleset')
                 }
                 else {
                     $existing = @($rulesetList.Rulesets | Where-Object { $_.name -eq $wanted.Name })[0]
@@ -1164,6 +1354,7 @@ function Get-GitHubRepoConfig {
                         $rulesetDetail = $detail
                         if ($null -eq $detail) {
                             Write-Warning "Could not read ruleset $rulesetId on $target; skipping its rule comparison."
+                            $skippedChecks.Add('Ruleset')
                         }
                         else {
                             $ruleTypes = @($detail.rules | ForEach-Object { $_.type })
@@ -1265,6 +1456,7 @@ function Get-GitHubRepoConfig {
 
                 if ($null -eq $variables -or $null -eq $secrets) {
                     Write-Warning "Could not list Actions variables/secrets for $target. The gh token likely lacks the 'secrets'/'variables' permissions; skipping the AppCredential category."
+                    $skippedChecks.Add('AppCredential')
                 }
                 else {
                     $hasVariable = @($variables.variables | Where-Object { $_.name -eq $variableName }).Count -gt 0
@@ -1282,6 +1474,43 @@ function Get-GitHubRepoConfig {
                 }
             }
 
+            $usesPagesWorkflow = $null
+            if ($Check -contains 'CloudflareCredential') {
+                $cf = $desired.CloudflareCredential
+
+                # Gate on the workflow, not just on the secret being absent:
+                # these credentials are meaningless in a repo that never
+                # deploys Pages, and reporting them as drift everywhere would
+                # bury the repositories that genuinely need them.
+                $usesPagesWorkflow = Test-GitHubPagesWorkflow -Repository $target -Marker $cf.WorkflowMarker
+                $current['uses_pages_workflow'] = $usesPagesWorkflow
+
+                if (-not $usesPagesWorkflow) {
+                    Write-Verbose "$target does not call the central Pages workflow; skipping the Cloudflare credential check."
+                }
+                else {
+                    # Repository-level on purpose: the reusable workflow's
+                    # detect-cloudflare job gates deploys on these secrets and
+                    # declares no environment, so an environment secret would
+                    # read as empty there and silently disable deploys.
+                    $secrets = Invoke-GitHubApi -Endpoint "repos/$target/actions/secrets" -AllowFailure
+
+                    if ($null -eq $secrets) {
+                        Write-Warning "Could not list Actions secrets for $target. The gh token likely lacks the 'secrets' permission; skipping the CloudflareCredential category."
+                        $skippedChecks.Add('CloudflareCredential')
+                    }
+                    else {
+                        foreach ($name in @($cf.AccountIdSecretName, $cf.ApiTokenSecretName)) {
+                            $present = @($secrets.secrets | Where-Object { $_.name -eq $name }).Count -gt 0
+                            $current[$name] = $present
+                            if (-not $present) {
+                                $drift.Add((New-GitHubConfigDrift -Category 'CloudflareCredential' -Setting $name -Current $false -Desired $true))
+                            }
+                        }
+                    }
+                }
+            }
+
             [PSCustomObject]@{
                 PSTypeName  = 'Dotfiles.GitHubRepoConfig'
                 Repository  = $target
@@ -1290,8 +1519,11 @@ function Get-GitHubRepoConfig {
                 Visibility  = $repo.visibility
                 IsArchived  = [bool]$repo.archived
                 IsFork      = [bool]$repo.fork
+                # Only covers the categories that were actually evaluated;
+                # consult SkippedChecks before treating this as a clean bill.
                 IsCompliant = ($drift.Count -eq 0)
                 DriftCount  = $drift.Count
+                SkippedChecks = $skippedChecks.ToArray()
                 Drift       = $drift.ToArray()
                 Current     = $current
                 Baseline    = $desired
@@ -1300,6 +1532,7 @@ function Get-GitHubRepoConfig {
                 RulesetDetail = $rulesetDetail
                 CredentialScope = $credentialScope
                 DefaultBranch = $repo.default_branch
+                UsesPagesWorkflow = $usesPagesWorkflow
             }
         }
     }
@@ -1343,6 +1576,11 @@ function Set-GitHubRepoConfig {
         the AppCredential category; without it those items are skipped with a
         warning.
 
+    .PARAMETER CloudflareCredential
+        Credential from Get-CloudflareCredential. Required to remediate drift in
+        the CloudflareCredential category; without it those items are skipped
+        with a warning.
+
     .PARAMETER Category
         Restrict remediation to specific categories, e.g. -Category Settings to
         fix merge strategies while leaving Actions permissions alone.
@@ -1371,6 +1609,14 @@ function Set-GitHubRepoConfig {
 
         Roll the GitHub App ID and private key out to every repository missing
         them.
+
+    .EXAMPLE
+        $cf = Get-CloudflareCredential
+        Get-GitHubRepoConfig -All -Check CloudflareCredential | Set-GitHubRepoConfig -CloudflareCredential $cf
+
+        Roll the Cloudflare Pages secrets out to the repositories that deploy
+        through the central Pages workflow. Repositories that do not call it are
+        left untouched.
 
     .EXAMPLE
         Get-GitHubRepoConfig -All -Check Ruleset | Set-GitHubRepoConfig -Category Ruleset -WhatIf
@@ -1404,7 +1650,11 @@ function Set-GitHubRepoConfig {
         [PSCustomObject]$AppCredential,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential')]
+        [PSTypeName('Dotfiles.CloudflareCredential')]
+        [PSCustomObject]$CloudflareCredential,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential', 'CloudflareCredential')]
         [string[]]$Category,
 
         [Parameter(Mandatory = $false)]
@@ -1422,7 +1672,7 @@ function Set-GitHubRepoConfig {
             return
         }
 
-        $auditArgs = @{ Repository = $Repository; Check = @('Settings', 'Actions', 'Ruleset', 'AppCredential') }
+        $auditArgs = @{ Repository = $Repository; Check = @('Settings', 'Actions', 'Ruleset', 'AppCredential', 'CloudflareCredential') }
         if (-not [string]::IsNullOrWhiteSpace($Owner)) { $auditArgs['Owner'] = $Owner }
         if ($PSBoundParameters.ContainsKey('Baseline')) { $auditArgs['Baseline'] = $Baseline }
 
@@ -1607,6 +1857,50 @@ function Set-GitHubRepoConfig {
                                 finally {
                                     $plain = $null
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            # --- Cloudflare Pages secrets from 1Password ---
+            $cloudflareDrift = @($drift | Where-Object { $_.Category -eq 'CloudflareCredential' })
+            if ($cloudflareDrift.Count -gt 0) {
+                if ($null -eq $CloudflareCredential) {
+                    Write-Warning "$target is missing the Cloudflare Pages secrets but -CloudflareCredential was not supplied. Run Get-CloudflareCredential and pass the result to remediate."
+                    foreach ($item in $cloudflareDrift) { $skipped.Add("CloudflareCredential/$($item.Setting)") }
+                }
+                else {
+                    $cfBaseline = $config.Baseline.CloudflareCredential
+                    $values = @{
+                        $cfBaseline.AccountIdSecretName = $CloudflareCredential.AccountId
+                        $cfBaseline.ApiTokenSecretName  = $CloudflareCredential.ApiToken
+                    }
+
+                    foreach ($item in $cloudflareDrift) {
+                        $secure = $values[$item.Setting]
+                        if ($null -eq $secure) {
+                            Write-Error "No value available for $($item.Setting) on ${target}."
+                            $skipped.Add("CloudflareCredential/$($item.Setting)")
+                            continue
+                        }
+
+                        if ($PSCmdlet.ShouldProcess($target, "Set repository secret $($item.Setting)")) {
+                            $plain = ConvertFrom-DotfilesSecureString -SecureString $secure
+                            try {
+                                # Piped on stdin so the value never appears in a
+                                # process argument list.
+                                $result = Invoke-GitHubCli -Arguments @('secret', 'set', $item.Setting, '--repo', $target) -StdIn $plain -AllowFailure -ErrorContext "gh secret set $($item.Setting) on $target"
+                                if ($null -eq $result) {
+                                    Write-Error "Could not set secret $($item.Setting) on ${target}."
+                                    $skipped.Add("CloudflareCredential/$($item.Setting)")
+                                }
+                                else {
+                                    $applied.Add("CloudflareCredential/$($item.Setting)")
+                                }
+                            }
+                            finally {
+                                $plain = $null
                             }
                         }
                     }
