@@ -520,11 +520,15 @@ function New-GitHubRulesetPayload {
     $managedRuleTypes = @('deletion', 'non_fast_forward', 'pull_request')
 
     $rules = [System.Collections.Generic.List[object]]::new()
+    $existingPullRequest = $null
 
     if ($null -ne $ExistingRuleset -and $null -ne $ExistingRuleset.rules) {
         foreach ($rule in $ExistingRuleset.rules) {
             if ($managedRuleTypes -notcontains $rule.type) {
                 $rules.Add($rule)
+            }
+            elseif ($rule.type -eq 'pull_request') {
+                $existingPullRequest = $rule
             }
         }
     }
@@ -538,17 +542,29 @@ function New-GitHubRulesetPayload {
     }
 
     if ($Ruleset.RequirePullRequest) {
-        $rules.Add(@{
-                type       = 'pull_request'
-                parameters = @{
-                    allowed_merge_methods             = @($Ruleset.AllowedMergeMethods)
-                    dismiss_stale_reviews_on_push     = $false
-                    require_code_owner_review         = $false
-                    require_last_push_approval        = $false
-                    required_approving_review_count   = $Ruleset.RequiredApprovingReviews
-                    required_review_thread_resolution = $false
-                }
-            })
+        # Only two pull_request parameters belong to this baseline. Everything
+        # else - code-owner review, stale-review dismissal, last-push approval,
+        # thread resolution, and any parameter GitHub adds later - is carried
+        # over from the existing rule, so remediating a merge-method drift never
+        # silently switches someone's stricter review settings off.
+        $prParameters = [ordered]@{}
+        if ($null -ne $existingPullRequest -and $null -ne $existingPullRequest.parameters) {
+            foreach ($property in $existingPullRequest.parameters.PSObject.Properties) {
+                $prParameters[$property.Name] = $property.Value
+            }
+        }
+        else {
+            # No existing rule to inherit from: start from GitHub's defaults.
+            $prParameters['dismiss_stale_reviews_on_push'] = $false
+            $prParameters['require_code_owner_review'] = $false
+            $prParameters['require_last_push_approval'] = $false
+            $prParameters['required_review_thread_resolution'] = $false
+        }
+
+        $prParameters['allowed_merge_methods'] = @($Ruleset.AllowedMergeMethods)
+        $prParameters['required_approving_review_count'] = $Ruleset.RequiredApprovingReviews
+
+        $rules.Add(@{ type = 'pull_request'; parameters = $prParameters })
     }
 
     $bypassActors = [System.Collections.Generic.List[object]]::new()
@@ -583,11 +599,19 @@ function New-GitHubRulesetPayload {
     }
 
     # Keep a deliberately narrower or broader ref condition if one is already
-    # configured; retargeting someone's ruleset is not this tool's job.
+    # configured; retargeting someone's ruleset is not this tool's job. The one
+    # exception is a condition that does not cover the default branch at all -
+    # preserving that would leave the branch unprotected, which is the whole
+    # point of the ruleset, so the default-branch include is added to it.
     if ($null -ne $ExistingRuleset -and $null -ne $ExistingRuleset.conditions -and $null -ne $ExistingRuleset.conditions.ref_name) {
+        $include = @($ExistingRuleset.conditions.ref_name.include)
+        $coversDefault = ($include -contains '~ALL') -or ($include -contains '~DEFAULT_BRANCH')
+        if (-not $coversDefault) {
+            $include += '~DEFAULT_BRANCH'
+        }
         $conditions = @{
             ref_name = @{
-                include = @($ExistingRuleset.conditions.ref_name.include)
+                include = $include
                 exclude = @($ExistingRuleset.conditions.ref_name.exclude)
             }
         }
@@ -672,21 +696,30 @@ function Get-GitHubEnvironmentState {
 
     $env = Invoke-GitHubApi -Endpoint "repos/$Repository/environments/$Environment" -AllowFailure
     if ($null -eq $env) {
-        return [PSCustomObject]@{ Exists = $false; PinnedToDefaultBranch = $false }
+        return [PSCustomObject]@{ Exists = $false; PinnedToDefaultBranch = $false; ExtraBranchPolicies = @() }
     }
 
-    # A policy of custom_branch_policies with the default branch listed is the
-    # only shape that actually pins deployments to that branch.
+    # Pinned means the default branch and *nothing else*. A policy list of
+    # main + feature/* would still let a workflow on an attacker-controlled
+    # branch read the secret, so merely containing the default branch is not
+    # enough - the extra policies are reported so remediation can remove them.
     $pinned = $false
+    $extraPolicies = @()
     if ($null -ne $env.deployment_branch_policy -and $env.deployment_branch_policy.custom_branch_policies) {
         $policies = Invoke-GitHubApi -Endpoint "repos/$Repository/environments/$Environment/deployment-branch-policies" -AllowFailure
         if ($null -ne $policies -and -not [string]::IsNullOrWhiteSpace($DefaultBranch)) {
-            $names = @($policies.branch_policies | ForEach-Object { $_.name })
-            $pinned = $names -contains $DefaultBranch
+            $branchPolicies = @($policies.branch_policies)
+            $matching = @($branchPolicies | Where-Object { $_.name -eq $DefaultBranch })
+            $extraPolicies = @($branchPolicies | Where-Object { $_.name -ne $DefaultBranch })
+            $pinned = ($matching.Count -eq 1) -and ($extraPolicies.Count -eq 0)
         }
     }
 
-    return [PSCustomObject]@{ Exists = $true; PinnedToDefaultBranch = $pinned }
+    return [PSCustomObject]@{
+        Exists                = $true
+        PinnedToDefaultBranch = $pinned
+        ExtraBranchPolicies   = $extraPolicies
+    }
 }
 
 function Test-GitHubPagesWorkflow {
@@ -1227,9 +1260,16 @@ function Get-GitHubRepoConfig {
     .NOTES
         A category that cannot be evaluated - a missing token permission, or a
         plan limitation such as rulesets on a private repository - is reported
-        on the SkippedChecks property rather than counted as drift. IsCompliant
-        therefore means "nothing drifted among the categories that were actually
-        checked", so check SkippedChecks before treating it as a clean bill.
+        on the SkippedChecks property rather than counted as drift.
+
+        IsCompliant is therefore tri-state:
+          $true   every requested category was evaluated and nothing drifted
+          $false  something drifted
+          $null   nothing drifted, but at least one category could not be
+                  checked, so compliance is unknown
+
+        `Where-Object { -not $_.IsCompliant }` consequently surfaces both real
+        drift and repositories that could not be fully audited.
 
     .OUTPUTS
         PSCustomObject (Dotfiles.GitHubRepoConfig)
@@ -1359,7 +1399,14 @@ function Get-GitHubRepoConfig {
                     $skippedChecks.Add('Ruleset')
                 }
                 else {
-                    $existing = @($rulesetList.Rulesets | Where-Object { $_.name -eq $wanted.Name })[0]
+                    # Name alone is not identity: a tag ruleset or one inherited
+                    # from an organisation can share the name, and PUTting a
+                    # branch payload over either would mutate the wrong object.
+                    $existing = @($rulesetList.Rulesets | Where-Object {
+                            $_.name -eq $wanted.Name -and
+                            $_.target -eq 'branch' -and
+                            ($null -eq $_.source_type -or $_.source_type -eq 'Repository')
+                        })[0]
 
                     if ($null -eq $existing) {
                         $current['ruleset_present'] = $false
@@ -1396,6 +1443,22 @@ function Get-GitHubRepoConfig {
                                 }
                             }
 
+                            # A ruleset can carry the right name and rules while
+                            # targeting release/* - in which case the default
+                            # branch is not protected at all.
+                            $includes = @()
+                            if ($null -ne $detail.conditions -and $null -ne $detail.conditions.ref_name) {
+                                $includes = @($detail.conditions.ref_name.include)
+                            }
+                            $coversDefault = ($includes -contains '~ALL') -or ($includes -contains '~DEFAULT_BRANCH')
+                            if (-not $coversDefault -and -not [string]::IsNullOrWhiteSpace($repo.default_branch)) {
+                                $coversDefault = $includes -contains "refs/heads/$($repo.default_branch)"
+                            }
+                            $current['ruleset_covers_default_branch'] = $coversDefault
+                            if (-not $coversDefault) {
+                                $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting 'ruleset_covers_default_branch' -Current $false -Desired $true))
+                            }
+
                             # The admin bypass is what keeps you able to push
                             # directly to the default branch; verify it explicitly.
                             $hasAdminBypass = @($detail.bypass_actors | Where-Object {
@@ -1428,6 +1491,7 @@ function Get-GitHubRepoConfig {
             }
 
             $credentialScope = $null
+            $extraBranchPolicies = @()
             if ($Check -contains 'AppCredential') {
                 $variableName = $desired.AppCredential.VariableName
                 $secretName = $desired.AppCredential.SecretName
@@ -1454,6 +1518,7 @@ function Get-GitHubRepoConfig {
                     # environment; without it the secret is no better protected
                     # than a repository secret.
                     $current['environment_pinned_to_default_branch'] = $envState.PinnedToDefaultBranch
+                    $extraBranchPolicies = @($envState.ExtraBranchPolicies)
                     if (-not $envState.PinnedToDefaultBranch) {
                         $drift.Add((New-GitHubConfigDrift -Category 'AppCredential' -Setting 'environment_pinned_to_default_branch' -Current $envState.PinnedToDefaultBranch -Desired $true))
                     }
@@ -1538,9 +1603,13 @@ function Get-GitHubRepoConfig {
                 Visibility  = $repo.visibility
                 IsArchived  = [bool]$repo.archived
                 IsFork      = [bool]$repo.fork
-                # Only covers the categories that were actually evaluated;
-                # consult SkippedChecks before treating this as a clean bill.
-                IsCompliant = ($drift.Count -eq 0)
+                # Tri-state on purpose. $true only when every requested
+                # category was evaluated and clean; $null when something could
+                # not be checked, so a caller that treats the result as a
+                # boolean gets "not true" rather than a false clean bill.
+                IsCompliant = if ($drift.Count -gt 0) { $false }
+                elseif ($skippedChecks.Count -gt 0) { $null }
+                else { $true }
                 DriftCount  = $drift.Count
                 SkippedChecks = $skippedChecks.ToArray()
                 Drift       = $drift.ToArray()
@@ -1550,6 +1619,7 @@ function Get-GitHubRepoConfig {
                 RulesetId   = $rulesetId
                 RulesetDetail = $rulesetDetail
                 CredentialScope = $credentialScope
+                ExtraBranchPolicies = $extraBranchPolicies
                 DefaultBranch = $repo.default_branch
                 UsesPagesWorkflow = $usesPagesWorkflow
             }
@@ -1830,9 +1900,24 @@ function Set-GitHubRepoConfig {
                         }
                     }
 
+                    # The pin is the entire security value of using an
+                    # environment, so it is a prerequisite: if it cannot be
+                    # established the credential is not written at all. Writing
+                    # it into an unrestricted environment would be strictly worse
+                    # than leaving it absent, because it would look protected.
+                    $environmentReady = $useEnv
                     if ($needsPin) {
+                        $environmentReady = $false
                         $branch = $config.DefaultBranch
                         if ($PSCmdlet.ShouldProcess($target, "Pin environment '$envName' to branch '$branch'")) {
+                            # Remove any broader policy first; leaving feature/*
+                            # in place would let a PR branch read the secret.
+                            foreach ($extra in @($config.ExtraBranchPolicies)) {
+                                $null = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName/deployment-branch-policies/$($extra.id)" `
+                                    -Method 'DELETE' -AllowFailure
+                                Write-Verbose "Removed deployment branch policy '$($extra.name)' from $target/$envName"
+                            }
+
                             $policy = Invoke-GitHubApi -Endpoint "repos/$target/environments/$envName/deployment-branch-policies" `
                                 -Method 'POST' -Body @{ name = $branch; type = 'branch' } -AllowFailure
                             if ($null -eq $policy) {
@@ -1841,8 +1926,19 @@ function Set-GitHubRepoConfig {
                             }
                             else {
                                 $applied.Add('AppCredential/environment_pinned_to_default_branch')
+                                $environmentReady = $true
                             }
                         }
+                    }
+
+                    if ($useEnv -and -not $environmentReady) {
+                        Write-Warning "Not writing the App credential to ${target}: environment '$envName' is not pinned to the default branch, so an environment secret there would be no safer than a repository secret."
+                        foreach ($item in $credentialDrift) {
+                            if ($item.Setting -in @($variableName, $secretName)) {
+                                $skipped.Add("AppCredential/$($item.Setting)")
+                            }
+                        }
+                        $credentialDrift = @()
                     }
 
                     foreach ($item in $credentialDrift) {

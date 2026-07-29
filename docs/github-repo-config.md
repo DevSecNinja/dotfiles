@@ -35,11 +35,15 @@ failing the run, so a token with narrower scopes still produces a useful audit.
 
 !!! warning "A skipped category is not a compliant one"
 
-    Anything that could not be evaluated is listed on `SkippedChecks`.
-    `IsCompliant` only means "nothing drifted among the categories that were
-    actually checked", so check both:
+    Anything that could not be evaluated is listed on `SkippedChecks`, and
+    `IsCompliant` is tri-state: `$true` clean, `$false` drifted, `$null` when
+    something could not be checked.
+
+    `-not $_.IsCompliant` therefore catches both real drift and repositories
+    that could not be fully audited:
 
     ```powershell
+    Get-GitHubRepoConfig -All | Where-Object { -not $_.IsCompliant }
     Get-GitHubRepoConfig -All | Where-Object { $_.SkippedChecks }
     ```
 
@@ -159,16 +163,26 @@ block your own PRs.
 ### Existing rules are preserved
 
 The rulesets API replaces the whole object on update, which makes a naive PUT
-destructive. When updating in place, only the three rules this baseline
-owns — `deletion`, `non_fast_forward` and `pull_request` — are replaced.
-Everything else is carried over verbatim:
+destructive. When updating in place, only the rules and parameters this baseline
+owns are replaced. Everything else is carried over verbatim:
 
 - `required_status_checks` keeps its full context list
 - `copilot_code_review` and any other rule type is left alone
+- Within `pull_request`, only `allowed_merge_methods` and
+  `required_approving_review_count` are set. `require_code_owner_review`,
+  `dismiss_stale_reviews_on_push`, `require_last_push_approval`,
+  `required_review_thread_resolution` and any parameter GitHub adds later are
+  inherited from the existing rule, so fixing a merge-method drift never
+  silently switches stricter review settings off
 - Existing bypass actors (GitHub Apps, teams) are kept; the admin role is added
   only if it is missing
-- A custom `ref_name` condition is preserved rather than being retargeted to
-  `~DEFAULT_BRANCH`
+- A custom `ref_name` condition is preserved. The one exception is a condition
+  that does not cover the default branch at all — `~DEFAULT_BRANCH` is added to
+  it, since leaving the branch unprotected would defeat the purpose
+
+The ruleset is matched by name **and** by being a repository-owned `branch`
+ruleset, so a tag ruleset or an organisation-inherited one that happens to share
+the name is never mistaken for it.
 
 !!! note "Private repositories need GitHub Pro"
 
@@ -306,6 +320,17 @@ jobs:
     Free plan withholds, and without it an environment secret is no safer than
     a repository secret. Upgrading to GitHub Pro enables environments on private
     repositories, after which a re-run moves them across.
+
+!!! danger "The pin is a prerequisite, not a nice-to-have"
+
+    If the environment cannot be pinned to the default branch — the API call
+    fails, or you decline the prompt — the credential is **not written at all**.
+    Writing it into an unrestricted environment would be worse than leaving it
+    absent, because it would look protected while any branch could read it.
+
+    An environment is only considered pinned when the default branch is the
+    *only* allowed branch. A policy list of `main` plus `feature/*` counts as
+    drift, and remediation removes the broader entries before adding the pin.
 
 ### Rolling it out
 

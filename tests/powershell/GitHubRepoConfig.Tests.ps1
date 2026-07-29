@@ -69,7 +69,12 @@ BeforeAll {
         return [PSCustomObject]@{
             id            = 42
             name          = 'Default'
+            target        = 'branch'
+            source_type   = 'Repository'
             enforcement   = 'active'
+            conditions    = [PSCustomObject]@{
+                ref_name = [PSCustomObject]@{ include = @('~DEFAULT_BRANCH'); exclude = @() }
+            }
             bypass_actors = @(
                 [PSCustomObject]@{ actor_id = 5; actor_type = 'RepositoryRole'; bypass_mode = 'always' }
             )
@@ -91,7 +96,7 @@ BeforeAll {
     function script:New-RulesetListPresent {
         return [PSCustomObject]@{
             Available = $true
-            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'Default' })
+            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'Default'; target = 'branch'; source_type = 'Repository' })
         }
     }
 
@@ -890,7 +895,7 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
             $warnings = @()
             $result = Get-GitHubRepoConfig -Repository 'private-repo' -WarningVariable warnings -WarningAction SilentlyContinue
             ($warnings -join ' ') | Should -Match 'GitHub Pro'
-            $result.IsCompliant | Should -BeTrue
+            $result.IsCompliant | Should -BeNullOrEmpty -Because 'the ruleset category could not be evaluated, so compliance is unknown'
         }
     }
 
@@ -1915,9 +1920,10 @@ Describe "Skipped check reporting" -Tag "Unit" {
 
         $result = Get-GitHubRepoConfig -Repository 'compliant' -Check CloudflareCredential -WarningAction SilentlyContinue
 
-        # IsCompliant is true only because nothing could be checked; the
-        # SkippedChecks list is what makes that visible.
-        $result.IsCompliant | Should -BeTrue
+        # Nothing could be checked, so compliance is unknown ($null) rather
+        # than a clean bill.
+        $null -eq $result.IsCompliant | Should -BeTrue
+        -not $result.IsCompliant | Should -BeTrue -Because 'a skipped check must not read as compliant'
         @($result.SkippedChecks).Count | Should -BeGreaterThan 0
     }
 }
@@ -1982,6 +1988,161 @@ Describe "Hardcoded 1Password references" -Tag "Unit" {
 
             Should -Invoke Invoke-OnePasswordCli -Times 1 -Exactly -ParameterFilter {
                 $Arguments -contains 'read' -and $Arguments -contains 'op://Private/Cloudflare Pages Deploy/api-token'
+            }
+        }
+    }
+}
+
+Describe "Rubber-duck regressions" -Tag "Unit" {
+    Context "pull_request parameters the baseline does not own" {
+        It "preserves require_code_owner_review when remediating merge methods" {
+            InModuleScope DotfilesHelpers {
+                $existing = [PSCustomObject]@{
+                    rules = @(
+                        [PSCustomObject]@{
+                            type       = 'pull_request'
+                            parameters = [PSCustomObject]@{
+                                allowed_merge_methods             = @('merge', 'squash', 'rebase')
+                                required_approving_review_count   = 0
+                                require_code_owner_review         = $true
+                                dismiss_stale_reviews_on_push     = $true
+                                require_last_push_approval        = $true
+                                required_review_thread_resolution = $true
+                            }
+                        }
+                    )
+                }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
+                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
+
+                $pr.parameters['require_code_owner_review'] | Should -BeTrue
+                $pr.parameters['dismiss_stale_reviews_on_push'] | Should -BeTrue
+                $pr.parameters['require_last_push_approval'] | Should -BeTrue
+                $pr.parameters['required_review_thread_resolution'] | Should -BeTrue
+                # ...while the two the baseline owns are still applied.
+                $pr.parameters['allowed_merge_methods'] | Should -Be @('squash')
+            }
+        }
+
+        It "carries over a parameter the baseline has never heard of" {
+            InModuleScope DotfilesHelpers {
+                $existing = [PSCustomObject]@{
+                    rules = @(
+                        [PSCustomObject]@{
+                            type       = 'pull_request'
+                            parameters = [PSCustomObject]@{
+                                allowed_merge_methods       = @('merge')
+                                some_future_github_setting  = 'keep-me'
+                            }
+                        }
+                    )
+                }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
+                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
+                $pr.parameters['some_future_github_setting'] | Should -Be 'keep-me'
+            }
+        }
+
+        It "falls back to GitHub defaults when there is no existing rule" {
+            InModuleScope DotfilesHelpers {
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
+                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
+                $pr.parameters['require_code_owner_review'] | Should -BeFalse
+                $pr.parameters['required_approving_review_count'] | Should -Be 0
+            }
+        }
+    }
+
+    Context "ruleset identity" {
+        It "ignores a tag ruleset that shares the baseline name" {
+            InModuleScope DotfilesHelpers {
+                $list = [PSCustomObject]@{
+                    Available = $true
+                    Rulesets  = @([PSCustomObject]@{ id = 9; name = 'Default'; target = 'tag'; source_type = 'Repository' })
+                }
+                @($list.Rulesets | Where-Object {
+                        $_.name -eq 'Default' -and $_.target -eq 'branch' -and
+                        ($null -eq $_.source_type -or $_.source_type -eq 'Repository')
+                    }).Count | Should -Be 0
+            }
+        }
+
+        It "ignores an organisation-inherited ruleset that shares the name" {
+            InModuleScope DotfilesHelpers {
+                $rulesets = @([PSCustomObject]@{ id = 9; name = 'Default'; target = 'branch'; source_type = 'Organization' })
+                @($rulesets | Where-Object {
+                        $_.name -eq 'Default' -and $_.target -eq 'branch' -and
+                        ($null -eq $_.source_type -or $_.source_type -eq 'Repository')
+                    }).Count | Should -Be 0
+            }
+        }
+
+        It "adds the default branch to a condition that does not cover it" {
+            InModuleScope DotfilesHelpers {
+                $existing = [PSCustomObject]@{
+                    rules      = @()
+                    conditions = [PSCustomObject]@{
+                        ref_name = [PSCustomObject]@{ include = @('refs/heads/release/*'); exclude = @() }
+                    }
+                }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
+                $payload.conditions.ref_name.include | Should -Contain '~DEFAULT_BRANCH'
+                $payload.conditions.ref_name.include | Should -Contain 'refs/heads/release/*'
+            }
+        }
+
+        It "leaves a condition that already covers the default branch alone" {
+            InModuleScope DotfilesHelpers {
+                $existing = [PSCustomObject]@{
+                    rules      = @()
+                    conditions = [PSCustomObject]@{
+                        ref_name = [PSCustomObject]@{ include = @('~ALL'); exclude = @() }
+                    }
+                }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
+                @($payload.conditions.ref_name.include).Count | Should -Be 1
+                $payload.conditions.ref_name.include | Should -Contain '~ALL'
+            }
+        }
+    }
+
+    Context "environment pinning" {
+        It "does not call an environment pinned when a broader policy also exists" {
+            InModuleScope DotfilesHelpers {
+                Mock Invoke-GitHubApi {
+                    if ($Endpoint -like '*deployment-branch-policies*') {
+                        return [PSCustomObject]@{ branch_policies = @(
+                                [PSCustomObject]@{ id = 1; name = 'main' }
+                                [PSCustomObject]@{ id = 2; name = 'feature/*' }
+                            )
+                        }
+                    }
+                    return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
+                }
+
+                $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+                $state.PinnedToDefaultBranch | Should -BeFalse
+                @($state.ExtraBranchPolicies).Count | Should -Be 1
+                $state.ExtraBranchPolicies[0].name | Should -Be 'feature/*'
+            }
+        }
+
+        It "calls it pinned when only the default branch is allowed" {
+            InModuleScope DotfilesHelpers {
+                Mock Invoke-GitHubApi {
+                    if ($Endpoint -like '*deployment-branch-policies*') {
+                        return [PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ id = 1; name = 'main' }) }
+                    }
+                    return [PSCustomObject]@{ name = 'production'; deployment_branch_policy = [PSCustomObject]@{ custom_branch_policies = $true } }
+                }
+
+                $state = Get-GitHubEnvironmentState -Repository 'o/r' -Environment 'production' -DefaultBranch 'main'
+                $state.PinnedToDefaultBranch | Should -BeTrue
+                @($state.ExtraBranchPolicies).Count | Should -Be 0
             }
         }
     }
