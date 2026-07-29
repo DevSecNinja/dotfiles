@@ -265,10 +265,15 @@ Describe "Test-ChezmoiSourceBranch" -Tag "Unit" {
 
 Describe "Update-Chezmoi branch guard wiring" -Tag "Unit" {
     It "Runs the branch guard before pulling" {
+        # Normalise line endings before matching. .gitattributes pins *.ps1 to
+        # eol=crlf, so the working tree is CRLF on every OS while
+        # [Environment]::NewLine is LF on Linux/macOS - matching against it
+        # would only ever succeed on Windows.
+        #
         # Match the invocations, not the comment-based help above them, which
         # also names `chezmoi update --apply=false`.
-        $body = (Get-Command Update-Chezmoi).Definition
-        $guard = $body.IndexOf('Test-ChezmoiSourceBranch' + [Environment]::NewLine)
+        $body = (Get-Command Update-Chezmoi).Definition -replace "`r`n", "`n"
+        $guard = $body.IndexOf("Test-ChezmoiSourceBranch`n")
         $pull = $body.IndexOf('& chezmoi update --apply=false')
         $guard | Should -BeGreaterThan -1
         $pull | Should -BeGreaterThan -1
