@@ -84,7 +84,7 @@ right one:
 
 | Platform | Binary | Auto-detected from |
 | --- | --- | --- |
-| WSL | `op-ssh-sign-wsl.exe` | `/mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/`, then the pre-8.11.18 `…/1Password/app/8/` |
+| WSL | `op-ssh-sign-wsl.exe` | Current Windows user's `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then the pre-8.11.18 `…\1Password\app\8\` |
 | Native Windows | `op-ssh-sign.exe` | `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then `%LOCALAPPDATA%\1Password\app\8\` |
 | macOS | `op-ssh-sign` | `/Applications/1Password.app/Contents/MacOS/` |
 | Linux | — | no standard path; set it explicitly |
