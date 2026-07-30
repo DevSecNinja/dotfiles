@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-  "//": "Managed by chezmoi (dot_config/fastfetch/config.jsonc). The three trailing 'command' modules call status.sh, which prints cached lines and refreshes in the background so login stays fast. Empty output makes a line disappear, so updates/reboot/ansible only show when relevant.",
+  "//": "Managed by chezmoi (dot_config/fastfetch/config.jsonc.tmpl). The trailing 'command' modules print cached status lines that are refreshed in the background so login stays fast. Empty output makes a line disappear, so updates/reboot/ansible only show when relevant.",
   "modules": [
     "title",
     "separator",
@@ -29,6 +29,15 @@
     "battery",
     "poweradapter",
     "locale",
+{{- if eq .chezmoi.os "windows" }}
+    {
+      "//": "Windows reads the cache with `cmd /c type` (a few milliseconds) instead of starting PowerShell; status.ps1 fills it from a detached background refresh spawned by the PowerShell profile. `cd` first because fastfetch cannot pass double quotes through to cmd, and an unquoted path would break on a user profile containing a space.",
+      "type": "command",
+      "key": "Updates",
+      "keyColor": "yellow",
+      "text": "cd /d %LOCALAPPDATA%\\fastfetch-status 2>nul && type updates 2>nul"
+    },
+{{- else }}
     {
       "type": "command",
       "key": "Updates",
@@ -47,6 +56,7 @@
       "keyColor": "blue",
       "text": "\"$HOME/.config/fastfetch/status.sh\" ansible"
     },
+{{- end }}
     "break",
     "colors"
   ]
