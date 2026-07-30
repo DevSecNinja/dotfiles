@@ -122,12 +122,17 @@
 {{- /* platform-specific signer binary is auto-detected. Ignored when           */ -}}
 {{- /* useYubiKey is true. See docs/git-signing.md.                             */ -}}
 {{- /*                                                                          */ -}}
-{{- /* This is a PUBLIC key, not a secret — it is already published at          */ -}}
-{{- /* https://github.com/DevSecNinja.keys — so it is safe to ship as the       */ -}}
-{{- /* default. Override it per-machine by setting `gitSigningKey` in your      */ -}}
-{{- /* local chezmoi config. `get` (not `hasKey`) so an existing config that    */ -}}
-{{- /* already carries an empty value still picks the default up.               */ -}}
-{{- $gitSigningKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99" -}}
+{{- /* These are PUBLIC keys, not secrets — the personal one is already         */ -}}
+{{- /* published at https://github.com/DevSecNinja.keys — so they are safe to   */ -}}
+{{- /* ship as defaults. Two defaults ship: one for work machines (see          */ -}}
+{{- /* `isWork` below) and one for everything else; the pick happens after the  */ -}}
+{{- /* Entra ID detection has run. Override it per-machine by setting           */ -}}
+{{- /* `gitSigningKey` in your local chezmoi config. `get` (not `hasKey`) so an */ -}}
+{{- /* existing config that already carries an empty value still picks a        */ -}}
+{{- /* default up.                                                              */ -}}
+{{- $gitSigningKeyPersonal := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99" -}}
+{{- $gitSigningKeyWork := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINHf9KPQ4uBdDqzZFrKyE1ugMJBee1XXVZwLLUKklNQV" -}}
+{{- $gitSigningKey := "" -}}
 {{- if get . "gitSigningKey" -}}
 {{-   $gitSigningKey = .gitSigningKey -}}
 {{- end -}}
@@ -218,6 +223,20 @@
 {{-     if $entraIDTenantName -}}
 {{-       $isWork = hasSuffix "Microsoft" $entraIDTenantName -}}
 {{-     end -}}
+{{-   end -}}
+{{- end -}}
+
+{{- /* Now that work/personal is known, fall back to the matching default key.  */ -}}
+{{- /* A value that is merely one of the shipped defaults is not a real         */ -}}
+{{- /* override — re-pick it, so a config written by an earlier init (or on a   */ -}}
+{{- /* machine that has since changed work/personal status) does not pin the    */ -}}
+{{- /* wrong key forever.                                                       */ -}}
+{{- $gitSigningKeyTrimmed := $gitSigningKey | toString | trim -}}
+{{- if or (not $gitSigningKeyTrimmed) (eq $gitSigningKeyTrimmed $gitSigningKeyPersonal) (eq $gitSigningKeyTrimmed $gitSigningKeyWork) -}}
+{{-   if $isWork -}}
+{{-     $gitSigningKey = $gitSigningKeyWork -}}
+{{-   else -}}
+{{-     $gitSigningKey = $gitSigningKeyPersonal -}}
 {{-   end -}}
 {{- end -}}
 

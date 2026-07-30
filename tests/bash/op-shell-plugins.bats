@@ -50,6 +50,19 @@ _render() {
 	chezmoi --config "${1}" execute-template <"${2}"
 }
 
+# _fake_dsregcmd TENANT_NAME -> put a fake wslinfo + dsregcmd.exe on PATH so the
+# config template's Entra ID detection is deterministic regardless of the host
+# it runs on. A tenant ending in "Microsoft" is what flips isWork to true.
+_fake_dsregcmd() {
+	local bin="${TEST_DIR}/fake-bin"
+	mkdir -p "${bin}"
+	printf '#!/bin/sh\necho "2.5.7"\n' >"${bin}/wslinfo"
+	printf '#!/bin/sh\nprintf "AzureAdJoined : YES\\nTenantName : %s\\n"\n' "${1}" \
+		>"${bin}/dsregcmd.exe"
+	chmod +x "${bin}/wslinfo" "${bin}/dsregcmd.exe"
+	export PATH="${bin}:${PATH}"
+}
+
 @test "op-plugins: templates exist for bash/zsh and fish" {
 	[ -f "${BASH_TMPL}" ]
 	[ -f "${FISH_TMPL}" ]
@@ -473,6 +486,43 @@ _render() {
 	run chezmoi --config "${pre}" execute-template --init <"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 ' ]]
+}
+
+@test "signing: a work machine gets the work default key" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/work.yaml"
+	_fake_dsregcmd Microsoft
+	printf '{}\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "isWork: true" ]]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINHf9KPQ4uBdDqzZFrKyE1ugMJBee1XXVZwLLUKklNQV"' ]]
+}
+
+@test "signing: a non-work machine gets the personal default key" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/personal.yaml"
+	_fake_dsregcmd Contoso
+	printf '{}\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "isWork: false" ]]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99"' ]]
+}
+
+@test "signing: a persisted shipped default is re-picked per machine" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/stale-default.yaml"
+	# A config written before the work key existed carries the personal default;
+	# that is not a real override, so a work machine must still get the work key.
+	_fake_dsregcmd Microsoft
+	printf 'data:\n  gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99"\n' >"${pre}"
+	run chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINHf9KPQ4uBdDqzZFrKyE1ugMJBee1XXVZwLLUKklNQV"' ]]
 }
 
 @test "signing: a per-machine key overrides the default" {
