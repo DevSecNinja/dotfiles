@@ -343,6 +343,147 @@ Describe "Set-WindowsTerminalDefaultProfile Function" -Tag "Unit" {
     }
 }
 
+Describe "Set-WindowsTerminalProfileCommandLine Function" -Tag "Unit" {
+    BeforeEach {
+        $script:settingsPath = Join-Path $script:TestDir.FullName "settings-$(Get-Random).json"
+    }
+
+    AfterEach {
+        Remove-Item -LiteralPath $script:settingsPath -ErrorAction SilentlyContinue
+    }
+
+    BeforeAll {
+        $script:QuietCommandLine = 'pwsh.exe -NoLogo -NoProfileLoadTime'
+        $script:CmdLineSettings = @'
+{
+    "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+    "profiles": {
+        "defaults": { "font": { "face": "FiraCode Nerd Font" } },
+        "list": [
+            {
+                "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+                "name": "Windows PowerShell"
+            },
+            {
+                "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+                "name": "PowerShell",
+                "source": "Windows.Terminal.PowershellCore"
+            },
+            {
+                "guid": "{36f9ac1f-0a96-55ed-952d-57a0df08d14f}",
+                "name": "Debian",
+                "source": "Microsoft.WSL"
+            }
+        ]
+    }
+}
+'@
+    }
+
+    It "Should support ShouldProcess (WhatIf)" {
+        (Get-Command Set-WindowsTerminalProfileCommandLine).Parameters.ContainsKey("WhatIf") | Should -Be $true
+    }
+
+    It "Should add a commandline to the PowerShell Core profile" {
+        # The dynamic PowerShell profile has no commandline of its own, so this
+        # is how -NoLogo/-NoProfileLoadTime get applied: they are read before
+        # any profile script runs and cannot be set from profile.ps1.
+        $script:CmdLineSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $result.MatchedProfile | Should -Be 'PowerShell'
+
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $core = @($json.profiles.list) | Where-Object { $_.source -eq 'Windows.Terminal.PowershellCore' }
+        $core.commandline | Should -Be $script:QuietCommandLine
+    }
+
+    It "Should leave the other profiles untouched" {
+        $script:CmdLineSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath | Out-Null
+
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $json.profiles.list.Count | Should -Be 3
+        @($json.profiles.list)[0].commandline | Should -Be '%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe'
+        $json.profiles.defaults.font.face | Should -Be 'FiraCode Nerd Font'
+        $json.defaultProfile | Should -Be '{574e775e-4f2a-5b96-ac1e-a2962a402336}'
+    }
+
+    It "Should replace an existing commandline" {
+        $existing = $script:CmdLineSettings -replace '"name": "PowerShell",', '"name": "PowerShell", "commandline": "pwsh.exe",'
+        $existing | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $core = @($json.profiles.list) | Where-Object { $_.source -eq 'Windows.Terminal.PowershellCore' }
+        $core.commandline | Should -Be $script:QuietCommandLine
+    }
+
+    It "Should be idempotent when the commandline already matches" {
+        $script:CmdLineSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+        Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath | Out-Null
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'AlreadySet'
+        $result.Changed | Should -Be $false
+    }
+
+    It "Should match a profile by name via -ProfileName" {
+        $script:CmdLineSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalProfileCommandLine -ProfileName 'Debian' -CommandLine 'wsl -d Debian' -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'Updated'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $debian = @($json.profiles.list) | Where-Object { $_.name -eq 'Debian' }
+        $debian.commandline | Should -Be 'wsl -d Debian'
+    }
+
+    It "Should skip (ProfileNotFound) when PowerShell Core is not installed" {
+        $noCore = @'
+{
+    "profiles": {
+        "list": [
+            { "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}", "name": "Windows PowerShell" }
+        ]
+    }
+}
+'@
+        $noCore | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath
+
+        $result.Status | Should -Be 'ProfileNotFound'
+        $result.Changed | Should -Be $false
+    }
+
+    It "Should skip paths that do not exist" {
+        $missing = Join-Path $script:TestDir.FullName "does-not-exist-$(Get-Random).json"
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $missing
+
+        $result | Should -BeNullOrEmpty
+    }
+
+    It "Should not write under -WhatIf" {
+        $script:CmdLineSettings | Set-Content -LiteralPath $script:settingsPath -Encoding utf8
+
+        $result = Set-WindowsTerminalProfileCommandLine -CommandLine $script:QuietCommandLine -SettingsPath $script:settingsPath -WhatIf
+
+        $result.Status | Should -Be 'WhatIf'
+        $json = Get-Content -LiteralPath $script:settingsPath -Raw | ConvertFrom-Json
+        $core = @($json.profiles.list) | Where-Object { $_.source -eq 'Windows.Terminal.PowershellCore' }
+        $core.PSObject.Properties['commandline'] | Should -BeNullOrEmpty
+    }
+}
+
 Describe "Set-WindowsTerminalCopilotProfile Function" -Tag "Unit" {
     BeforeEach {
         $script:settingsPath = Join-Path $script:TestDir.FullName "settings-$(Get-Random).json"

@@ -51,6 +51,16 @@
         # Windows Terminal settings
         'Set-WindowsTerminalDefaultProfile'
         'Set-WindowsTerminalCopilotProfile'
+        'Set-WindowsTerminalProfileCommandLine'
+
+        # fastfetch status cache
+        'Get-FastfetchStatusCacheDir'
+        'Format-FastfetchStatusDuration'
+        'Expand-FastfetchStatusToken'
+        'Update-FastfetchStatusCache'
+        'Test-FastfetchStatusStale'
+        'Start-FastfetchStatusRefresh'
+        'Write-FastfetchStatusFile'
 
         # Office 365 mail aliases
         'New-MailAlias'

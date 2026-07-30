@@ -19,6 +19,14 @@
       * The PowerShell profile spawns a detached 'refresh' when the cache is
         older than the TTL, so the next login shows fresh numbers.
 
+    Each section is stored twice: '<name>.src' keeps relative times as absolute
+    epoch tokens (@ago:<epoch>@), and '<name>' is the rendered copy fastfetch
+    reads. Baking "checked 5m ago" straight into the rendered file would freeze
+    it until the next refresh an hour later, so the tokens are expanded on every
+    shell start by Update-FastfetchStatusCache (DotfilesHelpers), which the
+    profile already imports. This script calls the same function after a refresh
+    so a manual 'refresh' also leaves a correctly rendered cache behind.
+
     fastfetch hides a `command` module entirely when it prints nothing, so a
     host with no pending updates simply does not get an "Updates" line.
 
@@ -59,10 +67,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-# U+1F4E6 PACKAGE. Built from its code point because .ps1 files in this repo
-# must stay ASCII (see .github/copilot-instructions.md): PowerShell 5.1 reads
-# unsigned scripts without a BOM as ANSI, which corrupts literal emoji.
+# U+1F4E6 PACKAGE and U+00B7 MIDDLE DOT. Built from their code points because
+# .ps1 files in this repo must stay ASCII (see .github/copilot-instructions.md):
+# PowerShell 5.1 reads unsigned scripts without a BOM as ANSI, which corrupts
+# literal non-ASCII characters.
 $script:PackageIcon = [char]::ConvertFromUtf32(0x1F4E6)
+$script:MiddleDot = [char]::ConvertFromUtf32(0x00B7)
 
 function Get-StatusCacheDir {
     if ($env:FASTFETCH_STATUS_CACHE_DIR) { return $env:FASTFETCH_STATUS_CACHE_DIR }
@@ -171,19 +181,32 @@ function Get-UpdatesLine {
     <#
     .SYNOPSIS
     The "N update(s) available (winget)" line, or an empty string.
+
+    .DESCRIPTION
+    The "checked" suffix is emitted as an absolute epoch token rather than a
+    formatted duration, so it keeps counting up on every shell start instead of
+    freezing at the value it had when the cache was written.
     #>
     [CmdletBinding()]
     param()
 
     $count = Get-WingetUpdateCount
     if ($null -eq $count -or $count -le 0) { return '' }
-    return ('{0} {1} update(s) available (winget)' -f $script:PackageIcon, $count)
+
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    return ('{0} {1} update(s) available (winget) {2} checked @ago:{3}@' -f
+        $script:PackageIcon, $count, $script:MiddleDot, $now)
 }
 
 function Write-StatusSection {
     <#
     .SYNOPSIS
-    Atomically write a cache section, or remove it when the value is empty.
+    Atomically write a cache section source, or remove it when the value is empty.
+
+    .DESCRIPTION
+    Writes '<name>.src' (with relative-time tokens intact). The rendered
+    '<name>' file that fastfetch reads is produced from it by
+    Update-FastfetchStatusCache.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -191,11 +214,13 @@ function Write-StatusSection {
         [Parameter(Mandatory)][AllowEmptyString()][string]$Value
     )
 
-    $file = Join-Path (Get-StatusCacheDir) $Name
+    $cacheDir = Get-StatusCacheDir
+    $file = Join-Path $cacheDir "$Name.src"
     if (-not $PSCmdlet.ShouldProcess($file, 'Write status section')) { return }
 
     if ([string]::IsNullOrEmpty($Value)) {
         Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath (Join-Path $cacheDir $Name) -Force -ErrorAction SilentlyContinue
         return
     }
 
@@ -205,6 +230,38 @@ function Write-StatusSection {
     $tmp = "$file.tmp"
     [System.IO.File]::WriteAllText($tmp, ($Value + "`r`n"), $encoding)
     Move-Item -LiteralPath $tmp -Destination $file -Force
+}
+
+function Invoke-StatusRender {
+    <#
+    .SYNOPSIS
+    Expand the cached tokens into the rendered files fastfetch reads.
+
+    .DESCRIPTION
+    Rendering lives in the DotfilesHelpers module because the PowerShell profile
+    imports it anyway, so expanding tokens on every shell start is free there
+    (dot-sourcing this script instead would add ~60ms to profile load). This
+    script imports the module so a manual 'refresh' also leaves a correctly
+    rendered cache behind; when the module is missing the rendered files are
+    simply left to the next shell start.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        if (-not (Get-Command Update-FastfetchStatusCache -ErrorAction SilentlyContinue)) {
+            $modulePath = Join-Path (Split-Path $PSScriptRoot -Parent) 'powershell\modules\DotfilesHelpers'
+            if (-not (Test-Path -LiteralPath $modulePath)) {
+                Write-Verbose "DotfilesHelpers not found at '$modulePath'; skipping render."
+                return
+            }
+            Import-Module $modulePath -DisableNameChecking -ErrorAction Stop
+        }
+        Update-FastfetchStatusCache -SkipRefresh
+    }
+    catch {
+        Write-Verbose "Could not render the status cache: $($_.Exception.Message)"
+    }
 }
 
 function Invoke-StatusEmit {
@@ -264,6 +321,7 @@ function Invoke-StatusRefresh {
         Write-StatusSection -Name 'updates' -Value (Get-UpdatesLine)
         $stamp = Join-Path $cacheDir '.refreshed-at'
         [System.IO.File]::WriteAllText($stamp, '')
+        Invoke-StatusRender
     }
     finally {
         $handle.Dispose()

@@ -1,0 +1,43 @@
+# {{ if eq .chezmoi.os "windows" }}
+# Start the Windows Terminal PowerShell profile quietly.
+#
+# Two lines of noise appear before anything useful:
+#
+#   PowerShell 7.6.4
+#   Loading personal and system profiles took 1513ms.
+#
+# Both are printed by pwsh itself around profile load, so they cannot be
+# suppressed from profile.ps1 -- the banner is written before the profile runs
+# and the timing line after it. The only lever is the command line the terminal
+# starts, hence -NoLogo -NoProfileLoadTime here. fastfetch already reports the
+# shell version in its banner, so nothing is lost.
+#
+# pwsh.exe is left to PATH resolution rather than pinned to an absolute path so
+# the profile keeps working across PowerShell upgrades and reinstalls.
+#
+# As with the sibling default-profile script, Windows Terminal owns
+# settings.json and every machine has a different, hand-tuned config, so only
+# this one profile's commandline is touched.
+$ErrorActionPreference = "Stop"
+
+$modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
+if (Test-Path $modulePath) {
+    Import-Module $modulePath -Force -DisableNameChecking
+}
+else {
+    Write-Error "DotfilesHelpers module not found at: $modulePath"
+    exit 1
+}
+
+Write-Host "Setting Windows Terminal PowerShell startup arguments..." -ForegroundColor Cyan
+$results = Set-WindowsTerminalProfileCommandLine `
+    -Source "Windows.Terminal.PowershellCore" `
+    -CommandLine "pwsh.exe -NoLogo -NoProfileLoadTime"
+
+if (-not $results) {
+    Write-Host "[SKIP] No Windows Terminal settings found to update" -ForegroundColor Yellow
+}
+elseif (-not ($results | Where-Object { $_.Status -in @('Updated', 'AlreadySet') })) {
+    Write-Host "[SKIP] PowerShell Core profile not found; leaving commandline unchanged" -ForegroundColor Yellow
+}
+# {{ end }}

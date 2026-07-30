@@ -118,6 +118,24 @@ EOF
 	[[ "$output" =~ "2 update(s) available (apt)" ]]
 }
 
+@test "fastfetch-status: updates line reports when it was calculated" {
+	_mock apt-get <<'EOF'
+#!/bin/bash
+echo 'Inst bash [5.2] (5.2.15 Debian:13 [arm64])'
+EOF
+	run bash "${SCRIPT}" refresh
+	[ "$status" -eq 0 ]
+
+	# Stored as an absolute epoch token so the age keeps advancing between
+	# refreshes rather than freezing at "checked 0s ago".
+	run cat "${XDG_CACHE_HOME}/fastfetch-status/updates"
+	[[ "$output" =~ checked\ @ago:[0-9]+@ ]]
+
+	run bash "${SCRIPT}" updates
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "checked 0s ago" ]]
+}
+
 @test "fastfetch-status: no apt updates leaves updates section empty" {
 	_mock apt-get <<'EOF'
 #!/bin/bash
@@ -174,9 +192,10 @@ EOF
 	[ "$status" -eq 0 ]
 	# The cache stores absolute epoch tokens, not pre-rendered durations.
 	run cat "${XDG_CACHE_HOME}/fastfetch-status/ansible"
-	[[ "$output" =~ @ago:[0-9]+@ ]]
-	[[ "$output" =~ @in:[0-9]+@ ]]
-	[[ ! "$output" =~ "ran " ]]
+	[[ "$output" =~ ran\ @ago:[0-9]+@ ]]
+	[[ "$output" =~ next\ @in:[0-9]+@ ]]
+	# ... and definitely not a duration that would freeze until the next refresh.
+	[[ ! "$output" =~ [0-9]+[smhd]\ ago ]]
 	# Emitting expands them against the current clock.
 	run bash "${SCRIPT}" ansible
 	[ "$status" -eq 0 ]
@@ -188,7 +207,7 @@ EOF
 @test "fastfetch-status: relative times advance without a cache refresh" {
 	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
 	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
-	printf 'ansible-pull OK \302\267 @ago:%s@\n' "$(($(date +%s) - 3540))" \
+	printf 'ansible-pull OK \302\267 ran @ago:%s@\n' "$(($(date +%s) - 3540))" \
 		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
 
 	run bash "${SCRIPT}" ansible
@@ -196,7 +215,7 @@ EOF
 	[[ "$output" =~ "ran 59m ago" ]]
 
 	# Same cache file, later clock -> a different rendered duration.
-	printf 'ansible-pull OK \302\267 @ago:%s@\n' "$(($(date +%s) - 3660))" \
+	printf 'ansible-pull OK \302\267 ran @ago:%s@\n' "$(($(date +%s) - 3660))" \
 		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
 	run bash "${SCRIPT}" ansible
 	[ "$status" -eq 0 ]
@@ -206,12 +225,28 @@ EOF
 @test "fastfetch-status: elapsed next-run token renders as due" {
 	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
 	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
-	printf 'ansible-pull OK \302\267 @in:%s@\n' "$(($(date +%s) - 60))" \
+	printf 'ansible-pull OK \302\267 next @in:%s@\n' "$(($(date +%s) - 60))" \
 		>"${XDG_CACHE_HOME}/fastfetch-status/ansible"
 
 	run bash "${SCRIPT}" ansible
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "next due" ]]
+}
+
+@test "fastfetch-status: tokens expand to a bare duration phrase" {
+	# The wording around a token belongs to the collector, so the same token
+	# can read as "checked 5m ago" or "ran 5m ago" depending on the section.
+	mkdir -p "${XDG_CACHE_HOME}/fastfetch-status"
+	: >"${XDG_CACHE_HOME}/fastfetch-status/.refreshed-at"
+	printf 'checked @ago:%s@ \302\267 due @in:%s@\n' \
+		"$(($(date +%s) - 300))" "$(($(date +%s) + 600))" \
+		>"${XDG_CACHE_HOME}/fastfetch-status/updates"
+
+	run bash "${SCRIPT}" updates
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "checked 5m ago" ]]
+	[[ "$output" =~ "due in 10m" ]]
+	[[ ! "$output" =~ "ran " ]]
 }
 
 @test "fastfetch-status: lines without tokens are emitted verbatim" {
