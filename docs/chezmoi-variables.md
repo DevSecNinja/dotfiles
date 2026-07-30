@@ -78,6 +78,12 @@ templates and scripts.
   `op-ssh-sign.exe` on Windows, `op-ssh-sign` on macOS). Set it for a
   non-standard install, or on Linux where there is no standard path. When no
   signer is found, signing stays off rather than breaking every `git commit`.
+- `opSshVault` — 1Password vault the SSH agent offers keys from, written to
+  `%LOCALAPPDATA%\1Password\config\ssh\agent.toml` on Windows. Defaults to
+  `Microsoft` when `isWork` is `true` and `Private` otherwise; as with
+  `gitSigningKey`, a value that still equals one of the shipped defaults is
+  re-picked, so only a differently-named vault counts as an override.
+  See [git-signing.md](git-signing.md).
 
 ## Windows Enterprise (Windows and WSL)
 

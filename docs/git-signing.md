@@ -52,6 +52,31 @@ Git needs a `key::` prefix to read a literal public key rather than a file
 path; the template adds it for you, so paste the key exactly as 1Password
 gives it — with or without a trailing comment.
 
+## The agent has to offer the key
+
+Holding the right key is not enough: the 1Password SSH agent only offers keys
+from the vaults listed in its config, so the signer can hold a perfectly good
+key and still fail with *"No SSH private key found for the specified public
+key"*.
+
+On Windows that config is managed by this repo at
+`%LOCALAPPDATA%\1Password\config\ssh\agent.toml`, rendered from the
+`opSshVault` chezmoi variable — `Microsoft` on work machines, `Private`
+elsewhere. WSL benefits too, since it reaches the same Windows agent
+(see [wsl.md](wsl.md)).
+
+Watch out for a bare `ssh-keys = []`, which 1Password writes on a fresh
+install. That is an explicit *empty* list, not "the default set", so the agent
+offers nothing at all and `ssh-add -l` reports no identities. Adding at least
+one `[[ssh-keys]]` entry is what fixes it.
+
+Use a differently-named vault by setting it in your local chezmoi config:
+
+```yaml
+data:
+  opSshVault: "My Custom Vault"
+```
+
 ## The signer is platform-specific
 
 1Password ships a different binary per platform, and the repo auto-detects the
@@ -96,3 +121,14 @@ git log --show-signature -1
 
 A good signature shows `Good "git" signature`. In WSL the approval prompt
 appears on the Windows host — see [wsl.md](wsl.md).
+
+If signing fails with *"No SSH private key found for the specified public
+key"*, check what the agent is actually offering:
+
+```bash
+ssh-add -l
+```
+
+No identities means the agent is not running, is locked, or its `agent.toml`
+does not list the vault holding the key — see
+[the agent has to offer the key](#the-agent-has-to-offer-the-key).

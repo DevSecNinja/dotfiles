@@ -146,6 +146,17 @@
 {{-   $opSshSignProgram = .opSshSignProgram -}}
 {{- end -}}
 
+{{- /* 1Password vault the SSH agent offers keys from, written to the Windows  */ -}}
+{{- /* agent.toml. Empty means pick per machine below: the work vault on work */ -}}
+{{- /* devices, Private elsewhere. Set it to use a differently-named vault.   */ -}}
+{{- /* See docs/git-signing.md.                                              */ -}}
+{{- $opSshVaultWork := "Microsoft" -}}
+{{- $opSshVaultPersonal := "Private" -}}
+{{- $opSshVault := "" -}}
+{{- if get . "opSshVault" -}}
+{{-   $opSshVault = .opSshVault -}}
+{{- end -}}
+
 {{- /* Extract GitHub username from email or prompt */ -}}
 {{- $githubUsername := "" -}}
 {{- /* Matches GitHub noreply email format: ID+USERNAME@users.noreply.github.com (e.g., 14926452+DevSecNinja@users.noreply.github.com) */ -}}
@@ -240,6 +251,17 @@
 {{-   end -}}
 {{- end -}}
 
+{{- /* Same treatment for the SSH agent's vault: a persisted shipped default is */ -}}
+{{- /* re-picked, only a differently-named vault counts as an override.         */ -}}
+{{- $opSshVaultTrimmed := $opSshVault | toString | trim -}}
+{{- if or (not $opSshVaultTrimmed) (eq $opSshVaultTrimmed $opSshVaultPersonal) (eq $opSshVaultTrimmed $opSshVaultWork) -}}
+{{-   if $isWork -}}
+{{-     $opSshVault = $opSshVaultWork -}}
+{{-   else -}}
+{{-     $opSshVault = $opSshVaultPersonal -}}
+{{-   end -}}
+{{- end -}}
+
 {{- /* Determine if running on a server based on hostname */ -}}
 {{- $isServer := false -}}
 {{- $hostname := .chezmoi.hostname -}}
@@ -318,6 +340,7 @@ data:
   opCopilotEnvironmentId: {{ $opCopilotEnvironmentId | quote }}
   opShellPlugins: {{ $opShellPluginList | toJson }}
   opSshSignProgram: {{ $opSshSignProgram | quote }}
+  opSshVault: {{ $opSshVault | quote }}
   privateDomain: {{ $privateDomain | quote }}
   useYubiKey: {{ $useYubiKey }}
   username: {{ $username | quote }}

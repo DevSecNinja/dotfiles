@@ -17,7 +17,8 @@ setup() {
 
 	BASH_TMPL="${REPO_ROOT}/home/dot_config/shell/functions/op-plugins.sh.tmpl"
 	FISH_TMPL="${REPO_ROOT}/home/dot_config/fish/conf.d/op-plugins.fish.tmpl"
-	export BASH_TMPL FISH_TMPL
+	AGENT_TMPL="${REPO_ROOT}/home/AppData/Local/1Password/config/ssh/agent.toml.tmpl"
+	export BASH_TMPL FISH_TMPL AGENT_TMPL
 }
 
 teardown() {
@@ -510,6 +511,66 @@ _fake_dsregcmd() {
 	[ "$status" -eq 0 ]
 	[[ "$output" =~ "isWork: false" ]]
 	[[ "$output" =~ 'gitSigningKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9RsnZlHiWrFkVf9iUaAH1Jb/6G9bCREjpjG2izEu99"' ]]
+}
+
+@test "op-agent: the agent config enables the work vault on a work machine" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/agent-work.yaml"
+	_fake_dsregcmd Microsoft
+	printf '{}\n' >"${pre}"
+	chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl" >"${TEST_DIR}/agent-work-cfg.yaml"
+	run _render "${TEST_DIR}/agent-work-cfg.yaml" "${AGENT_TMPL}"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ '[[ssh-keys]]' ]]
+	[[ "$output" =~ 'vault = "Microsoft"' ]]
+}
+
+@test "op-agent: the agent config enables Private on a personal machine" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/agent-personal.yaml"
+	_fake_dsregcmd Contoso
+	printf '{}\n' >"${pre}"
+	chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl" >"${TEST_DIR}/agent-personal-cfg.yaml"
+	run _render "${TEST_DIR}/agent-personal-cfg.yaml" "${AGENT_TMPL}"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'vault = "Private"' ]]
+}
+
+@test "op-agent: a custom vault name overrides the default" {
+	_skip_without_chezmoi
+	local pre="${TEST_DIR}/agent-custom.yaml"
+	_fake_dsregcmd Microsoft
+	printf 'data:\n  opSshVault: "My Custom Vault"\n' >"${pre}"
+	chezmoi --config "${pre}" execute-template --init \
+		<"${REPO_ROOT}/home/.chezmoi.yaml.tmpl" >"${TEST_DIR}/agent-custom-cfg.yaml"
+	run _render "${TEST_DIR}/agent-custom-cfg.yaml" "${AGENT_TMPL}"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ 'vault = "My Custom Vault"' ]]
+}
+
+@test "op-agent: never enables zero keys, which is what breaks the agent" {
+	_skip_without_chezmoi
+	local cfg
+	cfg="$(_config)"
+	run _render "${cfg}" "${AGENT_TMPL}"
+	[ "$status" -eq 0 ]
+	# A bare `ssh-keys = []` means no identities at all; it may only ever appear
+	# inside the explanatory comment block.
+	[[ ! "$output" =~ $'\nssh-keys = []' ]]
+	[[ "$output" =~ '[[ssh-keys]]' ]]
+}
+
+@test "op-agent: the agent config is Windows-only" {
+	_skip_without_chezmoi
+	# AppData is ignored off Windows, so a Linux/macOS apply must not try to
+	# write a Windows-shaped path into $HOME.
+	run chezmoi ignored --source="${REPO_ROOT}/home"
+	[ "$status" -eq 0 ]
+	if [ "$(uname -s)" != "Darwin" ]; then
+		[[ "$output" =~ "AppData" ]]
+	fi
 }
 
 @test "signing: a persisted shipped default is re-picked per machine" {

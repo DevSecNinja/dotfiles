@@ -1,0 +1,22 @@
+# This is the 1Password SSH agent config file, which allows you to customize the
+# behavior of the SSH agent running on this machine.
+#
+# Managed by chezmoi — edit
+# home/AppData/Local/1Password/config/ssh/agent.toml.tmpl in the dotfiles repo,
+# not this file. The vault below comes from the `opSshVault` chezmoi variable,
+# which defaults to the work vault on work machines and Private elsewhere.
+# See docs/git-signing.md.
+#
+# A bare `ssh-keys = []` (which 1Password writes on a fresh install) enables
+# *zero* keys, so `ssh-add -l` reports no identities and every signed commit
+# fails. At least one `[[ssh-keys]]` entry is required.
+#
+# You can enable more keys by adding more `[[ssh-keys]]` entries, and narrow an
+# entry to a single item with `item = "My SSH Key"`. Order here is the order in
+# which keys are offered to SSH servers. Test the result with `ssh-add -l`.
+#
+# More examples can be found here:
+#  https://www.1password.dev/ssh/agent/config
+
+[[ssh-keys]]
+vault = {{ .opSshVault | quote }}
