@@ -363,6 +363,149 @@ function Set-WindowsTerminalDefaultProfile {
     return $results
 }
 
+function Set-WindowsTerminalProfileCommandLine {
+    <#
+    .SYNOPSIS
+    Sets the commandline of an existing Windows Terminal profile.
+
+    .DESCRIPTION
+    Parses each existing Windows Terminal settings.json, finds the matching
+    profile in profiles.list (by source, e.g. 'Windows.Terminal.PowershellCore',
+    or by display name), and surgically sets that profile's 'commandline'. Only
+    that one key is touched, so the rest of a hand-tuned config survives intact.
+
+    This is how launch-time switches get applied: options like -NoLogo and
+    -NoProfileLoadTime are read by PowerShell before any profile runs, so they
+    cannot be set from within profile.ps1 and have to live on the command line
+    the terminal starts.
+
+    Dynamically generated profiles (the ones carrying a 'source') accept an
+    explicit commandline, which overrides the generator's default.
+
+    When no matching profile exists (e.g. PowerShell Core is not installed on
+    that machine) the file is left unchanged and the result is reported as
+    'ProfileNotFound' rather than raising an error, so callers can skip cleanly.
+
+    .PARAMETER CommandLine
+    The command line to set, e.g. 'pwsh.exe -NoLogo -NoProfileLoadTime'.
+
+    .PARAMETER Source
+    The profile 'source' to match, e.g. 'Windows.Terminal.PowershellCore'
+    (default). Used when -ProfileName is not supplied.
+
+    .PARAMETER ProfileName
+    Match a profile by its display 'name' instead of its 'source'.
+
+    .PARAMETER SettingsPath
+    One or more settings.json paths. Defaults to the known Windows Terminal
+    locations (Store, Preview, and unpackaged).
+
+    .EXAMPLE
+    Set-WindowsTerminalProfileCommandLine -CommandLine 'pwsh.exe -NoLogo'
+    Starts the PowerShell Core profile without the startup banner.
+
+    .EXAMPLE
+    Set-WindowsTerminalProfileCommandLine -ProfileName 'Debian' -CommandLine 'wsl -d Debian'
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'Matches sibling Windows Terminal helpers that print visible status after a change.')]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'BySource')]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$CommandLine,
+
+        [Parameter(ParameterSetName = 'BySource')]
+        [ValidateNotNullOrEmpty()]
+        [string]$Source = 'Windows.Terminal.PowershellCore',
+
+        [Parameter(Mandatory, ParameterSetName = 'ByName')]
+        [ValidateNotNullOrEmpty()]
+        [string]$ProfileName,
+
+        [Parameter()]
+        [string[]]$SettingsPath
+    )
+
+    if (-not $SettingsPath) {
+        $SettingsPath = Get-WindowsTerminalSettingsPath
+    }
+
+    if ($PSCmdlet.ParameterSetName -eq 'ByName') {
+        $criteria = "name '$ProfileName'"
+    }
+    else {
+        $criteria = "source '$Source'"
+    }
+
+    $results = @()
+
+    foreach ($path in $SettingsPath) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            Write-Verbose "Windows Terminal settings not found at: $path (skipping)"
+            continue
+        }
+
+        try {
+            $json = Read-WindowsTerminalSettings -Path $path
+
+            $list = $null
+            if ($json.PSObject.Properties['profiles'] -and $json.profiles.PSObject.Properties['list']) {
+                $list = @($json.profiles.list)
+            }
+
+            if (-not $list) {
+                Write-Verbose "No profiles.list found in: $path (skipping)"
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'ProfileNotFound'; MatchedProfile = $null }
+                continue
+            }
+
+            if ($PSCmdlet.ParameterSetName -eq 'ByName') {
+                $match = $list | Where-Object { $_.PSObject.Properties['name'] -and $_.name -eq $ProfileName } | Select-Object -First 1
+            }
+            else {
+                $match = $list | Where-Object { $_.PSObject.Properties['source'] -and $_.source -eq $Source } | Select-Object -First 1
+            }
+
+            if (-not $match) {
+                Write-Verbose "No profile matching $criteria found in: $path (skipping)"
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'ProfileNotFound'; MatchedProfile = $null }
+                continue
+            }
+
+            $name = if ($match.PSObject.Properties['name']) { [string]$match.name } else { $criteria }
+
+            if ($match.PSObject.Properties['commandline'] -and [string]$match.commandline -eq $CommandLine) {
+                Write-Verbose "commandline already set for $criteria at: $path"
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'AlreadySet'; MatchedProfile = $name }
+                continue
+            }
+
+            if ($null -eq $match.PSObject.Properties['commandline']) {
+                $match | Add-Member -NotePropertyName commandline -NotePropertyValue $CommandLine -Force
+            }
+            else {
+                $match.commandline = $CommandLine
+            }
+
+            if ($PSCmdlet.ShouldProcess($path, "Set commandline for '$name' to $CommandLine")) {
+                Save-WindowsTerminalSettings -Path $path -Settings $json
+                Write-Host "[OK] Set Windows Terminal commandline for '$name' at: $path" -ForegroundColor Green
+                $results += [pscustomobject]@{ Path = $path; Changed = $true; Status = 'Updated'; MatchedProfile = $name }
+            }
+            else {
+                $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'WhatIf'; MatchedProfile = $name }
+            }
+        }
+        catch {
+            Write-Warning "Could not update Windows Terminal commandline at '$path': $_"
+            $results += [pscustomobject]@{ Path = $path; Changed = $false; Status = 'Error'; MatchedProfile = $null }
+        }
+    }
+
+    return $results
+}
+
 function Set-WindowsTerminalCopilotProfile {
     <#
     .SYNOPSIS

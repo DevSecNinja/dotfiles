@@ -18,11 +18,12 @@
 #
 # Relative times ("ran 5m ago", "next in 20m") are NOT baked into the cache
 # — that would freeze them until the next refresh. The collectors store
-# absolute epoch tokens (@ago:<epoch>@ / @in:<epoch>@) and the section
-# commands expand them against the current clock on every fastfetch run.
-# Expansion itself is pure shell arithmetic; reading the clock uses the
-# EPOCHSECONDS builtin on bash >= 5.0 and falls back to one `date` call on
-# older bash, so the emit path costs at most a single fork.
+# absolute epoch tokens (@ago:<epoch>@ / @in:<epoch>@) that expand to a bare
+# duration phrase ("5m ago" / "in 20m"), and the section commands expand them
+# against the current clock on every fastfetch run. Expansion itself is pure
+# shell arithmetic; reading the clock uses the EPOCHSECONDS builtin on
+# bash >= 5.0 and falls back to one `date` call on older bash, so the emit
+# path costs at most a single fork.
 #
 # Usage: status.sh <section|command>
 #   updates            Print cached "updates available" line (may be empty)
@@ -90,8 +91,10 @@ _now() {
 }
 
 # _render LINE NOW -> print LINE with relative-time tokens expanded:
-#   @ago:<epoch>@  -> "ran 5m ago"   (elapsed since <epoch>)
-#   @in:<epoch>@   -> "next in 20m", or "next due" once <epoch> has passed
+#   @ago:<epoch>@  -> "5m ago"        (elapsed since <epoch>)
+#   @in:<epoch>@   -> "in 20m", or "due" once <epoch> has passed
+# Tokens expand to a bare duration phrase; the collectors own the wording
+# around them (e.g. "ran @ago:…@", "next @in:…@", "checked @ago:…@").
 # Unknown or malformed tokens are left untouched.
 _render() {
     local line="${1}" now="${2}" tail="" pre kind epoch token
@@ -103,12 +106,12 @@ _render() {
         token=""
         if [ "${kind}" = "ago" ]; then
             _fmt_duration "$((now - epoch))"
-            token="ran ${REL_DURATION} ago"
+            token="${REL_DURATION} ago"
         elif [ "${epoch}" -gt "${now}" ]; then
             _fmt_duration "$((epoch - now))"
-            token="next in ${REL_DURATION}"
+            token="in ${REL_DURATION}"
         else
-            token="next due"
+            token="due"
         fi
         tail="${token}${BASH_REMATCH[4]}${tail}"
         line="${pre}"
@@ -194,7 +197,13 @@ _collect_updates() {
     count="${count//[!0-9]/}"
     [ -z "${count}" ] && count=0
     if [ "${count}" -gt 0 ]; then
-        printf '\360\237\223\246 %s update(s) available (%s)\n' "${count}" "${mgr}"
+        # The "checked" suffix is an absolute epoch token so it keeps counting
+        # up between refreshes instead of freezing at the value it had when
+        # the cache was written.
+        local checked_at
+        checked_at="$(_now)"
+        printf '\360\237\223\246 %s update(s) available (%s) \302\267 checked @ago:%s@\n' \
+            "${count}" "${mgr}" "${checked_at}"
     fi
 }
 
@@ -273,7 +282,7 @@ _collect_ansible() {
     if [ -n "${finished_ts}" ]; then
         local finished_epoch
         finished_epoch="$(date -d "${finished_ts}" +%s 2>/dev/null || echo 0)"
-        [ "${finished_epoch}" -gt 0 ] && ran="@ago:${finished_epoch}@"
+        [ "${finished_epoch}" -gt 0 ] && ran="ran @ago:${finished_epoch}@"
     fi
 
     # Next scheduled run from the timer (microseconds since epoch).
@@ -282,7 +291,7 @@ _collect_ansible() {
     next_us="${next_us//[!0-9]/}"
     if [ -n "${next_us}" ] && [ "${next_us}" -gt 0 ]; then
         next_epoch=$((next_us / 1000000))
-        [ "${next_epoch}" -gt "${now}" ] && next="@in:${next_epoch}@"
+        [ "${next_epoch}" -gt "${now}" ] && next="next @in:${next_epoch}@"
     fi
 
     local head tail="" part

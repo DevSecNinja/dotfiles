@@ -156,7 +156,7 @@ to say — fastfetch hides a module entirely when it prints nothing, so a health
 machine stays clean:
 
 ```console
-Updates: 📦 6 update(s) available (winget)
+Updates: 📦 6 update(s) available (winget) · checked 5m ago
 Reboot: 🔄 Reboot required — linux-image-generic
 Ansible: ✅ ansible-pull OK · ran 5m ago · next in 25m
 ```
@@ -178,6 +178,12 @@ the next login.
 On Windows fastfetch reads the cache with `cmd /c type` rather than starting
 PowerShell, which keeps the line free (a few milliseconds).
 
+The `checked 5m ago` part is deliberately not stored in the cache — that would
+freeze it until the next hourly refresh. Each section is kept twice: a source
+file holding the moment as an absolute timestamp, and the rendered line the
+banner shows. Expanding one into the other is pure arithmetic and happens on
+every shell start, so the age is always correct when you read it.
+
 Refresh by hand — useful right after installing updates:
 
 ```bash
@@ -194,6 +200,20 @@ Refresh by hand — useful right after installing updates:
 | `FASTFETCH_STATUS_DISABLE=1` | Print no status lines at all                                 |
 | `FASTFETCH_STATUS_CACHE_DIR` | Override the cache directory (Windows; testing)              |
 | `ANSIBLE_PULL_WORKDIR`       | ansible-pull checkout (default `/var/lib/ansible/local`)      |
+
+### A quiet PowerShell startup
+
+fastfetch already reports the shell version and everything else worth knowing,
+so the noise around it is turned off rather than printed twice:
+
+- `PowerShell 7.6.4` and `Loading personal and system profiles took 1513ms.` are
+  printed by pwsh itself, before and after the profile runs. They cannot be
+  suppressed from `profile.ps1`, so the Windows Terminal PowerShell profile is
+  launched as `pwsh.exe -NoLogo -NoProfileLoadTime` instead (set by
+  `run_onchange_set-windows-terminal-powershell-args.ps1`).
+- The dotfiles' own `[OK] PowerShell Profile Loaded` and `Type 'aliases'` lines
+  are skipped whenever the fastfetch banner rendered. On a light install without
+  fastfetch they stay, so an interactive shell still confirms the profile loaded.
 
 ## Windows PATH
 

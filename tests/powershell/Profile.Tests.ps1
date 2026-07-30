@@ -454,6 +454,42 @@ Describe "Profile fastfetch startup guard" {
         # light install (no fastfetch) from erroring on every shell start.
         $script:ProfileContent | Should -Match 'Get-Command fastfetch -ErrorAction SilentlyContinue'
     }
+
+    It "Profile should refresh the fastfetch status cache via the module" {
+        $script:ProfileContent | Should -Match 'Update-FastfetchStatusCache'
+    }
+
+    It "Profile should guard the status call so a broken cache cannot break the shell" {
+        $script:ProfileContent | Should -Match 'Get-Command Update-FastfetchStatusCache -ErrorAction SilentlyContinue'
+    }
+}
+
+Describe "Profile startup noise" {
+    BeforeAll {
+        $script:ProfileContent = Get-Content $script:ProfilePath -Raw
+    }
+
+    It "Profile should record whether fastfetch rendered" {
+        $script:ProfileContent | Should -Match '\$script:_fastfetchShown = \$false'
+        $script:ProfileContent | Should -Match '\$script:_fastfetchShown = \$true'
+    }
+
+    It "Profile should skip the welcome lines when fastfetch rendered" {
+        # fastfetch already reports the shell and everything else worth knowing,
+        # so the two extra lines are pure noise underneath its banner.
+        $script:ProfileContent | Should -Match '-not \$script:_fastfetchShown'
+    }
+
+    It "Profile should not mark fastfetch as shown when it timed out" {
+        # A killed fastfetch prints a notice instead of a banner, so the welcome
+        # lines are still the only confirmation the profile loaded.
+        $script:ProfileContent | Should -Match 'if \(-not \$fastfetchProc\.WaitForExit'
+    }
+
+    It "Profile should keep the welcome lines for installs without fastfetch" {
+        $script:ProfileContent | Should -Match 'PowerShell Profile Loaded'
+        $script:ProfileContent | Should -Match "Type 'aliases' to see available aliases"
+    }
 }
 
 Describe "Profile Syntax Validation" {

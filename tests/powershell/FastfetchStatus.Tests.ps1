@@ -206,16 +206,35 @@ Describe "fastfetch status.ps1 update line" {
 
     It "should report the count and the manager" {
         Mock Get-WingetUpdateCount { 6 }
-        Get-UpdatesLine | Should -Match '^\S+ 6 update\(s\) available \(winget\)$'
+        Get-UpdatesLine | Should -Match '^\S+ 6 update\(s\) available \(winget\) \S+ checked @ago:\d+@$'
     }
 
-    It "refresh should write a cache file and a stamp" {
+    It "should date the line with a token rather than a frozen duration" {
+        # A pre-rendered "checked 0s ago" would stay 0s until the next refresh
+        # an hour later, so the epoch has to survive into the cache.
+        Mock Get-WingetUpdateCount { 6 }
+        $line = Get-UpdatesLine
+        $line | Should -Not -Match '\d+[smhd] ago'
+        $line | Should -Match '@ago:\d+@'
+    }
+
+    It "refresh should write a source file and a stamp" {
         Mock Get-WingetUpdateCount { 4 }
         Invoke-StatusRefresh
 
         Join-Path $script:TestCacheDir '.refreshed-at' | Should -Exist
+        $line = Get-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Raw
+        $line | Should -Match '4 update\(s\) available \(winget\)'
+    }
+
+    It "refresh should render the source into the file fastfetch reads" {
+        Mock Get-WingetUpdateCount { 4 }
+        Invoke-StatusRefresh
+
         $line = Get-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates') -Raw
         $line | Should -Match '4 update\(s\) available \(winget\)'
+        $line | Should -Match 'checked \d+[smhd] ago'
+        $line | Should -Not -Match '@ago:'
     }
 
     It "refresh should write the cache as UTF-8 without a BOM so cmd /c type stays clean" {
@@ -226,7 +245,7 @@ Describe "fastfetch status.ps1 update line" {
         $bytes[0] | Should -Not -Be 0xEF
     }
 
-    It "refresh should remove the cache file when nothing is outdated" {
+    It "refresh should remove both cache files when nothing is outdated" {
         Mock Get-WingetUpdateCount { 3 }
         Invoke-StatusRefresh
         Join-Path $script:TestCacheDir 'updates' | Should -Exist
@@ -234,6 +253,7 @@ Describe "fastfetch status.ps1 update line" {
         Mock Get-WingetUpdateCount { 0 }
         Invoke-StatusRefresh
         Join-Path $script:TestCacheDir 'updates' | Should -Not -Exist
+        Join-Path $script:TestCacheDir 'updates.src' | Should -Not -Exist
     }
 
     It "refresh should release the lock on completion" {
@@ -313,17 +333,179 @@ Describe "fastfetch chezmoi wiring" {
         $script:IgnoreContent | Should -Not -Match '\.config/fastfetch/\*\*'
     }
 
-    It "profile should spawn a background refresh of the status cache" {
-        $script:ProfileContent | Should -Match 'fastfetch\\status\.ps1'
-        $script:ProfileContent | Should -Match "'refresh'|refresh"
+    It "profile should delegate the status cache to the module" {
+        # The render must run on every shell start (so "checked 5m ago" keeps
+        # counting), but dot-sourcing status.ps1 from the profile costs ~60ms,
+        # hence the module function the profile already has loaded.
+        $script:ProfileContent | Should -Match 'Update-FastfetchStatusCache'
     }
 
-    It "profile background refresh should not create a visible window" {
-        $script:ProfileContent | Should -Match 'CreateNoWindow'
+    It "profile should not inline the refresh spawn any more" {
+        $script:ProfileContent | Should -Not -Match 'CreateNoWindow'
+        $script:ProfileContent | Should -Not -Match 'FASTFETCH_STATUS_TTL'
     }
 
-    It "profile should honour FASTFETCH_STATUS_DISABLE" {
-        $script:ProfileContent | Should -Match 'FASTFETCH_STATUS_DISABLE'
+    It "profile should skip the welcome lines when fastfetch rendered" {
+        $script:ProfileContent | Should -Match '\$script:_fastfetchShown = \$true'
+        $script:ProfileContent | Should -Match '-not \$script:_fastfetchShown'
+    }
+
+    It "profile should still show the welcome lines without fastfetch" {
+        # The welcome block must not be nested inside the fastfetch guard, or a
+        # light install would start completely silently.
+        $script:ProfileContent | Should -Match 'PowerShell Profile Loaded'
+    }
+}
+
+Describe "fastfetch status module helpers" {
+    BeforeAll {
+        Import-Module (Join-Path $script:RepoRoot "home\dot_config\powershell\modules\DotfilesHelpers") `
+            -Force -DisableNameChecking
+    }
+
+    Context "Format-FastfetchStatusDuration" {
+        It "should format <seconds>s as '<expected>'" -ForEach @(
+            @{ Seconds = 0; Expected = '0s' }
+            @{ Seconds = 45; Expected = '45s' }
+            @{ Seconds = 59; Expected = '59s' }
+            @{ Seconds = 60; Expected = '1m' }
+            @{ Seconds = 3540; Expected = '59m' }
+            @{ Seconds = 3600; Expected = '1h' }
+            @{ Seconds = 86399; Expected = '23h' }
+            @{ Seconds = 86400; Expected = '1d' }
+        ) {
+            Format-FastfetchStatusDuration -Seconds $seconds | Should -Be $expected
+        }
+
+        It "should clamp a negative age to zero (clock skew)" {
+            Format-FastfetchStatusDuration -Seconds -30 | Should -Be '0s'
+        }
+    }
+
+    Context "Expand-FastfetchStatusToken" {
+        BeforeAll { $script:Now = 1700000000 }
+
+        It "should expand an elapsed token to a bare duration phrase" {
+            Expand-FastfetchStatusToken -Line "checked @ago:$($script:Now - 300)@" -Now $script:Now |
+                Should -Be 'checked 5m ago'
+        }
+
+        It "should let the caller own the wording around a token" {
+            Expand-FastfetchStatusToken -Line "ran @ago:$($script:Now - 300)@" -Now $script:Now |
+                Should -Be 'ran 5m ago'
+        }
+
+        It "should expand a future token" {
+            Expand-FastfetchStatusToken -Line "next @in:$($script:Now + 1200)@" -Now $script:Now |
+                Should -Be 'next in 20m'
+        }
+
+        It "should report a passed future token as due" {
+            Expand-FastfetchStatusToken -Line "next @in:$($script:Now - 60)@" -Now $script:Now |
+                Should -Be 'next due'
+        }
+
+        It "should expand several tokens in one line" {
+            $line = "OK - ran @ago:$($script:Now - 60)@, next @in:$($script:Now + 60)@"
+            Expand-FastfetchStatusToken -Line $line -Now $script:Now |
+                Should -Be 'OK - ran 1m ago, next in 1m'
+        }
+
+        It "should leave unknown tokens untouched rather than throwing" {
+            Expand-FastfetchStatusToken -Line 'user@host @nope:1@ 100% done' -Now $script:Now |
+                Should -Be 'user@host @nope:1@ 100% done'
+        }
+
+        It "should handle an empty line" {
+            Expand-FastfetchStatusToken -Line '' -Now $script:Now | Should -Be ''
+        }
+    }
+
+    Context "Update-FastfetchStatusCache" {
+        BeforeEach {
+            if (Test-Path -LiteralPath $script:TestCacheDir) {
+                Remove-Item -LiteralPath $script:TestCacheDir -Recurse -Force
+            }
+            New-Item -ItemType Directory -Path $script:TestCacheDir -Force | Out-Null
+            # Fresh stamp so no background refresh is triggered by these tests.
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir '.refreshed-at') -Value ''
+        }
+
+        It "should render a source file into its sibling" {
+            $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 600
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') `
+                -Value "6 update(s) available (winget) - checked @ago:$epoch@"
+
+            Update-FastfetchStatusCache -SkipRefresh
+
+            $rendered = Get-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates') -Raw
+            $rendered | Should -Match 'checked 10m ago'
+        }
+
+        It "should re-render with the current clock, not the cached duration" {
+            $src = Join-Path $script:TestCacheDir 'updates.src'
+            $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 60
+            Set-Content -LiteralPath $src -Value "checked @ago:$epoch@"
+            Update-FastfetchStatusCache -SkipRefresh
+            (Get-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates') -Raw) |
+                Should -Match 'checked 1m ago'
+
+            # Same source, older timestamp -> a different rendered duration,
+            # without any refresh having run.
+            $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 7200
+            Set-Content -LiteralPath $src -Value "checked @ago:$epoch@"
+            Update-FastfetchStatusCache -SkipRefresh
+            (Get-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates') -Raw) |
+                Should -Match 'checked 2h ago'
+        }
+
+        It "should write UTF-8 without a BOM" {
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'plain line'
+            Update-FastfetchStatusCache -SkipRefresh
+
+            $bytes = [System.IO.File]::ReadAllBytes((Join-Path $script:TestCacheDir 'updates'))
+            $bytes[0] | Should -Not -Be 0xEF
+        }
+
+        It "should drop a rendered file whose source has gone" {
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'line'
+            Update-FastfetchStatusCache -SkipRefresh
+            Join-Path $script:TestCacheDir 'updates' | Should -Exist
+
+            Remove-Item -LiteralPath (Join-Path $script:TestCacheDir 'updates.src')
+            Update-FastfetchStatusCache -SkipRefresh
+            Join-Path $script:TestCacheDir 'updates' | Should -Not -Exist
+        }
+
+        It "should leave the stamp alone" {
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'line'
+            Update-FastfetchStatusCache -SkipRefresh
+            Join-Path $script:TestCacheDir '.refreshed-at' | Should -Exist
+        }
+
+        It "should do nothing when disabled" {
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'line'
+            $env:FASTFETCH_STATUS_DISABLE = '1'
+            try {
+                Update-FastfetchStatusCache -SkipRefresh
+                Join-Path $script:TestCacheDir 'updates' | Should -Not -Exist
+            }
+            finally {
+                $env:FASTFETCH_STATUS_DISABLE = $script:OriginalDisable
+            }
+        }
+
+        It "should not throw when the cache directory does not exist" {
+            Remove-Item -LiteralPath $script:TestCacheDir -Recurse -Force
+            { Update-FastfetchStatusCache -SkipRefresh } | Should -Not -Throw
+        }
+    }
+
+    Context "Start-FastfetchStatusRefresh" {
+        It "should do nothing when the status script is missing" {
+            $missing = Join-Path $script:TestCacheDir 'no-such-status.ps1'
+            { Start-FastfetchStatusRefresh -StatusScript $missing } | Should -Not -Throw
+        }
     }
 }
 
