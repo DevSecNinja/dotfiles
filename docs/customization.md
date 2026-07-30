@@ -149,6 +149,12 @@ notice instead of a hung shell:
 
 Set `FASTFETCH_TIMEOUT_MS` to tune the limit (default 5000).
 
+The module list lives in `~/.config/fastfetch/config.jsonc`. One deviation from
+the defaults is worth knowing about: the `Host` line is formatted as `{name}`
+only, because fastfetch otherwise appends the product version — on OEM hardware
+that is a long firmware/SKU string such as `124I:00108T:000M:...` that pushes the
+useful part off the line.
+
 ### Extra status lines
 
 The banner carries a few extra lines that only appear when they have something
