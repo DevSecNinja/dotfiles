@@ -112,6 +112,56 @@ if (Test-Path $completionsPath) {
 if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
     $fastfetchCmd = Get-Command fastfetch -ErrorAction SilentlyContinue
     if ($fastfetchCmd) {
+        # Stale-while-revalidate for the extra "Updates" module: fastfetch reads
+        # a cache file with `cmd /c type`, and the expensive winget query runs
+        # here in a detached background process. The banner below therefore
+        # shows the previous (possibly slightly stale) numbers instantly while a
+        # fresh copy is computed for the next login. Mirrors status.sh on Unix,
+        # which can self-spawn its refresh because its emit path is already a
+        # shell script.
+        try {
+            $statusScript = Join-Path (Split-Path $PSScriptRoot -Parent) 'fastfetch\status.ps1'
+            $statusCacheDir = if ($env:FASTFETCH_STATUS_CACHE_DIR) {
+                $env:FASTFETCH_STATUS_CACHE_DIR
+            } else {
+                Join-Path $env:LOCALAPPDATA 'fastfetch-status'
+            }
+            $statusStamp = Join-Path $statusCacheDir '.refreshed-at'
+
+            $statusTtlSeconds = 3600
+            $parsedTtl = 0
+            if ($env:FASTFETCH_STATUS_TTL -and
+                [int]::TryParse($env:FASTFETCH_STATUS_TTL, [ref]$parsedTtl) -and
+                $parsedTtl -gt 0) {
+                $statusTtlSeconds = $parsedTtl
+            }
+
+            $statusStale = -not (Test-Path -LiteralPath $statusStamp)
+            if (-not $statusStale) {
+                $statusAge = (Get-Date) - (Get-Item -LiteralPath $statusStamp).LastWriteTime
+                $statusStale = $statusAge.TotalSeconds -ge $statusTtlSeconds
+            }
+
+            if ($statusStale -and $env:FASTFETCH_STATUS_DISABLE -ne '1' -and (Test-Path -LiteralPath $statusScript)) {
+                $statusHost = (Get-Process -Id $PID).Path
+                if ($statusHost) {
+                    # Output is silenced inside the child (*>$null) as well as
+                    # redirected, because nobody drains these pipes: a chatty
+                    # child would otherwise block once the pipe buffer filled.
+                    $statusCommand = "& '{0}' refresh *>`$null" -f $statusScript.Replace("'", "''")
+                    $statusInfo = [System.Diagnostics.ProcessStartInfo]::new($statusHost)
+                    $statusInfo.Arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "{0}"' -f $statusCommand
+                    $statusInfo.UseShellExecute = $false
+                    $statusInfo.CreateNoWindow = $true
+                    $statusInfo.RedirectStandardOutput = $true
+                    $statusInfo.RedirectStandardError = $true
+                    [System.Diagnostics.Process]::Start($statusInfo) | Out-Null
+                }
+            }
+        } catch {
+            # A missing cache only costs an "Updates" line; never break the shell.
+        }
+
         # Allow users to tune the timeout (milliseconds) via an env var.
         $fastfetchTimeoutMs = 5000
         $parsedTimeout = 0

@@ -24,14 +24,15 @@ renovate.json
 
 {{ if eq .chezmoi.os "windows" }}
 .chezmoiscripts/linux/**
-# fastfetch status modules are driven by a bash script (status.sh); Windows
-# fastfetch keeps its own default config instead.
+# The fastfetch status cache is filled by status.ps1 on Windows and status.sh
+# everywhere else; ship only the one the host can run.
 # Patterns match the TARGET path, so this is .config/… and not dot_config/….
-.config/fastfetch/**
+.config/fastfetch/status.sh
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
 .chezmoiscripts/windows/**
+.config/fastfetch/status.ps1
 Documents
 AppData
 {{ end }}

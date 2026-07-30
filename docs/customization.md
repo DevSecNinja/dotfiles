@@ -149,6 +149,52 @@ notice instead of a hung shell:
 
 Set `FASTFETCH_TIMEOUT_MS` to tune the limit (default 5000).
 
+### Extra status lines
+
+The banner carries a few extra lines that only appear when they have something
+to say — fastfetch hides a module entirely when it prints nothing, so a healthy
+machine stays clean:
+
+```console
+Updates: 📦 6 update(s) available (winget)
+Reboot: 🔄 Reboot required — linux-image-generic
+Ansible: ✅ ansible-pull OK · ran 5m ago · next in 25m
+```
+
+`Updates` works everywhere: apt/dnf/pacman/zypper/apk on Linux, brew on macOS,
+winget on Windows. `Reboot` and `Ansible` are Linux-only.
+
+Counting updates is far too slow to do while you wait for a prompt (a winget
+query takes tens of seconds), so nothing is ever computed on the login path.
+Instead the numbers come from a small cache that is refreshed in the background:
+the banner shows the previous result instantly while a fresh one is computed for
+the next login.
+
+| Platform    | Cache                                  | Filled by                                                                |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| Linux/macOS | `~/.cache/fastfetch-status/`           | `~/.config/fastfetch/status.sh`, which self-spawns its own refresh        |
+| Windows     | `%LOCALAPPDATA%\fastfetch-status\`     | `~/.config/fastfetch/status.ps1`, spawned detached by the PowerShell profile |
+
+On Windows fastfetch reads the cache with `cmd /c type` rather than starting
+PowerShell, which keeps the line free (a few milliseconds).
+
+Refresh by hand — useful right after installing updates:
+
+```bash
+~/.config/fastfetch/status.sh refresh        # Linux/macOS
+```
+
+```powershell
+~/.config/fastfetch/status.ps1 refresh       # Windows
+```
+
+| Variable                     | Effect                                                       |
+| ---------------------------- | ------------------------------------------------------------ |
+| `FASTFETCH_STATUS_TTL`       | Cache lifetime in seconds (default 3600)                     |
+| `FASTFETCH_STATUS_DISABLE=1` | Print no status lines at all                                 |
+| `FASTFETCH_STATUS_CACHE_DIR` | Override the cache directory (Windows; testing)              |
+| `ANSIBLE_PULL_WORKDIR`       | ansible-pull checkout (default `/var/lib/ansible/local`)      |
+
 ## Windows PATH
 
 On Windows, the setup adds `%OneDrive%\Portable Programs` to the user-scope
