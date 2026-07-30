@@ -208,8 +208,14 @@ function Update-FastfetchStatusCache {
     }
 
     # Drop rendered files whose source is gone (section no longer applies).
+    # Scoped deliberately narrowly: '.tmp' files belong to an in-flight write in
+    # this or another shell, and deleting one would break its Move-Item.
     foreach ($stale in @(Get-ChildItem -LiteralPath $CacheDir -File -ErrorAction SilentlyContinue |
-                Where-Object { $_.Name -notlike '*.src' -and $_.Name -notlike '.*' })) {
+                Where-Object {
+                    $_.Name -notlike '*.src' -and
+                    $_.Name -notlike '*.tmp' -and
+                    $_.Name -notlike '.*'
+                })) {
         if (-not (Test-Path -LiteralPath "$($stale.FullName).src")) {
             if ($PSCmdlet.ShouldProcess($stale.FullName, 'Remove orphaned fastfetch status section')) {
                 Remove-Item -LiteralPath $stale.FullName -Force -ErrorAction SilentlyContinue
@@ -344,9 +350,17 @@ function Write-FastfetchStatusFile {
 
     $encoding = New-Object System.Text.UTF8Encoding($false)
     $content = ($Lines -join "`r`n") + "`r`n"
-    $tmp = "$Path.tmp"
-    [System.IO.File]::WriteAllText($tmp, $content, $encoding)
-    Move-Item -LiteralPath $tmp -Destination $Path -Force
+    # Unique temp name: two shells starting at the same moment both render the
+    # same section, and a shared '<name>.tmp' would let one process's Move-Item
+    # pull the file out from under the other's.
+    $tmp = '{0}.{1}.tmp' -f $Path, [System.IO.Path]::GetRandomFileName()
+    try {
+        [System.IO.File]::WriteAllText($tmp, $content, $encoding)
+        Move-Item -LiteralPath $tmp -Destination $Path -Force
+    }
+    finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # SIG # Begin signature block

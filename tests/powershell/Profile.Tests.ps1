@@ -486,6 +486,12 @@ Describe "Profile startup noise" {
         $script:ProfileContent | Should -Match 'if \(-not \$fastfetchProc\.WaitForExit'
     }
 
+    It "Profile should not mark fastfetch as shown when it exited non-zero" {
+        # Exiting quickly is not the same as succeeding: a bad config leaves the
+        # screen blank, and suppressing the welcome lines would look like a hang.
+        $script:ProfileContent | Should -Match '\$fastfetchProc\.ExitCode -eq 0'
+    }
+
     It "Profile should keep the welcome lines for installs without fastfetch" {
         $script:ProfileContent | Should -Match 'PowerShell Profile Loaded'
         $script:ProfileContent | Should -Match "Type 'aliases' to see available aliases"

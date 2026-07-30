@@ -1,4 +1,4 @@
-# {{ if eq .chezmoi.os "windows" }}
+#!/usr/bin/env pwsh
 # Start the Windows Terminal PowerShell profile quietly.
 #
 # Two lines of noise appear before anything useful:
@@ -18,9 +18,25 @@
 # As with the sibling default-profile script, Windows Terminal owns
 # settings.json and every machine has a different, hand-tuned config, so only
 # this one profile's commandline is touched.
+#
+# Deliberately NOT a .tmpl: the signing workflow skips *.ps1.tmpl (a rendered
+# template no longer matches its signature), and this script needs no template
+# input. The OS guard the sibling templates carry is redundant here because
+# .chezmoiignore already drops .chezmoiscripts/windows/** on non-Windows, and
+# the module path comes from CHEZMOI_SOURCE_DIR, which chezmoi exports to every
+# script it runs.
 $ErrorActionPreference = "Stop"
 
-$modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
+# CHEZMOI_SOURCE_DIR arrives with forward slashes (and sometimes in 8.3 form),
+# so build the path with Join-Path rather than string concatenation. Falling
+# back to the applied tree keeps the script usable when run by hand.
+if ($env:CHEZMOI_SOURCE_DIR) {
+    $modulePath = Join-Path $env:CHEZMOI_SOURCE_DIR "dot_config/powershell/modules/DotfilesHelpers"
+}
+else {
+    $modulePath = Join-Path $HOME ".config/powershell/modules/DotfilesHelpers"
+}
+
 if (Test-Path $modulePath) {
     Import-Module $modulePath -Force -DisableNameChecking
 }
@@ -40,4 +56,3 @@ if (-not $results) {
 elseif (-not ($results | Where-Object { $_.Status -in @('Updated', 'AlreadySet') })) {
     Write-Host "[SKIP] PowerShell Core profile not found; leaving commandline unchanged" -ForegroundColor Yellow
 }
-# {{ end }}

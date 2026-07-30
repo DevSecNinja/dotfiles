@@ -226,10 +226,16 @@ function Write-StatusSection {
 
     # UTF-8 without BOM: `cmd /c type` copies the bytes straight through to
     # fastfetch, so a BOM would show up as stray characters in the banner.
+    # The temp name is unique so a concurrent writer cannot claim it.
     $encoding = New-Object System.Text.UTF8Encoding($false)
-    $tmp = "$file.tmp"
-    [System.IO.File]::WriteAllText($tmp, ($Value + "`r`n"), $encoding)
-    Move-Item -LiteralPath $tmp -Destination $file -Force
+    $tmp = '{0}.{1}.tmp' -f $file, [System.IO.Path]::GetRandomFileName()
+    try {
+        [System.IO.File]::WriteAllText($tmp, ($Value + "`r`n"), $encoding)
+        Move-Item -LiteralPath $tmp -Destination $file -Force
+    }
+    finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Invoke-StatusRender {

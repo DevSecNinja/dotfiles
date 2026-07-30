@@ -477,6 +477,29 @@ Describe "fastfetch status module helpers" {
             Join-Path $script:TestCacheDir 'updates' | Should -Not -Exist
         }
 
+        It "should not delete an in-flight temp file from a concurrent writer" {
+            # Cleanup used to remove any non-.src file, which could yank a
+            # '<name>.<random>.tmp' out from under another shell's Move-Item.
+            $inFlight = Join-Path $script:TestCacheDir 'updates.abc12345.tmp'
+            Set-Content -LiteralPath $inFlight -Value 'half-written'
+            Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'line'
+
+            Update-FastfetchStatusCache -SkipRefresh
+
+            $inFlight | Should -Exist
+        }
+
+        It "should give each write a unique temp name" {
+            # Two shells starting together both render the same section; a
+            # shared '<name>.tmp' would make one of the writes fail.
+            $target = Join-Path $script:TestCacheDir 'concurrent'
+            Write-FastfetchStatusFile -Path $target -Lines 'one'
+            Write-FastfetchStatusFile -Path $target -Lines 'two'
+
+            (Get-Content -LiteralPath $target -Raw).Trim() | Should -Be 'two'
+            @(Get-ChildItem -LiteralPath $script:TestCacheDir -Filter '*.tmp') | Should -BeNullOrEmpty
+        }
+
         It "should leave the stamp alone" {
             Set-Content -LiteralPath (Join-Path $script:TestCacheDir 'updates.src') -Value 'line'
             Update-FastfetchStatusCache -SkipRefresh
