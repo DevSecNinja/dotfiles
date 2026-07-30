@@ -135,12 +135,19 @@
 {{- else if .wsl -}}
 {{- /* The signer moved with the 8.11.18 MSIX installer, so probe the current */ -}}
 {{- /* location first and fall back to the pre-MSIX one.                     */ -}}
-{{-   range glob "/mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/op-ssh-sign-wsl.exe" -}}
-{{-     if not $signer -}}{{- $signer = . -}}{{- end -}}
+{{-   $localAppData := "" -}}
+{{-   if and (lookPath "sh") (lookPath "cmd.exe") -}}
+{{-     $windowsLocalAppData := output "sh" "-c" "cmd.exe /d /c 'echo %LOCALAPPDATA%' 2>/dev/null || true" | trim -}}
+{{-     if and $windowsLocalAppData (not (contains "%LOCALAPPDATA%" $windowsLocalAppData)) (lookPath "wslpath") -}}
+{{-       $localAppData = output "sh" "-c" "wslpath -u \"$1\" 2>/dev/null || true" "sh" $windowsLocalAppData | trim -}}
+{{-     end -}}
 {{-   end -}}
-{{-   if not $signer -}}
-{{-     range glob "/mnt/c/Users/*/AppData/Local/1Password/app/8/op-ssh-sign-wsl" -}}
-{{-       if not $signer -}}{{- $signer = . -}}{{- end -}}
+{{-   if $localAppData -}}
+{{-     $candidates := list
+          (joinPath $localAppData "Microsoft" "WindowsApps" "op-ssh-sign-wsl.exe")
+          (joinPath $localAppData "1Password" "app" "8" "op-ssh-sign-wsl") -}}
+{{-     range $candidates -}}
+{{-       if and (not $signer) (stat .) -}}{{- $signer = . -}}{{- end -}}
 {{-     end -}}
 {{-   end -}}
 {{- else if eq .chezmoi.os "windows" -}}

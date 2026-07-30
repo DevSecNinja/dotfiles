@@ -63,6 +63,22 @@ _fake_dsregcmd() {
 	export PATH="${bin}:${PATH}"
 }
 
+# _fake_wsl_localappdata LOCAL_APP_DATA [WSLPATH_STATUS] -> put fake cmd.exe
+# and wslpath commands on PATH so WSL signer detection is host-independent.
+_fake_wsl_localappdata() {
+	local local_app_data="${1}" wslpath_status="${2:-0}"
+	local bin="${TEST_DIR}/fake-wsl-bin"
+	mkdir -p "${bin}"
+	printf '#!/bin/sh\nprintf "C:\\\\Users\\\\Test\\\\AppData\\\\Local\\r\\n"\n' >"${bin}/cmd.exe"
+	if [ "${wslpath_status}" -eq 0 ]; then
+		printf '#!/bin/sh\nprintf '\''%%s\\n'\'' '\''%s'\''\n' "${local_app_data}" >"${bin}/wslpath"
+	else
+		printf '#!/bin/sh\nexit %s\n' "${wslpath_status}" >"${bin}/wslpath"
+	fi
+	chmod +x "${bin}/cmd.exe" "${bin}/wslpath"
+	export PATH="${bin}:${PATH}"
+}
+
 @test "op-plugins: templates exist for bash/zsh and fish" {
 	[ -f "${BASH_TMPL}" ]
 	[ -f "${FISH_TMPL}" ]
@@ -299,10 +315,62 @@ _fake_dsregcmd() {
 
 @test "wsl-signing: a missing signer leaves signing OFF rather than breaking commits" {
 	_skip_without_chezmoi
+	local cfg chezmoi_bin
+	# Hide Windows interop even when this test runs inside WSL. Enabling gpgsign
+	# without a signer would make every commit fail.
+	cfg="$(_config \
+		's|^  wsl: .*|  wsl: true|' \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|' \
+		's|^  opSshSignProgram: .*|  opSshSignProgram: ""|')"
+	chezmoi_bin="$(dirname "$(command -v chezmoi)")"
+	PATH="${chezmoi_bin}:/usr/bin:/bin" run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ ! "$output" =~ "gpgsign" ]]
+	[[ ! "$output" =~ "signingkey" ]]
+	[[ "$output" =~ "signing is left OFF on purpose" ]]
+}
+
+@test "wsl-signing: auto-detection uses the current user's MSIX signer" {
+	_skip_without_chezmoi
+	local cfg local_app_data="${TEST_DIR}/LocalAppData"
+	mkdir -p "${local_app_data}/Microsoft/WindowsApps" "${local_app_data}/1Password/app/8"
+	touch "${local_app_data}/Microsoft/WindowsApps/op-ssh-sign-wsl.exe"
+	touch "${local_app_data}/1Password/app/8/op-ssh-sign-wsl"
+	_fake_wsl_localappdata "${local_app_data}"
+	cfg="$(_config \
+		's|^  wsl: .*|  wsl: true|' \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|' \
+		's|^  opSshSignProgram: .*|  opSshSignProgram: ""|')"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "program = \"${local_app_data}/Microsoft/WindowsApps/op-ssh-sign-wsl.exe\"" ]]
+	[[ ! "$output" =~ "program = \"${local_app_data}/1Password/app/8/op-ssh-sign-wsl\"" ]]
+	[[ "$output" =~ "gpgsign = true" ]]
+}
+
+@test "wsl-signing: auto-detection falls back to the pre-MSIX signer" {
+	_skip_without_chezmoi
+	local cfg local_app_data="${TEST_DIR}/LocalAppData"
+	mkdir -p "${local_app_data}/1Password/app/8"
+	touch "${local_app_data}/1Password/app/8/op-ssh-sign-wsl"
+	_fake_wsl_localappdata "${local_app_data}"
+	cfg="$(_config \
+		's|^  wsl: .*|  wsl: true|' \
+		's|^  useYubiKey: .*|  useYubiKey: false|' \
+		's|^  gitSigningKey: .*|  gitSigningKey: "ssh-ed25519 AAAATESTKEY comment"|' \
+		's|^  opSshSignProgram: .*|  opSshSignProgram: ""|')"
+	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -eq 0 ]
+	[[ "$output" =~ "program = \"${local_app_data}/1Password/app/8/op-ssh-sign-wsl\"" ]]
+	[[ "$output" =~ "gpgsign = true" ]]
+}
+
+@test "wsl-signing: a failed LocalAppData conversion leaves signing OFF" {
+	_skip_without_chezmoi
 	local cfg
-	# No signer override and no /mnt/c on this host, so auto-detection finds
-	# nothing. Enabling gpgsign anyway would make git fall back to the local
-	# ssh-keygen, which cannot reach the 1Password-held key: every commit fails.
+	_fake_wsl_localappdata "${TEST_DIR}/LocalAppData" 1
 	cfg="$(_config \
 		's|^  wsl: .*|  wsl: true|' \
 		's|^  useYubiKey: .*|  useYubiKey: false|' \
@@ -311,8 +379,12 @@ _fake_dsregcmd() {
 	run _render "${cfg}" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
 	[ "$status" -eq 0 ]
 	[[ ! "$output" =~ "gpgsign" ]]
-	[[ ! "$output" =~ "signingkey" ]]
 	[[ "$output" =~ "signing is left OFF on purpose" ]]
+}
+
+@test "wsl-signing: auto-detection never scans every Windows profile" {
+	run grep -F "/mnt/c/Users/*/" "${REPO_ROOT}/home/dot_config/git/config.tmpl"
+	[ "$status" -ne 0 ]
 }
 
 @test "wsl-signing: no signing key means no signing configuration" {
