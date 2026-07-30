@@ -149,7 +149,10 @@ if ([Environment]::UserInteractive -and -not $env:CHEZMOI_SOURCE_DIR) {
                 if (-not $fastfetchProc.WaitForExit($fastfetchTimeoutMs)) {
                     try { $fastfetchProc.Kill() } catch { }
                     Write-Host "`n(fastfetch timed out after $([math]::Round($fastfetchTimeoutMs / 1000, 1))s; skipping)" -ForegroundColor DarkYellow
-                } else {
+                } elseif ($fastfetchProc.ExitCode -eq 0) {
+                    # Only a clean run actually painted a banner. A non-zero exit
+                    # (bad config, for instance) leaves the screen empty, so the
+                    # welcome lines below stay as the one sign of life.
                     $script:_fastfetchShown = $true
                 }
             } catch {

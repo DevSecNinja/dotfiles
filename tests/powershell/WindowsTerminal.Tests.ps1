@@ -484,6 +484,46 @@ Describe "Set-WindowsTerminalProfileCommandLine Function" -Tag "Unit" {
     }
 }
 
+Describe "Windows Terminal PowerShell args script" -Tag "Unit" {
+    BeforeAll {
+        $script:ArgsScript = Join-Path $script:RepoRoot `
+            "home\.chezmoiscripts\windows\run_onchange_set-windows-terminal-powershell-args.ps1"
+    }
+
+    It "Should exist as a plain .ps1 so the signing workflow can sign it" {
+        # sign-powershell.yml signs **.ps1 but excludes **.ps1.tmpl, because a
+        # rendered template no longer matches its signature.
+        $script:ArgsScript | Should -Exist
+        "$script:ArgsScript.tmpl" | Should -Not -Exist
+    }
+
+    It "Should have valid PowerShell syntax" {
+        $errors = $null
+        [System.Management.Automation.Language.Parser]::ParseFile(
+            $script:ArgsScript, [ref]$null, [ref]$errors) | Out-Null
+        $errors | Should -BeNullOrEmpty
+    }
+
+    It "Should not contain chezmoi template syntax" {
+        $content = Get-Content $script:ArgsScript -Raw
+        $content | Should -Not -Match '\{\{'
+    }
+
+    It "Should resolve the module through CHEZMOI_SOURCE_DIR" {
+        $content = Get-Content $script:ArgsScript -Raw
+        $content | Should -Match 'CHEZMOI_SOURCE_DIR'
+        # Forward slashes and 8.3 paths arrive in that variable, so the path has
+        # to be composed rather than concatenated.
+        $content | Should -Match 'Join-Path'
+    }
+
+    It "Should quieten both pwsh startup lines" {
+        $content = Get-Content $script:ArgsScript -Raw
+        $content | Should -Match '-NoLogo'
+        $content | Should -Match '-NoProfileLoadTime'
+    }
+}
+
 Describe "Set-WindowsTerminalCopilotProfile Function" -Tag "Unit" {
     BeforeEach {
         $script:settingsPath = Join-Path $script:TestDir.FullName "settings-$(Get-Random).json"
