@@ -321,6 +321,13 @@ Describe "fastfetch chezmoi wiring" {
         $script:TemplateContent | Should -Match 'status\.sh\\" ansible'
     }
 
+    It "config template should trim the host line to the product name" {
+        # The default host format appends the product version, which on OEM
+        # hardware is a long firmware/SKU string.
+        $script:TemplateContent | Should -Match '"type": "host"'
+        $script:TemplateContent | Should -Match '"format": "\{name\}"'
+    }
+
     It "chezmoiignore should keep status.sh off Windows" {
         $script:IgnoreContent | Should -Match '\.config/fastfetch/status\.sh'
     }

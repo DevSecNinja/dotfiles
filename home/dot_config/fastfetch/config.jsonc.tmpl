@@ -5,7 +5,11 @@
     "title",
     "separator",
     "os",
-    "host",
+    {
+      "//": "Product name only. The default format appends {version}, which on OEM hardware is often a firmware/SKU string (e.g. '124I:00108T:...') that says nothing useful and makes the line unreadably long.",
+      "type": "host",
+      "format": "{name}"
+    },
     "kernel",
     "uptime",
     "packages",
