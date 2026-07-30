@@ -10,10 +10,22 @@ everything on this page.
 
 ## Setup
 
-The repository owner's public key ships as the default for `gitSigningKey`, so
+The repository owner's public keys ship as the defaults for `gitSigningKey`, so
 signing switches itself on as soon as a 1Password signer binary is present —
-nothing to configure. (That key is public and already published at
-<https://github.com/DevSecNinja.keys>.)
+nothing to configure. Which default applies depends on the machine:
+
+| Machine | Default key |
+| --- | --- |
+| Entra ID tenant ending in `Microsoft` (`isWork = true`) | work key |
+| Everything else | personal key ([published][keys]) |
+
+[keys]: https://github.com/DevSecNinja.keys
+
+`isWork` comes from `dsregcmd /status` on Windows and WSL; elsewhere it is
+`false`, so the personal key applies. A `gitSigningKey` left over in your local
+chezmoi config from an earlier `chezmoi init` is re-evaluated whenever it still
+equals one of the shipped defaults, so a machine never gets pinned to the wrong
+one — only a key of your own is treated as an override.
 
 **Using your own key instead:**
 
