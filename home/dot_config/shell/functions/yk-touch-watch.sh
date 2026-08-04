@@ -19,24 +19,24 @@
 #     `ssh-keygen`/`ssh-add` process has been blocked >2s.
 
 yk-touch-watch() {
-	local once=false bell=true interval="0.5"
+    local once=false bell=true interval="0.5"
 
-	while [[ $# -gt 0 ]]; do
-		case $1 in
-		--once)
-			once=true
-			shift
-			;;
-		--interval)
-			interval="$2"
-			shift 2
-			;;
-		--no-bell)
-			bell=false
-			shift
-			;;
-		-h | --help)
-			cat <<EOF
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --once)
+            once=true
+            shift
+            ;;
+        --interval)
+            interval="$2"
+            shift 2
+            ;;
+        --no-bell)
+            bell=false
+            shift
+            ;;
+        -h | --help)
+            cat <<EOF
 Usage: yk-touch-watch [OPTIONS]
 Notify when a YubiKey is waiting for a touch.
 
@@ -46,53 +46,53 @@ Options:
   --no-bell          Don't emit a terminal bell
   -h, --help         Show this help
 EOF
-			return 0
-			;;
-		*)
-			echo "Unknown option: $1" >&2
-			return 1
-			;;
-		esac
-	done
+            return 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            return 1
+            ;;
+        esac
+    done
 
-	if ! command -v ykman >/dev/null 2>&1; then
-		echo "Error: 'ykman' not found." >&2
-		return 1
-	fi
+    if ! command -v ykman >/dev/null 2>&1; then
+        echo "Error: 'ykman' not found." >&2
+        return 1
+    fi
 
-	_yk_touch_notify() {
-		local title="$1" body="$2"
-		echo "[yk-touch-watch] $title — $body"
-		[[ "$bell" == true ]] && printf '\a'
-		if command -v notify-send >/dev/null 2>&1; then
-			notify-send -u critical -i security-high "$title" "$body" || true
-		elif [[ "$(uname)" == "Darwin" ]] && command -v osascript >/dev/null 2>&1; then
-			osascript -e "display notification \"$body\" with title \"$title\"" || true
-		fi
-	}
+    _yk_touch_notify() {
+        local title="$1" body="$2"
+        echo "[yk-touch-watch] ${title} — ${body}"
+        [[ "${bell}" == true ]] && printf '\a'
+        if command -v notify-send >/dev/null 2>&1; then
+            notify-send -u critical -i security-high "${title}" "${body}" || true
+        elif [[ "$(uname)" == "Darwin" ]] && command -v osascript >/dev/null 2>&1; then
+            osascript -e "display notification \"${body}\" with title \"${title}\"" || true
+        fi
+    }
 
-	echo "Watching for YubiKey touch requests... (ctrl-c to stop)"
-	local last_state=""
-	while true; do
-		# Best-effort: parse ykman's "Touch" indicator from `ykman info` —
-		# devices that don't expose it just stay quiet. We treat any change
-		# in the relevant lines as a touch event candidate.
-		local state
-		state="$(ykman info 2>/dev/null | grep -Ei 'touch|locked' || true)"
-		if [[ -n "$state" && "$state" != "$last_state" ]]; then
-			_yk_touch_notify "YubiKey touch" "$state"
-			last_state="$state"
-			[[ "$once" == true ]] && return 0
-		fi
-		# POSIX-friendly subsecond sleep via perl/python fallback if available.
-		if command -v perl >/dev/null 2>&1; then
-			perl -e "select(undef,undef,undef,$interval)"
-		else
-			sleep "${interval%.*}"
-		fi
-	done
+    echo "Watching for YubiKey touch requests... (ctrl-c to stop)"
+    local last_state=""
+    while true; do
+        # Best-effort: parse ykman's "Touch" indicator from `ykman info` —
+        # devices that don't expose it just stay quiet. We treat any change
+        # in the relevant lines as a touch event candidate.
+        local state
+        state="$(ykman info 2>/dev/null | grep -Ei 'touch|locked' || true)"
+        if [[ -n "${state}" && "${state}" != "${last_state}" ]]; then
+            _yk_touch_notify "YubiKey touch" "${state}"
+            last_state="${state}"
+            [[ "${once}" == true ]] && return 0
+        fi
+        # POSIX-friendly subsecond sleep via perl/python fallback if available.
+        if command -v perl >/dev/null 2>&1; then
+            perl -e "select(undef,undef,undef,${interval})"
+        else
+            sleep "${interval%.*}"
+        fi
+    done
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-	yk-touch-watch "$@"
+    yk-touch-watch "$@"
 fi

@@ -6,5 +6,5 @@
 
 # Only generate completion dynamically if task is available and not already loaded from Homebrew
 if command -v task >/dev/null 2>&1 && ! type _task_bash_autocomplete >/dev/null 2>&1; then
-	eval "$(task --completion bash)"
+  eval "$(task --completion bash)"
 fi

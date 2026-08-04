@@ -6,5 +6,5 @@
 
 # Only generate completion dynamically if chezmoi is available and not already loaded from Homebrew
 if command -v chezmoi >/dev/null 2>&1 && ! type _chezmoi_bash_autocomplete >/dev/null 2>&1; then
-	eval "$(chezmoi completion bash)"
+  eval "$(chezmoi completion bash)"
 fi

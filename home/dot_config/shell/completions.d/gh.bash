@@ -6,5 +6,5 @@
 
 # Only generate completion dynamically if gh is available and not already loaded from Homebrew
 if command -v gh >/dev/null 2>&1 && ! type __start_gh >/dev/null 2>&1; then
-	eval "$(gh completion -s bash)"
+  eval "$(gh completion -s bash)"
 fi

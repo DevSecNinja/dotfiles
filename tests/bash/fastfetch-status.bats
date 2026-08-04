@@ -133,7 +133,9 @@ EOF
 
 	run bash "${SCRIPT}" updates
 	[ "$status" -eq 0 ]
-	[[ "$output" =~ "checked 0s ago" ]]
+	# Any small age is fine: asserting exactly "0s" makes the test fail
+	# whenever the refresh above happens to straddle a second boundary.
+	[[ "$output" =~ checked\ [0-9]+s\ ago ]]
 }
 
 @test "fastfetch-status: no apt updates leaves updates section empty" {

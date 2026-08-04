@@ -21,32 +21,32 @@
 #   - Remote authorized_keys gets `chmod 600`, ~/.ssh `chmod 700`, umask 077.
 
 yk-ssh-copy-id() {
-	local port=22
-	local identity=""
-	local check=false
-	local dry_run=false
-	local target=""
+    local port=22
+    local identity=""
+    local check=false
+    local dry_run=false
+    local target=""
 
-	while [[ $# -gt 0 ]]; do
-		case $1 in
-		-i | --identity)
-			identity="$2"
-			shift 2
-			;;
-		-p | --port)
-			port="$2"
-			shift 2
-			;;
-		--check)
-			check=true
-			shift
-			;;
-		--dry-run)
-			dry_run=true
-			shift
-			;;
-		-h | --help)
-			cat <<EOF
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        -i | --identity)
+            identity="$2"
+            shift 2
+            ;;
+        -p | --port)
+            port="$2"
+            shift 2
+            ;;
+        --check)
+            check=true
+            shift
+            ;;
+        --dry-run)
+            dry_run=true
+            shift
+            ;;
+        -h | --help)
+            cat <<EOF
 Usage: yk-ssh-copy-id [OPTIONS] [user@]host
 Push YubiKey SSH pubkey(s) into a remote authorized_keys (idempotent).
 
@@ -59,79 +59,79 @@ Options:
   --dry-run              Print the keys that would be pushed locally; don't
                          connect to the remote
 EOF
-			return 0
-			;;
-		-*)
-			echo "Error: unknown option: $1" >&2
-			return 1
-			;;
-		*)
-			if [[ -n "$target" ]]; then
-				echo "Error: only one [user@]host argument allowed (got '$target' and '$1')" >&2
-				return 1
-			fi
-			target="$1"
-			shift
-			;;
-		esac
-	done
+            return 0
+            ;;
+        -*)
+            echo "Error: unknown option: $1" >&2
+            return 1
+            ;;
+        *)
+            if [[ -n "${target}" ]]; then
+                echo "Error: only one [user@]host argument allowed (got '${target}' and '$1')" >&2
+                return 1
+            fi
+            target="$1"
+            shift
+            ;;
+        esac
+    done
 
-	if [[ -z "$target" && "$dry_run" != true ]]; then
-		echo "Error: missing [user@]host argument. See --help." >&2
-		return 1
-	fi
+    if [[ -z "${target}" && "${dry_run}" != true ]]; then
+        echo "Error: missing [user@]host argument. See --help." >&2
+        return 1
+    fi
 
-	# Collect the set of pubkeys to push.
-	local -a keys=()
-	if [[ -n "$identity" ]]; then
-		if [[ ! -f "$identity" ]]; then
-			echo "Error: --identity file not found: $identity" >&2
-			return 1
-		fi
-		keys=("$identity")
-	else
-		# Per-serial first, then legacy. Use find for zsh NOMATCH-safety.
-		local pat candidate
-		for pat in 'id_ed25519_sk_*' 'id_ed25519_sk' 'id_ecdsa_sk_*' 'id_ecdsa_sk'; do
-			while IFS= read -r candidate; do
-				[[ -n "$candidate" && -f "$candidate" ]] && keys+=("$candidate")
-			done < <(find "$HOME/.ssh" -maxdepth 1 -name "${pat}.pub" -type f 2>/dev/null | sort)
-		done
-	fi
+    # Collect the set of pubkeys to push.
+    local -a keys=()
+    if [[ -n "${identity}" ]]; then
+        if [[ ! -f "${identity}" ]]; then
+            echo "Error: --identity file not found: ${identity}" >&2
+            return 1
+        fi
+        keys=("${identity}")
+    else
+        # Per-serial first, then legacy. Use find for zsh NOMATCH-safety.
+        local pat candidate
+        for pat in 'id_ed25519_sk_*' 'id_ed25519_sk' 'id_ecdsa_sk_*' 'id_ecdsa_sk'; do
+            while IFS= read -r candidate; do
+                [[ -n "${candidate}" && -f "${candidate}" ]] && keys+=("${candidate}")
+            done < <(find "${HOME}/.ssh" -maxdepth 1 -name "${pat}.pub" -type f 2>/dev/null | sort)
+        done
+    fi
 
-	if [[ ${#keys[@]} -eq 0 ]]; then
-		echo "Error: no YubiKey pubkey found in ~/.ssh. Run \`yk-enroll\` first." >&2
-		return 1
-	fi
+    if [[ ${#keys[@]} -eq 0 ]]; then
+        echo "Error: no YubiKey pubkey found in ~/.ssh. Run \`yk-enroll\` first." >&2
+        return 1
+    fi
 
-	# Build the payload (one pubkey line per file, blank lines stripped).
-	local payload=""
-	local k
-	for k in "${keys[@]}"; do
-		payload+="$(grep -vE '^[[:space:]]*$' "$k")"$'\n'
-	done
+    # Build the payload (one pubkey line per file, blank lines stripped).
+    local payload=""
+    local k
+    for k in "${keys[@]}"; do
+        payload+="$(grep -vE '^[[:space:]]*$' "${k}")"$'\n'
+    done
 
-	if [[ "$dry_run" == true ]]; then
-		echo "Would push ${#keys[@]} pubkey(s)${target:+ to ${target}}:"
-		for k in "${keys[@]}"; do
-			echo "  - $k"
-		done
-		echo
-		echo "Payload:"
-		printf '%s' "$payload"
-		return 0
-	fi
+    if [[ "${dry_run}" == true ]]; then
+        echo "Would push ${#keys[@]} pubkey(s)${target:+ to ${target}}:"
+        for k in "${keys[@]}"; do
+            echo "  - ${k}"
+        done
+        echo
+        echo "Payload:"
+        printf '%s' "${payload}"
+        return 0
+    fi
 
-	if ! command -v ssh >/dev/null 2>&1; then
-		echo "Error: ssh not found." >&2
-		return 1
-	fi
+    if ! command -v ssh >/dev/null 2>&1; then
+        echo "Error: ssh not found." >&2
+        return 1
+    fi
 
-	# Single SSH call: dedupe against the remote's existing authorized_keys
-	# and append only the missing entries. One FIDO2 touch + PIN, not N.
-	local remote_install
-	# shellcheck disable=SC2016 # $variables are intentionally literal here — they're evaluated by the remote shell.
-	remote_install='set -e
+    # Single SSH call: dedupe against the remote's existing authorized_keys
+    # and append only the missing entries. One FIDO2 touch + PIN, not N.
+    local remote_install
+    # shellcheck disable=SC2016 # $variables are intentionally literal here — they're evaluated by the remote shell.
+    remote_install='set -e
 umask 077
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
@@ -151,9 +151,9 @@ while IFS= read -r line; do
 done
 echo "yk-ssh-copy-id: $new added, $present already present" >&2'
 
-	local remote_check
-	# shellcheck disable=SC2016 # $variables are intentionally literal here — they're evaluated by the remote shell.
-	remote_check='set -e
+    local remote_check
+    # shellcheck disable=SC2016 # $variables are intentionally literal here — they're evaluated by the remote shell.
+    remote_check='set -e
 existing=""
 [ -f ~/.ssh/authorized_keys ] && existing="$(cat ~/.ssh/authorized_keys)"
 new=0
@@ -170,19 +170,19 @@ while IFS= read -r line; do
 done
 echo "yk-ssh-copy-id: $present already present, $new missing" >&2'
 
-	local script
-	if [[ "$check" == true ]]; then
-		script="$remote_check"
-	else
-		script="$remote_install"
-	fi
+    local script
+    if [[ "${check}" == true ]]; then
+        script="${remote_check}"
+    else
+        script="${remote_install}"
+    fi
 
-	# Pipe the payload to the remote bash. Use -T to skip the pty, -o
-	# BatchMode=no so password/PIN prompts still work, and explicit /bin/sh
-	# on the far side to avoid login-shell surprises.
-	printf '%s' "$payload" | ssh -T -p "$port" "$target" "/bin/sh -c '$script'"
+    # Pipe the payload to the remote bash. Use -T to skip the pty, -o
+    # BatchMode=no so password/PIN prompts still work, and explicit /bin/sh
+    # on the far side to avoid login-shell surprises.
+    printf '%s' "${payload}" | ssh -T -p "${port}" "${target}" "/bin/sh -c '${script}'"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-	yk-ssh-copy-id "$@"
+    yk-ssh-copy-id "$@"
 fi

@@ -21,229 +21,229 @@
 #   - Exit codes: 0 = keys found, 1 = error, 2 = no keys found in authorized_keys
 
 gh-check-ssh-keys() {
-	# Initialize variables
-	local verbose=false
-	local username=""
-	local authorized_keys_file="${HOME}/.ssh/authorized_keys"
+    # Initialize variables
+    local verbose=false
+    local username=""
+    local authorized_keys_file="${HOME}/.ssh/authorized_keys"
 
-	# Parse arguments
-	while [[ $# -gt 0 ]]; do
-		case $1 in
-		--verbose | -v)
-			verbose=true
-			shift
-			;;
-		-h | --help)
-			echo "Usage: gh-check-ssh-keys [OPTIONS] USERNAME"
-			echo "Check if GitHub user's SSH keys are in authorized_keys"
-			echo ""
-			echo "Options:"
-			echo "  --verbose, -v    Enable verbose output"
-			echo "  -h, --help       Show this help message"
-			echo ""
-			echo "Arguments:"
-			echo "  USERNAME         GitHub username to check keys for"
-			echo ""
-			echo "Examples:"
-			echo "  gh-check-ssh-keys octocat              # Check if octocat's keys are trusted"
-			echo "  gh-check-ssh-keys --verbose octocat    # Check with detailed output"
-			echo ""
-			echo "Exit codes:"
-			echo "  0 - At least one key found in authorized_keys"
-			echo "  1 - Error occurred"
-			echo "  2 - No keys found in authorized_keys"
-			return 0
-			;;
-		-*)
-			echo "❌ Unknown option: $1"
-			echo "Use --help for usage information"
-			return 1
-			;;
-		*)
-			# Handle positional arguments
-			if [ -z "$username" ]; then
-				username="$1"
-			else
-				echo "❌ Too many arguments. Expected 1 username, got: $*"
-				echo "Use --help for usage information"
-				return 1
-			fi
-			shift
-			;;
-		esac
-	done
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --verbose | -v)
+            verbose=true
+            shift
+            ;;
+        -h | --help)
+            echo "Usage: gh-check-ssh-keys [OPTIONS] USERNAME"
+            echo "Check if GitHub user's SSH keys are in authorized_keys"
+            echo ""
+            echo "Options:"
+            echo "  --verbose, -v    Enable verbose output"
+            echo "  -h, --help       Show this help message"
+            echo ""
+            echo "Arguments:"
+            echo "  USERNAME         GitHub username to check keys for"
+            echo ""
+            echo "Examples:"
+            echo "  gh-check-ssh-keys octocat              # Check if octocat's keys are trusted"
+            echo "  gh-check-ssh-keys --verbose octocat    # Check with detailed output"
+            echo ""
+            echo "Exit codes:"
+            echo "  0 - At least one key found in authorized_keys"
+            echo "  1 - Error occurred"
+            echo "  2 - No keys found in authorized_keys"
+            return 0
+            ;;
+        -*)
+            echo "❌ Unknown option: $1"
+            echo "Use --help for usage information"
+            return 1
+            ;;
+        *)
+            # Handle positional arguments
+            if [ -z "${username}" ]; then
+                username="$1"
+            else
+                echo "❌ Too many arguments. Expected 1 username, got: $*"
+                echo "Use --help for usage information"
+                return 1
+            fi
+            shift
+            ;;
+        esac
+    done
 
-	# Validation checks
-	if [ -z "$username" ]; then
-		# Check if CHEZMOI_GITHUB_USERNAME environment variable is set
-		if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
-			# Check if we're in an interactive environment (stdin is a TTY)
-			if [ -t 0 ]; then
-				# Ask for confirmation before using the detected username
-				echo "🔍 No username provided, detected GitHub username from chezmoi config: $CHEZMOI_GITHUB_USERNAME"
-				printf "Do you want to use this username? (y/N): "
-				# Use read with timeout to prevent hanging in non-interactive environments
-				if read -t 30 -r response; then
-					if [[ "$response" =~ ^[Yy]$ ]]; then
-						username="$CHEZMOI_GITHUB_USERNAME"
-						echo "✅ Using GitHub username: $username"
-					else
-						echo "❌ GitHub username is required"
-						echo "Use --help for usage information"
-						return 1
-					fi
-				else
-					# Timeout or no input
-					echo ""
-					echo "❌ GitHub username is required"
-					echo "Use --help for usage information"
-					return 1
-				fi
-			else
-				# Non-interactive environment - cannot prompt for confirmation
-				echo "❌ GitHub username is required"
-				echo "💡 Detected CHEZMOI_GITHUB_USERNAME='$CHEZMOI_GITHUB_USERNAME' but cannot confirm in non-interactive mode"
-				echo "Use --help for usage information"
-				return 1
-			fi
-		else
-			echo "❌ GitHub username is required"
-			echo "Use --help for usage information"
-			return 1
-		fi
-	fi
+    # Validation checks
+    if [ -z "${username}" ]; then
+        # Check if CHEZMOI_GITHUB_USERNAME environment variable is set
+        if [ -n "${CHEZMOI_GITHUB_USERNAME:-}" ]; then
+            # Check if we're in an interactive environment (stdin is a TTY)
+            if [ -t 0 ]; then
+                # Ask for confirmation before using the detected username
+                echo "🔍 No username provided, detected GitHub username from chezmoi config: ${CHEZMOI_GITHUB_USERNAME}"
+                printf "Do you want to use this username? (y/N): "
+                # Use read with timeout to prevent hanging in non-interactive environments
+                if read -t 30 -r response; then
+                    if [[ "${response}" =~ ^[Yy]$ ]]; then
+                        username="${CHEZMOI_GITHUB_USERNAME}"
+                        echo "✅ Using GitHub username: ${username}"
+                    else
+                        echo "❌ GitHub username is required"
+                        echo "Use --help for usage information"
+                        return 1
+                    fi
+                else
+                    # Timeout or no input
+                    echo ""
+                    echo "❌ GitHub username is required"
+                    echo "Use --help for usage information"
+                    return 1
+                fi
+            else
+                # Non-interactive environment - cannot prompt for confirmation
+                echo "❌ GitHub username is required"
+                echo "💡 Detected CHEZMOI_GITHUB_USERNAME='${CHEZMOI_GITHUB_USERNAME}' but cannot confirm in non-interactive mode"
+                echo "Use --help for usage information"
+                return 1
+            fi
+        else
+            echo "❌ GitHub username is required"
+            echo "Use --help for usage information"
+            return 1
+        fi
+    fi
 
-	# Check for required commands
-	if ! command -v curl >/dev/null 2>&1; then
-		echo "❌ Required command 'curl' is not installed or not in PATH"
-		return 1
-	fi
+    # Check for required commands
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "❌ Required command 'curl' is not installed or not in PATH"
+        return 1
+    fi
 
-	# Verbose output
-	if [ "$verbose" = true ]; then
-		echo "🔍 Checking GitHub SSH keys for user: $username"
-		echo "📁 Authorized keys file: $authorized_keys_file"
-	fi
+    # Verbose output
+    if [ "${verbose}" = true ]; then
+        echo "🔍 Checking GitHub SSH keys for user: ${username}"
+        echo "📁 Authorized keys file: ${authorized_keys_file}"
+    fi
 
-	# Check if authorized_keys file exists
-	if [ ! -f "$authorized_keys_file" ]; then
-		if [ "$verbose" = true ]; then
-			echo "ℹ️  File $authorized_keys_file does not exist"
-		fi
-		echo "❌ No authorized_keys file found - no keys are trusted"
-		return 2
-	fi
+    # Check if authorized_keys file exists
+    if [ ! -f "${authorized_keys_file}" ]; then
+        if [ "${verbose}" = true ]; then
+            echo "ℹ️  File ${authorized_keys_file} does not exist"
+        fi
+        echo "❌ No authorized_keys file found - no keys are trusted"
+        return 2
+    fi
 
-	# Fetch GitHub user's SSH keys
-	local github_keys
-	if [ "$verbose" = true ]; then
-		echo "🌐 Fetching SSH keys from GitHub API..."
-	fi
+    # Fetch GitHub user's SSH keys
+    local github_keys
+    if [ "${verbose}" = true ]; then
+        echo "🌐 Fetching SSH keys from GitHub API..."
+    fi
 
-	github_keys=$(curl -sf "https://api.github.com/users/${username}/keys" 2>/dev/null)
-	local curl_exit_code=$?
+    github_keys=$(curl -sf "https://api.github.com/users/${username}/keys" 2>/dev/null)
+    local curl_exit_code=$?
 
-	if [ $curl_exit_code -ne 0 ]; then
-		if [ $curl_exit_code -eq 22 ]; then
-			echo "❌ User '$username' not found on GitHub"
-		else
-			echo "❌ Failed to fetch SSH keys from GitHub (curl exit code: $curl_exit_code)"
-		fi
-		return 1
-	fi
+    if [ "${curl_exit_code}" -ne 0 ]; then
+        if [ "${curl_exit_code}" -eq 22 ]; then
+            echo "❌ User '${username}' not found on GitHub"
+        else
+            echo "❌ Failed to fetch SSH keys from GitHub (curl exit code: ${curl_exit_code})"
+        fi
+        return 1
+    fi
 
-	# Check if response is empty
-	if [ -z "$github_keys" ]; then
-		echo "❌ Failed to fetch SSH keys from GitHub"
-		return 1
-	fi
+    # Check if response is empty
+    if [ -z "${github_keys}" ]; then
+        echo "❌ Failed to fetch SSH keys from GitHub"
+        return 1
+    fi
 
-	# Extract public keys from JSON response
-	# The API returns: [{"id": 123, "key": "ssh-rsa AAAA..."}, ...]
-	# Note: Using grep/sed instead of jq to avoid external dependencies
-	# This works for the standard GitHub API response format
-	local keys_array
-	keys_array=$(echo "$github_keys" | grep -Eo '"key":\s*"[^"]*"' | sed 's/"key":\s*"//g' | sed 's/"//g')
+    # Extract public keys from JSON response
+    # The API returns: [{"id": 123, "key": "ssh-rsa AAAA..."}, ...]
+    # Note: Using grep/sed instead of jq to avoid external dependencies
+    # This works for the standard GitHub API response format
+    local keys_array
+    keys_array=$(echo "${github_keys}" | grep -Eo '"key":\s*"[^"]*"' | sed 's/"key":\s*"//g' | sed 's/"//g')
 
-	# If no keys extracted, check if it's an empty array or a parse error
-	if [ -z "$keys_array" ]; then
-		# Strip whitespace and check if response is just an empty array []
-		if echo "$github_keys" | tr -d '\n\r\t ' | grep -q '^\[\]$'; then
-			echo "❌ User '$username' has no public SSH keys on GitHub"
-		else
-			echo "❌ Failed to parse SSH keys from GitHub response"
-			if [ "$verbose" = true ]; then
-				echo "ℹ️  API response format may have changed or be malformed"
-			fi
-		fi
-		return 1
-	fi
+    # If no keys extracted, check if it's an empty array or a parse error
+    if [ -z "${keys_array}" ]; then
+        # Strip whitespace and check if response is just an empty array []
+        if echo "${github_keys}" | tr -d '\n\r\t ' | grep -q '^\[\]$'; then
+            echo "❌ User '${username}' has no public SSH keys on GitHub"
+        else
+            echo "❌ Failed to parse SSH keys from GitHub response"
+            if [ "${verbose}" = true ]; then
+                echo "ℹ️  API response format may have changed or be malformed"
+            fi
+        fi
+        return 1
+    fi
 
-	# Count total keys
-	local total_keys
-	total_keys=$(echo "$keys_array" | wc -l | tr -d ' ')
+    # Count total keys
+    local total_keys
+    total_keys=$(echo "${keys_array}" | wc -l | tr -d ' ')
 
-	if [ "$verbose" = true ]; then
-		echo "📋 Found $total_keys SSH key(s) for user '$username' on GitHub"
-	fi
+    if [ "${verbose}" = true ]; then
+        echo "📋 Found ${total_keys} SSH key(s) for user '${username}' on GitHub"
+    fi
 
-	# Check each key against authorized_keys
-	local found_count=0
-	local key_num=0
+    # Check each key against authorized_keys
+    local found_count=0
+    local key_num=0
 
-	while IFS= read -r key; do
-		if [ -z "$key" ]; then
-			continue
-		fi
+    while IFS= read -r key; do
+        if [ -z "${key}" ]; then
+            continue
+        fi
 
-		key_num=$((key_num + 1))
+        key_num=$((key_num + 1))
 
-		# Extract just the key part (without key type and comment)
-		# This handles keys in format: "ssh-rsa AAAA... comment"
-		# SSH keys typically have: key_type key_data [optional_comment]
-		# We match on key_type + key_data to avoid false positives from comments
-		local key_data
-		key_data=$(echo "$key" | awk '{print $1 " " $2}')
+        # Extract just the key part (without key type and comment)
+        # This handles keys in format: "ssh-rsa AAAA... comment"
+        # SSH keys typically have: key_type key_data [optional_comment]
+        # We match on key_type + key_data to avoid false positives from comments
+        local key_data
+        key_data=$(echo "${key}" | awk '{print $1 " " $2}')
 
-		# Skip if key parsing failed
-		if [ -z "$key_data" ] || [ "$(echo "$key_data" | wc -w)" -ne 2 ]; then
-			if [ "$verbose" = true ]; then
-				echo "⚠️  Key #${key_num} has unexpected format, skipping"
-			fi
-			continue
-		fi
+        # Skip if key parsing failed
+        if [ -z "${key_data}" ] || [ "$(echo "${key_data}" | wc -w)" -ne 2 ]; then
+            if [ "${verbose}" = true ]; then
+                echo "⚠️  Key #${key_num} has unexpected format, skipping"
+            fi
+            continue
+        fi
 
-		if grep -qF "$key_data" "$authorized_keys_file"; then
-			found_count=$((found_count + 1))
-			if [ "$verbose" = true ]; then
-				local key_type
-				key_type=$(echo "$key" | awk '{print $1}')
-				local key_preview
-				key_preview=$(echo "$key" | awk '{print substr($2, 1, 20)}')
-				echo "✅ Key #${key_num} ($key_type ${key_preview}...) is trusted"
-			fi
-		else
-			if [ "$verbose" = true ]; then
-				local key_type
-				key_type=$(echo "$key" | awk '{print $1}')
-				local key_preview
-				key_preview=$(echo "$key" | awk '{print substr($2, 1, 20)}')
-				echo "❌ Key #${key_num} ($key_type ${key_preview}...) is NOT trusted"
-			fi
-		fi
-	done <<<"$keys_array"
+        if grep -qF "${key_data}" "${authorized_keys_file}"; then
+            found_count=$((found_count + 1))
+            if [ "${verbose}" = true ]; then
+                local key_type
+                key_type=$(echo "${key}" | awk '{print $1}')
+                local key_preview
+                key_preview=$(echo "${key}" | awk '{print substr($2, 1, 20)}')
+                echo "✅ Key #${key_num} (${key_type} ${key_preview}...) is trusted"
+            fi
+        else
+            if [ "${verbose}" = true ]; then
+                local key_type
+                key_type=$(echo "${key}" | awk '{print $1}')
+                local key_preview
+                key_preview=$(echo "${key}" | awk '{print substr($2, 1, 20)}')
+                echo "❌ Key #${key_num} (${key_type} ${key_preview}...) is NOT trusted"
+            fi
+        fi
+    done <<<"${keys_array}"
 
-	# Report results
-	if [ $found_count -gt 0 ]; then
-		echo "✅ Found $found_count of $total_keys key(s) from '$username' in authorized_keys"
-		return 0
-	else
-		echo "❌ None of the $total_keys key(s) from '$username' are in authorized_keys"
-		return 2
-	fi
+    # Report results
+    if [ "${found_count}" -gt 0 ]; then
+        echo "✅ Found ${found_count} of ${total_keys} key(s) from '${username}' in authorized_keys"
+        return 0
+    else
+        echo "❌ None of the ${total_keys} key(s) from '${username}' are in authorized_keys"
+        return 2
+    fi
 }
 
 # Auto-execute if script is run directly (not sourced)
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-	gh-check-ssh-keys "$@"
+    gh-check-ssh-keys "$@"
 fi

@@ -19,15 +19,16 @@ setup() {
 }
 
 @test "lefthook-config: shellcheck and shfmt run on staged shell files" {
-	grep -q "shellcheck -x {staged_files}" "$LEFTHOOK_CONFIG"
-	grep -q "shfmt -i 0 --write {staged_files}" "$LEFTHOOK_CONFIG"
+	grep -q "shellcheck -x --exclude=SC2310,SC2311,SC2312 {staged_files}" "$LEFTHOOK_CONFIG"
+	grep -q "shfmt --write {staged_files}" "$LEFTHOOK_CONFIG"
 }
 
-@test "lefthook-config: shfmt pins tab indentation" {
-	# Without an explicit indent flag shfmt reads .editorconfig, which asks for
-	# 4 spaces and would reindent every (tab-indented) script in the tree on
-	# the first commit that touches it.
-	grep -q "shfmt -i 0 " "$LEFTHOOK_CONFIG"
+@test "lefthook-config: shfmt indentation is left to .editorconfig" {
+	# Shell scripts follow the centrally synced .editorconfig (4 spaces). An
+	# explicit indent flag would make shfmt ignore .editorconfig and silently
+	# reindent every file it touches.
+	! grep -qE "shfmt -i [0-9]" "$LEFTHOOK_CONFIG"
+	grep -q "indent_size = 4" "$REPO_ROOT/.editorconfig"
 }
 
 @test "lefthook-config: silent shell tools report successful execution" {

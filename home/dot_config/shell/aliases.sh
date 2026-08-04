@@ -62,37 +62,37 @@ alias motd='fastfetch'
 # Discovers both the legacy un-suffixed `id_<type>_sk.pub` and per-serial
 # `id_<type>_sk_<serial>.pub` files written by `yk-enroll`.
 pubkey() {
-	# Use find for glob expansion so unmatched patterns don't error out
-	# under zsh (which has NOMATCH on by default and aborts the function
-	# on `for x in $unmatched_glob`).
-	_pubkey_key=""
-	# Prefer hardware-backed FIDO2 keys: per-serial files first, then
-	# legacy un-suffixed, then non-FIDO2.
-	for _pubkey_pattern in \
-		"id_ed25519_sk_*" \
-		"id_ed25519_sk" \
-		"id_ecdsa_sk_*" \
-		"id_ecdsa_sk" \
-		"id_ed25519" \
-		"id_rsa"; do
-		_pubkey_candidate="$(find "$HOME/.ssh" -maxdepth 1 -name "${_pubkey_pattern}.pub" -type f 2>/dev/null | sort | head -n1)"
-		if [ -n "$_pubkey_candidate" ] && [ -f "$_pubkey_candidate" ]; then
-			_pubkey_key="$_pubkey_candidate"
-			break
-		fi
-	done
-	unset _pubkey_pattern _pubkey_candidate
-	if [ -z "$_pubkey_key" ]; then
-		echo "No SSH public key found in ~/.ssh" >&2
-		unset _pubkey_key
-		return 1
-	fi
-	cat "$_pubkey_key"
-	if command -v clipboard-copy >/dev/null 2>&1 && clipboard-copy --check >/dev/null 2>&1; then
-		clipboard-copy <"$_pubkey_key"
-		echo "=> Public key ($(basename "$_pubkey_key")) copied to clipboard."
-	else
-		echo "=> $(basename "$_pubkey_key") (no clipboard backend; not copied)."
-	fi
-	unset _pubkey_key
+    # Use find for glob expansion so unmatched patterns don't error out
+    # under zsh (which has NOMATCH on by default and aborts the function
+    # on `for x in $unmatched_glob`).
+    _pubkey_key=""
+    # Prefer hardware-backed FIDO2 keys: per-serial files first, then
+    # legacy un-suffixed, then non-FIDO2.
+    for _pubkey_pattern in \
+        "id_ed25519_sk_*" \
+        "id_ed25519_sk" \
+        "id_ecdsa_sk_*" \
+        "id_ecdsa_sk" \
+        "id_ed25519" \
+        "id_rsa"; do
+        _pubkey_candidate="$(find "${HOME}/.ssh" -maxdepth 1 -name "${_pubkey_pattern}.pub" -type f 2>/dev/null | sort | head -n1)"
+        if [ -n "${_pubkey_candidate}" ] && [ -f "${_pubkey_candidate}" ]; then
+            _pubkey_key="${_pubkey_candidate}"
+            break
+        fi
+    done
+    unset _pubkey_pattern _pubkey_candidate
+    if [ -z "${_pubkey_key}" ]; then
+        echo "No SSH public key found in ~/.ssh" >&2
+        unset _pubkey_key
+        return 1
+    fi
+    cat "${_pubkey_key}"
+    if command -v clipboard-copy >/dev/null 2>&1 && clipboard-copy --check >/dev/null 2>&1; then
+        clipboard-copy <"${_pubkey_key}"
+        echo "=> Public key ($(basename "${_pubkey_key}")) copied to clipboard."
+    else
+        echo "=> $(basename "${_pubkey_key}") (no clipboard backend; not copied)."
+    fi
+    unset _pubkey_key
 }

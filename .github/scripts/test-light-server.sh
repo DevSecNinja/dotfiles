@@ -6,9 +6,9 @@ set -e
 
 # Only run in CI environment
 if [ "${CI:-}" != "true" ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
-	echo "ℹ️  This test is designed to run in GitHub Actions only"
-	echo "💡 It requires specific container hostname configuration"
-	exit 0
+    echo "ℹ️  This test is designed to run in GitHub Actions only"
+    echo "💡 It requires specific container hostname configuration"
+    exit 0
 fi
 
 echo "🧪 Testing light server installation scenario..."
@@ -25,9 +25,9 @@ echo ""
 
 # Install chezmoi if not present
 if ! command -v chezmoi >/dev/null 2>&1; then
-	REQUIRED_CHEZMOI_VERSION="$(tr -d '[:space:]' <"${SOURCE_DIR}/home/.chezmoiversion")"
-	echo "Installing chezmoi ${REQUIRED_CHEZMOI_VERSION} with mise..."
-	MISE_YES=1 mise use --global "chezmoi@${REQUIRED_CHEZMOI_VERSION}"
+    REQUIRED_CHEZMOI_VERSION="$(tr -d '[:space:]' <"${SOURCE_DIR}/home/.chezmoiversion")"
+    echo "Installing chezmoi ${REQUIRED_CHEZMOI_VERSION} with mise..."
+    MISE_YES=1 mise use --global "chezmoi@${REQUIRED_CHEZMOI_VERSION}"
 fi
 
 # Run chezmoi init and apply
@@ -50,14 +50,14 @@ echo ""
 echo "Checking essential files (should exist)..."
 MISSING_COUNT=0
 for file in ${ESSENTIAL_FILES}; do
-	if [ -n "${file}" ]; then
-		if [ -f "${file}" ]; then
-			echo "  ✅ ${file}"
-		else
-			echo "  ❌ ${file} (missing)"
-			MISSING_COUNT=$((MISSING_COUNT + 1))
-		fi
-	fi
+    if [ -n "${file}" ]; then
+        if [ -f "${file}" ]; then
+            echo "  ✅ ${file}"
+        else
+            echo "  ❌ ${file} (missing)"
+            MISSING_COUNT=$((MISSING_COUNT + 1))
+        fi
+    fi
 done
 
 # Check chezmoi data to verify installType
@@ -67,18 +67,18 @@ INSTALL_TYPE=$(chezmoi data 2>/dev/null | grep -o '"installType": "[^"]*"' | hea
 echo "  Install type: ${INSTALL_TYPE}"
 
 if [ "${INSTALL_TYPE}" != "light" ]; then
-	echo "  ❌ Expected installType=light, got ${INSTALL_TYPE}"
-	MISSING_COUNT=$((MISSING_COUNT + 1))
+    echo "  ❌ Expected installType=light, got ${INSTALL_TYPE}"
+    MISSING_COUNT=$((MISSING_COUNT + 1))
 else
-	echo "  ✅ Install type is correctly set to 'light'"
+    echo "  ✅ Install type is correctly set to 'light'"
 fi
 
 # Report results
 echo ""
 if [ "${MISSING_COUNT}" -gt 0 ]; then
-	echo "❌ Light server test FAILED"
-	echo "   Missing essential files or incorrect install type: ${MISSING_COUNT}"
-	exit 1
+    echo "❌ Light server test FAILED"
+    echo "   Missing essential files or incorrect install type: ${MISSING_COUNT}"
+    exit 1
 fi
 
 echo "✅ Light server test PASSED!"
