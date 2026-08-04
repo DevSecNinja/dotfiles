@@ -96,6 +96,35 @@ teardown() { common_teardown; }
 	[ "$parsed" = "$msg" ] || { echo "want=[$msg] got=[$parsed]"; false; }
 }
 
+@test "json: tabs survive and other control chars are dropped" {
+	if ! command -v jq >/dev/null 2>&1; then skip "jq not installed"; fi
+	# A tab has a named JSON escape and must round-trip; a bare control byte
+	# (VT here) has none and is stripped rather than emitted raw, which would
+	# make the object unparseable.
+	log_file="$BATS_TEST_TMPDIR/json-ctrl.log"
+	msg=$(printf 'a\tb\013c')
+	LOG_FORMAT=json LOG_TAG=t LOG_TIMESTAMP="2026-04-29T12:00:00Z" LOG_JOURNAL=never LOG_COLOR=never \
+		bash -c '. "$1"; log_info "$2"' bash "$LOG_SCRIPT" "$msg" >"$log_file"
+	run jq -e . "$log_file"
+	assert_success
+	parsed=$(jq -r .message <"$log_file")
+	[ "$parsed" = "$(printf 'a\tbc')" ] || { echo "got=[$parsed]"; false; }
+}
+
+@test "json: trailing backslash does not escape the closing quote" {
+	if ! command -v jq >/dev/null 2>&1; then skip "jq not installed"; fi
+	# The classic off-by-one of hand-rolled JSON escaping: a message ending in
+	# a backslash swallows the closing quote and corrupts the whole object.
+	log_file="$BATS_TEST_TMPDIR/json-trailing.log"
+	msg=$(printf 'path C:\\')
+	LOG_FORMAT=json LOG_TAG=t LOG_TIMESTAMP="2026-04-29T12:00:00Z" LOG_JOURNAL=never LOG_COLOR=never \
+		bash -c '. "$1"; log_info "$2"' bash "$LOG_SCRIPT" "$msg" >"$log_file"
+	run jq -e . "$log_file"
+	assert_success
+	parsed=$(jq -r .message <"$log_file")
+	[ "$parsed" = "$msg" ] || { echo "want=[$msg] got=[$parsed]"; false; }
+}
+
 @test "json: log_data includes data field" {
 	if ! command -v jq >/dev/null 2>&1; then skip "jq not installed"; fi
 	run sh -c 'printf "k: v\nl: 1\n" | { LOG_FORMAT=json; . "$1"; LOG_TAG=t log_data INFO config; }' sh "$LOG_SCRIPT"

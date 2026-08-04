@@ -20,8 +20,15 @@ exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 # Format shell scripts (excluding zsh, bats and chezmoi templates).
 # stage_fixed automatically re-stages files that shfmt rewrote so the
 # commit picks up the formatted content.
+#
+# `-i 0` (tabs) is passed explicitly because shfmt otherwise reads
+# .editorconfig, whose `[*.sh] indent_size = 4` combined with the global
+# `indent_style = space` contradicts every shell script in this tree. Without
+# the flag the hook silently reindents whole files on the first commit that
+# touches them, burying the actual change. .editorconfig is synced from the
+# central config repo, so the override lives here instead.
 [pre-commit.commands.shfmt]
-run = "shfmt --write {staged_files} && echo \"[OK] shfmt checked/formatted matching shell scripts\""
+run = "shfmt -i 0 --write {staged_files} && echo \"[OK] shfmt checked/formatted matching shell scripts\""
 glob = ["**/*.sh", "**/*.bash"]
 exclude = '(.*\.zsh|.*zshrc|.*\.bats|.*\.tmpl)$'
 stage_fixed = true

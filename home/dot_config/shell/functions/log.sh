@@ -120,7 +120,7 @@ _LOG_TAG_PATTERN_BAD='*[!A-Za-z0-9._-]*'
 # must snapshot it now. Bash exposes BASH_SOURCE; zsh exposes ZSH_ARGZERO.
 # shellcheck disable=SC3028,SC3054
 if [ -n "${ZSH_ARGZERO:-}" ]; then
-	_LOG_SCRIPT0="$ZSH_ARGZERO"
+	_LOG_SCRIPT0="${ZSH_ARGZERO}"
 elif [ -n "${BASH_SOURCE:-}" ]; then
 	_LOG_SCRIPT0="$0"
 else
@@ -161,23 +161,24 @@ _log_resolve() {
 }
 
 _log_min_level_num() {
-	_lv=$(_log_resolve "${LOG_LEVEL:-${LOG_MIN_LEVEL:-$LOG_DEFAULT_LEVEL}}") || _lv="INFO INFO 30"
+	_lv=$(_log_resolve "${LOG_LEVEL:-${LOG_MIN_LEVEL:-${LOG_DEFAULT_LEVEL}}}") || _lv="INFO INFO 30"
 	# shellcheck disable=SC2086
-	set -- $_lv
+	set -- ${_lv}
 	printf '%s' "$3"
 }
 
 log_level_enabled() {
 	_lv=$(_log_resolve "${1:-INFO}") || _lv="INFO INFO 30"
 	# shellcheck disable=SC2086
-	set -- $_lv
-	test "$3" -ge "$(_log_min_level_num)"
+	set -- ${_lv}
+	_lv_min=$(_log_min_level_num)
+	test "$3" -ge "${_lv_min}"
 }
 
 log_set_level() {
 	_lv=$(_log_resolve "${1:-}") || return 1
 	# shellcheck disable=SC2086
-	set -- $_lv
+	set -- ${_lv}
 	LOG_LEVEL="$1"
 	export LOG_LEVEL
 }
@@ -197,11 +198,11 @@ _log_pad_label() {
 	# Right-pad to 6 characters.
 	_pl="$1"
 	_pl_len=${#_pl}
-	while [ "$_pl_len" -lt 6 ]; do
-		_pl="$_pl "
+	while [ "${_pl_len}" -lt 6 ]; do
+		_pl="${_pl} "
 		_pl_len=$((_pl_len + 1))
 	done
-	printf '%s' "$_pl"
+	printf '%s' "${_pl}"
 }
 
 # ----------------------------------------------------------------------------
@@ -255,9 +256,13 @@ _log_use_color_for_fd() {
 
 _log_ts_iso() {
 	if [ -n "${LOG_TIMESTAMP:-}" ]; then
-		printf '%s' "$LOG_TIMESTAMP"
+		printf '%s' "${LOG_TIMESTAMP}"
 	elif command -v date >/dev/null 2>&1; then
-		date -u '+%Y-%m-%dT%H:%M:%SZ' | tr -d '\n'
+		# Assign first: `date | tr` would hide a failing date behind tr's
+		# exit status. Command substitution strips the trailing newline
+		# anyway, so tr is not needed.
+		_lts=$(date -u '+%Y-%m-%dT%H:%M:%SZ') || _lts="0000-00-00T00:00:00Z"
+		printf '%s' "${_lts}"
 	else
 		printf '%s' "0000-00-00T00:00:00Z"
 	fi
@@ -265,9 +270,10 @@ _log_ts_iso() {
 
 _log_ts_human() {
 	if [ -n "${LOG_TIMESTAMP:-}" ]; then
-		printf '%s' "$LOG_TIMESTAMP"
+		printf '%s' "${LOG_TIMESTAMP}"
 	elif command -v date >/dev/null 2>&1; then
-		date '+%Y-%m-%d %H:%M:%S' | tr -d '\n'
+		_lts=$(date '+%Y-%m-%d %H:%M:%S') || _lts="0000-00-00 00:00:00"
+		printf '%s' "${_lts}"
 	else
 		printf '%s' "0000-00-00 00:00:00"
 	fi
@@ -284,7 +290,8 @@ _log_validate_tag() {
 	"") return 0 ;;
 	-*) return 0 ;;
 	.*) return 0 ;;
-	$_LOG_TAG_PATTERN_BAD) return 0 ;;
+	${_LOG_TAG_PATTERN_BAD}) return 0 ;;
+	*) ;;
 	esac
 	if [ "${#1}" -le 32 ]; then
 		printf '%s' "$1"
@@ -295,18 +302,19 @@ _log_validate_tag() {
 # or empty when called interactively / from the logger script itself.
 _log_tag() {
 	if [ -n "${LOG_TAG:-}" ]; then
-		_log_validate_tag "$LOG_TAG"
+		_log_validate_tag "${LOG_TAG}"
 		return 0
 	fi
 
 	_t="${_LOG_SCRIPT0##*/}"
-	case "$_t" in
+	case "${_t}" in
 	*.sh | *.bash | *.zsh | *.ksh) _t="${_t%.*}" ;;
+	*) ;;
 	esac
 
-	case "$_t" in
+	case "${_t}" in
 	"" | log | log.sh | sh | bash | zsh | ksh | dash | fish | -sh | -bash | -zsh | -ksh | -dash) ;;
-	*) _log_validate_tag "$_t" ;;
+	*) _log_validate_tag "${_t}" ;;
 	esac
 }
 
@@ -317,10 +325,11 @@ _log_tag() {
 # Returns 0 if the string contains characters that need sanitizing.
 _log_needs_sanitize() {
 	case "$1" in
-	*"$_LOG_NL"* | *"$_LOG_CR"* | *"$_LOG_ESC"* | *"$_LOG_BEL"*) return 0 ;;
+	*"${_LOG_NL}"* | *"${_LOG_CR}"* | *"${_LOG_ESC}"* | *"${_LOG_BEL}"*) return 0 ;;
+	*) ;;
 	esac
 	# Length cap
-	if [ "${#1}" -gt "${LOG_MAX_BYTES:-$_LOG_MAX_BYTES_DEFAULT}" ]; then
+	if [ "${#1}" -gt "${LOG_MAX_BYTES:-${_LOG_MAX_BYTES_DEFAULT}}" ]; then
 		return 0
 	fi
 	return 1
@@ -335,8 +344,8 @@ _log_sanitize() {
 		printf '%s' "$1"
 		return 0
 	fi
-	_max="${LOG_MAX_BYTES:-$_LOG_MAX_BYTES_DEFAULT}"
-	printf '%s' "$1" | LC_ALL=C awk -v max="$_max" '
+	_max="${LOG_MAX_BYTES:-${_LOG_MAX_BYTES_DEFAULT}}"
+	printf '%s' "$1" | LC_ALL=C awk -v max="${_max}" '
 		BEGIN { ORS=""; out = "" }
 		{
 			s = $0
@@ -365,16 +374,18 @@ _log_effective_banner_style() {
 	fi
 
 	# Multi-byte styles need a real TTY and a UTF-8 locale.
-	case "$_st" in
+	case "${_st}" in
 	unicode | box | rule)
 		if [ "${LOG_FORCE_LANG_C:-0}" = "1" ]; then
 			_st="ascii"
 		fi
 		case "${LC_ALL:-${LANG:-}}" in
 		C | POSIX) _st="ascii" ;;
+		*) ;;
 		esac
 		case "${TERM:-}" in
 		dumb) _st="ascii" ;;
+		*) ;;
 		esac
 		# Headless / file-only invocations get ASCII so log files stay
 		# grep- and editor-friendly.
@@ -382,17 +393,18 @@ _log_effective_banner_style() {
 			_st="ascii"
 		fi
 		;;
+	*) ;;
 	esac
-	printf '%s' "$_st"
+	printf '%s' "${_st}"
 }
 
 _log_banner_width() {
 	_w="${LOG_RULE_WIDTH:-40}"
 	_max="${COLUMNS:-80}"
-	if [ "$_w" -gt "$_max" ] 2>/dev/null; then
-		_w="$_max"
+	if [ "${_w}" -gt "${_max}" ] 2>/dev/null; then
+		_w="${_max}"
 	fi
-	printf '%s' "$_w"
+	printf '%s' "${_w}"
 }
 
 # Build a separator line of the given width using the specified style char.
@@ -400,11 +412,11 @@ _log_repeat_char() {
 	# $1 = char, $2 = count
 	_rc=""
 	_i=0
-	while [ "$_i" -lt "$2" ]; do
-		_rc="$_rc$1"
+	while [ "${_i}" -lt "$2" ]; do
+		_rc="${_rc}$1"
 		_i=$((_i + 1))
 	done
-	printf '%s' "$_rc"
+	printf '%s' "${_rc}"
 }
 
 # ----------------------------------------------------------------------------
@@ -421,13 +433,15 @@ _log_stdio_fd() {
 _log_journal_available() {
 	case "${LOG_JOURNAL:-auto}" in
 	never | false | 0) return 1 ;;
+	*) ;;
 	esac
 
 	_log_logger_command="${LOG_LOGGER_COMMAND:-logger}"
-	command -v "$_log_logger_command" >/dev/null 2>&1 || return 1
+	command -v "${_log_logger_command}" >/dev/null 2>&1 || return 1
 
 	case "${LOG_JOURNAL:-auto}" in
 	always | true | 1) return 0 ;;
+	*) ;;
 	esac
 
 	test -S /run/systemd/journal/socket ||
@@ -446,8 +460,9 @@ _log_write_journal() {
 	_lj_tag="${3:-shell-log}"
 	# Validate tag again to be safe (logger -t accepts arbitrary; keep us safe)
 	# shellcheck disable=SC2254 # _LOG_TAG_PATTERN_BAD is intentionally an unquoted glob
-	case "$_lj_tag" in
-	$_LOG_TAG_PATTERN_BAD) _lj_tag="shell-log" ;;
+	case "${_lj_tag}" in
+	${_LOG_TAG_PATTERN_BAD}) _lj_tag="shell-log" ;;
+	*) ;;
 	esac
 	_lj_pri=$(_log_priority "$1")
 	if [ "$2" = "$1" ]; then
@@ -456,8 +471,8 @@ _log_write_journal() {
 		_lj_msg="$1 $2 $4"
 	fi
 
-	"$_lj_cmd" -t "$_lj_tag" -p "user.$_lj_pri" -- "$_lj_msg" >/dev/null 2>&1 ||
-		"$_lj_cmd" -t "$_lj_tag" -p "user.$_lj_pri" "$_lj_msg" >/dev/null 2>&1 ||
+	"${_lj_cmd}" -t "${_lj_tag}" -p "user.${_lj_pri}" -- "${_lj_msg}" >/dev/null 2>&1 ||
+		"${_lj_cmd}" -t "${_lj_tag}" -p "user.${_lj_pri}" "${_lj_msg}" >/dev/null 2>&1 ||
 		:
 }
 
@@ -469,32 +484,37 @@ _log_file_enabled() {
 _log_prepare_file() {
 	_log_file_enabled || return 1
 
-	_log_file_dir=$(dirname "$LOG_FILE" 2>/dev/null) || return 1
-	test -d "$_log_file_dir" || mkdir -p "$_log_file_dir" 2>/dev/null || return 1
+	_log_file_dir=$(dirname "${LOG_FILE}" 2>/dev/null) || return 1
+	test -d "${_log_file_dir}" || mkdir -p "${_log_file_dir}" 2>/dev/null || return 1
 
 	# Refuse to write through a symlink (simple traversal guard).
-	if [ -L "$LOG_FILE" ]; then
+	if [ -L "${LOG_FILE}" ]; then
 		return 1
 	fi
 
-	if [ -n "${LOG_FILE_TTL_DAYS:-}" ] && [ -f "$LOG_FILE" ] && command -v find >/dev/null 2>&1; then
-		find "$LOG_FILE" -type f -mtime +"$LOG_FILE_TTL_DAYS" -exec rm -f {} \; 2>/dev/null || :
+	if [ -n "${LOG_FILE_TTL_DAYS:-}" ] && [ -f "${LOG_FILE}" ] && command -v find >/dev/null 2>&1; then
+		find "${LOG_FILE}" -type f -mtime +"${LOG_FILE_TTL_DAYS}" -exec rm -f {} \; 2>/dev/null || :
 	fi
 
-	if [ -n "${LOG_FILE_MAX_BYTES:-}" ] && [ -f "$LOG_FILE" ] && command -v wc >/dev/null 2>&1; then
-		_log_file_size=$(wc -c <"$LOG_FILE" 2>/dev/null | tr -d ' ')
-		case "$_log_file_size:$LOG_FILE_MAX_BYTES" in
+	if [ -n "${LOG_FILE_MAX_BYTES:-}" ] && [ -f "${LOG_FILE}" ] && command -v wc >/dev/null 2>&1; then
+		_log_file_size=$(wc -c <"${LOG_FILE}" 2>/dev/null) || _log_file_size=""
+		# BSD wc pads the count with blanks; trim them with parameter
+		# expansion rather than a `| tr` that would mask wc's exit status.
+		_log_file_size=${_log_file_size#"${_log_file_size%%[![:space:]]*}"}
+		_log_file_size=${_log_file_size%"${_log_file_size##*[![:space:]]}"}
+		case "${_log_file_size}:${LOG_FILE_MAX_BYTES}" in
 		*[!0123456789:]* | :* | *:) return 0 ;;
+		*) ;;
 		esac
-		if [ "$_log_file_size" -ge "$LOG_FILE_MAX_BYTES" ] 2>/dev/null; then
-			mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || :
+		if [ "${_log_file_size}" -ge "${LOG_FILE_MAX_BYTES}" ] 2>/dev/null; then
+			mv -f "${LOG_FILE}" "${LOG_FILE}.1" 2>/dev/null || :
 		fi
 	fi
 }
 
 _log_write_file_line() {
 	_log_prepare_file || return 0
-	printf '%s\n' "$1" >>"$LOG_FILE" 2>/dev/null || :
+	printf '%s\n' "$1" >>"${LOG_FILE}" 2>/dev/null || :
 }
 
 _log_write_stdio_line() {
@@ -503,16 +523,16 @@ _log_write_stdio_line() {
 
 	_ws_fd=$(_log_stdio_fd "$1")
 
-	if _log_use_color_for_fd "$_ws_fd"; then
+	if _log_use_color_for_fd "${_ws_fd}"; then
 		_ws_reset=$(printf '\033[0m')
 		_ws_color=$(_log_kind_color "$2")
-		if [ "$_ws_fd" = "2" ]; then
-			printf '%s%s%s\n' "$_ws_color" "$3" "$_ws_reset" >&2
+		if [ "${_ws_fd}" = "2" ]; then
+			printf '%s%s%s\n' "${_ws_color}" "$3" "${_ws_reset}" >&2
 		else
-			printf '%s%s%s\n' "$_ws_color" "$3" "$_ws_reset"
+			printf '%s%s%s\n' "${_ws_color}" "$3" "${_ws_reset}"
 		fi
 	else
-		if [ "$_ws_fd" = "2" ]; then
+		if [ "${_ws_fd}" = "2" ]; then
 			printf '%s\n' "$3" >&2
 		else
 			printf '%s\n' "$3"
@@ -528,29 +548,54 @@ _log_format_text() {
 	# $1=ts $2=label $3=tag $4=message
 	_lf_label=$(_log_pad_label "$2")
 	if [ -n "$3" ]; then
-		printf '%s %s [%s] %s' "$1" "$_lf_label" "$3" "$4"
+		printf '%s %s [%s] %s' "$1" "${_lf_label}" "$3" "$4"
 	else
-		printf '%s %s %s' "$1" "$_lf_label" "$4"
+		printf '%s %s %s' "$1" "${_lf_label}" "$4"
 	fi
 }
 
 # JSON-escape a single string (printed without surrounding quotes).
 _log_json_escape() {
-	# In awk, the replacement string interprets backslashes specially:
-	# "\\" in source = "\" in replacement. To emit two backslashes we need
-	# four backslashes in the replacement source.
+	# Escaping is done character by character rather than with gsub(), because
+	# awk implementations disagree on backslashes in a gsub() replacement:
+	# gawk collapses `\\` to a single backslash, mawk passes both through. Any
+	# literal that is right for one is wrong for the other, and getting it
+	# wrong silently doubles every backslash in the emitted JSON. Backslash and
+	# double quote are built with sprintf("%c", ...) for the same reason, so no
+	# escaping rule of the awk parser is relied upon.
 	printf '%s' "$1" | LC_ALL=C awk '
-		BEGIN { ORS=""; out = "" }
+		BEGIN {
+			ORS = ""
+			out = ""
+			bs = sprintf("%c", 92)
+			dq = sprintf("%c", 34)
+			named[sprintf("%c", 9)] = "t"
+			named[sprintf("%c", 13)] = "r"
+			named[sprintf("%c", 8)] = "b"
+			named[sprintf("%c", 12)] = "f"
+			# Remaining C0 controls are dropped rather than escaped.
+			for (i = 0; i < 32; i++) ctrl[sprintf("%c", i)] = 1
+		}
 		{
 			s = $0
-			gsub(/\\/, "\\\\\\\\", s)
-			gsub(/"/, "\\\"", s)
-			gsub(/\t/, "\\\\t", s)
-			gsub(/\r/, "\\\\r", s)
-			gsub(/\b/, "\\\\b", s)
-			gsub(/\f/, "\\\\f", s)
-			gsub(/[\000-\037]/, "", s)
-			out = (NR == 1 ? s : out "\\\\n" s)
+			esc = ""
+			n = length(s)
+			for (i = 1; i <= n; i++) {
+				c = substr(s, i, 1)
+				if (c == bs || c == dq) {
+					esc = esc bs c
+				} else if (c in named) {
+					esc = esc bs named[c]
+				} else if (c in ctrl) {
+					continue
+				} else {
+					esc = esc c
+				}
+			}
+			# Embedded newlines become the two-character sequence \n inside the
+			# JSON string, so one log entry stays one line in a JSON Lines
+			# stream (matching text-mode file output).
+			out = (NR == 1 ? esc : out bs bs "n" esc)
 		}
 		END { print out }
 	'
@@ -566,10 +611,10 @@ _log_format_json() {
 	if [ -n "${6:-}" ]; then
 		_jd=$(_log_json_escape "$6")
 		printf '{"timestamp":"%s","level":"%s","kind":"%s","tag":"%s","message":"%s","data":"%s"}' \
-			"$_jt" "$_jl" "$_jk" "$_jg" "$_jm" "$_jd"
+			"${_jt}" "${_jl}" "${_jk}" "${_jg}" "${_jm}" "${_jd}"
 	else
 		printf '{"timestamp":"%s","level":"%s","kind":"%s","tag":"%s","message":"%s"}' \
-			"$_jt" "$_jl" "$_jk" "$_jg" "$_jm"
+			"${_jt}" "${_jl}" "${_jk}" "${_jg}" "${_jm}"
 	fi
 }
 
@@ -585,12 +630,12 @@ _log_emit() {
 	_e_msg="$3"
 	_e_data="${4:-}"
 
-	log_level_enabled "$_e_level" || return 0
+	log_level_enabled "${_e_level}" || return 0
 
-	_e_msg=$(_log_sanitize "$_e_msg")
-	test -n "$_e_msg" || _e_msg="-"
-	if [ -n "$_e_data" ]; then
-		_e_data=$(_log_sanitize "$_e_data")
+	_e_msg=$(_log_sanitize "${_e_msg}")
+	test -n "${_e_msg}" || _e_msg="-"
+	if [ -n "${_e_data}" ]; then
+		_e_data=$(_log_sanitize "${_e_data}")
 	fi
 
 	_e_tag=$(_log_tag)
@@ -598,43 +643,43 @@ _log_emit() {
 	_e_ts_iso=$(_log_ts_iso)
 
 	if [ "${LOG_FORMAT:-text}" = "json" ]; then
-		_e_line=$(_log_format_json "$_e_ts_iso" "$_e_level" "$_e_kind" "$_e_tag" "$_e_msg" "$_e_data")
-		_log_write_stdio_line "$_e_level" "$_e_kind" "$_e_line"
-		_log_write_file_line "$_e_line"
+		_e_line=$(_log_format_json "${_e_ts_iso}" "${_e_level}" "${_e_kind}" "${_e_tag}" "${_e_msg}" "${_e_data}")
+		_log_write_stdio_line "${_e_level}" "${_e_kind}" "${_e_line}"
+		_log_write_file_line "${_e_line}"
 	else
-		_e_stdio_line=$(_log_format_text "$_e_ts_human" "$_e_kind" "$_e_tag" "$_e_msg")
-		_e_file_line=$(_log_format_text "$_e_ts_iso" "$_e_kind" "$_e_tag" "$_e_msg")
-		_log_write_stdio_line "$_e_level" "$_e_kind" "$_e_stdio_line"
-		_log_write_file_line "$_e_file_line"
+		_e_stdio_line=$(_log_format_text "${_e_ts_human}" "${_e_kind}" "${_e_tag}" "${_e_msg}")
+		_e_file_line=$(_log_format_text "${_e_ts_iso}" "${_e_kind}" "${_e_tag}" "${_e_msg}")
+		_log_write_stdio_line "${_e_level}" "${_e_kind}" "${_e_stdio_line}"
+		_log_write_file_line "${_e_file_line}"
 
-		if [ -n "$_e_data" ]; then
+		if [ -n "${_e_data}" ]; then
 			# Iterate lines of the data (already sanitized to the literal
 			# two-char `\n` sequence) and emit each as a continuation entry.
-			_rest="$_e_data"
-			while [ -n "$_rest" ]; do
-				case "$_rest" in
+			_rest="${_e_data}"
+			while [ -n "${_rest}" ]; do
+				case "${_rest}" in
 				*'\n'*)
 					_seg="${_rest%%\\n*}"
 					_rest="${_rest#*\\n}"
 					;;
 				*)
-					_seg="$_rest"
+					_seg="${_rest}"
 					_rest=""
 					;;
 				esac
-				_e_stdio_cont=$(_log_format_text "$_e_ts_human" "$_e_kind" "$_e_tag" "│ $_seg")
-				_e_file_cont=$(_log_format_text "$_e_ts_iso" "$_e_kind" "$_e_tag" "| $_seg")
-				_log_write_stdio_line "$_e_level" "$_e_kind" "$_e_stdio_cont"
-				_log_write_file_line "$_e_file_cont"
+				_e_stdio_cont=$(_log_format_text "${_e_ts_human}" "${_e_kind}" "${_e_tag}" "│ ${_seg}")
+				_e_file_cont=$(_log_format_text "${_e_ts_iso}" "${_e_kind}" "${_e_tag}" "| ${_seg}")
+				_log_write_stdio_line "${_e_level}" "${_e_kind}" "${_e_stdio_cont}"
+				_log_write_file_line "${_e_file_cont}"
 			done
 		fi
 	fi
 
 	# Journal entry uses the original sanitized message and (optionally) data
-	if [ -n "$_e_data" ]; then
-		_log_write_journal "$_e_level" "$_e_kind" "$_e_tag" "$_e_msg | $_e_data"
+	if [ -n "${_e_data}" ]; then
+		_log_write_journal "${_e_level}" "${_e_kind}" "${_e_tag}" "${_e_msg} | ${_e_data}"
 	else
-		_log_write_journal "$_e_level" "$_e_kind" "$_e_tag" "$_e_msg"
+		_log_write_journal "${_e_level}" "${_e_kind}" "${_e_tag}" "${_e_msg}"
 	fi
 }
 
@@ -645,12 +690,12 @@ _log_emit() {
 log() {
 	_lr=$(_log_resolve "${1:-}") && shift || _lr="INFO INFO 30"
 	# shellcheck disable=SC2086
-	set -- $_lr "$@"
+	set -- ${_lr} "$@"
 	# args are now: LEVEL KIND NUM message...
 	_g_level="$1"
 	_g_kind="$2"
 	shift 3
-	_log_emit "$_g_level" "$_g_kind" "$*"
+	_log_emit "${_g_level}" "${_g_kind}" "$*"
 }
 
 log_trace() { _log_emit TRACE TRACE "$*"; }
@@ -686,29 +731,29 @@ log_kv() {
 	# Each argument is a key=value pair. Quote values with whitespace or "=".
 	_kv_msg=""
 	for _kv_pair in "$@"; do
-		case "$_kv_pair" in
+		case "${_kv_pair}" in
 		*=*)
 			_kv_k="${_kv_pair%%=*}"
 			_kv_v="${_kv_pair#*=}"
-			case "$_kv_v" in
-			*' '* | *"$_LOG_NL"* | *'"'*)
+			case "${_kv_v}" in
+			*' '* | *"${_LOG_NL}"* | *'"'*)
 				# Escape inner backslashes and quotes
-				_kv_v_escaped=$(printf '%s' "$_kv_v" | sed 's/\\/\\\\/g; s/"/\\"/g')
-				_kv_msg="$_kv_msg $_kv_k=\"$_kv_v_escaped\""
+				_kv_v_escaped=$(printf '%s' "${_kv_v}" | sed 's/\\/\\\\/g; s/"/\\"/g')
+				_kv_msg="${_kv_msg} ${_kv_k}=\"${_kv_v_escaped}\""
 				;;
 			*)
-				_kv_msg="$_kv_msg $_kv_k=$_kv_v"
+				_kv_msg="${_kv_msg} ${_kv_k}=${_kv_v}"
 				;;
 			esac
 			;;
 		*)
-			_kv_msg="$_kv_msg $_kv_pair"
+			_kv_msg="${_kv_msg} ${_kv_pair}"
 			;;
 		esac
 	done
 	# Strip leading space
 	_kv_msg="${_kv_msg# }"
-	_log_emit INFO INFO "$_kv_msg"
+	_log_emit INFO INFO "${_kv_msg}"
 }
 
 # ----------------------------------------------------------------------------
@@ -747,17 +792,17 @@ log_data() {
 	_ld_first="${1:-INFO}"
 	shift 2>/dev/null || :
 	_ld_msg="$*"
-	test -n "$_ld_msg" || _ld_msg="data"
+	test -n "${_ld_msg}" || _ld_msg="data"
 
-	_ld_resolved=$(_log_resolve "$_ld_first") || _ld_resolved="INFO INFO 30"
+	_ld_resolved=$(_log_resolve "${_ld_first}") || _ld_resolved="INFO INFO 30"
 	# shellcheck disable=SC2086
-	set -- $_ld_resolved
+	set -- ${_ld_resolved}
 	_ld_level="$1"
 	_ld_kind="$2"
 
 	# Read all of stdin
 	_ld_payload=$(cat)
-	_log_emit "$_ld_level" "$_ld_kind" "$_ld_msg" "$_ld_payload"
+	_log_emit "${_ld_level}" "${_ld_kind}" "${_ld_msg}" "${_ld_payload}"
 }
 
 # ----------------------------------------------------------------------------
@@ -790,17 +835,17 @@ log_data() {
 
 log_sep() {
 	_b_kind="${1:-INFO}"
-	_b_resolved=$(_log_resolve "$_b_kind") || _b_resolved="INFO INFO 30"
+	_b_resolved=$(_log_resolve "${_b_kind}") || _b_resolved="INFO INFO 30"
 	# shellcheck disable=SC2086
-	set -- $_b_resolved
+	set -- ${_b_resolved}
 	_b_level="$1"
 	_b_kind="$2"
-	log_level_enabled "$_b_level" || return 0
+	log_level_enabled "${_b_level}" || return 0
 
 	_b_style=$(_log_effective_banner_style)
 	_b_width=$(_log_banner_width)
 
-	case "$_b_style" in
+	case "${_b_style}" in
 	ascii) _b_char="${LOG_RULE_CHAR:-=}" ;;
 	heavy) _b_char="${LOG_RULE_CHAR:-#}" ;;
 	unicode) _b_char="${LOG_RULE_CHAR:-━}" ;;
@@ -809,31 +854,31 @@ log_sep() {
 	*) _b_char="=" ;;
 	esac
 
-	_b_line=$(_log_repeat_char "$_b_char" "$_b_width")
-	_log_emit "$_b_level" "$_b_kind" "$_b_line"
+	_b_line=$(_log_repeat_char "${_b_char}" "${_b_width}")
+	_log_emit "${_b_level}" "${_b_kind}" "${_b_line}"
 }
 
 log_rule() {
 	# log_rule [KIND] <title>
 	_r_kind_arg="${1:-INFO}"
-	_r_resolved=$(_log_resolve "$_r_kind_arg") || _r_resolved=""
-	if [ -n "$_r_resolved" ]; then
+	_r_resolved=$(_log_resolve "${_r_kind_arg}") || _r_resolved=""
+	if [ -n "${_r_resolved}" ]; then
 		shift
 	else
 		_r_resolved="INFO INFO 30"
 	fi
 	# shellcheck disable=SC2086
-	set -- $_r_resolved "$@"
+	set -- ${_r_resolved} "$@"
 	_r_level="$1"
 	_r_kind="$2"
 	shift 3
 	_r_title="$*"
-	log_level_enabled "$_r_level" || return 0
+	log_level_enabled "${_r_level}" || return 0
 
 	_r_style=$(_log_effective_banner_style)
 	_r_width=$(_log_banner_width)
 
-	case "$_r_style" in
+	case "${_r_style}" in
 	ascii) _r_char="${LOG_RULE_CHAR:-=}" ;;
 	heavy) _r_char="${LOG_RULE_CHAR:-#}" ;;
 	unicode) _r_char="${LOG_RULE_CHAR:-━}" ;;
@@ -841,59 +886,59 @@ log_rule() {
 	esac
 
 	# Format: ──── title ──────
-	_r_prefix=$(_log_repeat_char "$_r_char" 4)
+	_r_prefix=$(_log_repeat_char "${_r_char}" 4)
 	_r_used=$((4 + 1 + ${#_r_title} + 1))
 	_r_remain=$((_r_width - _r_used))
-	if [ "$_r_remain" -lt 0 ]; then _r_remain=0; fi
-	_r_suffix=$(_log_repeat_char "$_r_char" "$_r_remain")
-	_r_line="$_r_prefix $_r_title $_r_suffix"
-	_log_emit "$_r_level" "$_r_kind" "$_r_line"
+	if [ "${_r_remain}" -lt 0 ]; then _r_remain=0; fi
+	_r_suffix=$(_log_repeat_char "${_r_char}" "${_r_remain}")
+	_r_line="${_r_prefix} ${_r_title} ${_r_suffix}"
+	_log_emit "${_r_level}" "${_r_kind}" "${_r_line}"
 }
 
 log_banner() {
 	# log_banner <title> [KIND]
 	_bn_title="${1:-}"
 	_bn_kind_arg="${2:-STATE}"
-	_bn_resolved=$(_log_resolve "$_bn_kind_arg") || _bn_resolved="INFO STATE 30"
+	_bn_resolved=$(_log_resolve "${_bn_kind_arg}") || _bn_resolved="INFO STATE 30"
 	# shellcheck disable=SC2086
-	set -- $_bn_resolved
+	set -- ${_bn_resolved}
 	_bn_level="$1"
 	_bn_kind="$2"
-	log_level_enabled "$_bn_level" || return 0
+	log_level_enabled "${_bn_level}" || return 0
 
 	_bn_style=$(_log_effective_banner_style)
 	_bn_width=$(_log_banner_width)
 
 	if [ "${LOG_FORMAT:-text}" = "json" ]; then
 		# Single JSON line for banners.
-		_log_emit "$_bn_level" BANNER "$_bn_title"
+		_log_emit "${_bn_level}" BANNER "${_bn_title}"
 		return 0
 	fi
 
-	if [ "$_bn_style" = "box" ]; then
+	if [ "${_bn_style}" = "box" ]; then
 		_bn_inner=$((_bn_width - 2))
-		if [ "$_bn_inner" -lt 4 ]; then _bn_inner=4; fi
-		_bn_top_mid=$(_log_repeat_char "─" "$_bn_inner")
+		if [ "${_bn_inner}" -lt 4 ]; then _bn_inner=4; fi
+		_bn_top_mid=$(_log_repeat_char "─" "${_bn_inner}")
 		_bn_top="┌${_bn_top_mid}┐"
 		_bn_bot="└${_bn_top_mid}┘"
 
 		# Pad title to inner width minus 2 (one space each side)
 		_bn_pad_target=$((_bn_inner - 2))
-		_bn_t="$_bn_title"
+		_bn_t="${_bn_title}"
 		_bn_t_len=${#_bn_t}
-		while [ "$_bn_t_len" -lt "$_bn_pad_target" ]; do
-			_bn_t="$_bn_t "
+		while [ "${_bn_t_len}" -lt "${_bn_pad_target}" ]; do
+			_bn_t="${_bn_t} "
 			_bn_t_len=$((_bn_t_len + 1))
 		done
-		_bn_mid="│ $_bn_t │"
+		_bn_mid="│ ${_bn_t} │"
 
-		_log_emit "$_bn_level" "$_bn_kind" "$_bn_top"
-		_log_emit "$_bn_level" "$_bn_kind" "$_bn_mid"
-		_log_emit "$_bn_level" "$_bn_kind" "$_bn_bot"
+		_log_emit "${_bn_level}" "${_bn_kind}" "${_bn_top}"
+		_log_emit "${_bn_level}" "${_bn_kind}" "${_bn_mid}"
+		_log_emit "${_bn_level}" "${_bn_kind}" "${_bn_bot}"
 	else
-		log_sep "$_bn_kind_arg"
-		_log_emit "$_bn_level" "$_bn_kind" " $_bn_title"
-		log_sep "$_bn_kind_arg"
+		log_sep "${_bn_kind_arg}"
+		_log_emit "${_bn_level}" "${_bn_kind}" " ${_bn_title}"
+		log_sep "${_bn_kind_arg}"
 	fi
 }
 
@@ -903,9 +948,10 @@ log_banner() {
 
 _log_is_sourced() {
 	if [ -n "${ZSH_EVAL_CONTEXT:-}" ]; then
-		case "$ZSH_EVAL_CONTEXT" in
+		case "${ZSH_EVAL_CONTEXT}" in
 		*:file:*) return 0 ;;
 		*:file) return 0 ;;
+		*) ;;
 		esac
 	fi
 
