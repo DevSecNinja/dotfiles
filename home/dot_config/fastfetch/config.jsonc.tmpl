@@ -16,7 +16,11 @@
     "shell",
     "display",
     "de",
-    "wm",
+    {
+      "//": "Name and protocol only. The default format appends {version}, which under WSLg is the entire multi-line /mnt/wslg/versions.txt dump (component SHAs, build date, ...) and wrecks the layout.",
+      "type": "wm",
+      "format": "{pretty-name}{?protocol-name} ({protocol-name}){?}"
+    },
     "wmtheme",
     "theme",
     "icons",
