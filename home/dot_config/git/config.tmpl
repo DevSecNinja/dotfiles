@@ -69,6 +69,24 @@
 [credential]
 	helper = cache
 # {{ end }}
+{{ $gh := lookPath "gh" }}
+{{- if $gh }}
+# HTTPS auth for GitHub via the GitHub CLI's credential helper — the same thing
+# `gh auth setup-git` writes. It lives here because that command appends to this
+# very file, so the next `chezmoi apply` would silently drop it again and leave
+# `git push` falling back to the generic helper above (and prompting).
+#
+# The empty `helper =` first resets the inherited generic helper for these hosts,
+# so a stale keychain/cache entry cannot shadow the gh token. The path is quoted
+# because git hands `!`-prefixed helpers to a shell.
+{{- $ghPath := $gh | replace "\\" "/" }}
+[credential "https://github.com"]
+	helper =
+	helper = !'{{ $ghPath }}' auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !'{{ $ghPath }}' auth git-credential
+{{- end }}
 
 [diff]
 	colorMoved = zebra
