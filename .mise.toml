@@ -14,7 +14,7 @@ task = "latest"
 chezmoi = "2.71.1"
 
 # Bats for bash testing
-bats = "1.13.0"
+bats = "1.14.0"
 
 # Lefthook for managing git hooks
 lefthook = "latest"
