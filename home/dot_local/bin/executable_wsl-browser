@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Open a URL or file in the Windows default browser, from WSL.
+#
+# WSL has no browser of its own, and no xdg-open. Tools that "open a browser"
+# — `gh auth login`, OAuth flows, `npm docs` — fall back to whatever terminal
+# browser happens to be installed (lynx, w3m). Completing an OAuth flow in lynx
+# is not a good time. Pointing $BROWSER here fixes every such tool at once.
+#
+# The obvious dependency for this is wslu's `wslview`, but that project was
+# archived upstream in 2025 (last release 4.1.3, April 2024) and is not
+# packaged for Debian 13. Rather than install an unmaintained .deb outside apt,
+# we ship these few lines. See docs/wsl.md.
+
+set -euo pipefail
+
+target=${1:-}
+if [ -z "${target}" ]; then
+    echo "usage: ${0##*/} <url|file>" >&2
+    exit 2
+fi
+
+# Windows' Start-Process is a general "run this" verb, not a browser: handed a
+# program name or an .exe path it would execute it. So only pass it things that
+# are unambiguously browsable — an http(s) URL, or a file that exists. Anything
+# else is refused rather than quietly launched.
+if [ -e "${target}" ]; then
+    target=$(wslpath -w "${target}")
+elif [[ ${target} =~ ^https?://[^[:space:]]+$ ]]; then
+    : # a plain http(s) URL — fine
+else
+    echo "${0##*/}: refusing to open '${target}' (not an http(s) URL or existing file)" >&2
+    exit 1
+fi
+
+# The target is handed over as an environment variable rather than interpolated
+# into the PowerShell command string, so a URL containing quotes or semicolons
+# is always data and never code. WSLENV is what makes the variable visible to
+# the Windows process. `--` stops Start-Process reading a leading `-` as a flag.
+export WSLB_TARGET="${target}"
+export WSLENV="${WSLENV:+${WSLENV}:}WSLB_TARGET"
+
+# shellcheck disable=SC2016 # $env: is PowerShell syntax, evaluated on the Windows side.
+exec powershell.exe -NoProfile -NonInteractive \
+    -Command 'Start-Process -- $env:WSLB_TARGET'

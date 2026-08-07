@@ -16,3 +16,8 @@ trim_trailing_whitespace = false
 
 [*.sh]
 indent_size = 4
+
+; Scripts in ~/.local/bin are extensionless by convention, so [*.sh] misses
+; them. Keep them indented like every other shell script in the repo.
+[home/dot_local/bin/*]
+indent_size = 4
