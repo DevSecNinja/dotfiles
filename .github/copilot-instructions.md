@@ -199,14 +199,30 @@ run_once_setup-lefthook.sh         # Install lefthook hooks (runs once on apply)
 | `dot_filename`              | `~/.filename`           | Hidden files                  |
 | `private_filename`          | File with 0600 perms    | Sensitive files               |
 | `executable_script.sh`      | File with +x perms      | Executable scripts            |
-| `run_once_script.sh.tmpl`   | Runs once on apply      | Setup scripts                 |
-| `run_onchange_script.sh`    | Runs when changed       | Update scripts                |
-| `*.tmpl`                    | Processed as template   | Uses Chezmoi template vars    |
+| `run_once_script.sh`        | Runs once on apply      | Prefer native setup scripts   |
+| `run_onchange_script.sh`    | Runs when changed       | Native update scripts         |
+| `run_always_script.ps1`     | Runs on every apply     | Native runtime-checked script |
+| `*.tmpl`                    | Processed as template   | Use only when native is unfit |
 | `dot_config/fish/config.sh` | `~/.config/fish/config` | Directory structure preserved |
 
 ## Important Rules & Behaviors
 
-### 1. Template Variables (.tmpl files)
+### 1. Prefer Native Files and Scripts
+
+**Always start with a native file or script** (`.ps1`, `.sh`, `.fish`, and so
+on). Use Chezmoi's platform directories, ignore rules, script naming, and
+runtime checks to handle conditional behavior.
+
+Only use a `.tmpl` file when native code cannot express the requirement
+cleanly, or when the native alternative becomes harder to understand or
+maintain. Appropriate template uses include rendering Chezmoi data directly
+into configuration files and conditionally generating content that cannot be
+selected at runtime.
+
+Do not introduce a template solely to gate a script when a small, clear native
+runtime check can make the decision.
+
+### 2. Template Variables (.tmpl files)
 
 Available in `*.tmpl` files:
 
@@ -217,7 +233,7 @@ Available in `*.tmpl` files:
 - `{{ .chezmoi.hostname }}` - System hostname
 - `{{ .chezmoi.osRelease.id }}` - OS distribution (e.g., "ubuntu", "debian")
 
-### 2. Installation Mode Detection
+### 3. Installation Mode Detection
 
 **Light mode** (hostname starts with `SVL` but not matching `SVL*DEV`):
 
@@ -227,7 +243,7 @@ Available in `*.tmpl` files:
 
 - Installs: git, vim, tmux, tree, htop, python3-venv, fish (full dev tools)
 
-### 3. OS-Specific Ignore Patterns (.chezmoiignore)
+### 4. OS-Specific Ignore Patterns (.chezmoiignore)
 
 **Windows systems ignore**:
 
@@ -242,7 +258,7 @@ Available in `*.tmpl` files:
 - `AppData/`
 - Windows-specific scripts
 
-### 4. Fish Shell Configuration Loading Order
+### 5. Fish Shell Configuration Loading Order
 
 1. `/etc/fish/config.fish` (system)
 2. `~/.config/fish/config.fish` (main config)
@@ -251,7 +267,7 @@ Available in `*.tmpl` files:
 
 **When editing Fish configs**: Always validate with `fish -n <file>` before committing.
 
-### 5. Lefthook Hook Requirements
+### 6. Lefthook Hook Requirements
 
 **Must run before every commit**:
 
@@ -265,7 +281,7 @@ mise exec -- lefthook run pre-commit --all-files
 home/.chezmoiscripts/linux/run_once_setup-lefthook.sh
 ```
 
-### 6. No Emoji/Unicode in PowerShell Files
+### 7. No Emoji/Unicode in PowerShell Files
 
 **NEVER use emoji characters (🔍, ✅, ❌, 🚀, 📊, ⏱️, ━, etc.) in `.ps1` files.**
 
@@ -284,7 +300,7 @@ PowerShell on Windows may load scripts without UTF-8 BOM encoding, causing multi
 
 **Emoji is fine in**: `.fish`, `.sh`, `.md`, and other UTF-8 native files. Only `.ps1` files are affected.
 
-### 7. Shell Logging — use the `log.sh` helpers
+### 8. Shell Logging — use the `log.sh` helpers
 
 When writing or modifying shell scripts under `home/` that emit diagnostic
 output, prefer the helpers in [`home/dot_config/shell/functions/log.sh`](../home/dot_config/shell/functions/log.sh)
@@ -322,7 +338,7 @@ over raw `echo` / `printf`. Full reference: [`docs/logging.md`](../docs/logging.
    `tests/bash/log-*.bats` (one file per concern: format / kinds / banner /
    injection / structured / shells).
 
-### 8. Never sign PowerShell scripts manually
+### 9. Never sign PowerShell scripts manually
 
 **Do not add, update, or worry about Authenticode signatures on `.ps1` files.**
 Signing is fully automated by the
