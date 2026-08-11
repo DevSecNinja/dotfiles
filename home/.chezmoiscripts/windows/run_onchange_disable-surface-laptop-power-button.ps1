@@ -1,7 +1,6 @@
-# {{ if and (eq .chezmoi.os "windows") (eq .installType "full") }}
 #!/usr/bin/env pwsh
 # Disable the hardware power button on Microsoft Surface Laptop models.
-# Runs in the opinionated full profile and is idempotent.
+# Runs on Windows and is idempotent.
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     "PSAvoidUsingWriteHost",
@@ -110,4 +109,3 @@ function Disable-SurfaceLaptopPowerButton {
 if (-not $SkipApply) {
     Disable-SurfaceLaptopPowerButton | Out-Null
 }
-# {{ end }}

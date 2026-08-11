@@ -21,10 +21,9 @@ The repository supports two installation modes:
 - **Full mode** (dev servers, workstations) — Full development tooling
   including Task and mise.
 
-On Windows, full mode also applies opinionated workstation settings. Microsoft
-Surface Laptop models have the hardware power button set to **Do nothing** for
-both AC and battery power, preventing an accidental press next to Delete from
-suspending or shutting down the computer.
+On Windows, Microsoft Surface Laptop models always have the hardware power
+button set to **Do nothing** for both AC and battery power, preventing an
+accidental press next to Delete from suspending or shutting down the computer.
 
 The mode is auto-detected based on:
 

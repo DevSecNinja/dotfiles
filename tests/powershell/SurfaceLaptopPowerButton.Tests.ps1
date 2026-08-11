@@ -7,10 +7,9 @@
 BeforeAll {
     $script:RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     $script:ScriptPath = Join-Path $script:RepoRoot `
-        "home\.chezmoiscripts\windows\run_onchange_disable-surface-laptop-power-button.ps1.tmpl"
+        "home\.chezmoiscripts\windows\run_onchange_disable-surface-laptop-power-button.ps1"
 
-    $scriptContent = Get-Content -LiteralPath $script:ScriptPath -Raw
-    . ([scriptblock]::Create($scriptContent)) -SkipApply
+    . $script:ScriptPath -SkipApply
 }
 
 Describe "Surface Laptop power button script" -Tag "Unit" {
@@ -27,11 +26,9 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
         $errors | Should -BeNullOrEmpty
     }
 
-    It "is limited to the Windows full profile" {
-        $content = Get-Content -LiteralPath $script:ScriptPath -Raw
-
-        $content | Should -Match 'eq \.chezmoi\.os "windows"'
-        $content | Should -Match 'eq \.installType "full"'
+    It "is a non-template Windows script" {
+        $script:ScriptPath | Should -Match '\.ps1$'
+        $script:ScriptPath | Should -Not -Match '\.tmpl$'
     }
 
     It "recognizes Microsoft Surface Laptop models" {
