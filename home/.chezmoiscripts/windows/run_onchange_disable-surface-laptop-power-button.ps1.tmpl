@@ -28,7 +28,7 @@ function Test-SurfaceLaptop {
     $model = [string]$ComputerSystem.Model
 
     return $manufacturer.Trim() -eq "Microsoft Corporation" -and
-        $model.Trim() -match "^Surface Laptop(?:\s|$)"
+        $model.Trim() -match "^(?:Microsoft )?Surface Laptop(?:[\s,]|$)"
 }
 
 function Invoke-PowerCfg {

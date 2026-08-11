@@ -41,6 +41,13 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
             }) | Should -BeTrue
     }
 
+    It "recognizes the Surface Laptop 7 SMBIOS model" {
+        Test-SurfaceLaptop -ComputerSystem ([pscustomobject]@{
+                Manufacturer = "Microsoft Corporation"
+                Model        = "Microsoft Surface Laptop, 7th Edition"
+            }) | Should -BeTrue
+    }
+
     It "recognizes Surface Laptop Studio models" {
         Test-SurfaceLaptop -ComputerSystem ([pscustomobject]@{
                 Manufacturer = "Microsoft Corporation"
