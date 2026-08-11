@@ -372,6 +372,10 @@ The repository supports two installation modes:
 - **Light mode** (servers, CI, codespaces): Essential tools only
 - **Full mode** (dev servers, workstations): Full development tooling including Task and mise
 
+On Windows, full mode also applies opinionated workstation settings. On
+Microsoft Surface Laptop models, the hardware power button is set to **Do
+nothing** for both AC and battery power.
+
 The mode is auto-detected based on:
 - Hostname patterns (SVLDEV* = full, SVL* = light)
 - Environment (codespaces, devcontainer, CI = light)
