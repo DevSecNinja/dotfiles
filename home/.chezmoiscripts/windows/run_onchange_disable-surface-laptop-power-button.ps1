@@ -41,11 +41,52 @@ function Invoke-PowerCfg {
         throw "powercfg.exe was not found at '$powerCfgPath'."
     }
 
-    $output = & $powerCfgPath @ArgumentList 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        $details = ($output | Out-String).Trim()
-        throw "powercfg.exe failed with exit code $LASTEXITCODE for '$($ArgumentList -join ' ')': $details"
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5.1 surfaces native stderr as NativeCommandError.
+        # Capture it for the exit-code error without treating stderr as success.
+        $ErrorActionPreference = "Continue"
+        $output = & $powerCfgPath @ArgumentList 2>&1
+        $exitCode = $LASTEXITCODE
     }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    if ($exitCode -ne 0) {
+        $details = ($output | Out-String).Trim()
+        throw "powercfg.exe failed with exit code $exitCode for '$($ArgumentList -join ' ')': $details"
+    }
+}
+
+function Get-PowerButtonPolicy {
+    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Power\PowerSettings\7648EFA3-DD9C-4E3E-B566-50F929386280"
+    $policy = [pscustomobject]@{
+        Path  = $policyPath
+        HasAC = $false
+        AC    = $null
+        HasDC = $false
+        DC    = $null
+    }
+
+    if (-not (Test-Path -LiteralPath $policyPath)) {
+        return $policy
+    }
+
+    $values = Get-ItemProperty -LiteralPath $policyPath -ErrorAction Stop
+    $acProperty = $values.PSObject.Properties["ACSettingIndex"]
+    if ($null -ne $acProperty) {
+        $policy.HasAC = $true
+        $policy.AC = [int]$acProperty.Value
+    }
+
+    $dcProperty = $values.PSObject.Properties["DCSettingIndex"]
+    if ($null -ne $dcProperty) {
+        $policy.HasDC = $true
+        $policy.DC = [int]$dcProperty.Value
+    }
+
+    return $policy
 }
 
 function Disable-SurfaceLaptopPowerButton {
@@ -58,6 +99,10 @@ function Disable-SurfaceLaptopPowerButton {
         [scriptblock]$InvokePowerCfg = {
             param([string[]]$ArgumentList)
             Invoke-PowerCfg -ArgumentList $ArgumentList
+        },
+
+        [scriptblock]$GetPowerButtonPolicy = {
+            Get-PowerButtonPolicy
         }
     )
 
@@ -69,6 +114,27 @@ function Disable-SurfaceLaptopPowerButton {
             Changed = $false
             Model   = [string]$computerSystem.Model
         }
+    }
+
+    $policy = & $GetPowerButtonPolicy
+    if ($policy.HasAC -and $policy.HasDC -and $policy.AC -eq 0 -and $policy.DC -eq 0) {
+        Write-Host "[OK] Power button action is managed by Group Policy for AC and battery power." -ForegroundColor Green
+        return [pscustomobject]@{
+            Status  = "ManagedByPolicy"
+            Changed = $false
+            Model   = [string]$computerSystem.Model
+        }
+    }
+
+    if ($policy.HasAC -or $policy.HasDC) {
+        $acValue = if ($policy.HasAC) { [string]$policy.AC } else { "<not configured>" }
+        $dcValue = if ($policy.HasDC) { [string]$policy.DC } else { "<not configured>" }
+        throw (
+            "Group Policy owns the Surface Laptop power-button setting but does not enforce " +
+            "'Take no action' for both power states (ACSettingIndex=$acValue, " +
+            "DCSettingIndex=$dcValue). Update or remove the policy at '$($policy.Path)'; " +
+            "dotfiles will not override managed settings."
+        )
     }
 
     $powerButtonSetting = "7648efa3-dd9c-4e3e-b566-50f929386280"
