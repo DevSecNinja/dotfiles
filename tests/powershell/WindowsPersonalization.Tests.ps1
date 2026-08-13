@@ -114,6 +114,48 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
         $actual.sList | Should -Be ",|String"
     }
 
+    It "keeps audit metadata attached to every applied registry setting" {
+        $allSettings = @(Get-WindowsPersonalizationSetting)
+        $registrySettings = @($allSettings | Where-Object SettingType -eq "Registry")
+        $appliedRegistrySettings = @(
+            Get-WindowsPersonalizationRegistrySetting
+            Get-WindowsNumberFormatRegistrySetting
+        )
+
+        $registrySettings.Count | Should -Be 11
+        $appliedRegistrySettings.Count | Should -Be $registrySettings.Count
+        foreach ($setting in $appliedRegistrySettings) {
+            $setting.Setting | Should -Not -BeNullOrEmpty
+            $setting.Path | Should -Not -BeNullOrEmpty
+            $setting.Name | Should -Not -BeNullOrEmpty
+            $setting.Kind | Should -Not -BeNullOrEmpty
+            $setting.Description | Should -Not -BeNullOrEmpty
+            $setting.Rationale | Should -Not -BeNullOrEmpty
+            $setting.Citation | Should -Not -BeNullOrEmpty
+            $setting.EvidenceGrade | Should -BeIn @(1, 2, 3)
+            $setting.Reversal | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    It "documents cmdlet settings and the post-culture ordering dependency" {
+        $settings = @(Get-WindowsPersonalizationSetting)
+        $cmdletSettings = @($settings | Where-Object SettingType -eq "Cmdlet")
+        $afterCulture = @($settings | Where-Object Phase -eq "AfterCulture")
+
+        $cmdletSettings.Count | Should -Be 3
+        foreach ($setting in $cmdletSettings) {
+            $setting.Command | Should -Not -BeNullOrEmpty
+            $setting.Description | Should -Not -BeNullOrEmpty
+            $setting.Rationale | Should -Not -BeNullOrEmpty
+            $setting.Citation | Should -Match "^https://learn\.microsoft\.com/"
+            $setting.Reversal | Should -Not -BeNullOrEmpty
+        }
+        $afterCulture.Count | Should -Be 3
+        foreach ($setting in $afterCulture) {
+            $setting.Rationale | Should -Match "after Set-Culture"
+        }
+    }
+
     It "accepts only the exact ordered language and keyboard list" {
         Test-WindowsLanguageListDesired -LanguageList (New-TestLanguageList) |
             Should -BeTrue

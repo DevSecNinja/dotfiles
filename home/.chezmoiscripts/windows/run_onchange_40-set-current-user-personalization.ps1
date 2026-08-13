@@ -13,62 +13,158 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Get-WindowsPersonalizationRegistrySetting {
+function Get-WindowsPersonalizationSetting {
     $settings = @(
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-            Name = "AppsUseLightTheme"; Value = 0; Kind = "DWord"
+            Id = "dark-mode-apps"; Setting = "Dark mode for apps"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "AppsUseLightTheme"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Selects the dark theme for applications."
+            Rationale = "Keeps application surfaces in the preferred dark theme. The registry mapping is community-documented, not an official policy contract."
+            Citation = "https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes"
+            EvidenceGrade = 3
+            Reversal = "Set AppsUseLightTheme to 1, delete the value, or choose Light in Settings > Personalization > Colors."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-            Name = "SystemUsesLightTheme"; Value = 0; Kind = "DWord"
+            Id = "dark-mode-system"; Setting = "Dark mode for Windows"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "SystemUsesLightTheme"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Selects the dark theme for the taskbar, Start, and other Windows surfaces."
+            Rationale = "Keeps system surfaces in the preferred dark theme. The registry mapping is community-documented, not an official policy contract."
+            Citation = "https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes"
+            EvidenceGrade = 3
+            Reversal = "Set SystemUsesLightTheme to 1, delete the value, or choose Light in Settings > Personalization > Colors."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-            Name = "RotatingLockScreenOverlayEnabled"; Value = 0; Kind = "DWord"
+            Id = "disable-lockscreen-spotlight-overlay"; Setting = "Lock-screen Spotlight overlays"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"; Name = "RotatingLockScreenOverlayEnabled"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Disables Windows Spotlight lock-screen fun-fact, suggestion, and advertising overlays."
+            Rationale = "Reduces promotional content on the lock screen. This per-user mapping is documented by Microsoft Community rather than an official registry policy."
+            Citation = "https://learn.microsoft.com/en-us/answers/questions/1326668/how-to-disable-windows-spotlight-via-registry"
+            EvidenceGrade = 3
+            Reversal = "Set RotatingLockScreenOverlayEnabled to 1, delete the value, or re-enable lock-screen tips in Settings."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-            Name = "ShowTaskViewButton"; Value = 0; Kind = "DWord"
+            Id = "hide-task-view"; Setting = "Task View button"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "ShowTaskViewButton"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Hides the Task View button while leaving the Win+Tab shortcut available."
+            Rationale = "Removes an unused taskbar control without disabling Task View."
+            Citation = "https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11"
+            EvidenceGrade = 1
+            Reversal = "Set ShowTaskViewButton to 1, delete the value, or enable Task view in Settings > Personalization > Taskbar."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Search"
-            Name = "SearchboxTaskbarMode"; Value = 0; Kind = "DWord"
+            Id = "hide-taskbar-search"; Setting = "Taskbar search"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Search"; Name = "SearchboxTaskbarMode"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Hides the taskbar search box and icon."
+            Rationale = "Removes an unused taskbar control; Windows Search remains available from Start. The value mirrors documented modes but is not itself a documented policy."
+            Citation = "https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11"
+            EvidenceGrade = 2
+            Reversal = "Set SearchboxTaskbarMode to 3, delete the value, or select Search box in Settings > Personalization > Taskbar."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-            Name = "HideFileExt"; Value = 0; Kind = "DWord"
+            Id = "show-file-extensions"; Setting = "File-name extensions"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "HideFileExt"
+            Value = 0; Kind = "DWord"; Command = $null
+            Description = "Shows known file-type extensions in File Explorer."
+            Rationale = "Improves clarity and helps expose misleading names such as invoice.pdf.exe. The exact registry mapping has no retained authoritative citation."
+            Citation = "Unverified"
+            EvidenceGrade = 3
+            Reversal = "Set HideFileExt to 1, delete the value, or clear View > Show > File name extensions in File Explorer."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-            Name = "Hidden"; Value = 1; Kind = "DWord"
+            Id = "show-hidden-items"; Setting = "Hidden files and folders"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "Hidden"
+            Value = 1; Kind = "DWord"; Command = $null
+            Description = "Shows hidden files and folders in File Explorer."
+            Rationale = "Makes configuration and development files directly accessible. The exact registry mapping has no retained authoritative citation."
+            Citation = "Unverified"
+            EvidenceGrade = 3
+            Reversal = "Set Hidden to 2, delete the value, or clear View > Show > Hidden items in File Explorer."
         }
         [pscustomobject]@{
-            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
-            Name = "BackgroundType"; Value = 3; Kind = "DWord"
+            Id = "spotlight-desktop-background"; Setting = "Desktop background"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"; Name = "BackgroundType"
+            Value = 3; Kind = "DWord"; Command = $null
+            Description = "Selects Windows Spotlight as the desktop background."
+            Rationale = "Uses the rotating Spotlight image. Microsoft documents Spotlight as wallpaper kind 3, but this per-user registry mirror is best-effort and community-grade."
+            Citation = "https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11"
+            EvidenceGrade = 3
+            Reversal = "Set BackgroundType to 1, delete the value, or choose another background in Settings > Personalization > Background."
+        }
+        [pscustomobject]@{
+            Id = "culture-nl"; Setting = "Regional format"; SettingType = "Cmdlet"; Phase = "Culture"
+            Path = $null; Name = "Culture"; Value = "nl-NL"; Kind = $null; Command = "Set-Culture"
+            Description = "Sets the current user's regional format to Dutch (Netherlands), including 24-hour time and day-month-year dates."
+            Rationale = "Uses the supported per-user cmdlet without changing the English display language. Set-Culture rewrites regional overrides, so number separators must run afterward."
+            Citation = "https://learn.microsoft.com/en-us/powershell/module/international/set-culture"
+            EvidenceGrade = 1
+            Reversal = "Run Set-Culture -CultureInfo en-US or select another Regional format in Settings > Time & language > Language & region."
+        }
+        [pscustomobject]@{
+            Id = "home-location-nl"; Setting = "Home location"; SettingType = "Cmdlet"; Phase = "Culture"
+            Path = $null; Name = "HomeLocation"; Value = 176; Kind = $null; Command = "Set-WinHomeLocation"
+            Description = "Sets the current user's home location GeoID to 176 (Netherlands)."
+            Rationale = "Aligns Region > Country or region with the Dutch regional format through the supported per-user cmdlet."
+            Citation = "https://learn.microsoft.com/en-us/powershell/module/international/set-winhomelocation"
+            EvidenceGrade = 1
+            Reversal = "Run Set-WinHomeLocation -GeoId 244 for the United States or choose another Country or region in Settings."
+        }
+        [pscustomobject]@{
+            Id = "language-list-us-international"; Setting = "Languages and keyboards"; SettingType = "Cmdlet"; Phase = "Culture"
+            Path = $null; Name = "LanguageList"
+            Value = "en-US:0409:00020409; nl-NL:0413:00020409"; Kind = $null; Command = "Set-WinUserLanguageList"
+            Description = "Sets exactly en-US then nl-NL, both using the United States-International keyboard layout."
+            Rationale = "Keeps English first while removing the unwanted plain-US layout. The supported cmdlet avoids hand-editing the serialized per-user language profile."
+            Citation = "https://learn.microsoft.com/en-us/powershell/module/international/set-winuserlanguagelist"
+            EvidenceGrade = 1
+            Reversal = "Use Settings > Time & language > Language & region, or run Set-WinUserLanguageList en-US -Force, to restore a normal single-language list."
+        }
+        [pscustomobject]@{
+            Id = "number-format-decimal-us"; Setting = "Decimal separator"; SettingType = "Registry"; Phase = "AfterCulture"
+            Path = "Control Panel\International"; Name = "sDecimal"; Value = "."; Kind = "String"; Command = $null
+            Description = "Uses a dot as the decimal symbol."
+            Rationale = "A comma CSV delimiter requires the decimal symbol to differ from the list separator. Applied after Set-Culture because that cmdlet restores nl-NL defaults."
+            Citation = "https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants"
+            EvidenceGrade = 2
+            Reversal = "Set sDecimal to ',' to restore the nl-NL default, or choose another Regional format."
+        }
+        [pscustomobject]@{
+            Id = "number-format-thousands-us"; Setting = "Thousands separator"; SettingType = "Registry"; Phase = "AfterCulture"
+            Path = "Control Panel\International"; Name = "sThousand"; Value = ","; Kind = "String"; Command = $null
+            Description = "Uses a comma as the digit-grouping symbol."
+            Rationale = "Completes the preferred US-style number format after the decimal symbol becomes a dot. Applied after Set-Culture because that cmdlet restores nl-NL defaults."
+            Citation = "https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants"
+            EvidenceGrade = 2
+            Reversal = "Set sThousand to '.' to restore the nl-NL default, or choose another Regional format."
+        }
+        [pscustomobject]@{
+            Id = "number-format-list-us"; Setting = "List separator"; SettingType = "Registry"; Phase = "AfterCulture"
+            Path = "Control Panel\International"; Name = "sList"; Value = ","; Kind = "String"; Command = $null
+            Description = "Uses a comma as the list separator for comma-delimited CSV files."
+            Rationale = "Excel uses the user list separator for CSV columns. Applied after Set-Culture, and after sDecimal, because Windows does not allow list and decimal separators to match."
+            Citation = "https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants"
+            EvidenceGrade = 2
+            Reversal = "Set sList to ';' to restore the nl-NL default, or choose another Regional format."
         }
     )
 
     return $settings
 }
 
-function Get-WindowsNumberFormatRegistrySetting {
-    $settings = @(
-        [pscustomobject]@{
-            Path = "Control Panel\International"
-            Name = "sDecimal"; Value = "."; Kind = "String"
-        }
-        [pscustomobject]@{
-            Path = "Control Panel\International"
-            Name = "sThousand"; Value = ","; Kind = "String"
-        }
-        [pscustomobject]@{
-            Path = "Control Panel\International"
-            Name = "sList"; Value = ","; Kind = "String"
-        }
-    )
+function Get-WindowsPersonalizationRegistrySetting {
+    return @(Get-WindowsPersonalizationSetting | Where-Object {
+            $_.SettingType -eq "Registry" -and $_.Phase -eq "BeforeCulture"
+        })
+}
 
-    return $settings
+function Get-WindowsNumberFormatRegistrySetting {
+    return @(Get-WindowsPersonalizationSetting | Where-Object {
+            $_.SettingType -eq "Registry" -and $_.Phase -eq "AfterCulture"
+        })
 }
 
 function Test-WindowsLanguageListDesired {
