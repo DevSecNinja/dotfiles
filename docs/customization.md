@@ -232,6 +232,27 @@ PATH when the folder exists, so it survives reboots and is available to GUI
 apps. The PowerShell profile also adds the same folder to the current session
 when OneDrive is configured.
 
+## Windows personalization
+
+On Windows, `run_onchange_40-set-current-user-personalization.ps1` applies the
+opinionated settings below to the invoking user's profile without elevation:
+
+- dark app and system themes, a hidden taskbar search box and Task View button,
+  visible file extensions and hidden items, reduced lock-screen Spotlight
+  overlays, and Windows Spotlight for the desktop background;
+- Dutch (Netherlands) regional formatting and home location while retaining
+  English (`en-US`) as the first input language;
+- `en-US` followed by `nl-NL`, both using the United States-International
+  keyboard layout; and
+- US decimal, thousands, and list separators (`.`, `,`, `,`) so comma-delimited
+  CSV files work as expected.
+
+The script checks exact desired state before every change and preserves
+unrelated registry values. It intentionally replaces the input-language list
+with the two entries above. Number separators are applied after `Set-Culture`,
+which otherwise restores the Dutch defaults. All registry writes are limited to
+`HKEY_CURRENT_USER`.
+
 ## Learn More
 
 - [Chezmoi documentation](https://www.chezmoi.io/user-guide/command-overview/)
