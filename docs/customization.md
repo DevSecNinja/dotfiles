@@ -232,6 +232,38 @@ PATH when the folder exists, so it survives reboots and is available to GUI
 apps. The PowerShell profile also adds the same folder to the current session
 when OneDrive is configured.
 
+## Windows personalization
+
+On Windows, `run_onchange_40-set-current-user-personalization.ps1` applies the
+opinionated settings below to the invoking user's profile without elevation:
+
+| Preference | Applied value | Evidence/source | Normal alternative or reversal |
+| ---------- | ------------- | --------------- | ------------------------------ |
+| App and Windows theme | Dark (`AppsUseLightTheme=0`, `SystemUsesLightTheme=0`) | Grade 3: related [Microsoft theme guidance](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes), but the registry mappings are community-documented | Choose Light in Settings > Personalization > Colors, delete the values, or set both to `1` |
+| Lock-screen Spotlight overlays | Off (`RotatingLockScreenOverlayEnabled=0`) | Grade 3: [Microsoft Community mapping](https://learn.microsoft.com/en-us/answers/questions/1326668/how-to-disable-windows-spotlight-via-registry) | Re-enable lock-screen tips, delete the value, or set it to `1` |
+| Task View button | Hidden (`ShowTaskViewButton=0`) | Grade 1: [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11) | Enable Task view in taskbar settings, delete the value, or set it to `1` |
+| Taskbar search | Hidden (`SearchboxTaskbarMode=0`) | Grade 2: modes correspond to the [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but this value is not a documented policy | Select Search box in taskbar settings, delete the value, or set it to `3` |
+| File-name extensions | Shown (`HideFileExt=0`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's File name extensions option, delete the value, or set it to `1` |
+| Hidden files and folders | Shown (`Hidden=1`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's Hidden items option, delete the value, or set it to `2` |
+| Desktop background | Windows Spotlight (`BackgroundType=3`) | Grade 3: Spotlight is documented in the [settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but the registry mirror is best-effort | Choose another background, delete the value, or set image mode (`1`) |
+| Regional format | Dutch (Netherlands), `nl-NL` | Grade 1: [`Set-Culture`](https://learn.microsoft.com/en-us/powershell/module/international/set-culture) | Select another regional format or run `Set-Culture -CultureInfo en-US` |
+| Home location | Netherlands, GeoID `176` | Grade 1: [`Set-WinHomeLocation`](https://learn.microsoft.com/en-us/powershell/module/international/set-winhomelocation) | Select another country or run `Set-WinHomeLocation -GeoId 244` for the US |
+| Languages and keyboards | `en-US`, then `nl-NL`; both US-International (`00020409`) | Grade 1: [`Set-WinUserLanguageList`](https://learn.microsoft.com/en-us/powershell/module/international/set-winuserlanguagelist) | Edit Language & region settings or run `Set-WinUserLanguageList en-US -Force` |
+| Number and CSV separators | Decimal `.`, thousands `,`, list `,` | Grade 2: [Windows locale constants](https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants) document the fields; registry behavior is vendor-observed | Restore Dutch defaults: decimal `,`, thousands `.`, list `;` |
+
+The script checks exact desired state before every change and preserves
+unrelated registry values. It intentionally replaces the input-language list
+with the two entries above. Number separators are applied after `Set-Culture`,
+which rewrites `HKCU\Control Panel\International` and otherwise restores the
+Dutch defaults. The decimal symbol is restored first because Windows will not
+allow the decimal and list separators to match. All registry writes are limited
+to `HKEY_CURRENT_USER`.
+
+The executable settings table in the script carries the same descriptions,
+rationales, citations, evidence grades, and reversal guidance next to each
+desired value. Tests require those fields for every applied registry setting so
+this audit context cannot silently drift away from the implementation.
+
 ## Learn More
 
 - [Chezmoi documentation](https://www.chezmoi.io/user-guide/command-overview/)
