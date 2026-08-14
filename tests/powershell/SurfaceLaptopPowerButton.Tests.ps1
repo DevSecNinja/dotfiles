@@ -66,6 +66,27 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
             }) | Should -BeFalse
     }
 
+    It "reads the documented AC and DC policy values" {
+        $expectedPath = "HKLM:\SOFTWARE\Policies\Microsoft\Power\PowerSettings\7648EFA3-DD9C-4E3E-B566-50F929386280"
+        Mock Test-Path { $true } -ParameterFilter { $LiteralPath -eq $expectedPath }
+        Mock Get-ItemProperty {
+            [pscustomobject]@{
+                ACSettingIndex = 0
+                DCSettingIndex = 0
+            }
+        } -ParameterFilter { $LiteralPath -eq $expectedPath }
+
+        $result = Get-PowerButtonPolicy
+
+        $result.Path | Should -Be $expectedPath
+        $result.HasAC | Should -BeTrue
+        $result.AC | Should -Be 0
+        $result.HasDC | Should -BeTrue
+        $result.DC | Should -Be 0
+        Should -Invoke Get-ItemProperty -Times 1 -Exactly `
+            -ParameterFilter { $LiteralPath -eq $expectedPath }
+    }
+
     It "does not invoke powercfg on non-Surface hardware" {
         $script:PowerCfgCalls = @()
 
@@ -99,6 +120,14 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
             -InvokePowerCfg {
                 param([string[]]$ArgumentList)
                 $script:PowerCfgCalls += , $ArgumentList
+            } `
+            -GetPowerButtonPolicy {
+                [pscustomobject]@{
+                    HasAC = $false
+                    AC    = $null
+                    HasDC = $false
+                    DC    = $null
+                }
             }
 
         $result.Status | Should -Be "Disabled"
@@ -117,6 +146,73 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
         $script:PowerCfgCalls[2] -join " " | Should -Be "/SETACTIVE SCHEME_CURRENT"
     }
 
+    It "does not invoke powercfg when the desired policy manages both power states" {
+        $script:PowerCfgCalls = @()
+        $policy = {
+            [pscustomobject]@{
+                Path  = "HKLM:\policy"
+                HasAC = $true
+                AC    = 0
+                HasDC = $true
+                DC    = 0
+            }
+        }
+        $surface = {
+            [pscustomobject]@{
+                Manufacturer = "Microsoft Corporation"
+                Model        = "Surface Laptop 7"
+            }
+        }
+        $powerCfg = {
+            param([string[]]$ArgumentList)
+            $script:PowerCfgCalls += , $ArgumentList
+        }
+
+        $firstResult = Disable-SurfaceLaptopPowerButton `
+            -GetComputerSystem $surface `
+            -InvokePowerCfg $powerCfg `
+            -GetPowerButtonPolicy $policy
+        $secondResult = Disable-SurfaceLaptopPowerButton `
+            -GetComputerSystem $surface `
+            -InvokePowerCfg $powerCfg `
+            -GetPowerButtonPolicy $policy
+
+        $firstResult.Status | Should -Be "ManagedByPolicy"
+        $firstResult.Changed | Should -BeFalse
+        $secondResult.Status | Should -Be "ManagedByPolicy"
+        $secondResult.Changed | Should -BeFalse
+        $script:PowerCfgCalls | Should -BeNullOrEmpty
+    }
+
+    It "rejects conflicting policy without invoking powercfg" {
+        $script:PowerCfgCalls = @()
+
+        {
+            Disable-SurfaceLaptopPowerButton `
+                -GetComputerSystem {
+                    [pscustomobject]@{
+                        Manufacturer = "Microsoft Corporation"
+                        Model        = "Surface Laptop 7"
+                    }
+                } `
+                -InvokePowerCfg {
+                    param([string[]]$ArgumentList)
+                    $script:PowerCfgCalls += , $ArgumentList
+                } `
+                -GetPowerButtonPolicy {
+                    [pscustomobject]@{
+                        Path  = "HKLM:\SOFTWARE\Policies\Microsoft\Power\PowerSettings\7648EFA3-DD9C-4E3E-B566-50F929386280"
+                        HasAC = $true
+                        AC    = 1
+                        HasDC = $true
+                        DC    = 0
+                    }
+                }
+        } | Should -Throw "*Group Policy owns*ACSettingIndex=1, DCSettingIndex=0*will not override*"
+
+        $script:PowerCfgCalls | Should -BeNullOrEmpty
+    }
+
     It "does not invoke powercfg under WhatIf" {
         $script:PowerCfgCalls = @()
 
@@ -131,6 +227,14 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
                 param([string[]]$ArgumentList)
                 $script:PowerCfgCalls += , $ArgumentList
             } `
+            -GetPowerButtonPolicy {
+                [pscustomobject]@{
+                    HasAC = $false
+                    AC    = $null
+                    HasDC = $false
+                    DC    = $null
+                }
+            } `
             -WhatIf
 
         $result.Status | Should -Be "WhatIf"
@@ -138,7 +242,7 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
         $script:PowerCfgCalls | Should -BeNullOrEmpty
     }
 
-    It "propagates powercfg failures" {
+    It "propagates native-command failures on unmanaged devices" {
         {
             Disable-SurfaceLaptopPowerButton `
                 -GetComputerSystem {
@@ -148,9 +252,17 @@ Describe "Surface Laptop power button script" -Tag "Unit" {
                     }
                 } `
                 -InvokePowerCfg {
-                    throw "powercfg failed"
+                    throw "powercfg.exe failed with exit code 1"
+                } `
+                -GetPowerButtonPolicy {
+                    [pscustomobject]@{
+                        HasAC = $false
+                        AC    = $null
+                        HasDC = $false
+                        DC    = $null
+                    }
                 }
-        } | Should -Throw "*powercfg failed*"
+        } | Should -Throw "*powercfg.exe failed with exit code 1*"
     }
 }
 
