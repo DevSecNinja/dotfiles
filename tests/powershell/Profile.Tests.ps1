@@ -216,9 +216,19 @@ Describe "Profile Configuration" {
     }
 
     It "Profile should set location to projects folder" {
-        # Verify the profile constructs projects path and changes to it
+        # Verify the profile resolves the projects path and changes to it
+        $script:ProfileContent | Should -Match 'Get-ProjectsPath'
         $script:ProfileContent | Should -Match 'Join-Path.*USERPROFILE.*projects'
         $script:ProfileContent | Should -Match 'Set-Location.*projectsPath'
+    }
+
+    It "Profile should import DotfilesHelpers before resolving the projects path" {
+        # Get-ProjectsPath comes from the module, so the import has to happen first
+        $importIndex = $script:ProfileContent.IndexOf('Import-Module $dotfilesModulePath')
+        $projectsIndex = $script:ProfileContent.IndexOf('Get-ProjectsPath')
+
+        $importIndex | Should -BeGreaterThan -1
+        $projectsIndex | Should -BeGreaterThan $importIndex
     }
 
     It "Profile should verify projects folder exists before changing" {

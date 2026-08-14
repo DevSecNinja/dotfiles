@@ -61,6 +61,12 @@ the dotfiles.
     cd dotfiles
     ```
 
+    !!! tip "Using a Dev Drive"
+        If you have a [Dev Drive](https://learn.microsoft.com/en-us/windows/dev-drive/),
+        clone into `<Dev Drive>\projects` instead (for example `D:\projects`) —
+        that's the folder the PowerShell profile will `cd` into afterwards. See
+        [Projects folder and Dev Drive](customization.md#projects-folder-and-dev-drive).
+
     To use SSH afterwards (e.g. with the 1Password SSH agent), install
     1Password and enable the agent, then switch the remote to SSH:
 

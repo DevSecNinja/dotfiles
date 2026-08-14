@@ -15,6 +15,11 @@
         'Set-LocationUp'
         'Set-LocationUpUp'
 
+        # Dev Drive / projects folder
+        'Test-DevDriveSupported'
+        'Get-DevDrivePath'
+        'Get-ProjectsPath'
+
         # System utilities
         'which'
         'touch'
