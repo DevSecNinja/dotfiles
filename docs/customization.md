@@ -225,6 +225,34 @@ so the noise around it is turned off rather than printed twice:
   are skipped whenever the fastfetch banner rendered. On a light install without
   fastfetch they stay, so an interactive shell still confirms the profile loaded.
 
+## Projects folder and Dev Drive
+
+Interactive shells `cd` into your projects folder at startup (unless the shell
+was launched from VS Code, or you're already somewhere under a path containing
+`projects`).
+
+On Windows the folder is resolved by `Get-ProjectsPath` in the order below, so a
+[Dev Drive](https://learn.microsoft.com/en-us/windows/dev-drive/) — a ReFS
+volume tuned for developer workloads — wins over the user profile:
+
+1. `$env:PROJECTS_PATH`, when set.
+2. `<Dev Drive>\projects`, when a Dev Drive has one (for example `D:\projects`).
+3. `%USERPROFILE%\projects`.
+
+`run_once_before_00-setup.ps1` creates the folder on the Dev Drive when one is
+present, so a fresh machine with a Dev Drive gets `D:\projects` instead of
+`%USERPROFILE%\projects`.
+
+!!! note "How the Dev Drive is detected"
+    `fsutil devdrv query` is the authoritative check, but it needs an elevated
+    shell — unusable from a profile. Fixed, ready ReFS volumes are used as the
+    heuristic instead. If that guesses wrong (a plain ReFS data volume, or
+    several Dev Drives), pin the right one with `$env:DEV_DRIVE`, or skip
+    detection entirely with `$env:PROJECTS_PATH`.
+
+The Linux/macOS shell configs (`fish`, `bash`, `zsh`) always use
+`$HOME/projects`; Dev Drive is a Windows-only feature.
+
 ## Windows PATH
 
 On Windows, the setup adds `%OneDrive%\Portable Programs` to the user-scope

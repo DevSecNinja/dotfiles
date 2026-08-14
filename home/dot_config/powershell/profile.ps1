@@ -51,11 +51,23 @@ if ($env:OneDrive) {
     }
 }
 
+# Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
+$dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
+if (Test-Path $dotfilesModulePath) {
+    Import-Module $dotfilesModulePath -DisableNameChecking
+}
+
 # Set working directory to projects folder if not already there
+# Get-ProjectsPath prefers a Dev Drive over $env:USERPROFILE when one exists
 # Skip this if running in VS Code to preserve the opened folder location
 if ($ENV:TERM_PROGRAM -ne "vscode") {
     $currentPath = (Get-Location).Path
-    $projectsPath = Join-Path $env:USERPROFILE "projects"
+    $projectsPath = if (Get-Command Get-ProjectsPath -ErrorAction SilentlyContinue) {
+        Get-ProjectsPath
+    }
+    else {
+        Join-Path $env:USERPROFILE "projects"
+    }
 
     # Check if current path contains 'projects' (case-insensitive)
     if ($currentPath -notlike "*projects*") {
@@ -64,12 +76,6 @@ if ($ENV:TERM_PROGRAM -ne "vscode") {
             Set-Location $projectsPath
         }
     }
-}
-
-# Load DotfilesHelpers module (lazy-loadable via PSModulePath, explicit import for profile)
-$dotfilesModulePath = Join-Path $PSScriptRoot "modules\DotfilesHelpers"
-if (Test-Path $dotfilesModulePath) {
-    Import-Module $dotfilesModulePath -DisableNameChecking
 }
 
 # Load aliases

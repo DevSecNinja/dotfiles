@@ -5,10 +5,34 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ">> Running initial Windows setup..." -ForegroundColor Cyan
 
+# Prefer a Dev Drive (fixed ReFS volume) over the user profile for source code.
+# "fsutil devdrv query" needs elevation, so fixed ReFS volumes are the heuristic.
+# Set DEV_DRIVE to pin a specific volume.
+$devDriveRoot = $null
+
+if (-not [string]::IsNullOrWhiteSpace($env:DEV_DRIVE) -and (Test-Path -LiteralPath $env:DEV_DRIVE.Trim().Trim('"'))) {
+    $devDriveRoot = $env:DEV_DRIVE.Trim().Trim('"')
+}
+else {
+    $devDriveRoot = [System.IO.DriveInfo]::GetDrives() |
+        Where-Object { $_.IsReady -and $_.DriveType -eq [System.IO.DriveType]::Fixed -and $_.DriveFormat -eq 'ReFS' } |
+        Sort-Object Name |
+        Select-Object -First 1 -ExpandProperty RootDirectory |
+        Select-Object -ExpandProperty FullName
+}
+
+$projectsPath = if ($devDriveRoot) {
+    Write-Host "Dev Drive detected: $devDriveRoot" -ForegroundColor Cyan
+    Join-Path $devDriveRoot "projects"
+}
+else {
+    Join-Path $env:USERPROFILE "projects"
+}
+
 # Create necessary directories
 $directories = @(
     "$env:USERPROFILE\bin",
-    "$env:USERPROFILE\projects"
+    $projectsPath
 )
 
 foreach ($dir in $directories) {
