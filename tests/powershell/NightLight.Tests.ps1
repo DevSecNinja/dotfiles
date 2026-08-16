@@ -295,6 +295,25 @@ Describe "Strength conversion" -Tag "Unit" {
     }
 }
 
+Describe "Default settings" -Tag "Unit" {
+    It "describes a sunset-to-sunrise schedule with no cached solar times" {
+        $defaults = Get-NightLightDefaultSetting
+        $defaults.ScheduleEnabled | Should -BeTrue
+        $defaults.SetHoursMode | Should -BeFalse
+        $defaults.SunsetHour | Should -Be 0
+        $defaults.SunriseHour | Should -Be 0
+    }
+
+    It "round-trips through the payload codec" {
+        $defaults = Get-NightLightDefaultSetting
+        $payload = ConvertTo-NightLightSettingsPayload -Settings $defaults
+        $decoded = ConvertFrom-NightLightSettingsPayload -Payload $payload
+        $decoded.StartHour | Should -Be $defaults.StartHour
+        $decoded.EndHour | Should -Be $defaults.EndHour
+        $decoded.ScheduleEnabled | Should -BeTrue
+    }
+}
+
 Describe "Night window detection" -Tag "Unit" {
     BeforeAll {
         $script:WindowSettings = [pscustomobject]@{
@@ -396,12 +415,44 @@ Describe "Set-NightLightConfiguration" -Tag "Unit" {
         @($results | Where-Object { $_.Status -eq "WhatIf" }).Count | Should -BeGreaterThan 0
     }
 
-    It "fails with actionable guidance when Night Light was never initialised" {
-        $fake = script:New-FakeNightLightRegistry -SettingsBlob $null
+    It "creates the settings from scratch when Night Light was never initialised" {
+        $fake = script:New-FakeNightLightRegistry -SettingsBlob $null -StateBlob $null
+        $results = Set-NightLightConfiguration -Strength 50 -Now ([DateTime]::Parse("22:00")) `
+            -GetRegistryValue { param([string]$Path) $fake.Store[$Path] } `
+            -SetRegistryValue { param([string]$Path, [byte[]]$Value) $fake.Store[$Path] = $Value; $fake.Writes.Add($Path) }
+
+        @($results | Where-Object { $_.Changed }).Count | Should -BeGreaterThan 0
+        $fake.Store.ContainsKey($script:NightLightSettingsPath) | Should -BeTrue
+
+        $written = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob $fake.Store[$script:NightLightSettingsPath]).Payload
+        $written.ScheduleEnabled | Should -BeTrue
+        $written.SetHoursMode | Should -BeFalse
+        $written.ColorTemperature | Should -Be 3850
+    }
+
+    It "leaves sunset and sunrise unset when creating from scratch" {
+        # Windows computes these from the machine location; seeding them would
+        # only risk storing wrong times.
+        $fake = script:New-FakeNightLightRegistry -SettingsBlob $null -StateBlob $null
+        Set-NightLightConfiguration -Strength 50 -Now ([DateTime]::Parse("22:00")) `
+            -GetRegistryValue { param([string]$Path) $fake.Store[$Path] } `
+            -SetRegistryValue { param([string]$Path, [byte[]]$Value) $fake.Store[$Path] = $Value; $fake.Writes.Add($Path) } | Out-Null
+
+        $written = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob $fake.Store[$script:NightLightSettingsPath]).Payload
+        $written.SunsetHour | Should -Be 0
+        $written.SunriseHour | Should -Be 0
+
+        # With no solar window known, Night Light must not be forced on.
+        $state = ConvertFrom-NightLightStatePayload -Payload (ConvertFrom-CloudStoreBlob -Blob $fake.Store[$script:NightLightStatePath]).Payload
+        $state.Enabled | Should -BeFalse
+    }
+
+    It "does not throw on a host where Night Light was never initialised" {
+        $fake = script:New-FakeNightLightRegistry -SettingsBlob $null -StateBlob $null
         {
             Set-NightLightConfiguration -Strength 50 `
                 -GetRegistryValue { param([string]$Path) $fake.Store[$Path] } `
                 -SetRegistryValue { param([string]$Path, [byte[]]$Value) $fake.Store[$Path] = $Value }
-        } | Should -Throw "*not initialised*"
+        } | Should -Not -Throw
     }
 }

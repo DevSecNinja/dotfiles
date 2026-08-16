@@ -536,6 +536,34 @@ function Test-WindowsHost {
     return [bool](Get-Variable -Name IsWindows -ValueOnly -ErrorAction SilentlyContinue)
 }
 
+function Get-NightLightDefaultSetting {
+    <#
+        .SYNOPSIS
+            Baseline settings for a machine where Night Light was never used.
+
+        .DESCRIPTION
+            Sunset and sunrise are left at their defaults (00:00). Windows
+            recomputes them from the machine location and writes them back, so
+            seeding them here would only risk storing wrong times.
+    #>
+    [OutputType([psobject])]
+    param()
+
+    return [pscustomobject]@{
+        ScheduleEnabled  = $true
+        SetHoursMode     = $false
+        StartHour        = 21
+        StartMinute      = 0
+        EndHour          = 7
+        EndMinute        = 0
+        ColorTemperature = $script:NightLightMaxKelvin
+        SunsetHour       = 0
+        SunsetMinute     = 0
+        SunriseHour      = 0
+        SunriseMinute    = 0
+    }
+}
+
 function Set-NightLightConfiguration {
     <#
         .SYNOPSIS
@@ -583,12 +611,18 @@ function Set-NightLightConfiguration {
     $desiredKelvin = ConvertTo-NightLightColorTemperature -Strength $Strength
 
     $settingsBlob = & $GetRegistryValue -Path $script:NightLightSettingsPath
-    if (-not $settingsBlob) {
-        throw "Night Light settings are not initialised. Open Settings > System > Display > Night light once, then re-run."
+    if ($settingsBlob) {
+        $settings = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob ([byte[]]$settingsBlob)).Payload
+    }
+    else {
+        # Night Light has never been used on this machine (fresh install, or a
+        # host without the feature). Seed a baseline rather than failing the
+        # whole chezmoi apply.
+        Write-Verbose "Night Light settings not present; creating them from scratch."
+        $settings = Get-NightLightDefaultSetting
     }
 
-    $settings = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob ([byte[]]$settingsBlob)).Payload
-    $settingsCorrect = $settings.ScheduleEnabled -and -not $settings.SetHoursMode -and $settings.ColorTemperature -eq $desiredKelvin
+    $settingsCorrect = $settingsBlob -and $settings.ScheduleEnabled -and -not $settings.SetHoursMode -and $settings.ColorTemperature -eq $desiredKelvin
 
     if ($settingsCorrect) {
         $results += [pscustomobject]@{ Setting = "Schedule and strength"; Status = "AlreadySet"; Changed = $false }
