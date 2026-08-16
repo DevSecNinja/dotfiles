@@ -292,6 +292,45 @@ rationales, citations, evidence grades, and reversal guidance next to each
 desired value. Tests require those fields for every applied registry setting so
 this audit context cannot silently drift away from the implementation.
 
+## Windows Night Light
+
+On Windows, `run_onchange_41-set-night-light.ps1` enables Night Light on a
+sunset-to-sunrise schedule at strength `50`. Pass `-Strength` (0-100) to the
+script to use a different intensity.
+
+Night Light has no supported configuration API. Windows persists it as two
+`REG_BINARY` CloudStore values under `HKEY_CURRENT_USER`:
+
+| Value | Contents |
+| ----- | -------- |
+| `...\default$windows.data.bluelightreduction.settings\windows.data.bluelightreduction.settings` | Schedule mode, colour temperature, schedule times, cached sunset/sunrise times |
+| `...\default$windows.data.bluelightreduction.bluelightreductionstate\windows.data.bluelightreduction.bluelightreductionstate` | Whether Night Light is currently on |
+
+Both are [Microsoft Bond CompactBinary v1][bond] payloads inside a CloudStore
+envelope. The script implements just enough of that codec to decode the
+existing blobs, change the fields it owns, and re-encode them, so unrelated
+data (notably the sunset/sunrise times Windows computes from your location) is
+preserved byte for byte. Evidence grade 3: the format is
+[reverse-engineered and community-documented][fmt], not a Microsoft contract.
+
+Schedule mode is encoded by field presence rather than a value: field `0`
+(`schedule_enabled`) is set to `true` and field `10` (`set_hours_mode`) is
+omitted, which is how Windows represents "Sunset to sunrise". Strength maps
+linearly onto colour temperature, where `0` is 6500 K (no effect) and `100` is
+1200 K, so strength `50` stores 3850 K.
+
+The state value is derived rather than forced: the script turns Night Light on
+only when the current time falls inside the cached sunset-to-sunrise window,
+matching what Windows itself would have done. All writes stay in
+`HKEY_CURRENT_USER` and the script is idempotent — a second run reports zero
+changes.
+
+Reversal: open Settings > System > Display > Night light and turn it off, or
+delete the two registry values above and sign out.
+
+[bond]: https://github.com/microsoft/bond
+[fmt]: https://github.com/kvnxiao/win-nightlight-cli/blob/main/docs/nightlight-registry-format.md
+
 ## Learn More
 
 - [Chezmoi documentation](https://www.chezmoi.io/user-guide/command-overview/)
