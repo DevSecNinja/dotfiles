@@ -514,6 +514,28 @@ function Test-NightLightWithinNightWindow {
 
 #endregion
 
+function Test-WindowsHost {
+    <#
+        .SYNOPSIS
+            True when running on Windows, under either PowerShell edition.
+
+        .DESCRIPTION
+            $IsWindows only exists in PowerShell Core. Chezmoi runs .ps1 scripts
+            with `powershell` (Windows PowerShell 5.1, PSEdition "Desktop"),
+            where the variable is undefined, so a guard that negates it directly
+            is always true and skips the script on the very platform it targets.
+            Desktop edition only ships on Windows, so treat it as a match.
+    #>
+    [OutputType([bool])]
+    param()
+
+    if ($PSVersionTable.PSEdition -eq "Desktop") {
+        return $true
+    }
+
+    return [bool](Get-Variable -Name IsWindows -ValueOnly -ErrorAction SilentlyContinue)
+}
+
 function Set-NightLightConfiguration {
     <#
         .SYNOPSIS
@@ -605,7 +627,7 @@ function Set-NightLightConfiguration {
 }
 
 if (-not $SkipApply) {
-    if (-not $IsWindows) {
+    if (-not (Test-WindowsHost)) {
         Write-Host "[SKIP] Night Light is a Windows-only setting." -ForegroundColor Yellow
         return
     }

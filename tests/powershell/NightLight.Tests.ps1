@@ -85,6 +85,34 @@ Describe "Night Light script" -Tag "Unit" {
     }
 }
 
+Describe "Windows host detection" -Tag "Unit" {
+    It "reports true on the current Windows host" {
+        Test-WindowsHost | Should -BeTrue
+    }
+
+    It "does not guard on the bare `$IsWindows variable" {
+        # $IsWindows is undefined in Windows PowerShell 5.1, which is the
+        # interpreter chezmoi uses for .ps1 scripts. A bare guard therefore
+        # skips the script on the exact platform it targets.
+        $content = Get-Content -Path $script:ScriptPath -Raw
+        $content | Should -Not -Match '-not\s+\$IsWindows'
+    }
+
+    It "returns true under Windows PowerShell 5.1" -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
+        $output = & powershell.exe -NoLogo -NoProfile -Command @"
+. '$script:ScriptPath' -SkipApply
+if (Test-WindowsHost) { 'True' } else { 'False' }
+"@
+        $LASTEXITCODE | Should -Be 0
+        ($output | Select-Object -Last 1) | Should -Be "True"
+    }
+
+    It "runs without skipping under Windows PowerShell 5.1" -Skip:(-not (Get-Command powershell.exe -ErrorAction SilentlyContinue)) {
+        $output = & powershell.exe -NoLogo -NoProfile -File $script:ScriptPath -WhatIf 2>&1
+        ($output -join "`n") | Should -Not -Match 'Windows-only setting'
+    }
+}
+
 Describe "Bond CompactBinary primitives" -Tag "Unit" {
     It "round-trips varints" -ForEach @(
         @{ Value = [uint64]0 }
