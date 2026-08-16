@@ -201,7 +201,7 @@ run_once_setup-lefthook.sh         # Install lefthook hooks (runs once on apply)
 | `executable_script.sh`      | File with +x perms      | Executable scripts            |
 | `run_once_script.sh`        | Runs once on apply      | Prefer native setup scripts   |
 | `run_onchange_script.sh`    | Runs when changed       | Native update scripts         |
-| `run_always_script.ps1`     | Runs on every apply     | Native runtime-checked script |
+| `run_always_script.ps1`     | Runs on every apply     | Avoid; prefer `run_onchange_` |
 | `*.tmpl`                    | Processed as template   | Use only when native is unfit |
 | `dot_config/fish/config.sh` | `~/.config/fish/config` | Directory structure preserved |
 

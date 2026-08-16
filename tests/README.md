@@ -53,6 +53,9 @@ tests/
 # Exclude specific tags
 .\tests\powershell\Invoke-PesterTests.ps1 -ExcludeTag "Integration"
 
+# Include the certificate-store tests (writes to Cert:\CurrentUser)
+.\tests\powershell\Invoke-PesterTests.ps1 -IncludeCertStore
+
 # Or directly with Pester
 Invoke-Pester -Path ./tests/powershell
 
@@ -303,6 +306,15 @@ Use tags to organize and filter tests:
 - `E2E` - End-to-end workflow tests
 - `Security` - Security-related validations
 - `Pipeline` - CI/CD pipeline-specific tests
+- `CertStore` - Tests that create/import/delete certificates in
+  `Cert:\CurrentUser`. **Excluded by default** so ordinary local runs never
+  touch your certificate stores; opt in with `-IncludeCertStore` (CI does this
+  because its runners are ephemeral).
+
+Tests tagged `CertStore` must also guard their `BeforeAll`/`AfterAll` blocks
+with `$env:DOTFILES_TEST_CERTSTORE -eq 'true'`. Pester evaluates `-Skip:` and
+tag filters during discovery, but top-level `BeforeAll` blocks still execute,
+so tag filtering alone will not stop certificates from being provisioned.
 
 **Example**:
 ```powershell

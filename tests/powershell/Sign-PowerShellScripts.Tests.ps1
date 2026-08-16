@@ -81,8 +81,11 @@ BeforeAll {
         }
     }
 
-    # Create test certificate for all tests (only on Windows)
-    if ($IsWindows) {
+    # Create test certificate for all tests (only on Windows, and only when the
+    # caller has opted in to touching the certificate stores). Without the
+    # opt-in this block is skipped entirely, so a dev machine's
+    # Cert:\CurrentUser\My and Cert:\CurrentUser\Root are left untouched.
+    if ($IsWindows -and $env:DOTFILES_TEST_CERTSTORE -eq 'true') {
         # Clean up any existing test certificates
         Remove-TestCertificates -SubjectPattern "*SignTest*"
 
@@ -145,21 +148,27 @@ AfterAll {
         Remove-Item $script:TestRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    # Cleanup test certificates from Trusted Root store (if added, skip in CI mode)
-    if ($IsWindows -and $script:TestCertThumbprint -and $env:CI -ne 'true') {
-        try {
-            if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
-                # Use certutil.exe which works reliably in PowerShell Core
-                $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
+    # Only touch the certificate stores when this run was allowed to create
+    # certificates in the first place. Guarding the teardown matters as much as
+    # the setup: the "*Test*" pattern below is broad and must never run against
+    # a dev machine's store during an ordinary test run.
+    if ($env:DOTFILES_TEST_CERTSTORE -eq 'true') {
+        # Cleanup test certificates from Trusted Root store (if added, skip in CI mode)
+        if ($IsWindows -and $script:TestCertThumbprint -and $env:CI -ne 'true') {
+            try {
+                if (Test-Path "Cert:\CurrentUser\Root\$script:TestCertThumbprint") {
+                    # Use certutil.exe which works reliably in PowerShell Core
+                    $null = certutil.exe -delstore -user Root $script:TestCertThumbprint 2>&1
+                }
+            }
+            catch {
+                Write-Warning "Could not remove certificate from Trusted Root: $_"
             }
         }
-        catch {
-            Write-Warning "Could not remove certificate from Trusted Root: $_"
-        }
-    }
 
-    # Cleanup test certificates from My store
-    Remove-TestCertificates -SubjectPattern "*Test*"
+        # Cleanup test certificates from My store
+        Remove-TestCertificates -SubjectPattern "*Test*"
+    }
 }
 
 Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
@@ -206,7 +215,7 @@ Describe "Sign-PowerShellScripts.ps1 - Parameter Validation" -Skip:($env:CHEZMOI
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Verify certificate was created in top-level BeforeAll
@@ -310,7 +319,7 @@ Describe "Sign-PowerShellScripts.ps1 - Certificate Import" -Skip:(-not $IsWindow
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - Certificate Validation" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     It "Should validate certificate has code signing EKU" {
         if (-not $script:TestCert) {
@@ -401,7 +410,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Discovery" -Skip:($env:CHEZMOI_IS_
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Verify certificate is available
@@ -481,7 +490,7 @@ Describe "Sign-PowerShellScripts.ps1 - Script Signing" -Skip:(-not $IsWindows -o
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Verify certificate is available
@@ -619,7 +628,7 @@ Describe "Sign-PowerShellScripts.ps1 - End-to-End Integration Tests" -Skip:(-not
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Verify certificate and signing script are available
@@ -665,7 +674,7 @@ Describe "Sign-PowerShellScripts.ps1 - Error Handling" -Skip:(-not $IsWindows -o
     }
 }
 
-Describe "Sign-PowerShellScripts.ps1 - Statistics Reporting" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "Sign-PowerShellScripts.ps1 - Statistics Reporting" -Tag "CertStore" -Skip:(-not $IsWindows -or $env:CI -eq 'true' -or $env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Verify certificate and signing script are available

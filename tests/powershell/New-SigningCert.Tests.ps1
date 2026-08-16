@@ -128,7 +128,7 @@ Describe "New-SigningCert.ps1 Platform Requirements" -Tag "Platform" -Skip:($env
     }
 }
 
-Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration","CertStore" -Skip:($env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         # Clean up any existing test certificates
@@ -257,7 +257,7 @@ Describe "New-SigningCert.ps1 Certificate Creation" -Tag "Integration" -Skip:($e
     }
 }
 
-Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E","CertStore" -Skip:($env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*PesterE2E*"
@@ -342,7 +342,7 @@ Describe "New-SigningCert.ps1 End-to-End Test" -Tag "E2E" -Skip:($env:CHEZMOI_IS
     }
 }
 
-Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "New-SigningCert.ps1 Security Tests" -Tag "Security","CertStore" -Skip:($env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     It "Should use strong key length (4096 bits)" {
         # This validates the script specification
@@ -389,7 +389,7 @@ Describe "New-SigningCert.ps1 Security Tests" -Tag "Security" -Skip:($env:CHEZMO
     }
 }
 
-Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline" -Skip:($env:CHEZMOI_IS_WORK -eq 'true') {
+Describe "New-SigningCert.ps1 CI/CD Pipeline Validation" -Tag "Pipeline","CertStore" -Skip:($env:CHEZMOI_IS_WORK -eq 'true' -or $env:DOTFILES_TEST_CERTSTORE -ne 'true') {
 
     BeforeAll {
         Remove-TestCertificates -SubjectPattern "*CI-Pipeline*"

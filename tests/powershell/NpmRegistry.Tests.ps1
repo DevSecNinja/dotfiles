@@ -2,7 +2,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:NpmRegistryScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_always_30-configure-npm-registry.ps1"
+    $script:NpmRegistryScriptPath = Join-Path $script:RepoRoot "home\.chezmoiscripts\windows\run_onchange_30-configure-npm-registry.ps1"
     $script:NpmRegistryScriptContent = Get-Content -Path $script:NpmRegistryScriptPath -Raw
 }
 
@@ -11,6 +11,12 @@ Describe "Microsoft work npm registry setup script" -Tag "Unit" {
         $script:NpmRegistryScriptPath | Should -Not -Match '\.tmpl$'
         $script:NpmRegistryScriptContent |
             Should -Not -Match '\{\{'
+    }
+
+    It "Should re-run only when the script changes, not on every apply" {
+        $scriptName = Split-Path $script:NpmRegistryScriptPath -Leaf
+        $scriptName | Should -BeLike 'run_onchange_*'
+        $scriptName | Should -Not -BeLike 'run_always_*'
     }
 
     It "Should prefer the inherited work-device environment variable" {

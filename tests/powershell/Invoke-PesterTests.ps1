@@ -20,6 +20,13 @@
 .PARAMETER ExcludeTag
     Optional array of tags to exclude. Tests with these tags will be skipped.
 
+.PARAMETER IncludeCertStore
+    Switch to opt in to tests that create, import and delete certificates in the
+    current user's Windows certificate stores (Cert:\CurrentUser\My and
+    Cert:\CurrentUser\Root). These are tagged 'CertStore' and are EXCLUDED by
+    default so a local dev machine's certificate stores are never touched.
+    CI passes this switch because its runners are ephemeral.
+
 .PARAMETER CI
     Switch to enable CI mode. Exits with non-zero code if tests fail.
 
@@ -47,6 +54,11 @@
     .\Invoke-PesterTests.ps1 -ExcludeTag "Integration"
     Runs all tests except those tagged "Integration".
 
+.EXAMPLE
+    .\Invoke-PesterTests.ps1 -IncludeCertStore
+    Also runs the certificate-store tests, which write to the current user's
+    Windows certificate stores. Omit this switch on a dev machine.
+
 .NOTES
     Requires Pester 5.0 or later.
 #>
@@ -64,6 +76,9 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string[]]$ExcludeTag,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$IncludeCertStore,
 
     [Parameter(Mandatory = $false)]
     [switch]$CI,
@@ -108,6 +123,20 @@ if ($CI) {
 }
 else {
     Write-Host "   Mode: Local (strict signature validation)" -ForegroundColor Gray
+}
+
+# Certificate-store tests are opt-in. The gate is an environment variable
+# because Pester evaluates -Skip: conditions during discovery, so it must be
+# set before Invoke-Pester runs. Tag filtering alone would not stop the
+# top-level BeforeAll blocks from provisioning certificates.
+if ($IncludeCertStore) {
+    Write-Host "   Certificate-store tests: ENABLED (will modify Cert:\CurrentUser)" -ForegroundColor Yellow
+    $env:DOTFILES_TEST_CERTSTORE = 'true'
+}
+else {
+    Write-Host "   Certificate-store tests: skipped (use -IncludeCertStore to enable)" -ForegroundColor Gray
+    $env:DOTFILES_TEST_CERTSTORE = $null
+    $ExcludeTag = @($ExcludeTag) + 'CertStore' | Where-Object { $_ }
 }
 Write-Host ""
 

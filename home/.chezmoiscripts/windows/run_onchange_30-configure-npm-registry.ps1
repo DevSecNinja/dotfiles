@@ -1,3 +1,15 @@
+# Configures the Microsoft work npm registry on work devices only.
+#
+# This is a run_onchange (not run_always) script: chezmoi hashes the file
+# contents and re-runs it only when this script itself changes, so a clean
+# machine does not re-run it on every `chezmoi apply`. The work-device and npm
+# checks below are evaluated at runtime, which keeps the script native (no
+# .tmpl) per the repository's "prefer native files and scripts" rule.
+#
+# Caveat: because the deciding inputs are read at runtime rather than baked
+# into the file, flipping `isWork` from false to true does NOT by itself
+# re-trigger this script. After such a change, force one re-run with:
+#     chezmoi state delete-bucket --bucket=scriptState
 $ErrorActionPreference = "Stop"
 
 $isWork = $null
