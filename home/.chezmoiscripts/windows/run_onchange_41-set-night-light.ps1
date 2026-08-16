@@ -514,6 +514,56 @@ function Test-NightLightWithinNightWindow {
 
 #endregion
 
+function Test-WindowsHost {
+    <#
+        .SYNOPSIS
+            True when running on Windows, under either PowerShell edition.
+
+        .DESCRIPTION
+            $IsWindows only exists in PowerShell Core. Chezmoi runs .ps1 scripts
+            with `powershell` (Windows PowerShell 5.1, PSEdition "Desktop"),
+            where the variable is undefined, so a guard that negates it directly
+            is always true and skips the script on the very platform it targets.
+            Desktop edition only ships on Windows, so treat it as a match.
+    #>
+    [OutputType([bool])]
+    param()
+
+    if ($PSVersionTable.PSEdition -eq "Desktop") {
+        return $true
+    }
+
+    return [bool](Get-Variable -Name IsWindows -ValueOnly -ErrorAction SilentlyContinue)
+}
+
+function Get-NightLightDefaultSetting {
+    <#
+        .SYNOPSIS
+            Baseline settings for a machine where Night Light was never used.
+
+        .DESCRIPTION
+            Sunset and sunrise are left at their defaults (00:00). Windows
+            recomputes them from the machine location and writes them back, so
+            seeding them here would only risk storing wrong times.
+    #>
+    [OutputType([psobject])]
+    param()
+
+    return [pscustomobject]@{
+        ScheduleEnabled  = $true
+        SetHoursMode     = $false
+        StartHour        = 21
+        StartMinute      = 0
+        EndHour          = 7
+        EndMinute        = 0
+        ColorTemperature = $script:NightLightMaxKelvin
+        SunsetHour       = 0
+        SunsetMinute     = 0
+        SunriseHour      = 0
+        SunriseMinute    = 0
+    }
+}
+
 function Set-NightLightConfiguration {
     <#
         .SYNOPSIS
@@ -561,12 +611,18 @@ function Set-NightLightConfiguration {
     $desiredKelvin = ConvertTo-NightLightColorTemperature -Strength $Strength
 
     $settingsBlob = & $GetRegistryValue -Path $script:NightLightSettingsPath
-    if (-not $settingsBlob) {
-        throw "Night Light settings are not initialised. Open Settings > System > Display > Night light once, then re-run."
+    if ($settingsBlob) {
+        $settings = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob ([byte[]]$settingsBlob)).Payload
+    }
+    else {
+        # Night Light has never been used on this machine (fresh install, or a
+        # host without the feature). Seed a baseline rather than failing the
+        # whole chezmoi apply.
+        Write-Verbose "Night Light settings not present; creating them from scratch."
+        $settings = Get-NightLightDefaultSetting
     }
 
-    $settings = ConvertFrom-NightLightSettingsPayload -Payload (ConvertFrom-CloudStoreBlob -Blob ([byte[]]$settingsBlob)).Payload
-    $settingsCorrect = $settings.ScheduleEnabled -and -not $settings.SetHoursMode -and $settings.ColorTemperature -eq $desiredKelvin
+    $settingsCorrect = $settingsBlob -and $settings.ScheduleEnabled -and -not $settings.SetHoursMode -and $settings.ColorTemperature -eq $desiredKelvin
 
     if ($settingsCorrect) {
         $results += [pscustomobject]@{ Setting = "Schedule and strength"; Status = "AlreadySet"; Changed = $false }
@@ -605,7 +661,7 @@ function Set-NightLightConfiguration {
 }
 
 if (-not $SkipApply) {
-    if (-not $IsWindows) {
+    if (-not (Test-WindowsHost)) {
         Write-Host "[SKIP] Night Light is a Windows-only setting." -ForegroundColor Yellow
         return
     }

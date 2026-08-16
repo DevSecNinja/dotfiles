@@ -325,6 +325,12 @@ matching what Windows itself would have done. All writes stay in
 `HKEY_CURRENT_USER` and the script is idempotent — a second run reports zero
 changes.
 
+On a machine where Night Light has never been used the two values do not exist
+yet. Rather than failing the apply, the script seeds them. Sunset and sunrise
+are deliberately left unset in that case: Windows derives them from the machine
+location, and seeding them would only risk storing wrong times. Until Windows
+computes them, the solar window is unknown and Night Light is left off.
+
 Reversal: open Settings > System > Display > Night light and turn it off, or
 delete the two registry values above and sign out.
 
