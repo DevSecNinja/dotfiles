@@ -23,5 +23,16 @@
             "version": "latest"
         }
     },
+    // Baked into the image's devcontainer.metadata label so EVERY repo using
+    // this image inherits it with no per-repo devcontainer.json change. Forwards
+    // the GitHub Copilot CLI / gh tokens from the host running the Dev Containers
+    // backend (for Remote-SSH that is the VS Code Server on the dev server, which
+    // gets them from the copilot-ssh-proxy remote.SSH.path helper) into the
+    // container. Resolves to empty (harmless, treated as unset) where the tokens
+    // aren't present, e.g. local/Codespaces. See dotfiles docs/copilot-cli.md.
+    "remoteEnv": {
+        "COPILOT_GITHUB_TOKEN": "${localEnv:COPILOT_GITHUB_TOKEN}",
+        "GH_TOKEN": "${localEnv:GH_TOKEN}"
+    },
     "remoteUser": "vscode"
 }
