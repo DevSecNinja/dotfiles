@@ -48,6 +48,10 @@ function pubkey { Get-Content ~/.ssh/id_rsa.pub | Set-Clipboard; Write-Host '=> 
 Set-Alias -Name copilot-ssh -Value Connect-CopilotSsh
 Set-Alias -Name copilot_ssh -Value Connect-CopilotSsh
 
+# Copilot CLI - pre-approve safe file writes (see docs/copilot-cli.md).
+# Use 'copilot -Raw' (or the resolved executable directly) to bypass this.
+Set-Alias -Name copilot -Value Invoke-Copilot
+
 # Chezmoi shortcuts
 Set-Alias -Name chezmoi-up -Value Update-Chezmoi
 Set-Alias -Name chezmoi_up -Value Update-Chezmoi
