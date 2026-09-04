@@ -2,6 +2,75 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/DevSecNinja/dotfiles/compare/v0.6.0...v0.7.0) (2026-09-04)
+
+
+### Features
+
+* **1password:** manage the SSH agent vault config ([#650](https://github.com/DevSecNinja/dotfiles/issues/650)) ([0c293ea](https://github.com/DevSecNinja/dotfiles/commit/0c293ea1bfec7c49ac896c61112e0d142dd620de))
+* add GitHub Copilot CLI to packages.yaml ([ae73555](https://github.com/DevSecNinja/dotfiles/commit/ae73555324994b1f6e3fa6f5bf2cf27bff9ffabb))
+* add Microsoft APM to package configurations ([d50a7b9](https://github.com/DevSecNinja/dotfiles/commit/d50a7b993adf15c30cac725fe99dee093e61d973))
+* add script to configure Microsoft work npm registry ([ee50e93](https://github.com/DevSecNinja/dotfiles/commit/ee50e932866b3fae2e68434e3731dedea7d74d57))
+* **chezmoi-up:** warn when the source repo is off its default branch ([#623](https://github.com/DevSecNinja/dotfiles/issues/623)) ([837912e](https://github.com/DevSecNinja/dotfiles/commit/837912e77d5769ff6d8b1f0554a9bcac9a0cdd5f))
+* copilot-ssh reachability pre-flight, Windows Terminal profile and PATH tweaks ([#610](https://github.com/DevSecNinja/dotfiles/issues/610)) ([aa90b05](https://github.com/DevSecNinja/dotfiles/commit/aa90b0564a360a1075f1882ce1d1b9d83f444b81))
+* **copilot:** cli token forwarding ([#540](https://github.com/DevSecNinja/dotfiles/issues/540)) ([b987dbe](https://github.com/DevSecNinja/dotfiles/commit/b987dbe5da9a99a182a381ee7d5b591a6a15dcf7))
+* **fastfetch:** add cached update, reboot and ansible-pull status modules ([#601](https://github.com/DevSecNinja/dotfiles/issues/601)) ([fb9d53e](https://github.com/DevSecNinja/dotfiles/commit/fb9d53ee7dbfb0db66f947daee6ccdcdc975585c))
+* **fastfetch:** date the updates line and quieten pwsh startup ([#654](https://github.com/DevSecNinja/dotfiles/issues/654)) ([72d30ce](https://github.com/DevSecNinja/dotfiles/commit/72d30ced1bc10582a0329e76b002cb8230a8cdd8))
+* **fastfetch:** show winget update count on Windows ([#645](https://github.com/DevSecNinja/dotfiles/issues/645)) ([b836495](https://github.com/DevSecNinja/dotfiles/commit/b8364957948b097e955272d0ec4bfcc8102bb95c))
+* **github-release:** update release jdx/mise ( v2026.6.14 ➔ v2026.7.0 ) [automerge] ([#571](https://github.com/DevSecNinja/dotfiles/issues/571)) ([257964c](https://github.com/DevSecNinja/dotfiles/commit/257964c649938983d1c46afdb81ed4f73a04c1de))
+* **github-release:** update release jdx/mise ( v2026.7.18 ➔ v2026.8.0 ) [automerge] ([#729](https://github.com/DevSecNinja/dotfiles/issues/729)) ([761b653](https://github.com/DevSecNinja/dotfiles/commit/761b6538ff4744138fc3c52f96082ad31ec8d3f2))
+* **git:** pick the Git signing key based on isWork ([#648](https://github.com/DevSecNinja/dotfiles/issues/648)) ([9441cd0](https://github.com/DevSecNinja/dotfiles/commit/9441cd021b15e4a6cd34d6d365fa7d6d1667b1c9))
+* **macos:** support Homebrew casks and Mac App Store apps ([#543](https://github.com/DevSecNinja/dotfiles/issues/543)) ([61d9aac](https://github.com/DevSecNinja/dotfiles/commit/61d9aac87d849fe90466913ec4fd388028ee2b58))
+* manage 1Password shell plugins in the dotfiles + finish WSL SSH integration ([#614](https://github.com/DevSecNinja/dotfiles/issues/614)) ([6f4bbc9](https://github.com/DevSecNinja/dotfiles/commit/6f4bbc915b42eaa329abc53375d0b929deeb77e6))
+* **mise:** update chezmoi ( 2.70.5 ➔ 2.71.0 ) [automerge] ([#586](https://github.com/DevSecNinja/dotfiles/issues/586)) ([52a4a5b](https://github.com/DevSecNinja/dotfiles/commit/52a4a5b18246114e02e7a3fc6dbe31558fa450d2))
+* **mise:** update chezmoi ( 2.71.1 ➔ 2.72.0 ) [automerge] ([#741](https://github.com/DevSecNinja/dotfiles/issues/741)) ([cf004e6](https://github.com/DevSecNinja/dotfiles/commit/cf004e6a750b0a4434e2dc0a6b72a437b70d574f))
+* **mise:** update tool bats ( 1.13.0 ➔ 1.14.0 ) [automerge] ([#674](https://github.com/DevSecNinja/dotfiles/issues/674)) ([7e80246](https://github.com/DevSecNinja/dotfiles/commit/7e80246d26ac99ce8f18c89bf6e0c4303ad3ae86))
+* **mise:** update tool pipx:apm-cli ( 0.21.0 ➔ 0.22.0 ) [automerge] ([#562](https://github.com/DevSecNinja/dotfiles/issues/562)) ([e1cc539](https://github.com/DevSecNinja/dotfiles/commit/e1cc539c49ec0b9ddbd5092efdd4a433882b1521))
+* **mise:** update tool pipx:apm-cli ( 0.24.1 ➔ 0.25.0 ) [automerge] ([#599](https://github.com/DevSecNinja/dotfiles/issues/599)) ([1da8690](https://github.com/DevSecNinja/dotfiles/commit/1da8690b783b52c7c1123240dfe3eaba43e31c84))
+* **mise:** update tool pipx:apm-cli ( 0.25.0 ➔ 0.26.0 ) [automerge] ([#664](https://github.com/DevSecNinja/dotfiles/issues/664)) ([57022e1](https://github.com/DevSecNinja/dotfiles/commit/57022e153c417f1976c824359012c610ddff85db))
+* **mise:** update tool pipx:apm-cli ( 0.26.0 ➔ 0.27.0 ) [automerge] ([#744](https://github.com/DevSecNinja/dotfiles/issues/744)) ([fbfb59a](https://github.com/DevSecNinja/dotfiles/commit/fbfb59a1a71e3f013e8155c209ac248512312f76))
+* **powershell:** open projects folder on a Dev Drive when present ([#718](https://github.com/DevSecNinja/dotfiles/issues/718)) ([29fdeb2](https://github.com/DevSecNinja/dotfiles/commit/29fdeb212fbb00fd020cac519e8a45955b08bef6))
+* **pwsh:** add copilot-ssh helper forwarding GitHub tokens over SSH ([d685789](https://github.com/DevSecNinja/dotfiles/commit/d6857899cc032aff18240835c6ed5e0d68810907))
+* **pwsh:** add Set-WindowsTerminalDefaultProfile to patch defaultProfile non-destructively ([c71420e](https://github.com/DevSecNinja/dotfiles/commit/c71420e69fb4a3135fa0486c50ee00e28d411b87))
+* **pwsh:** audit and enforce GitHub repo config from the shell ([#621](https://github.com/DevSecNinja/dotfiles/issues/621)) ([8b35fbd](https://github.com/DevSecNinja/dotfiles/commit/8b35fbd7ba9e7cdfd5f78e86b589789ce1ee7173))
+* **pwsh:** show fastfetch at PowerShell startup ([#626](https://github.com/DevSecNinja/dotfiles/issues/626)) ([71c0626](https://github.com/DevSecNinja/dotfiles/commit/71c0626b4412149cce85970c9767e9e5a3b01b7b))
+* **pwsh:** tab-complete copilot-ssh host from ssh config and improve op guidance ([e01322f](https://github.com/DevSecNinja/dotfiles/commit/e01322f42b79ca8a8e9167c92c6d3d3b04f5e5a6))
+* **shell:** add chezmoi-up to pull, re-init and apply in one step ([#618](https://github.com/DevSecNinja/dotfiles/issues/618)) ([c785067](https://github.com/DevSecNinja/dotfiles/commit/c785067a2797991b56c4c750894faecd3fd70c57))
+* **windows:** apply current-user personalization ([#711](https://github.com/DevSecNinja/dotfiles/issues/711)) ([744cc2d](https://github.com/DevSecNinja/dotfiles/commit/744cc2d99d1f2063be33a45df91878e3e93bf3fd))
+* **windows:** configure work npm registry ([#705](https://github.com/DevSecNinja/dotfiles/issues/705)) ([6e70d22](https://github.com/DevSecNinja/dotfiles/commit/6e70d223e7c726159c7c41002449c31bc8303b2c))
+* **windows:** disable Surface Laptop power button ([#700](https://github.com/DevSecNinja/dotfiles/issues/700)) ([390534d](https://github.com/DevSecNinja/dotfiles/commit/390534d6f667e1f4972824d4fc892806d65ef17d))
+* **windows:** enable Night Light on a sunset-to-sunrise schedule ([#738](https://github.com/DevSecNinja/dotfiles/issues/738)) ([f0df02e](https://github.com/DevSecNinja/dotfiles/commit/f0df02e97e56852a6bbc5d24325a4705d0e4dac7))
+* **wsl:** open links in the Windows browser ([#677](https://github.com/DevSecNinja/dotfiles/issues/677)) ([1ceb811](https://github.com/DevSecNinja/dotfiles/commit/1ceb8116bb0c50036ac920e240259f904a5c757f))
+
+
+### Bug Fixes
+
+* **devcontainer:** repin image to the stable v0.6.0 release digest ([6e6d6d0](https://github.com/DevSecNinja/dotfiles/commit/6e6d6d0de6a66db6994c7a538aa733cc4f2d9dc9))
+* **fastfetch:** harden the status cache and sign the terminal args script ([#657](https://github.com/DevSecNinja/dotfiles/issues/657)) ([e9cc781](https://github.com/DevSecNinja/dotfiles/commit/e9cc7819726c891583caf0cdbc6d47882d733fcb))
+* **fastfetch:** show only the product name on the Host line ([#660](https://github.com/DevSecNinja/dotfiles/issues/660)) ([8aece1b](https://github.com/DevSecNinja/dotfiles/commit/8aece1b339f839f16379db948ccc31d204a83fde))
+* **github-release:** update release jdx/mise ( v2026.6.11 ➔ v2026.6.14 ) [automerge] ([#557](https://github.com/DevSecNinja/dotfiles/issues/557)) ([bb70945](https://github.com/DevSecNinja/dotfiles/commit/bb709451a56b990a1ba09d666d4e53788260e095))
+* **github-release:** update release jdx/mise ( v2026.6.9 ➔ v2026.6.11 ) [automerge] ([#550](https://github.com/DevSecNinja/dotfiles/issues/550)) ([d6086ae](https://github.com/DevSecNinja/dotfiles/commit/d6086aedabc51beb95d1637f76857ab0a40149dc))
+* **github-release:** update release jdx/mise ( v2026.7.12 ➔ v2026.7.13 ) [automerge] ([#680](https://github.com/DevSecNinja/dotfiles/issues/680)) ([7f6e4da](https://github.com/DevSecNinja/dotfiles/commit/7f6e4daae2641a97b7be40b025c182b948f3dda8))
+* **github-release:** update release jdx/mise ( v2026.7.13 ➔ v2026.7.14 ) [automerge] ([#693](https://github.com/DevSecNinja/dotfiles/issues/693)) ([b9300a8](https://github.com/DevSecNinja/dotfiles/commit/b9300a866732924c36a5e826cf16b8e367f1722a))
+* **github-release:** update release jdx/mise ( v2026.7.14 ➔ v2026.7.18 ) [automerge] ([#715](https://github.com/DevSecNinja/dotfiles/issues/715)) ([15908dc](https://github.com/DevSecNinja/dotfiles/commit/15908dc709196f25dbf8b1a764e6a24cca5e1f67))
+* **github-release:** update release jdx/mise ( v2026.7.2 ➔ v2026.7.5 ) [automerge] ([#583](https://github.com/DevSecNinja/dotfiles/issues/583)) ([eebca37](https://github.com/DevSecNinja/dotfiles/commit/eebca37265fd61ef806c93c38700d1e9a30e5747))
+* **github-release:** update release jdx/mise ( v2026.7.5 ➔ v2026.7.7 ) [automerge] ([#662](https://github.com/DevSecNinja/dotfiles/issues/662)) ([456e070](https://github.com/DevSecNinja/dotfiles/commit/456e0700991dd94657c1292d6b94710d48c0de09))
+* **github-release:** update release jdx/mise ( v2026.7.7 ➔ v2026.7.12 ) [automerge] ([#672](https://github.com/DevSecNinja/dotfiles/issues/672)) ([cde15a1](https://github.com/DevSecNinja/dotfiles/commit/cde15a186785bc6897c8cb3731cbcb298478c7c5))
+* **git:** keep the gh credential helper under chezmoi ([8fcca89](https://github.com/DevSecNinja/dotfiles/commit/8fcca89f35116ac008971d1b5eb5a2f1f613f000))
+* **git:** sign commits on native Windows and macOS too, not just WSL ([#616](https://github.com/DevSecNinja/dotfiles/issues/616)) ([6df0092](https://github.com/DevSecNinja/dotfiles/commit/6df009270b426dbc33b6df4c8934c703d925f7cf))
+* **log:** stop doubling backslashes in JSON output ([8175e71](https://github.com/DevSecNinja/dotfiles/commit/8175e71c7a520e21bc95af67955b5461cf026273))
+* **mise:** update chezmoi ( 2.71.0 ➔ 2.71.1 ) [automerge] ([#673](https://github.com/DevSecNinja/dotfiles/issues/673)) ([e9369b0](https://github.com/DevSecNinja/dotfiles/commit/e9369b07b3c7d37c5788136b9379c5d2736c86fe))
+* **mise:** update tool pipx:apm-cli ( 0.24.0 ➔ 0.24.1 ) [automerge] ([#593](https://github.com/DevSecNinja/dotfiles/issues/593)) ([d2b6e92](https://github.com/DevSecNinja/dotfiles/commit/d2b6e92ba2c1b5ce1f041c0f4a6ccb3d0b3c1d0e))
+* **pwsh:** keep copilot-ssh pre-flight aborts non-terminating under ErrorActionPreference=Stop ([8910d01](https://github.com/DevSecNinja/dotfiles/commit/8910d0107f30fb819d2b54c55aa5e4e675b8137f))
+* **pwsh:** make copilot-ssh abort on failed pre-flight checks instead of plain ssh ([4997604](https://github.com/DevSecNinja/dotfiles/commit/49976045a8d1029e1ac5e3210033b16f60a48f4a))
+* **test:** make the branch guard ordering test line-ending agnostic ([#629](https://github.com/DevSecNinja/dotfiles/issues/629)) ([c0e07dd](https://github.com/DevSecNinja/dotfiles/commit/c0e07dd6f1b4d7247a04fa0a8ad2e1eebd3061cb))
+* **windows:** apply Surface power policy in all modes ([#702](https://github.com/DevSecNinja/dotfiles/issues/702)) ([92f70b1](https://github.com/DevSecNinja/dotfiles/commit/92f70b14e20d6fb3cceaed8e8f284366ecaa7f43))
+* **windows:** detect Windows PowerShell in the Night Light script ([#742](https://github.com/DevSecNinja/dotfiles/issues/742)) ([0e48c13](https://github.com/DevSecNinja/dotfiles/commit/0e48c13947d190329c268fccb25c9f0057c770fb))
+* **windows:** repair fresh install flow and document manual steps ([58110f4](https://github.com/DevSecNinja/dotfiles/commit/58110f46327ec04639f80fe74f29bf2901ae021c))
+* **windows:** respect managed power button policy ([#713](https://github.com/DevSecNinja/dotfiles/issues/713)) ([9b419b0](https://github.com/DevSecNinja/dotfiles/commit/9b419b0a47a352eddaed2768c5ce933314253bfd))
+* **wsl:** drop WM version from fastfetch output ([b5c6d7c](https://github.com/DevSecNinja/dotfiles/commit/b5c6d7c8495ad42e92159409902005f435f44b70))
+* **wsl:** scope 1Password signer detection to current user ([#652](https://github.com/DevSecNinja/dotfiles/issues/652)) ([a75c1e5](https://github.com/DevSecNinja/dotfiles/commit/a75c1e571d9f3a863e069f1f743e2c098e2b5a2e))
+
 ## [0.6.0](https://github.com/DevSecNinja/dotfiles/compare/v0.5.0...v0.6.0) (2026-07-01)
 
 
