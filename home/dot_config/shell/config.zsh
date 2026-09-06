@@ -23,6 +23,8 @@ fi
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
 # Environment variables
+export SOPS_EDITOR="code --wait"
+
 # Use VS Code if available, otherwise vim
 if command -v code &>/dev/null; then
     export EDITOR="code --wait"

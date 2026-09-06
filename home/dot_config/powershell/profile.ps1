@@ -17,6 +17,9 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Environment variables
+$env:SOPS_EDITOR = "code --wait"
+
 # Load chezmoi configuration variables
 $chezmoiConfig = Join-Path $PSScriptRoot "chezmoi.ps1"
 if (Test-Path $chezmoiConfig) {

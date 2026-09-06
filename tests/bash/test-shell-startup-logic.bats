@@ -8,6 +8,17 @@ setup() {
 	export REPO_ROOT
 }
 
+@test "test-shell-startup-logic: interactive shells configure the SOPS editor" {
+	run grep -Fxq 'export SOPS_EDITOR="code --wait"' "$REPO_ROOT/home/dot_config/shell/config.bash"
+	[ "$status" -eq 0 ]
+
+	run grep -Fxq 'export SOPS_EDITOR="code --wait"' "$REPO_ROOT/home/dot_config/shell/config.zsh"
+	[ "$status" -eq 0 ]
+
+	run grep -Fxq 'set -gx SOPS_EDITOR "code --wait"' "$REPO_ROOT/home/dot_config/fish/config.fish"
+	[ "$status" -eq 0 ]
+}
+
 @test "test-shell-startup-logic: bash config contains VS Code check" {
 	local config_file="$REPO_ROOT/home/dot_config/shell/config.bash"
 

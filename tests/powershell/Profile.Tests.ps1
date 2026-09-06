@@ -205,6 +205,10 @@ Describe "Profile Configuration" {
         $script:ProfileContent | Should -Match "PowerShell Profile Loaded"
     }
 
+    It "Profile should configure the SOPS editor with wait semantics" {
+        $script:ProfileContent | Should -Match '\$env:SOPS_EDITOR\s*=\s*"code --wait"'
+    }
+
     It "Profile should check VS Code environment before changing directory" {
         # Verify the profile skips directory change in VS Code
         $script:ProfileContent | Should -Match 'TERM_PROGRAM.*vscode'

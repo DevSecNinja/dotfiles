@@ -24,6 +24,8 @@ fish_add_path $HOME/.local/bin
 fish_add_path $HOME/bin
 
 # Environment variables
+set -gx SOPS_EDITOR "code --wait"
+
 # Use VS Code if available, otherwise vim
 if type -q code
     set -gx EDITOR "code --wait"
