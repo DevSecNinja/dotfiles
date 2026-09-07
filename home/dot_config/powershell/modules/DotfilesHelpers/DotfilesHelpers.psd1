@@ -34,6 +34,9 @@
         # Copilot CLI
         'Connect-CopilotSsh'
 
+        # Git credential switching
+        'Invoke-GitWithCredentialSwitch'
+
         # Winget utilities
         'Test-WingetUpdates'
         'Invoke-WingetUpgrade'

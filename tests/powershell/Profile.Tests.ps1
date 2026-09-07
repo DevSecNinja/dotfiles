@@ -303,6 +303,7 @@ Describe "DotfilesHelpers Module" {
             'Get-ChezmoiExpectedBranch'
             'Get-ChezmoiBranchConfirmation'
             'Test-ChezmoiSourceBranch'
+            'Get-GitCredentialSwitchConfirmation'
             'Invoke-GitHubCli'
             'Invoke-OnePasswordCli'
             'ConvertFrom-OnePasswordReference'
