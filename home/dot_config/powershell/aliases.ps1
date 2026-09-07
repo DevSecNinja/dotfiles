@@ -10,6 +10,7 @@ function ll { Get-ChildItem -Force @args }
 function la { Get-ChildItem -Force @args }
 
 # Git shortcuts
+function git { Invoke-GitWithCredentialSwitch @args }
 function g { git @args }
 function gs { git status @args }
 function ga { git add @args }
