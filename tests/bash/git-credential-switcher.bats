@@ -118,7 +118,8 @@ EOF
 		\"set -gx HOME '$HOME'; set -gx PATH '$TEST_BIN' \\\$PATH; set -gx GIT_CALLS '$GIT_CALLS'; set -gx GH_CALLS '$GH_CALLS'; set -gx GIT_CREDENTIAL_SWITCHER_FORCE 1; set -gx LOG_TIMESTAMP '$LOG_TIMESTAMP'; source '$REPO_ROOT/home/dot_config/fish/functions/git.fish'; git push origin main\""
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Switch context to jeanpaulv_microsoft"* ]]
+    [[ "$output" == *"Active GitHub account switched from DevSecNinja to jeanpaulv_microsoft"* ]]
     [[ "$output" == *"retry succeeded"* ]]
+    [ "$(cat "$GH_CALLS")" = "auth switch --hostname github.com --user jeanpaulv_microsoft" ]
     [ "$(wc -l <"$GIT_CALLS")" -eq 2 ]
 }
