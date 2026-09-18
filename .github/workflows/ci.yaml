@@ -28,6 +28,88 @@ env:
   BASE_IMAGE: "ghcr.io/devsecninja/devcontainers-base:debian-12"
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    # Path-based gating so expensive jobs (Windows runners bill at 2x, the
+    # devcontainer build and the container install tests are slow) only run
+    # when files that actually affect them change. This keeps unrelated PRs
+    # (docs, packages, Renovate digest bumps, workflow tweaks) from spending
+    # minutes on every platform. Gated jobs are reported as "skipped", which
+    # branch protection treats as a passing required check.
+    outputs:
+      windows: ${{ steps.filter.outputs.windows }}
+      devcontainer: ${{ steps.filter.outputs.devcontainer }}
+      install: ${{ steps.filter.outputs.install }}
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Detect changed paths
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          # Non-PR events (e.g. manual workflow_dispatch) have no base ref to
+          # diff against, so conservatively enable every job group.
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            {
+              echo "windows=true"
+              echo "devcontainer=true"
+              echo "install=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --no-tags --prune --depth=1 origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          changed_files="$(git diff --name-only --diff-filter=ACMRD "origin/${BASE_REF}" HEAD)"
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+
+          matches() { printf '%s\n' "$changed_files" | grep -Eq "$1"; }
+
+          windows=false
+          devcontainer=false
+          install=false
+
+          # A change to this workflow itself re-runs every job group so the new
+          # definition is always exercised.
+          if matches '^\.github/workflows/ci\.yaml$'; then
+            windows=true
+            devcontainer=true
+            install=true
+          fi
+
+          # Windows / PowerShell surface.
+          if matches '(\.ps1(\.tmpl)?$|(^|/)install\.ps1$|^home/dot_config/powershell/|^home/AppData/|^tests/powershell/)'; then
+            windows=true
+          fi
+
+          # Devcontainer build + deployment test surface.
+          if matches '(^\.devcontainer/|^home/|(^|/)install\.sh$|^\.github/scripts/test-devcontainer\.sh$)'; then
+            devcontainer=true
+          fi
+
+          # Chezmoi / install-script surface exercised by the Linux install jobs.
+          if matches '(^home/|(^|/)install\.(sh|ps1)$|^tests/|^\.github/scripts/)'; then
+            install=true
+          fi
+
+          {
+            echo "windows=$windows"
+            echo "devcontainer=$devcontainer"
+            echo "install=$install"
+          } >> "$GITHUB_OUTPUT"
+
   validate:
     name: Validate Dotfiles
     runs-on: ubuntu-latest
@@ -89,7 +171,8 @@ jobs:
   test-devcontainer:
     name: Test Devcontainer Deployment
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.devcontainer == 'true'
     timeout-minutes: 30
     permissions:
       contents: read
@@ -159,7 +242,8 @@ jobs:
   test-install:
     name: Test Installation
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.install == 'true'
     timeout-minutes: 30
     permissions:
       contents: read
@@ -224,7 +308,8 @@ jobs:
   test-coder-install:
     name: Test Coder Install Scripts (Root)
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.install == 'true'
     timeout-minutes: 30
     permissions:
       contents: read
@@ -279,7 +364,8 @@ jobs:
   test-light-server:
     name: Test Light Server Installation
     runs-on: ubuntu-latest
-    needs: [validate, test-install, test-coder-install]
+    needs: [validate, changes, test-install, test-coder-install]
+    if: needs.changes.outputs.install == 'true'
     timeout-minutes: 20
     permissions:
       contents: read
@@ -308,7 +394,8 @@ jobs:
   test-dev-server:
     name: Test Dev Server Installation
     runs-on: ubuntu-latest
-    needs: [validate, test-install, test-coder-install]
+    needs: [validate, changes, test-install, test-coder-install]
+    if: needs.changes.outputs.install == 'true'
     timeout-minutes: 30
     permissions:
       contents: read
@@ -337,7 +424,8 @@ jobs:
   test-windows:
     name: Test Windows Light Installation
     runs-on: windows-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.windows == 'true'
     timeout-minutes: 30
 
     steps:
@@ -467,7 +555,8 @@ jobs:
   test-windows-coder:
     name: Test Windows Coder Install (Root)
     runs-on: windows-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.windows == 'true'
     timeout-minutes: 30
 
     steps:
@@ -531,7 +620,8 @@ jobs:
   test-powershell-scripts:
     name: Test PowerShell Scripts with Pester
     runs-on: windows-latest
-    needs: validate
+    needs: [validate, changes]
+    if: needs.changes.outputs.windows == 'true'
     timeout-minutes: 20
     permissions:
       contents: read
