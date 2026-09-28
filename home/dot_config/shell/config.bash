@@ -12,8 +12,8 @@ if [[ "${TERM_PROGRAM}" != "vscode" ]]; then
   projects_path="${HOME}/projects"
 
   # Check if current path contains 'projects' (case-insensitive)
-  # Using bash parameter expansion to convert to lowercase for comparison
-  if [[ ! "${current_path,,}" =~ "projects" ]]; then
+  # Character classes also work with macOS's built-in Bash 3.2.
+  if [[ "${current_path}" != *[Pp][Rr][Oo][Jj][Ee][Cc][Tt][Ss]* ]]; then
     # Not in projects directory, change to it if it exists
     if [[ -d "${projects_path}" ]]; then
       cd "${projects_path}" || true

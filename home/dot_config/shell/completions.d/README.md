@@ -7,7 +7,11 @@ This directory contains shell completions and tool initializations for **Bash** 
 ### Homebrew Integration (Priority)
 
 - **00-homebrew.bash** / **00-homebrew.zsh** - Homebrew environment and completion setup (loaded first)
-  - **Bash**: Sources completions from `$(brew --prefix)/etc/bash_completion.d/`
+  - **Bash 4.4+**: Sources completions from `$(brew --prefix)/etc/bash_completion.d/`
+  - **Older Bash (including macOS Bash 3.2)**: Initializes Homebrew's environment
+    but skips this third-party completion directory because some files require
+    newer features such as `complete -o nosort`. The dotfiles' own completion
+    initializers still run. Use a newer Bash for the full Homebrew completion set.
   - **Zsh**: Adds `$(brew --prefix)/share/zsh/site-functions` to `FPATH`
   - See [Homebrew Shell Completion docs](https://docs.brew.sh/Shell-Completion) for details
 

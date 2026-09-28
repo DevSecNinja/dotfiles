@@ -105,6 +105,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - `test-entra-id-parsing.bats` - Tests Entra ID user parsing
 - `test-fish-config.bats` - Tests Fish shell configuration loading
 - `test-git-config-windows.bats` - Tests Git configuration on Windows
+- `git-allowed-signers.bats` - Verifies public keys remain trusted across signing modes
 - `test-shell-startup-logic.bats` - Tests shell initialization logic
 - `verify-dotfiles.bats` - Verifies applied dotfiles exist
 

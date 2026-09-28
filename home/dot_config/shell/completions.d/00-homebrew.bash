@@ -13,7 +13,10 @@ fi
 
 # Load Homebrew's bash completions from bash_completion.d directory
 # These are static completion files provided by Homebrew packages
-if command -v brew &>/dev/null; then
+# Some (e.g. ykman) require Bash 4.4's `complete -o nosort`.
+# Keep shellenv above active on older Bash; load only our fallback completions.
+if ((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4))) &&
+  command -v brew &>/dev/null; then
   HOMEBREW_PREFIX="$(brew --prefix)"
   if [ -d "${HOMEBREW_PREFIX}/etc/bash_completion.d" ]; then
     for completion_file in "${HOMEBREW_PREFIX}/etc/bash_completion.d"/*; do

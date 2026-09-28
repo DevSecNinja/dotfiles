@@ -320,8 +320,11 @@ private key. If you carry multiple YubiKeys, set `user.signingkey` to the
 specific pubkey you want to sign with (or override per-repo via
 `git config user.signingkey ~/.ssh/id_ed25519_sk_<other-serial>.pub`).
 
-`allowed_signers` lists **all** per-serial pubkeys so verification works
-regardless of which YubiKey signed the commit.
+`allowed_signers` lists **all** enrolled per-serial and legacy pubkeys, plus
+the configured 1Password `gitSigningKey`, regardless of `useYubiKey`.
+Switching signing backends therefore preserves local verification of older
+commits. Keep the YubiKey `.pub` files in `~/.ssh/` so chezmoi can continue to
+include them; verification does not require a plugged-in YubiKey.
 
 ### Add a coworker's key
 
