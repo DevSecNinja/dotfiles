@@ -5,8 +5,8 @@ never leaves the vault: git delegates the signing operation to 1Password's own
 signer binary, which prompts you to approve it.
 
 This is the alternative to the hardware-token flow in
-[yubikey.md](yubikey.md) — `useYubiKey = true` takes precedence and ignores
-everything on this page.
+[yubikey.md](yubikey.md) — `useYubiKey = true` takes precedence for signing
+new commits and tags. Signature verification trusts both sets of public keys.
 
 ## Setup
 
@@ -47,6 +47,13 @@ That renders `user.signingkey`, points `gpg.ssh.program` at the right signer,
 turns on `commit.gpgsign` / `tag.gpgsign`, and adds the key to
 `~/.config/git/allowed_signers` so your own commits verify locally. A public
 key is not a secret, so keeping it in the config is fine.
+
+`allowed_signers` includes the configured `gitSigningKey` and all enrolled
+YubiKey public keys regardless of `useYubiKey`, so switching signing backends
+does not remove trust in previously signed commits. Keep the YubiKey `.pub`
+files in `~/.ssh/` (`id_ed25519_sk_*.pub`, `id_ecdsa_sk_*.pub`, or the legacy
+un-suffixed names); chezmoi reads them whenever it renders this file.
+The YubiKeys do not need to be plugged in for verification.
 
 Git needs a `key::` prefix to read a literal public key rather than a file
 path; the template adds it for you, so paste the key exactly as 1Password
