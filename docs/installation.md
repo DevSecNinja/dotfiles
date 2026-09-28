@@ -14,6 +14,17 @@ cd dotfiles
 ./install.sh
 ```
 
+### macOS Finder defaults
+
+On macOS, applying the dotfiles enables Finder's `AppleShowAllFiles` preference
+for the current user, so hidden files (including dot-prefixed files) are visible
+by default in both light and full installations. The setting is applied on the
+first apply and again whenever the Finder setup script changes.
+
+Relaunch Finder or log out and back in for the change to take effect. Setup
+does not restart Finder automatically, avoiding interruptions to file operations.
+Linux and Windows are unaffected.
+
 ## Windows (PowerShell)
 
 ### Prerequisites & manual bootstrap steps
