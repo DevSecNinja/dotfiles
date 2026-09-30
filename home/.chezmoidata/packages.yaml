@@ -126,6 +126,7 @@ packages:
         - twpayne.chezmoi
       full:
         - Fastfetch-cli.Fastfetch
+        - jdx.mise
         - Microsoft.VisualStudioCode
         - JanDeDobbeleer.OhMyPosh
         - Microsoft.WSL
