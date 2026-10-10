@@ -471,3 +471,51 @@ the suite runnable without them installed.
 Every external dependency is mocked at the module's own CLI wrappers, so the
 suite runs on any platform without `gh` or `op` installed and never touches a
 real repository.
+
+### Contract tests
+
+Mocking at the wrapper boundary proves the module's logic but not that GitHub
+accepts the payloads it builds or returns the shapes it parses. Two of the four
+bugs found in review were exactly that — assumptions the mocks confirmed because
+the fixtures were written from the same assumptions.
+
+`GitHubRepoConfig.Contract.Tests.ps1` closes that gap by driving the real
+audit/remediate cycle against a throwaway repository. It verifies, against the
+live API:
+
+- settings converge and are idempotent on a second run
+- the created ruleset is a repository-owned branch ruleset covering the default
+  branch, with the admin bypass intact
+- `require_code_owner_review` and friends survive a merge-method remediation
+- a same-named **tag** ruleset is left untouched
+- the `production` environment ends up pinned to the default branch and nothing
+  else, with the secret in the environment rather than at repository level
+
+!!! danger "Destructive, and off by default"
+
+    These tests create and delete a repository. They are skipped unless
+    `DOTFILES_CONTRACT_TEST=1`, so a normal suite or a CI run can never trigger
+    them — Pester does not even execute the file's setup block while every test
+    in it is skipped.
+
+Running them needs a token beyond the everyday one — it must be able to create
+and delete repositories:
+
+| Permission                            | Why                                      |
+| ------------------------------------- | ---------------------------------------- |
+| Repository creation (account level)   | Create the disposable repo               |
+| `delete_repo` (classic) or equivalent | Delete it again                          |
+| Administration: read & write          | Settings, rulesets, Actions permissions  |
+| Secrets / Variables: read & write     | Credential placement                     |
+| Environments: read & write            | Environment creation and branch policies |
+| Contents: read                        | Pages-workflow detection                 |
+
+```powershell
+$env:DOTFILES_CONTRACT_TEST = '1'
+./tests/powershell/Invoke-PesterTests.ps1 -Tag Contract
+```
+
+The repository is named `zz-delete-me-dotfiles-contract-<random>` so an orphan
+left by a hard kill is obviously safe to remove, and it is deleted in `AfterAll`
+even when a test fails. It is created **public** because environments and
+deployment branch policies are public-repository-only on the Free plan.
