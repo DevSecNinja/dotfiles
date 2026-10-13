@@ -33,6 +33,7 @@
 
         # Copilot CLI
         'Connect-CopilotSsh'
+        'Invoke-Copilot'
 
         # Git credential switching
         'Invoke-GitWithCredentialSwitch'

@@ -182,6 +182,37 @@ second, independent guard. The same reasoning applies to `gh` and `GH_TOKEN`.
 
 [opcopilot]: https://www.1password.dev/cli/shell-plugins/github-copilot
 
+## Pre-approving safe file writes (PowerShell)
+
+In a trusted, git-tracked repo, Copilot CLI's per-edit "accept" prompt is a
+lot of clicking — git already provides the safety net (`/diff`, `/rewind`,
+`git restore`). PowerShell sessions get a `copilot` function (aliased over
+the real CLI, defined in
+[`Copilot.ps1`](../home/dot_config/powershell/modules/DotfilesHelpers/Public/Copilot.ps1))
+that runs the CLI with `--allow-tool=write`, pre-approving file create/edit
+**only**. Shell (`shell`/`bash`) tools stay gated, and MCP tools (e.g.
+WorkIQ) are unaffected, so it remains least-privilege.
+
+```powershell
+copilot                # runs the CLI with --allow-tool=write
+copilot -Raw           # bypasses the wrapper; every tool call prompts
+```
+
+The pre-approved tool list is configurable via `$env:COPILOT_ALLOW_TOOLS`
+(default `write`), so it can be widened — e.g. to also pre-approve read-only
+git commands — or narrowed without editing the function:
+
+```powershell
+$env:COPILOT_ALLOW_TOOLS = 'write,shell(git status),shell(git diff)'
+```
+
+Never set it to `--allow-all-tools` / `--yolo` equivalents — that grants
+shell and URL access too, defeating the purpose of an allow-list.
+`Invoke-Copilot` resolves and calls the real `copilot` executable on `PATH`
+directly (never itself, avoiding recursion). Note this PowerShell wrapper is
+separate from the [1Password shell plugin](#local-authentication-with-the-1password-shell-plugin)
+above, which currently only wraps `copilot` in bash/zsh/fish.
+
 ## Security notes
 
 - The tokens live only in 1Password (at rest), transiently in the helper's
