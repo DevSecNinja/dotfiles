@@ -3,6 +3,7 @@
 import argparse
 from contextlib import closing
 from importlib.metadata import version, PackageNotFoundError
+import json
 import os
 from pathlib import Path
 import platform
@@ -10,6 +11,10 @@ import sys
 
 
 MODEL = "mlx-community/Qwen3.5-9B-4bit"
+REQUIRED_FILES = (
+    "config.json", "tokenizer.json", "tokenizer_config.json",
+    "chat_template.jinja", "model.safetensors.index.json",
+)
 CONTEXT_TOKENS = 8192
 REPLY_TOKENS = 512
 HELP = "q: quit | r: reset conversation | h: help"
@@ -47,8 +52,8 @@ def configure_cache(cache_dir, volume):
 
 
 def check_environment():
-    if sys.version_info < (3, 10) or sys.prefix == sys.base_prefix:
-        raise ValueError("A Python 3.10+ virtual environment is required.")
+    if sys.version_info < (3, 11) or sys.prefix == sys.base_prefix:
+        raise ValueError("A Python 3.11+ virtual environment is required.")
     import mlx.core
     from mlx_lm import load, stream_generate
     from mlx_lm.models.cache import make_prompt_cache
@@ -57,6 +62,19 @@ def check_environment():
 
     if Version(version("mlx-lm")) < Version("0.32.2"):
         raise ValueError("mlx-lm 0.32.2 or newer is required for this launcher.")
+
+
+def snapshot_is_complete(snapshot):
+    """Check Qwen3.5's required files, not the integrity of their contents."""
+    root = Path(snapshot)
+    # Require the index even if a shard exists: a partial download may omit it.
+    if not all((root / name).is_file() for name in REQUIRED_FILES):
+        return False
+    with (root / "model.safetensors.index.json").open() as index:
+        shards = set(json.load(index)["weight_map"].values())
+    if not shards:
+        raise ValueError("Cached model weight index contains no shards.")
+    return all((root / shard).is_file() for shard in shards)
 
 
 def chat(model, tokenizer):
@@ -182,15 +200,28 @@ def main():
         from mlx_lm import load
     except ImportError as error:
         parser.exit(1, f"Cannot import mlx-lm from this Python environment: {error}\n")
+    revision = None
+    allow_patterns = [*REQUIRED_FILES, "model*.safetensors"]
     try:
         snapshot = snapshot_download(
-            MODEL, cache_dir=str(root / "hub"), local_files_only=True
+            MODEL, cache_dir=str(root / "hub"), local_files_only=True,
+            allow_patterns=allow_patterns,
         )
+        if not snapshot_is_complete(snapshot):
+            # Hub cache snapshot directories are named by their commit hash.
+            revision = Path(snapshot).name
+            raise LocalEntryNotFoundError("Cached Qwen3.5 snapshot is incomplete.")
     except LocalEntryNotFoundError:
         print(f"Downloading {MODEL} to {root / 'hub'} (external SSD)...", flush=True)
         snapshot = snapshot_download(
-            MODEL, cache_dir=str(root / "hub"), local_files_only=False
+            MODEL, cache_dir=str(root / "hub"), local_files_only=False,
+            allow_patterns=allow_patterns, revision=revision,
         )
+        if not snapshot_is_complete(snapshot):
+            raise FileNotFoundError(
+                "Qwen3.5 snapshot is still incomplete after download. "
+                "Check connectivity and retry; the external cache has been preserved."
+            )
 
     print(f"Loading {MODEL} from the external cache...", flush=True)
     model, tokenizer = load(

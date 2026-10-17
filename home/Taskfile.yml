@@ -4,7 +4,7 @@ vars:
   MLX_VENV: '{{.ROOT_DIR}}/mlx-qwen/.venv'
   MLX_VOLUME: /Volumes/External Disk Data
   MLX_CACHE_DIR: '{{.MLX_VOLUME}}/AI/huggingface'
-  MLX_PYTHON_CHECK: 'import platform, sys, venv; assert sys.version_info >= (3, 10) and platform.machine() == "arm64"'
+  MLX_PYTHON_CHECK: 'import platform, sys, venv; assert sys.version_info >= (3, 11) and platform.machine() == "arm64"'
   MLX_VENV_CHECK: '{{.MLX_PYTHON_CHECK}}; assert sys.prefix != sys.base_prefix'
   MLX_CHECK_ENV: >-
     "{{.MLX_VENV}}/bin/python" "{{.ROOT_DIR}}/.config/mlx/chat.py"
@@ -71,7 +71,7 @@ tasks:
       - sh: >-
           (test ! -e "{{.MLX_VENV}}" && test ! -L "{{.MLX_VENV}}") ||
           "{{.MLX_VENV}}/bin/python" -c '{{.MLX_VENV_CHECK}}'
-        msg: 'Existing {{.MLX_VENV}} is not a usable Python 3.10+ arm64 venv. Repair it or move it aside; it will not be deleted automatically.'
+        msg: 'Existing {{.MLX_VENV}} is not a usable Python 3.11+ arm64 venv. Repair it or move it aside; it will not be deleted automatically.'
     status:
       - '"{{.MLX_VENV}}/bin/python" -c ''{{.MLX_VENV_CHECK}}'''
     cmds:
@@ -88,7 +88,7 @@ tasks:
     internal: true
     preconditions:
       - sh: python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null || command -v brew
-        msg: 'A native Python 3.10+ or Homebrew is required. Install Homebrew using the existing dotfiles setup; this task cannot safely bootstrap Homebrew.'
+        msg: 'A native Python 3.11+ or Homebrew is required. Install Homebrew using the existing dotfiles setup; this task cannot safely bootstrap Homebrew.'
     status:
       - |
         python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null ||

@@ -70,7 +70,8 @@ symlink redirection. A `status` check then verifies the venv and imports the
 required MLX APIs without loading weights. A working installation skips
 provisioning entirely: no Python replacement, pip upgrade, or package upgrade.
 
-If the venv is missing, Task creates it with native Python 3.10+ and `venv`.
+If the venv is missing, Task creates it with native Python 3.11+ and `venv`
+(the minimum required by `mlx-lm` 0.32.2).
 If suitable Python is missing, it uses the same Homebrew `python@3` formula
 as the repository's macOS package setup. Missing pip is bootstrapped with
 `ensurepip`; missing requirements are installed with isolated
@@ -102,6 +103,14 @@ Thinking is disabled via `enable_thinking=False` in the model's chat template,
 which supplies an empty closed `<think>` block. The launcher uses temperature
 0.7, top-p 0.8, top-k 20, at most 512 reply tokens, and 512-token prefill chunks.
 It does not use the unsupported `mlx_lm.chat` flags or a `/nothink` soft switch.
+
+A cached snapshot is reused without network access when its configuration,
+tokenizer, chat template, weight index and every indexed shard are present.
+Missing files trigger one resumable download into the same external cache,
+at the cached revision when its directory was returned by the Hub. Already
+cached files are preserved. If the snapshot remains incomplete (for
+example while offline), the launcher reports an error rather than loading it.
+Malformed metadata and model-loading errors are not treated as cache misses.
 
 Type `q` to quit, `r` to reset, or `h` for help. Ctrl+C (including during
 generation) and EOF exit cleanly. Each reply reports token speed and peak MLX
@@ -154,8 +163,15 @@ isolated Chezmoi destination. It covers installed/missing/broken environments
 and setup ordering without real provisioning, downloads, or inference:
 
 ```sh
-timeout 60 ./tests/bash/run-tests.sh --test global-mlx-chat.bats
+python3 tests/with-timeout.py 60 ./tests/bash/run-tests.sh --test global-mlx-chat.bats
 ```
+
+The Python standard-library wrapper works on macOS and Linux without GNU
+`timeout`. It preserves the command's exit status (128 + signal for a signal
+exit), kills the entire test process group on timeout, and returns 124.
+Ctrl+C also cleans up the process group and returns 130. Diagnostics go to
+stderr after cleanup; closed output pipes do not change either exit status.
+Use 300 instead of 60 for the full `--ci` suite.
 
 ## Mise (Tool Version Manager)
 
