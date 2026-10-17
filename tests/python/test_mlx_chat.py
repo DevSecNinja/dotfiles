@@ -3,6 +3,7 @@
 from contextlib import redirect_stdout, redirect_stderr
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import sys
@@ -17,6 +18,10 @@ SPEC = importlib.util.spec_from_file_location("mlx_chat", SCRIPT)
 launcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(launcher)
 CHECK_ENVIRONMENT = launcher.check_environment
+ALLOW_PATTERNS = [
+    "config.json", "tokenizer.json", "tokenizer_config.json",
+    "chat_template.jinja", "model.safetensors.index.json", "model*.safetensors",
+]
 
 
 class LocalEntryNotFoundError(Exception):
@@ -227,11 +232,29 @@ class ChatTests(unittest.TestCase):
         ):
             launcher.main()
 
+    def cached_snapshot(self, root):
+        snapshot = root / "hub/models--mlx-community--Qwen3.5-9B-4bit/snapshots" / ("a" * 40)
+        snapshot.mkdir(parents=True)
+        for name in (
+            "config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja",
+            "model-00001-of-00002.safetensors", "model-00002-of-00002.safetensors",
+        ):
+            (snapshot / name).write_text("{}")
+        (snapshot / "model.safetensors.index.json").write_text(json.dumps({
+            "weight_map": {
+                "layer.0": "model-00001-of-00002.safetensors",
+                "layer.1": "model-00002-of-00002.safetensors",
+            }
+        }))
+        self.snapshot.return_value = str(snapshot)
+        return snapshot
+
     def test_main_forces_external_cache_and_uses_existing_model_without_download(self):
         with tempfile.TemporaryDirectory(prefix="mlx cache ") as directory:
             root = Path(directory).resolve()
             (root / "hub").mkdir()
             (root / "xet").mkdir()
+            cached = self.cached_snapshot(root)
             with patch.dict(os.environ, {
                 "HF_HOME": "/internal", "HF_HUB_CACHE": "/internal/hub",
                 "HF_XET_CACHE": "/internal/xet", "HF_HUB_OFFLINE": "1",
@@ -240,19 +263,20 @@ class ChatTests(unittest.TestCase):
                 def snapshot(*args, **kwargs):
                     self.assertEqual(args, (launcher.MODEL,))
                     self.assertEqual(kwargs, {
-                        "cache_dir": str(root / "hub"), "local_files_only": True
+                        "cache_dir": str(root / "hub"), "local_files_only": True,
+                        "allow_patterns": ALLOW_PATTERNS,
                     })
                     self.assertEqual(os.environ["HF_HOME"], str(root))
                     self.assertEqual(os.environ["HF_HUB_CACHE"], str(root / "hub"))
                     self.assertEqual(os.environ["HF_XET_CACHE"], str(root / "xet"))
                     self.assertEqual(os.environ["HF_HUB_OFFLINE"], "0")
                     self.assertEqual(os.environ["TRANSFORMERS_OFFLINE"], "0")
-                    return str(root / "hub/snapshot")
+                    return str(cached)
                 self.snapshot.side_effect = snapshot
                 self.run_main(root)
                 self.snapshot.assert_called_once()
                 self.load.assert_called_once_with(
-                    str(root / "hub/snapshot"),
+                    str(cached),
                     tokenizer_config={"trust_remote_code": False},
                     trust_remote_code=False,
                 )
@@ -277,16 +301,106 @@ class ChatTests(unittest.TestCase):
             root = Path(directory).resolve()
             (root / "hub").mkdir()
             (root / "xet").mkdir()
+            cached = self.cached_snapshot(root)
             self.snapshot.side_effect = [
-                LocalEntryNotFoundError("not cached"), str(root / "hub/snapshot")
+                LocalEntryNotFoundError("not cached"), str(cached)
             ]
             self.run_main(root)
             self.assertEqual(self.snapshot.call_count, 2)
             self.assertEqual(self.snapshot.call_args.kwargs, {
-                "cache_dir": str(root / "hub"), "local_files_only": False
+                "cache_dir": str(root / "hub"), "local_files_only": False,
+                "allow_patterns": ALLOW_PATTERNS, "revision": None,
             })
             self.assertIn("Downloading", self.output.getvalue())
             self.load.assert_called_once()
+
+    def test_partial_snapshots_resume_once_and_reuse_completed_files(self):
+        for missing in (
+            "config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja",
+            "model.safetensors.index.json", "model-00002-of-00002.safetensors",
+        ):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                (root / "xet").mkdir()
+                cached = self.cached_snapshot(root)
+                existing = cached / "model-00001-of-00002.safetensors"
+                before = existing.stat()
+                content = (cached / missing).read_bytes()
+                (cached / missing).unlink()
+                self.snapshot.reset_mock(side_effect=True)
+                self.load.reset_mock()
+
+                def download(model, *, cache_dir, local_files_only, allow_patterns, revision=None):
+                    self.assertEqual(model, launcher.MODEL)
+                    self.assertEqual(cache_dir, str(root / "hub"))
+                    self.assertEqual(allow_patterns, ALLOW_PATTERNS)
+                    if not local_files_only:
+                        self.assertEqual(revision, cached.name)
+                        (cached / missing).write_bytes(content)
+                    return str(cached)
+
+                self.snapshot.side_effect = download
+                with patch.dict(os.environ):
+                    self.run_main(root)
+                    self.run_main(root)
+                self.assertEqual(
+                    [call.kwargs["local_files_only"] for call in self.snapshot.call_args_list],
+                    [True, False, True],
+                )
+                self.assertEqual(self.load.call_count, 2)
+                self.assertEqual(existing.stat().st_ino, before.st_ino)
+                self.assertEqual(existing.stat().st_mtime_ns, before.st_mtime_ns)
+
+    def test_empty_snapshot_and_broken_shard_symlink_are_incomplete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertFalse(launcher.snapshot_is_complete(root))
+            cached = self.cached_snapshot(root)
+            shard = cached / "model-00002-of-00002.safetensors"
+            shard.unlink()
+            shard.symlink_to("../../blobs/missing")
+            self.assertFalse(launcher.snapshot_is_complete(cached))
+            self.assertTrue((cached / "model-00001-of-00002.safetensors").is_file())
+
+    def test_offline_partial_snapshot_fails_after_one_retry_without_loading(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ):
+            root = Path(directory).resolve()
+            (root / "xet").mkdir()
+            cached = self.cached_snapshot(root)
+            (cached / "model-00002-of-00002.safetensors").unlink()
+            # Hub 1.5.0 can return the same partial folder even on the online call.
+            with self.assertRaisesRegex(FileNotFoundError, "still incomplete"):
+                self.run_main(root)
+            self.assertEqual(self.snapshot.call_count, 2)
+            self.load.assert_not_called()
+            self.assertTrue((cached / "model-00001-of-00002.safetensors").is_file())
+
+    def test_malformed_index_is_not_retried_as_a_cache_miss(self):
+        for content, error in (
+            ("{", json.JSONDecodeError), ("{}", KeyError),
+            ('{"weight_map": {}}', ValueError),
+        ):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                (root / "xet").mkdir()
+                cached = self.cached_snapshot(root)
+                (cached / "model.safetensors.index.json").write_text(content)
+                self.snapshot.reset_mock()
+                with patch.dict(os.environ), self.assertRaises(error):
+                    self.run_main(root)
+                self.snapshot.assert_called_once()
+                self.load.assert_not_called()
+
+    def test_cache_lookup_errors_are_not_retried(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ):
+            root = Path(directory)
+            (root / "hub").mkdir()
+            (root / "xet").mkdir()
+            self.snapshot.side_effect = PermissionError("cache not readable")
+            with self.assertRaisesRegex(PermissionError, "cache not readable"):
+                self.run_main(root)
+            self.snapshot.assert_called_once()
+            self.load.assert_not_called()
 
     def test_download_failure_is_not_hidden(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ):
@@ -334,6 +448,19 @@ class ChatTests(unittest.TestCase):
         self.load.assert_not_called()
         self.snapshot.assert_not_called()
 
+    def test_environment_check_rejects_python_310_and_accepts_311(self):
+        with patch.object(sys, "prefix", "/mock/venv"):
+            with patch.object(sys, "version_info", (3, 10, 19)):
+                with self.assertRaisesRegex(ValueError, "Python 3.11"):
+                    CHECK_ENVIRONMENT()
+            with (
+                patch.object(sys, "version_info", (3, 11, 14)),
+                patch.object(launcher, "version", return_value="0.32.2"),
+            ):
+                CHECK_ENVIRONMENT()
+        self.load.assert_not_called()
+        self.snapshot.assert_not_called()
+
     def test_environment_check_rejects_old_packages_and_non_venv_python(self):
         with (
             patch.object(sys, "version_info", (3, 14, 8)),
@@ -375,9 +502,12 @@ class ChatTests(unittest.TestCase):
             root = Path(directory)
             (root / "hub").mkdir()
             (root / "xet").mkdir()
+            self.cached_snapshot(root)
             self.load.side_effect = RuntimeError("incomplete model weights")
             with self.assertRaisesRegex(RuntimeError, "incomplete model weights"):
                 self.run_main(root)
+            self.snapshot.assert_called_once()
+            self.load.assert_called_once()
 
 
 if __name__ == "__main__":

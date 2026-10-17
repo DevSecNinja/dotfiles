@@ -8,6 +8,8 @@ setup() {
 	MLX_TEST_VOLUME="$(cd "$BATS_TEST_TMPDIR/External Disk Data" && pwd -P)"
 	CACHE_DIR="$MLX_TEST_VOLUME/AI/huggingface"
 	export MOCK_OS=Darwin MOCK_ARCH=arm64 MOCK_MOUNTED=1 MOCK_BASE_PYTHON=1
+	export MOCK_BASE_PYTHON_VERSION=3.14 MLX_TEST_REAL_PYTHON
+	MLX_TEST_REAL_PYTHON="$(tool_binary python3)"
 	export PYTHON_CALLS="$BATS_TEST_TMPDIR/python-calls"
 	export MLX_TEST_ACTIONS="$BATS_TEST_TMPDIR/actions"
 	export MLX_TEST_STATE="$BATS_TEST_TMPDIR/state"
@@ -72,6 +74,7 @@ case "$1" in
 	-c)
 		case "$0" in "$MLX_TEST_BREW"/*) exit 0 ;; esac
 		[ "$MOCK_BASE_PYTHON" -eq 1 ] || exit 1
+		"$MLX_TEST_REAL_PYTHON" -c 'import platform,sys; sys.version_info=tuple(map(int,sys.argv[1].split("."))); platform.machine=lambda: "arm64"; exec(sys.argv[2])' "$MOCK_BASE_PYTHON_VERSION" "$2"
 		;;
 	-m)
 		[ "$2" = venv ] || exit 1
@@ -119,7 +122,7 @@ global_task() {
 
 @test "global-mlx-chat: Python behavior is validated without MLX or model weights" {
 	command -v python3 >/dev/null || skip "Python 3 not installed"
-	run python3 -B -m unittest discover -s "$REPO_ROOT/tests/python" -p test_mlx_chat.py
+	run python3 -B -m unittest discover -s "$REPO_ROOT/tests/python" -p 'test_*.py'
 	[ "$status" -eq 0 ]
 }
 
@@ -266,7 +269,8 @@ EOF
 	grep -F -- "--isolated --require-virtualenv" "$MLX_TEST_ACTIONS"
 	grep -F -- "--cache-dir $CACHE_DIR/pip install mlx-lm>=0.32.2" "$MLX_TEST_ACTIONS"
 	grep -F -- "tmp: $CACHE_DIR/tmp" "$MLX_TEST_ACTIONS"
-	! grep -F -- "--upgrade" "$MLX_TEST_ACTIONS"
+	run grep -F -- "--upgrade" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
 
 	: >"$MLX_TEST_ACTIONS"
 	run global_task llm:chat
@@ -283,8 +287,10 @@ chat" ]
 	run global_task llm:chat
 	[ "$status" -eq 0 ]
 	[[ "$(cat "$MLX_TEST_ACTIONS")" == *check-pip*ensurepip*pip:*check-env*chat ]]
-	! grep -F -- "create-venv" "$MLX_TEST_ACTIONS"
-	! grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	run grep -F -- "create-venv" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
+	run grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
 }
 
 @test "global-mlx-chat: unusable packages after pip fail the post-install check" {
@@ -318,6 +324,30 @@ chat" ]
 	[[ "$(cat "$MLX_TEST_ACTIONS")" == mount*install-python*create-venv*pip:*chat ]]
 }
 
+@test "global-mlx-chat: Python 3.10 falls back to Homebrew before creating a venv" {
+	command -v task >/dev/null || skip "Task not installed"
+	rm "$TEST_HOME/mlx-qwen/.venv/bin/python"
+	rmdir "$TEST_HOME/mlx-qwen/.venv/bin" "$TEST_HOME/mlx-qwen/.venv"
+	printf 'missing\n' >"$MLX_TEST_STATE"
+	export MOCK_BASE_PYTHON_VERSION=3.10
+	run global_task llm:chat
+	[ "$status" -eq 0 ]
+	[[ "$(cat "$MLX_TEST_ACTIONS")" == mount*install-python*create-venv*pip:*chat ]]
+}
+
+@test "global-mlx-chat: Python 3.11 is accepted without installing Python" {
+	command -v task >/dev/null || skip "Task not installed"
+	rm "$TEST_HOME/mlx-qwen/.venv/bin/python"
+	rmdir "$TEST_HOME/mlx-qwen/.venv/bin" "$TEST_HOME/mlx-qwen/.venv"
+	printf 'missing\n' >"$MLX_TEST_STATE"
+	export MOCK_BASE_PYTHON_VERSION=3.11
+	run global_task llm:chat
+	[ "$status" -eq 0 ]
+	grep -F -- "create-venv" "$MLX_TEST_ACTIONS"
+	run grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
+}
+
 @test "global-mlx-chat: absent Python and Homebrew are reported without unsafe bootstrap" {
 	command -v task >/dev/null || skip "Task not installed"
 	rm "$TEST_HOME/mlx-qwen/.venv/bin/python" "$BATS_TEST_TMPDIR/bin/brew"
@@ -327,7 +357,8 @@ chat" ]
 	run global_task llm:chat
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"cannot safely bootstrap Homebrew"* ]]
-	! grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	run grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
 	[ ! -e "$PYTHON_CALLS" ]
 }
 
@@ -342,7 +373,8 @@ chat" ]
 	run global_task llm:chat
 	[ "$status" -eq 0 ]
 	grep -F -- "create-venv" "$MLX_TEST_ACTIONS"
-	! grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	run grep -F -- "install-python" "$MLX_TEST_ACTIONS"
+	[ "$status" -eq 1 ]
 }
 
 @test "global-mlx-chat: cache outside the external volume is rejected before setup" {
