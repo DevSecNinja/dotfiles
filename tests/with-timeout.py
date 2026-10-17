@@ -20,15 +20,17 @@ def main():
             code = process.wait(timeout=args.seconds)
         except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
             code = 124 if isinstance(error, subprocess.TimeoutExpired) else 130
-            print(
-                "Validation timed out." if code == 124 else "Validation interrupted.",
-                flush=True,
-            )
             try:
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass  # The entire process group already exited.
             process.wait()
+            try:
+                os.write(
+                    2, b"Validation timed out.\n" if code == 124 else b"Validation interrupted.\n"
+                )
+            except OSError:
+                pass  # A closed diagnostic pipe must not replace the exit status.
     return code if code >= 0 else 128 - code
 
 

@@ -169,8 +169,9 @@ python3 tests/with-timeout.py 60 ./tests/bash/run-tests.sh --test global-mlx-cha
 The Python standard-library wrapper works on macOS and Linux without GNU
 `timeout`. It preserves the command's exit status (128 + signal for a signal
 exit), kills the entire test process group on timeout, and returns 124.
-Ctrl+C also cleans up the process group and returns 130. Use 300 instead of
-60 for the full `--ci` suite.
+Ctrl+C also cleans up the process group and returns 130. Diagnostics go to
+stderr after cleanup; closed output pipes do not change either exit status.
+Use 300 instead of 60 for the full `--ci` suite.
 
 ## Mise (Tool Version Manager)
 

@@ -39,8 +39,8 @@ class TimeoutTests(unittest.TestCase):
             seconds="1",
         )
         self.assertEqual(result.returncode, 124)
-        self.assertIn("started", result.stdout)
-        self.assertIn("Validation timed out.", result.stdout)
+        self.assertEqual(result.stdout, "started\n")
+        self.assertIn("Validation timed out.", result.stderr)
 
     def test_interrupt_cleans_up_process_group(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -59,9 +59,50 @@ class TimeoutTests(unittest.TestCase):
                     time.sleep(0.01)
                 self.assertTrue(ready.exists(), "Child did not start")
                 wrapper.send_signal(signal.SIGINT)
-                output, error = wrapper.communicate(timeout=7)
+                _, error = wrapper.communicate(timeout=7)
                 self.assertEqual(wrapper.returncode, 130, error)
-                self.assertIn("Validation interrupted.", output)
+                self.assertIn("Validation interrupted.", error)
+
+    def test_closed_output_pipes_do_not_bypass_cleanup_or_change_exit_status(self):
+        for interrupted in (False, True):
+            for stream in ("stdout", "stderr"):
+                with (
+                    self.subTest(interrupted=interrupted, stream=stream),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    ready = Path(directory) / "ready"
+                    code = (
+                        "import os,pathlib,subprocess,sys,time; "
+                        "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); "
+                        f"ready=pathlib.Path({str(ready)!r}); "
+                        "ready.with_suffix('.tmp').write_text(str(os.getpid())); "
+                        "ready.with_suffix('.tmp').rename(ready); time.sleep(30)"
+                    )
+                    with subprocess.Popen(
+                        [sys.executable, str(WRAPPER), "1", sys.executable, "-c", code],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                    ) as wrapper:
+                        try:
+                            deadline = time.monotonic() + 3
+                            while not ready.exists() and time.monotonic() < deadline:
+                                time.sleep(0.01)
+                            self.assertTrue(ready.exists(), "Child did not start")
+                            getattr(wrapper, stream).close()
+                            setattr(wrapper, stream, None)
+                            if interrupted:
+                                wrapper.send_signal(signal.SIGINT)
+                            # The other pipe stays open if any descendant survives.
+                            wrapper.communicate(timeout=3)
+                            self.assertEqual(wrapper.returncode, 130 if interrupted else 124)
+                        finally:
+                            if ready.exists():
+                                try:
+                                    os.killpg(int(ready.read_text()), signal.SIGKILL)
+                                except ProcessLookupError:
+                                    pass
+                            if wrapper.poll() is None:
+                                wrapper.kill()
+                            wrapper.communicate(timeout=3)
 
     def test_invalid_timeout_and_missing_command_are_reported(self):
         for seconds in ("0", "-1", "nan", "inf"):

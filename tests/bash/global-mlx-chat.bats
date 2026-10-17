@@ -9,7 +9,7 @@ setup() {
 	CACHE_DIR="$MLX_TEST_VOLUME/AI/huggingface"
 	export MOCK_OS=Darwin MOCK_ARCH=arm64 MOCK_MOUNTED=1 MOCK_BASE_PYTHON=1
 	export MOCK_BASE_PYTHON_VERSION=3.14 MLX_TEST_REAL_PYTHON
-	MLX_TEST_REAL_PYTHON="$(tool_binary python3)"
+	MLX_TEST_REAL_PYTHON="$(tool_binary python3)" || skip "Python 3 not installed"
 	export PYTHON_CALLS="$BATS_TEST_TMPDIR/python-calls"
 	export MLX_TEST_ACTIONS="$BATS_TEST_TMPDIR/actions"
 	export MLX_TEST_STATE="$BATS_TEST_TMPDIR/state"
@@ -124,6 +124,23 @@ global_task() {
 	command -v python3 >/dev/null || skip "Python 3 not installed"
 	run python3 -B -m unittest discover -s "$REPO_ROOT/tests/python" -p 'test_*.py'
 	[ "$status" -eq 0 ]
+}
+
+@test "global-mlx-chat: unavailable Python skips instead of failing setup" {
+	local bats_bin tool tool_path bin
+	bats_bin="$(tool_binary bats)"
+	bin="$BATS_TEST_TMPDIR/without-python"
+	mkdir -p "$bin"
+	for tool in bash basename cat chmod cp cut date dirname env find grep head ln mkdir mktemp mv \
+		nl paste readlink realpath rm rmdir sed sleep sort tail touch tr uname uniq wc; do
+		tool_path="$(command -v "$tool")" || continue
+		ln -s "$tool_path" "$bin/$tool"
+	done
+	[ ! -e "$bin/python3" ]
+	run env PATH="$bin" "$bats_bin" --tap \
+		--filter "^global-mlx-chat: Python behavior is validated" "$BATS_TEST_FILENAME"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"# skip Python 3 not installed"* ]]
 }
 
 @test "global-mlx-chat: global task works outside the repository with spaces in paths" {
