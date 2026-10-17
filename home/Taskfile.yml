@@ -1,0 +1,100 @@
+version: '3'
+
+vars:
+  MLX_VENV: '{{.ROOT_DIR}}/mlx-qwen/.venv'
+  MLX_VOLUME: /Volumes/External Disk Data
+  MLX_CACHE_DIR: '{{.MLX_VOLUME}}/AI/huggingface'
+  MLX_PYTHON_CHECK: 'import platform, sys, venv; assert sys.version_info >= (3, 10) and platform.machine() == "arm64"'
+  MLX_VENV_CHECK: '{{.MLX_PYTHON_CHECK}}; assert sys.prefix != sys.base_prefix'
+  MLX_CHECK_ENV: >-
+    "{{.MLX_VENV}}/bin/python" "{{.ROOT_DIR}}/.config/mlx/chat.py"
+    --cache-dir "{{.MLX_CACHE_DIR}}" --volume "{{.MLX_VOLUME}}" --check-env
+
+tasks:
+  llm:chat:
+    desc: Set up and chat with local Qwen3.5 (Apple Silicon, thinking disabled)
+    interactive: true
+    silent: true
+    deps: [llm:setup]
+    cmds:
+      - >-
+        "{{.MLX_VENV}}/bin/python" "{{.ROOT_DIR}}/.config/mlx/chat.py"
+        --cache-dir "{{.MLX_CACHE_DIR}}" --volume "{{.MLX_VOLUME}}"
+
+  llm:storage:
+    internal: true
+    silent: true
+    preconditions:
+      - sh: test "$(uname -s)" = Darwin && test "$(uname -m)" = arm64
+        msg: 'llm:chat requires native Apple Silicon macOS (not Rosetta).'
+      - sh: mount | grep -F -- " on {{.MLX_VOLUME}} (" >/dev/null
+        msg: 'Connect the SSD at {{.MLX_VOLUME}} before setup. No internal cache fallback is used.'
+      - sh: |
+          case "{{.MLX_CACHE_DIR}}" in
+            *"/../"*|*"/.."|*"/./"*|*"/.") exit 1 ;;
+            "{{.MLX_VOLUME}}"/*) exit 0 ;;
+            *) exit 1 ;;
+          esac
+        msg: 'MLX_CACHE_DIR must be a directory beneath MLX_VOLUME, without dot segments.'
+      - sh: test -f "{{.ROOT_DIR}}/.config/mlx/chat.py"
+        msg: 'Missing ~/.config/mlx/chat.py. Apply the global Taskfile and launcher together.'
+    cmds:
+      - mkdir -p "{{.MLX_CACHE_DIR}}/hub" "{{.MLX_CACHE_DIR}}/xet" "{{.MLX_CACHE_DIR}}/pip" "{{.MLX_CACHE_DIR}}/tmp"
+
+  llm:setup:
+    internal: true
+    deps: [llm:storage]
+    preconditions:
+      - sh: |
+          for path in "{{.MLX_CACHE_DIR}}" "{{.MLX_CACHE_DIR}}/hub" "{{.MLX_CACHE_DIR}}/xet" "{{.MLX_CACHE_DIR}}/pip" "{{.MLX_CACHE_DIR}}/tmp"; do
+            test "$(cd "$path" && pwd -P)" = "$path" && test -w "$path" || exit 1
+          done
+        msg: 'External cache directories must be writable and not redirected through symlinks. Check SSD permissions.'
+    status:
+      - '{{.MLX_CHECK_ENV}}'
+    cmds:
+      - task: llm:venv
+      - |
+        export TMPDIR="{{.MLX_CACHE_DIR}}/tmp"
+        "{{.MLX_VENV}}/bin/python" -m pip --version ||
+          "{{.MLX_VENV}}/bin/python" -m ensurepip
+      - >-
+        env TMPDIR="{{.MLX_CACHE_DIR}}/tmp"
+        "{{.MLX_VENV}}/bin/python" -m pip --isolated --require-virtualenv
+        --disable-pip-version-check --no-input --cache-dir "{{.MLX_CACHE_DIR}}/pip"
+        install 'mlx-lm>=0.32.2'
+      - '{{.MLX_CHECK_ENV}}'
+
+  llm:venv:
+    internal: true
+    preconditions:
+      - sh: >-
+          (test ! -e "{{.MLX_VENV}}" && test ! -L "{{.MLX_VENV}}") ||
+          "{{.MLX_VENV}}/bin/python" -c '{{.MLX_VENV_CHECK}}'
+        msg: 'Existing {{.MLX_VENV}} is not a usable Python 3.10+ arm64 venv. Repair it or move it aside; it will not be deleted automatically.'
+    status:
+      - '"{{.MLX_VENV}}/bin/python" -c ''{{.MLX_VENV_CHECK}}'''
+    cmds:
+      - task: llm:python
+      - |
+        export TMPDIR="{{.MLX_CACHE_DIR}}/tmp"
+        if python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null; then
+          python3 -m venv "{{.MLX_VENV}}"
+        else
+          "$(brew --prefix python@3)/libexec/bin/python3" -m venv "{{.MLX_VENV}}"
+        fi
+
+  llm:python:
+    internal: true
+    preconditions:
+      - sh: python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null || command -v brew
+        msg: 'A native Python 3.10+ or Homebrew is required. Install Homebrew using the existing dotfiles setup; this task cannot safely bootstrap Homebrew.'
+    status:
+      - |
+        python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null ||
+          (command -v brew >/dev/null && "$(brew --prefix python@3)/libexec/bin/python3" -c '{{.MLX_PYTHON_CHECK}}')
+    cmds:
+      - >-
+        brew list --versions python@3 ||
+        env HOMEBREW_CACHE="{{.MLX_CACHE_DIR}}/homebrew" TMPDIR="{{.MLX_CACHE_DIR}}/tmp"
+        brew install python@3

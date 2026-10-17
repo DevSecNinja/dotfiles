@@ -16,6 +16,7 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 - **Automated Validation**: Pre-commit hooks and validation scripts ensure configuration quality
 - **Windows Enterprise Detection**: Automatic detection of Entra ID (Azure AD) and Intune enrollment status
 - **Task Automation**: Integrated [Task](https://taskfile.dev/) runner for common operations (validation, testing, installation)
+- **Global Tasks**: Shell-independent `task -g llm:chat` with automatic MLX setup on Apple Silicon; see [global tasks](docs/development-tools.md#global-tasks).
 - **Tool Version Management**: [mise](https://mise.jdx.dev/) for managing development tool versions
 
 ## 🔧 Chezmoi Variables
