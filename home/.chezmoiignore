@@ -5,7 +5,6 @@ LICENSE
 tests/
 install.sh
 install.ps1
-Taskfile.yml
 .mise.toml
 CONTRIBUTING.md
 STRUCTURE.md
