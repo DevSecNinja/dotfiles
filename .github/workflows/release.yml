@@ -40,7 +40,7 @@ concurrency:
 jobs:
   release:
     name: Build, attest, and publish
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       # Required by actions/attest-build-provenance to mint the OIDC token
@@ -169,7 +169,7 @@ jobs:
     # condition meaningful; the action itself derives resolved-vs-firing
     # from `needs.release.result`.
     if: ${{ always() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
