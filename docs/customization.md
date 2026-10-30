@@ -271,6 +271,7 @@ opinionated settings below to the invoking user's profile without elevation:
 | Lock-screen Spotlight overlays | Off (`RotatingLockScreenOverlayEnabled=0`) | Grade 3: [Microsoft Community mapping](https://learn.microsoft.com/en-us/answers/questions/1326668/how-to-disable-windows-spotlight-via-registry) | Re-enable lock-screen tips, delete the value, or set it to `1` |
 | Task View button | Hidden (`ShowTaskViewButton=0`) | Grade 1: [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11) | Enable Task view in taskbar settings, delete the value, or set it to `1` |
 | Taskbar search | Hidden (`SearchboxTaskbarMode=0`) | Grade 2: modes correspond to the [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but this value is not a documented policy | Select Search box in taskbar settings, delete the value, or set it to `3` |
+| Taskbar battery percentage | Shown (`IsBatteryPercentageEnabled=1`) | Grade 3: [community-documented Windows 11 preference](https://www.elevenforum.com/t/enable-or-disable-show-battery-percentage-on-taskbar-in-windows-11.32691/) | Turn off Battery percentage in Settings > System > Power & battery, delete the value, or set it to `0` |
 | File-name extensions | Shown (`HideFileExt=0`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's File name extensions option, delete the value, or set it to `1` |
 | Hidden files and folders | Shown (`Hidden=1`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's Hidden items option, delete the value, or set it to `2` |
 | Desktop background | Windows Spotlight (`BackgroundType=3`) | Grade 3: Spotlight is documented in the [settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but the registry mirror is best-effort | Choose another background, delete the value, or set image mode (`1`) |
@@ -286,6 +287,12 @@ which rewrites `HKCU\Control Panel\International` and otherwise restores the
 Dutch defaults. The decimal symbol is restored first because Windows will not
 allow the decimal and list separators to match. All registry writes are limited
 to `HKEY_CURRENT_USER`.
+
+The battery percentage appears next to the taskbar battery icon on supported
+Windows 11 builds (24H2 build 26100.7019 / 25H2 build 26200.7019 or later, with
+the feature available). Older builds and devices without a battery retain the
+preference without displaying a percentage. If the taskbar does not refresh
+immediately, sign out and back in; setup does not force-restart Explorer.
 
 The executable settings table in the script carries the same descriptions,
 rationales, citations, evidence grades, and reversal guidance next to each
