@@ -106,6 +106,7 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
         $actual.RotatingLockScreenOverlayEnabled | Should -Be "0|DWord"
         $actual.ShowTaskViewButton | Should -Be "0|DWord"
         $actual.SearchboxTaskbarMode | Should -Be "0|DWord"
+        $actual.IsBatteryPercentageEnabled | Should -Be "1|DWord"
         $actual.HideFileExt | Should -Be "0|DWord"
         $actual.Hidden | Should -Be "1|DWord"
         $actual.BackgroundType | Should -Be "3|DWord"
@@ -122,7 +123,7 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
             Get-WindowsNumberFormatRegistrySetting
         )
 
-        $registrySettings.Count | Should -Be 11
+        $registrySettings.Count | Should -Be 12
         $appliedRegistrySettings.Count | Should -Be $registrySettings.Count
         foreach ($setting in $appliedRegistrySettings) {
             $setting.Setting | Should -Not -BeNullOrEmpty
@@ -171,7 +172,7 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
     It "updates drifted settings with locale before the number separators" {
         $results = @(Invoke-TestPersonalization -Registry @{})
 
-        @($results | Where-Object Changed).Count | Should -Be 14
+        @($results | Where-Object Changed).Count | Should -Be 15
         $script:CultureSetCount | Should -Be 1
         $script:HomeSetCount | Should -Be 1
         $script:LanguageSetCount | Should -Be 1
@@ -202,7 +203,7 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
                 -GeoId 176 `
                 -Languages (New-TestLanguageList))
 
-        @($results).Count | Should -Be 14
+        @($results).Count | Should -Be 15
         @($results | Where-Object { $_.Status -ne "AlreadySet" }) |
             Should -BeNullOrEmpty
         $script:RegistryWrites | Should -BeNullOrEmpty
@@ -214,13 +215,36 @@ Describe "Current-user Windows personalization script" -Tag "Unit" {
     It "does not write any setting under WhatIf" {
         $results = @(Invoke-TestPersonalization -Registry @{} -WhatIf)
 
-        @($results).Count | Should -Be 14
+        @($results).Count | Should -Be 15
         @($results | Where-Object { $_.Status -ne "WhatIf" }) |
             Should -BeNullOrEmpty
         $script:RegistryWrites | Should -BeNullOrEmpty
         $script:CultureSetCount | Should -Be 0
         $script:HomeSetCount | Should -Be 0
         $script:LanguageSetCount | Should -Be 0
+    }
+
+    It "enables battery percentage when <Scenario>" -ForEach @(
+        @{ Scenario = "the preference is missing"; Exists = $false; Value = $null; Kind = $null }
+        @{ Scenario = "the preference is disabled"; Exists = $true; Value = 0; Kind = "DWord" }
+        @{ Scenario = "the registry type is wrong"; Exists = $true; Value = "1"; Kind = "String" }
+    ) {
+        $path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        $registry = @{
+            "$path|IsBatteryPercentageEnabled" = [pscustomobject]@{
+                Exists = $Exists; Value = $Value; Kind = $Kind
+            }
+        }
+
+        $results = @(Invoke-TestPersonalization -Registry $registry)
+        $result = @($results | Where-Object Setting -eq "IsBatteryPercentageEnabled")
+        $result.Count | Should -Be 1
+        $result[0].Status | Should -Be "Updated"
+        $write = @($script:RegistryWrites | Where-Object Name -eq "IsBatteryPercentageEnabled")
+        $write.Count | Should -Be 1
+        $write[0].Path | Should -Be $path
+        $write[0].Value | Should -Be 1
+        $write[0].Kind | Should -Be "DWord"
     }
 
     It "uses only current-user registry and supported per-user cmdlets" {

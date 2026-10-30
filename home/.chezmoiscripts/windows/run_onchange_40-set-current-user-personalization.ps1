@@ -66,6 +66,16 @@ function Get-WindowsPersonalizationSetting {
             Reversal = "Set SearchboxTaskbarMode to 3, delete the value, or select Search box in Settings > Personalization > Taskbar."
         }
         [pscustomobject]@{
+            Id = "show-battery-percentage"; Setting = "Taskbar battery percentage"; SettingType = "Registry"; Phase = "BeforeCulture"
+            Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "IsBatteryPercentageEnabled"
+            Value = 1; Kind = "DWord"; Command = $null
+            Description = "Shows the battery percentage next to the taskbar battery icon on supported Windows 11 builds."
+            Rationale = "Makes remaining battery charge visible without hovering. Older Windows builds or devices without a battery ignore this community-documented preference."
+            Citation = "https://www.elevenforum.com/t/enable-or-disable-show-battery-percentage-on-taskbar-in-windows-11.32691/"
+            EvidenceGrade = 3
+            Reversal = "Set IsBatteryPercentageEnabled to 0, delete the value, or turn off Battery percentage in Settings > System > Power & battery."
+        }
+        [pscustomobject]@{
             Id = "show-file-extensions"; Setting = "File-name extensions"; SettingType = "Registry"; Phase = "BeforeCulture"
             Path = "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "HideFileExt"
             Value = 0; Kind = "DWord"; Command = $null
