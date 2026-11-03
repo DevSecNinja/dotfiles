@@ -1,5 +1,11 @@
 {{- $manager := .manager -}}
 {{- $packages := .packages -}}
+{{- $homebrewPrefix := "" -}}
+{{- if or (eq $manager "brew") (eq $manager "formulas") -}}
+  {{- $homebrewPrefix = "homebrew/core/" -}}
+{{- else if eq $manager "cask" -}}
+  {{- $homebrewPrefix = "homebrew/cask/" -}}
+{{- end -}}
 {{- $patterns := dict
     "apt" "^[a-z0-9][a-z0-9.+-]*(:[a-z0-9-]+)?$"
     "dnf" "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
@@ -15,7 +21,7 @@
   {{- range (get $packages . | default list) -}}
     {{- $name := . -}}
     {{- if kindIs "map" . -}}{{- $name = .id -}}{{- end -}}
-    {{- $installed = append $installed ($name | toString | lower) -}}
+    {{- $installed = append $installed ($name | toString | lower | trimPrefix $homebrewPrefix) -}}
   {{- end -}}
 {{- end -}}
 {{- range (get $packages "uninstall" | default list) -}}
@@ -31,7 +37,7 @@
   {{- if not (regexMatch (get $patterns $manager) ($name | toString)) -}}
     {{- fail (printf "%s: invalid uninstall entry %v" $manager $name) -}}
   {{- end -}}
-  {{- if has ($name | toString | lower) $installed -}}
+  {{- if has ($name | toString | lower | trimPrefix $homebrewPrefix) $installed -}}
     {{- fail (printf "%s: %v is listed for both installation and uninstall" $manager $name) -}}
   {{- end -}}
 {{- end -}}

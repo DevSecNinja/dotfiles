@@ -160,6 +160,11 @@ winget:
     - Vendor.RetiredApplication
 ```
 
+For Homebrew conflict checks, `homebrew/core/name` and `name` are equivalent
+for formulas; `homebrew/cask/name` and `name` are equivalent for casks.
+Qualified uninstall selectors match only that tap. Unqualified selectors can
+match an installed basename from any tap.
+
 On the next `chezmoi apply`, the package scripts re-run when this configuration
 changes. Removals run before installations for the relevant manager, skip absent
 packages, and stop on errors (including missing tools or unsuccessful removal).

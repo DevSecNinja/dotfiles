@@ -1,6 +1,8 @@
 #!/bin/bash
 # Sourced after log.sh. SUDO_CMD is set by the package setup script.
 
+# Print installed selectors for the manager in $1, propagating query failures.
+# Canonicalize official Homebrew prefixes while retaining third-party tap names.
 package_uninstall_inventory() (
     set -o pipefail
     case "$1" in
@@ -12,10 +14,10 @@ package_uninstall_inventory() (
         rpm --query --all --queryformat '%{NAME}\n'
         ;;
     brew-formula)
-        brew list --formula --full-name -1
+        brew list --formula --full-name -1 | sed 's#^homebrew/core/##'
         ;;
     brew-cask)
-        brew list --cask --full-name -1
+        brew list --cask --full-name -1 | sed 's#^homebrew/cask/##'
         ;;
     mas)
         mas list | awk '{ print $1 }'
@@ -27,8 +29,10 @@ package_uninstall_inventory() (
     esac
 )
 
+# Remove selector $2 through manager $1, skipping absent packages and verifying removal.
+# Qualified Homebrew selectors must not match the same basename in another tap.
 uninstall_package() {
-    local manager="$1" package="$2" inventory output
+    local manager="$1" package="$2" match_package="$2" inventory output
     local -a remove_command elevate
     elevate=()
     [ -z "${SUDO_CMD:-}" ] || elevate=("${SUDO_CMD}")
@@ -77,16 +81,15 @@ uninstall_package() {
         printf '%s\n' "${inventory}" | log_data ERROR "Could not list ${manager} packages"
         return 1
     fi
-    # Homebrew core names are unqualified; tapped names may be fully qualified.
-    if [[ "${manager}" == brew-* ]]; then
-        if [[ "${package}" == homebrew/core/* || "${package}" == homebrew/cask/* ]]; then
-            package="${package##*/}"
-        fi
-        if [[ "${package}" != */* ]]; then
-            inventory=$(printf '%s\n' "${inventory}" | awk -F/ '{ print $NF }')
-        fi
+    if [[ "${manager}" == brew-formula && "${package}" == homebrew/core/* ]] ||
+        [[ "${manager}" == brew-cask && "${package}" == homebrew/cask/* ]]; then
+        match_package="${package##*/}"
     fi
-    if ! printf '%s\n' "${inventory}" | grep -Fx -- "${package}" >/dev/null; then
+    # Only an originally unqualified selector can match another tap's basename.
+    if [[ "${manager}" == brew-* && "${package}" != */* ]]; then
+        inventory=$(printf '%s\n' "${inventory}" | awk -F/ '{ print $NF }')
+    fi
+    if ! printf '%s\n' "${inventory}" | grep -Fx -- "${match_package}" >/dev/null; then
         log_step "${package} (${manager}) is not installed"
         return 0
     fi
@@ -103,7 +106,7 @@ uninstall_package() {
     if [[ "${manager}" == brew-* && "${package}" != */* ]]; then
         inventory=$(printf '%s\n' "${inventory}" | awk -F/ '{ print $NF }')
     fi
-    if printf '%s\n' "${inventory}" | grep -Fx -- "${package}" >/dev/null; then
+    if printf '%s\n' "${inventory}" | grep -Fx -- "${match_package}" >/dev/null; then
         log_error "${package} (${manager}) is still installed after uninstalling"
         return 1
     fi

@@ -231,6 +231,51 @@ Describe "Package uninstall template wiring" -Tag "Integration" {
 
     }
 
+    It "Rejects official Homebrew aliases in <OS> <Manager> install/uninstall lists" -TestCases @(
+        @{ OS = 'linux'; Manager = 'brew'; Prefix = 'homebrew/core' }
+        @{ OS = 'darwin'; Manager = 'formulas'; Prefix = 'homebrew/core' }
+        @{ OS = 'darwin'; Manager = 'cask'; Prefix = 'homebrew/cask' }
+    ) {
+        param($OS, $Manager, $Prefix)
+
+        foreach ($list in 'light', 'full', 'yubikey') {
+            foreach ($names in @(
+                @{ Install = 'legacy'; Uninstall = "$Prefix/legacy" }
+                @{ Install = "$Prefix/legacy"; Uninstall = 'legacy' }
+                @{ Install = "$Prefix/LEGACY"; Uninstall = 'legacy' }
+            )) {
+                $overrides = New-PackageOverrides $OS light
+                $group = if ($OS -eq 'darwin') { $overrides.packages.darwin.brew[$Manager] } else { $overrides.packages.linux.brew }
+                $group[$list] = @($names.Install)
+                $group.uninstall = @($names.Uninstall)
+
+                { Render-PackageScript $script:UnixScript $overrides } | Should -Throw '*listed for both installation and uninstall*'
+            }
+        }
+    }
+
+    It "Keeps third-party Homebrew taps distinct in <OS> <Manager> conflicts" -TestCases @(
+        @{ OS = 'linux'; Manager = 'brew'; Prefix = 'homebrew/core'; OtherPrefix = 'homebrew/cask' }
+        @{ OS = 'darwin'; Manager = 'formulas'; Prefix = 'homebrew/core'; OtherPrefix = 'homebrew/cask' }
+        @{ OS = 'darwin'; Manager = 'cask'; Prefix = 'homebrew/cask'; OtherPrefix = 'homebrew/core' }
+    ) {
+        param($OS, $Manager, $Prefix, $OtherPrefix)
+
+        foreach ($names in @(
+            @{ Install = 'vendor/tap/legacy'; Uninstall = "$Prefix/legacy" }
+            @{ Install = "$Prefix/legacy"; Uninstall = 'vendor/tap/legacy' }
+            @{ Install = 'vendor/one/legacy'; Uninstall = 'vendor/two/legacy' }
+            @{ Install = "$OtherPrefix/legacy"; Uninstall = 'legacy' }
+        )) {
+            $overrides = New-PackageOverrides $OS full
+            $group = if ($OS -eq 'darwin') { $overrides.packages.darwin.brew[$Manager] } else { $overrides.packages.linux.brew }
+            $group.light = @($names.Install)
+            $group.uninstall = @($names.Uninstall)
+
+            { Render-PackageScript $script:UnixScript $overrides } | Should -Not -Throw
+        }
+    }
+
     It "Rejects invalid uninstall selectors before rendering executable code" {
         foreach ($os in 'windows', 'linux', 'darwin') {
             $managers = switch ($os) {

@@ -12,6 +12,7 @@ setup() {
   QUERY_FAIL_WHEN_EMPTY=0
   REMOVE_FAIL=0
   KEEP_INSTALLED=0
+  REMAINING_INVENTORY=""
 }
 
 log_step() { printf '%s\n' "$*"; }
@@ -37,7 +38,7 @@ remove_mock() {
     echo "removal denied" >&2
     return 43
   fi
-  [ "$KEEP_INSTALLED" = 1 ] || : >"$INVENTORY"
+  [ "$KEEP_INSTALLED" = 1 ] || printf '%s' "$REMAINING_INVENTORY" >"$INVENTORY"
 }
 
 sudo() {
@@ -115,17 +116,75 @@ mas() {
   grep -Fx 'no-autoremove=1' "$CALLS"
 }
 
-@test "package-uninstall: Homebrew recognizes unqualified and core-qualified names" {
-  for package in legacy homebrew/core/legacy; do
-    printf 'legacy\n' >"$INVENTORY"
-    run uninstall_package brew-formula "$package"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"Uninstalled legacy"* ]]
+@test "package-uninstall: Homebrew recognizes unqualified and official tap names" {
+  for manager in brew-formula brew-cask; do
+    prefix=homebrew/core
+    [ "$manager" != brew-cask ] || prefix=homebrew/cask
+    for installed in legacy "$prefix/legacy"; do
+      for package in legacy "$prefix/legacy"; do
+        printf '%s\n' "$installed" >"$INVENTORY"
+        run uninstall_package "$manager" "$package"
+        [ "$status" -eq 0 ]
+        [[ "$output" == *"Uninstalled $package"* ]]
+      done
+    done
   done
   printf 'vendor/tap/legacy\n' >"$INVENTORY"
   run uninstall_package brew-formula legacy
   [ "$status" -eq 0 ]
   [[ "$output" == *"Uninstalled legacy"* ]]
+}
+
+@test "package-uninstall: qualified Homebrew selectors do not match another tap" {
+  REMOVE_FAIL=1
+  printf 'vendor/tap/legacy\n' >"$INVENTORY"
+  for manager in brew-formula brew-cask; do
+    prefix=homebrew/core
+    [ "$manager" != brew-cask ] || prefix=homebrew/cask
+    for package in "$prefix/legacy" vendor/other/legacy; do
+      run uninstall_package "$manager" "$package"
+      [ "$status" -eq 0 ]
+      [[ "$output" == *"is not installed"* ]]
+    done
+  done
+  ! grep -q '^remove ' "$CALLS"
+}
+
+@test "package-uninstall: Homebrew official prefixes are manager-specific" {
+  printf 'legacy\n' >"$INVENTORY"
+  run uninstall_package brew-formula homebrew/cask/legacy
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"is not installed"* ]]
+  run uninstall_package brew-cask homebrew/core/legacy
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"is not installed"* ]]
+  ! grep -q '^remove ' "$CALLS"
+}
+
+@test "package-uninstall: qualified Homebrew verification ignores other taps" {
+  REMAINING_INVENTORY=$'vendor/tap/legacy\n'
+  for manager in brew-formula brew-cask; do
+    prefix=homebrew/core
+    [ "$manager" != brew-cask ] || prefix=homebrew/cask
+    printf 'legacy\nvendor/tap/legacy\n' >"$INVENTORY"
+    run uninstall_package "$manager" "$prefix/legacy"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Uninstalled $prefix/legacy"* ]]
+    grep -Fx 'vendor/tap/legacy' "$INVENTORY"
+    grep -E "^remove brew uninstall .* -- $prefix/legacy$" "$CALLS"
+  done
+}
+
+@test "package-uninstall: qualified Homebrew verification detects remaining official names" {
+  for manager in brew-formula brew-cask; do
+    prefix=homebrew/core
+    [ "$manager" != brew-cask ] || prefix=homebrew/cask
+    printf 'legacy\n' >"$INVENTORY"
+    REMAINING_INVENTORY="$prefix/legacy"
+    run uninstall_package "$manager" "$prefix/legacy"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"still installed"* ]]
+  done
 }
 
 @test "package-uninstall: Mac App Store removal uses the exact numeric ID" {
