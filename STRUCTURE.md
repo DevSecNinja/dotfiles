@@ -67,7 +67,7 @@ dotfiles/
 │   │   └── windows/
 │   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
 │   │       ├── run_onchange_10-install-packages.ps1.tmpl # Development tools (winget, runs on packages.yaml change)
-│   │       ├── run_once_20-install-modules.ps1.tmpl   # PowerShell modules/fonts (after packages so pwsh exists)
+│   │       ├── run_onchange_20-install-modules.ps1.tmpl # PowerShell modules/fonts (after packages so pwsh exists)
 │   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing
@@ -130,6 +130,64 @@ Scripts run in this order:
 Numerical prefixes ensure order: `00-`, `01-`, `02-`, etc.
 
 **Note**: `run_onchange_*` scripts will re-run when their content changes or when tracked dependencies (like `packages.yaml`) are modified.
+
+### Uninstalling Packages
+
+Each package manager in `home/.chezmoidata/packages.yaml` supports an
+`uninstall` list alongside its installation lists:
+
+| Configuration key | Uninstall entries |
+| --- | --- |
+| `packages.windows.winget.uninstall` | Exact WinGet IDs, e.g. `Vendor.Application` |
+| `packages.windows.powershell_modules.uninstall` | PowerShellGet module names |
+| `packages.linux.apt.uninstall` | APT names, optionally `name:architecture` |
+| `packages.linux.dnf.uninstall` | RPM package names |
+| `packages.linux.brew.uninstall` | Homebrew formula names |
+| `packages.darwin.brew.formulas.uninstall` | Homebrew formula names |
+| `packages.darwin.brew.cask.uninstall` | Homebrew cask names |
+| `packages.darwin.brew.app-store.uninstall` | `{name, id}` entries, like the installation lists |
+
+These lists apply in **both light and full modes**, regardless of `useYubiKey`.
+Move retired entries out of `light`, `full`, and `yubikey` before listing them
+under `uninstall`; conflicting entries fail template rendering. Use canonical
+names rather than aliases or wildcards. For example:
+
+```yaml
+winget:
+  light: []
+  full: []
+  uninstall:
+    - Vendor.RetiredApplication
+```
+
+For Homebrew conflict checks, `homebrew/core/name` and `name` are equivalent
+for formulas; `homebrew/cask/name` and `name` are equivalent for casks.
+Qualified uninstall selectors match only that tap. Unqualified selectors can
+match an installed basename from any tap.
+
+On the next `chezmoi apply`, the package scripts re-run when this configuration
+changes. Removals run before installations for the relevant manager, skip absent
+packages, and stop on errors (including missing tools or unsuccessful removal).
+Only the native package manager for the current OS/distribution is used.
+Mac App Store removal requires `mas` to already be available, including in light
+mode, and runs before Homebrew formula removal so `mas` can itself be retired.
+
+APT/DNF and Mac App Store removal use sudo when needed; system-wide Windows
+packages/modules may require an elevated shell. Homebrew, WinGet, and module
+removals cover all installed versions. Automatic unused-dependency cleanup,
+APT purge, and Homebrew cask zap are not requested. Normal package-manager
+dependency rules still apply. Module directories are never deleted directly.
+
+The legacy `oh-my-posh` PowerShell module is retired this way in both Windows
+PowerShell and PowerShell 7. The `JanDeDobbeleer.OhMyPosh` WinGet package remains
+installed in full mode and provides the executable used by the profile.
+All other uninstall lists are empty by default. PPAs/taps, Git-cloned modules,
+and VS Code extensions are not managed by these uninstall lists.
+
+Windows module setup trusts `PSGallery` only if it is already registered. If
+the machine uses replacement repositories, their configuration and trust
+settings are preserved; the public gallery is not added automatically. Setup
+fails explicitly if no repositories are registered or repository discovery fails.
 
 ### Reusable Script Helpers
 

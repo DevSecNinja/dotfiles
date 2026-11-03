@@ -5,6 +5,19 @@
 #
 # chezmoi:run-onchange-trigger: packages.yaml checksum
 # Packages configuration hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
+# Uninstall helper hash: {{ include ".chezmoihelpers/package-uninstall.sh" | sha256sum }}
+# {{ $hasUninstall := false }}
+# {{ if eq .chezmoi.os "linux" }}
+# {{ range $manager := list "apt" "dnf" "brew" }}
+# {{ template "validate-package-actions" (dict "manager" $manager "packages" (index $.packages.linux $manager)) }}
+# {{ if (index $.packages.linux $manager).uninstall }}{{ $hasUninstall = true }}{{ end }}
+# {{ end }}
+# {{ else if eq .chezmoi.os "darwin" }}
+# {{ range $manager := list "formulas" "cask" "app-store" }}
+# {{ template "validate-package-actions" (dict "manager" $manager "packages" (index $.packages.darwin.brew $manager)) }}
+# {{ if (index $.packages.darwin.brew $manager).uninstall }}{{ $hasUninstall = true }}{{ end }}
+# {{ end }}
+# {{ end }}
 
 # Don't exit on error - we want to continue even if some packages fail
 set +e
@@ -12,6 +25,9 @@ set +e
 # shellcheck source=../../dot_config/shell/functions/log.sh
 . "{{ .chezmoi.sourceDir }}/dot_config/shell/functions/log.sh"
 LOG_TAG="install-packages"
+
+# shellcheck source=../../.chezmoihelpers/package-uninstall.sh
+. "{{ .chezmoi.sourceDir }}/.chezmoihelpers/package-uninstall.sh" || exit 1
 
 log_state "Installing development tools ({{ .installType }} mode)"
 
@@ -81,13 +97,22 @@ if [ "$EUID" -eq 0 ]; then
 elif command -v sudo >/dev/null 2>&1; then
 	SUDO_CMD="sudo"
 else
+	# {{ if $hasUninstall }}
+	log_error "sudo is not available and not running as root; cannot manage packages"
+	exit 1
+	# {{ else }}
 	log_warn "sudo is not available and not running as root"
 	log_info "Skipping package installation as it requires elevated privileges"
 	exit 0
+	# {{ end }}
 fi
 
 # {{ if eq .chezmoi.os "linux" }}
 # {{ if eq .chezmoi.osRelease.id "ubuntu" "debian" }}
+
+# {{ range .packages.linux.apt.uninstall }}
+uninstall_package apt {{ . | quote }} || exit 1
+# {{ end }}
 
 log_step "Updating package lists"
 $SUDO_CMD apt-get update
@@ -145,6 +170,10 @@ fi
 # {{ end }}
 # {{ else if eq .chezmoi.osRelease.id "fedora" "rhel" "centos" }}
 
+# {{ range .packages.linux.dnf.uninstall }}
+uninstall_package dnf {{ . | quote }} || exit 1
+# {{ end }}
+
 log_step "Installing packages with DNF"
 # Install light mode packages (always)
 # {{ range .packages.linux.dnf.light }}
@@ -184,7 +213,7 @@ fi
 # {{ end }}
 
 # Check if Homebrew packages are defined for Linux
-# {{ if or .packages.linux.brew.light .packages.linux.brew.full }}
+# {{ if or .packages.linux.brew.light .packages.linux.brew.full .packages.linux.brew.uninstall (and .useYubiKey .packages.linux.brew.yubikey) }}
 # Try to initialize Homebrew from standard locations if not already in PATH
 if ! command -v brew >/dev/null 2>&1; then
 	# Check standard Homebrew installation locations
@@ -198,6 +227,9 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 
 if command -v brew >/dev/null 2>&1; then
+	# {{ range .packages.linux.brew.uninstall }}
+	uninstall_package brew-formula {{ . | quote }} || exit 1
+	# {{ end }}
 	log_step "Installing packages with Homebrew"
 	# {{ range .packages.linux.brew.light }}
 	brew_install_quiet {{ . | quote }}
@@ -213,6 +245,10 @@ if command -v brew >/dev/null 2>&1; then
 	# {{ end }}
 	# {{ end }}
 else
+	# {{ if .packages.linux.brew.uninstall }}
+	log_error "Homebrew is required to process its uninstall list"
+	exit 1
+	# {{ end }}
 	log_warn "Homebrew not available. Skipping Homebrew packages:"
 	# {{ range .packages.linux.brew.light }}
 	log_info "  - {{ . }} (not installed)"
@@ -231,6 +267,17 @@ if ! command -v brew >/dev/null 2>&1; then
 	log_hint "The script should have run automatically if you're in full mode."
 	exit 1
 fi
+
+# Remove App Store apps before formulas so mas is still available.
+# {{ range (index .packages.darwin.brew "app-store").uninstall }}
+uninstall_package mas {{ .id | quote }} || exit 1
+# {{ end }}
+# {{ range .packages.darwin.brew.cask.uninstall }}
+uninstall_package brew-cask {{ . | quote }} || exit 1
+# {{ end }}
+# {{ range .packages.darwin.brew.formulas.uninstall }}
+uninstall_package brew-formula {{ . | quote }} || exit 1
+# {{ end }}
 
 log_step "Installing packages with Homebrew"
 # Install light mode formulas (always)

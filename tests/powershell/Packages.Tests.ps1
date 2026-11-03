@@ -261,7 +261,7 @@ Describe "Windows Package Configuration" {
         It "Should define a PowerShell Git full mode modules key (may be empty)" {
             # powershell_git_modules.full is intentionally empty on Windows since
             # the Office 365 alias module was retired; only assert the key is
-            # present so the git-clone loop in run_once_20-install-modules has a
+            # present so the git-clone loop in run_onchange_20-install-modules has a
             # defined (possibly empty) range to iterate.
             $script:ChezmoiData.packages.windows.powershell_git_modules.PSObject.Properties.Name |
                 Should -Contain 'full'

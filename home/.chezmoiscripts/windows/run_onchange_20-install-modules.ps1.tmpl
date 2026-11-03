@@ -1,4 +1,8 @@
 # {{ if eq .chezmoi.os "windows" }}
+# {{ template "validate-package-actions" (dict "manager" "powershell_modules" "packages" .packages.windows.powershell_modules) }}
+# Packages configuration hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
+$ErrorActionPreference = "Stop"
+
 # Source PowerShell functions from DotfilesHelpers module in chezmoi source directory
 $modulePath = "{{ .chezmoi.sourceDir }}\dot_config\powershell\modules\DotfilesHelpers"
 if (Test-Path $modulePath) {
@@ -19,23 +23,45 @@ $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 $env:Path = (@($machinePath, $userPath) | Where-Object { $_ }) -join ';'
 
+Write-Host "`nUninstalling retired PowerShell modules..." -ForegroundColor Cyan
+# {{ range .packages.windows.powershell_modules.uninstall }}
+Uninstall-PowerShellModule -ModuleName {{ . | quote }}
+# {{ end }}
+
 Write-Host "`nInstalling PowerShell Repositories..." -ForegroundColor Cyan
 
 # Set-PSResourceRepository ships with Microsoft.PowerShell.PSResourceGet and is
 # only present in PowerShell 7. chezmoi runs .ps1 scripts under Windows
 # PowerShell 5.1, which only has PowerShellGet's Set-PSRepository. Trust
-# PSGallery with whichever cmdlet is available so unattended module installs do
-# not prompt; skip gracefully if neither exists.
-if (Get-Command Set-PSResourceRepository -ErrorAction SilentlyContinue) {
-    $repositoryStorePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "PSResourceGet"
-    New-Item -ItemType Directory -Path $repositoryStorePath -Force | Out-Null
-    Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted
+# PSGallery only when it is registered; preserve replacement feeds and their
+# trust settings on machines that intentionally omit the public gallery.
+$usePSResourceGet = [bool](Get-Command Set-PSResourceRepository -ErrorAction SilentlyContinue)
+if ($usePSResourceGet) {
+    $repositories = @(Get-PSResourceRepository -ErrorAction Stop)
 }
 elseif (Get-Command Set-PSRepository -ErrorAction SilentlyContinue) {
-    Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+    $repositories = @(Get-PSRepository -ErrorAction Stop)
 }
 else {
-    Write-Warning "Neither Set-PSResourceRepository nor Set-PSRepository is available; skipping PSGallery trust configuration."
+    throw "Neither PSResourceGet nor PowerShellGet repository management is available."
+}
+
+if ($repositories.Count -eq 0) {
+    throw "No PowerShell repositories are registered. Register an approved repository before installing modules."
+}
+
+if ($repositories.Name -contains "PSGallery") {
+    if ($usePSResourceGet) {
+        $repositoryStorePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "PSResourceGet"
+        New-Item -ItemType Directory -Path $repositoryStorePath -Force | Out-Null
+        Set-PSResourceRepository -Name "PSGallery" -Priority 25 -Trusted -ErrorAction Stop
+    }
+    else {
+        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted -ErrorAction Stop
+    }
+}
+else {
+    Write-Host "[INFO] PSGallery is not registered; preserving configured repositories and their trust settings."
 }
 
 Write-Host "`nInstalling PowerShell Fonts..." -ForegroundColor Cyan

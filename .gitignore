@@ -5,6 +5,9 @@ CodeSigningCert-*.pfx
 
 # Chezmoi generated files
 .chezmoitemplates/
+!home/.chezmoitemplates/
+home/.chezmoitemplates/*
+!home/.chezmoitemplates/validate-package-actions
 .chezmoiremove
 
 # Generated completion cache files (Fish)

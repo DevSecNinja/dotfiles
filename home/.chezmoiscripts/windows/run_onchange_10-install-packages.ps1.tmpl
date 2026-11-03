@@ -1,10 +1,12 @@
 # {{ if eq .chezmoi.os "windows" }}
+# {{ template "validate-package-actions" (dict "manager" "winget" "packages" .packages.windows.winget) }}
 # PowerShell script to install packages defined in .chezmoidata/packages.yaml
 # Light mode: installs essential packages only
 # Full mode: installs light + additional development packages
 #
 # chezmoi:run-onchange-trigger: packages.yaml checksum
 # Packages configuration hash: {{ include ".chezmoidata/packages.yaml" | sha256sum }}
+# Uninstall helper hash: {{ include ".chezmoihelpers/package-uninstall.ps1" | sha256sum }}
 
 $ErrorActionPreference = "Stop"
 
@@ -15,6 +17,14 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Write-Error "winget not found. Please install App Installer from Microsoft Store."
     exit 1
 }
+
+# {{ if .packages.windows.winget.uninstall }}
+. "{{ .chezmoi.sourceDir }}\.chezmoihelpers\package-uninstall.ps1"
+Write-Host "`nUninstalling retired WinGet packages..." -ForegroundColor Cyan
+# {{ range .packages.windows.winget.uninstall }}
+Uninstall-WinGetPackage -Id {{ . | quote }}
+# {{ end }}
+# {{ end }}
 
 Write-Host "`nInstalling WinGet packages..." -ForegroundColor Cyan
 
