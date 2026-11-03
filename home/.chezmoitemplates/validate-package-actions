@@ -1,0 +1,37 @@
+{{- $manager := .manager -}}
+{{- $packages := .packages -}}
+{{- $patterns := dict
+    "apt" "^[a-z0-9][a-z0-9.+-]*(:[a-z0-9-]+)?$"
+    "dnf" "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+    "brew" "^([A-Za-z0-9_-]+/[A-Za-z0-9_-]+/)?[A-Za-z0-9][A-Za-z0-9@+._-]*$"
+    "formulas" "^([A-Za-z0-9_-]+/[A-Za-z0-9_-]+/)?[A-Za-z0-9][A-Za-z0-9@+._-]*$"
+    "cask" "^([A-Za-z0-9_-]+/[A-Za-z0-9_-]+/)?[A-Za-z0-9][A-Za-z0-9@+._-]*$"
+    "app-store" "^[1-9][0-9]*$"
+    "winget" "^[A-Za-z0-9][A-Za-z0-9.+_-]*$"
+    "powershell_modules" "^[A-Za-z0-9][A-Za-z0-9.-]*$"
+-}}
+{{- $installed := list -}}
+{{- range list "light" "full" "yubikey" -}}
+  {{- range (get $packages . | default list) -}}
+    {{- $name := . -}}
+    {{- if kindIs "map" . -}}{{- $name = .id -}}{{- end -}}
+    {{- $installed = append $installed ($name | toString | lower) -}}
+  {{- end -}}
+{{- end -}}
+{{- range (get $packages "uninstall" | default list) -}}
+  {{- $name := . -}}
+  {{- if eq $manager "app-store" -}}
+    {{- if not (kindIs "map" .) -}}
+      {{- fail "app-store: uninstall entries must have name and id fields" -}}
+    {{- end -}}
+    {{- $name = .id -}}
+  {{- else if not (kindIs "string" .) -}}
+    {{- fail (printf "%s: uninstall entries must be package names" $manager) -}}
+  {{- end -}}
+  {{- if not (regexMatch (get $patterns $manager) ($name | toString)) -}}
+    {{- fail (printf "%s: invalid uninstall entry %v" $manager $name) -}}
+  {{- end -}}
+  {{- if has ($name | toString | lower) $installed -}}
+    {{- fail (printf "%s: %v is listed for both installation and uninstall" $manager $name) -}}
+  {{- end -}}
+{{- end -}}

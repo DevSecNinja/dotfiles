@@ -48,6 +48,7 @@
 
         # Module installation
         'Install-PowerShellModule'
+        'Uninstall-PowerShellModule'
         'Install-GitPowerShellModule'
         'Add-ToPSModulePath'
 

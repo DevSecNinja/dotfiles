@@ -9,7 +9,7 @@ function Install-PowerShellModule {
     The name of the module to install from PowerShell Gallery.
 
     .EXAMPLE
-    Install-PowerShellModule -ModuleName "oh-my-posh"
+    Install-PowerShellModule -ModuleName "Pester"
     #>
     param (
         [Parameter(Mandatory)]
@@ -66,6 +66,66 @@ function Install-PowerShellModule {
         Write-Host " [FAILED]" -ForegroundColor Red
         Write-Error "Module installation failed: $result"
         return $null
+    }
+}
+
+function Uninstall-PowerShellModule {
+    <#
+    .SYNOPSIS
+    Removes all installed versions of a PowerShellGet module.
+
+    .DESCRIPTION
+    Checks the current host and, on Windows, the other installed PowerShell
+    host so both Windows PowerShell and PowerShell 7 module paths are covered.
+    Missing modules are skipped. Uninstall failures stop provisioning.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param (
+        [Parameter(Mandatory)]
+        [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9.-]*$')]
+        [string]$ModuleName
+    )
+
+    if (-not $PSCmdlet.ShouldProcess($ModuleName, "Uninstall all module versions from each PowerShell host")) {
+        return
+    }
+
+    $uninstallScript = {
+        param([string]$Name)
+
+        $ErrorActionPreference = "Stop"
+        if (-not (Get-Module -Name $Name -ListAvailable -ErrorAction Stop)) {
+            Write-Host "[SKIP] Module '$Name' is not installed in PowerShell $($PSVersionTable.PSVersion.Major)"
+            return
+        }
+
+        Get-Module -Name $Name -ErrorAction Stop | Remove-Module -Force -ErrorAction Stop
+        Uninstall-Module -Name $Name -AllVersions -Force -ErrorAction Stop
+
+        if (Get-Module -Name $Name -ListAvailable -ErrorAction Stop) {
+            throw "Module '$Name' is still available after uninstalling. Check its installation path and permissions."
+        }
+        Write-Host "[OK] Uninstalled module '$Name' from PowerShell $($PSVersionTable.PSVersion.Major)" -ForegroundColor Green
+    }
+
+    & $uninstallScript $ModuleName
+
+    # Each host has its own CurrentUser module directory. Use a clean process
+    # for the other host rather than guessing paths or deleting module folders.
+    if ($env:OS -eq 'Windows_NT') {
+        $otherHost = if ($PSVersionTable.PSVersion.Major -lt 7) { 'pwsh.exe' } else { 'powershell.exe' }
+        $hostCommand = Get-Command -Name $otherHost -CommandType Application -ErrorAction SilentlyContinue
+        if ($hostCommand) {
+            $command = "& { $uninstallScript } '$ModuleName'"
+            $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+            & $hostCommand.Source -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -EncodedCommand $encodedCommand
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not uninstall module '$ModuleName' using $otherHost (exit code $LASTEXITCODE)."
+            }
+        }
+        else {
+            Write-Host "[SKIP] $otherHost is not installed"
+        }
     }
 }
 

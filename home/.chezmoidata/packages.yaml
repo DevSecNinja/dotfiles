@@ -1,12 +1,15 @@
 # Cross-platform package definitions for Chezmoi dotfiles
 # Packages are organized by OS and package manager
 # Installation modes: light (essential) + full (light + additional packages)
+# Each package manager supports an uninstall list, applied in both modes.
+# Remove retired packages from light/full/yubikey before adding them to uninstall.
 
 packages:
   # Linux packages
   linux:
     # APT packages (Debian/Ubuntu)
     apt:
+      uninstall: []
       # PPAs to install (Ubuntu/derivatives only)
       ppas:
         light:
@@ -32,6 +35,7 @@ packages:
         - pcscd # smart-card daemon (required for OATH)
         - scdaemon
     brew:
+      uninstall: []
       light: []
       full:
         - copilot-cli # GitHub Copilot CLI
@@ -43,6 +47,7 @@ packages:
 
     # DNF packages (Fedora/RHEL/CentOS)
     dnf:
+      uninstall: []
       light: []
       full: []
       yubikey:
@@ -58,6 +63,7 @@ packages:
     brew:
       # Homebrew formulas (CLI tools)
       formulas:
+        uninstall: []
         light:
           - fastfetch
           - fish
@@ -79,6 +85,7 @@ packages:
           - openssh # macOS bundled OpenSSH lacks FIDO2 / SecurityKeyProvider
       # Homebrew casks (GUI applications)
       cask:
+        uninstall: []
         light: []
         full:
           - 1password
@@ -95,6 +102,8 @@ packages:
       # Mac App Store apps (installed via `mas`, which is provided by the
       # `mas` formula listed under brew.formulas.full).
       app-store:
+        # Use the same {name, id} entries as the installation lists.
+        uninstall: []
         light: []
         full:
           - name: "1Password for Safari"
@@ -120,6 +129,7 @@ packages:
   windows:
     # WinGet packages
     winget:
+      uninstall: []
       light:
         - Git.Git
         - Microsoft.PowerShell
@@ -138,8 +148,11 @@ packages:
       light:
         - Microsoft.WinGet.Client
       full:
-        - oh-my-posh
         - Pester
+      # Removed in both modes, from Windows PowerShell and PowerShell 7.
+      # Keep the Oh My Posh executable in winget.full above.
+      uninstall:
+        - oh-my-posh
 
     # PowerShell modules from Git repositories (installed via git clone)
     # Only installed in full mode on Windows

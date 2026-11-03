@@ -2,11 +2,15 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:SetupScriptPath = Join-Path $script:RepoRoot "home/.chezmoiscripts/windows/run_once_20-install-modules.ps1.tmpl"
+    $script:SetupScriptPath = Join-Path $script:RepoRoot "home/.chezmoiscripts/windows/run_onchange_20-install-modules.ps1.tmpl"
     $script:SetupScriptContent = Get-Content -Path $script:SetupScriptPath -Raw
 }
 
 Describe "PowerShell module setup script" -Tag "Unit" {
+    It "Tracks package configuration changes" {
+        $script:SetupScriptContent | Should -Match 'include "\.chezmoidata/packages.yaml" \| sha256sum'
+    }
+
     It "Should create the PSResourceGet repository directory before configuring PSGallery" {
         $directoryCreation = 'New-Item -ItemType Directory -Path $repositoryStorePath -Force'
         $setRepository = 'Set-PSResourceRepository -Name "PSGallery"'
@@ -16,6 +20,185 @@ Describe "PowerShell module setup script" -Tag "Unit" {
         $script:SetupScriptContent.IndexOf($directoryCreation) | Should -BeGreaterThan -1
         $script:SetupScriptContent.IndexOf($directoryCreation) |
             Should -BeLessThan $script:SetupScriptContent.IndexOf($setRepository)
+    }
+}
+
+Describe "PowerShell module setup rendering" -Tag "Integration" {
+    BeforeAll {
+        $script:TestConfig = Join-Path $TestDrive 'chezmoi.json'
+        Set-Content -LiteralPath $script:TestConfig -Value '{}' -Encoding ASCII
+        $script:OverrideFile = Join-Path $TestDrive 'override.json'
+        $script:PackageData = chezmoi execute-template --source $script:RepoRoot --config $script:TestConfig '{{ .packages.windows | toJson }}' |
+            ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { throw 'Could not load package data' }
+    }
+
+    It "Keeps Oh My Posh as an executable, not an installed module" {
+        $script:PackageData.winget.full | Should -Contain 'JanDeDobbeleer.OhMyPosh'
+        $script:PackageData.powershell_modules.uninstall | Should -Contain 'oh-my-posh'
+        $script:PackageData.powershell_modules.light | Should -Not -Contain 'oh-my-posh'
+        $script:PackageData.powershell_modules.full | Should -Not -Contain 'oh-my-posh'
+    }
+
+    It "Does not both install and uninstall any module" {
+        $modules = $script:PackageData.powershell_modules
+        foreach ($name in $modules.uninstall) {
+            $name | Should -Match '^[A-Za-z0-9][A-Za-z0-9.-]*$'
+            @($modules.light) + @($modules.full) | Should -Not -Contain $name
+        }
+    }
+
+    It "Renders removal before installations in <Mode> mode" -TestCases @(
+        @{ Mode = 'light' }
+        @{ Mode = 'full' }
+    ) {
+        param($Mode)
+
+        $override = @{ chezmoi = @{ os = 'windows' }; installType = $Mode } | ConvertTo-Json -Compress
+        Set-Content -LiteralPath $script:OverrideFile -Value $override -Encoding ASCII
+        $rendered = (chezmoi execute-template --source $script:RepoRoot --config $script:TestConfig --override-data-file $script:OverrideFile --file $script:SetupScriptPath) -join "`n"
+        $LASTEXITCODE | Should -Be 0
+        $rendered | Should -Match 'Uninstall-PowerShellModule -ModuleName "oh-my-posh"'
+        $rendered | Should -Not -Match '(?m)^Install-PowerShellModule -ModuleName "oh-my-posh"'
+        $rendered.IndexOf('Uninstall-PowerShellModule') | Should -BeLessThan $rendered.IndexOf('Install-PowerShellModule')
+        $rendered | Should -Match 'Install-PowerShellModule -ModuleName "Microsoft.WinGet.Client"'
+        if ($Mode -eq 'full') {
+            $rendered | Should -Match 'Install-PowerShellModule -ModuleName "Pester"'
+        }
+        else {
+            $rendered | Should -Not -Match 'Install-PowerShellModule -ModuleName "Pester"'
+        }
+        $parseErrors = $null
+        [void][System.Management.Automation.Language.Parser]::ParseInput($rendered, [ref]$null, [ref]$parseErrors)
+        $parseErrors | Should -BeNullOrEmpty
+
+        $destination = Join-Path $TestDrive "home-$Mode"
+        New-Item -ItemType Directory -Path $destination -Force | Out-Null
+        $state = Join-Path $TestDrive "state-$Mode.boltdb"
+        $preview = (chezmoi apply --dry-run --verbose --no-tty --include scripts --refresh-externals=never --source $script:RepoRoot --config $script:TestConfig --override-data-file $script:OverrideFile --destination $destination --persistent-state $state --source-path $script:SetupScriptPath 2>&1) -join "`n"
+        $LASTEXITCODE | Should -Be 0 -Because $preview
+        $preview | Should -Match 'Uninstall-PowerShellModule -ModuleName "oh-my-posh"'
+    }
+
+    It "Renders an empty uninstall list without removal calls" {
+        $override = @{
+            chezmoi = @{ os = 'windows' }
+            installType = 'full'
+            packages = @{ windows = @{ powershell_modules = @{ uninstall = @() } } }
+        } | ConvertTo-Json -Depth 6 -Compress
+        Set-Content -LiteralPath $script:OverrideFile -Value $override -Encoding ASCII
+        $rendered = (chezmoi execute-template --source $script:RepoRoot --config $script:TestConfig --override-data-file $script:OverrideFile --file $script:SetupScriptPath) -join "`n"
+
+        $LASTEXITCODE | Should -Be 0
+        $rendered | Should -Not -Match '(?m)^Uninstall-PowerShellModule'
+    }
+
+    It "Does not render Windows module actions on <OS>" -TestCases @(
+        @{ OS = 'linux' }
+        @{ OS = 'darwin' }
+    ) {
+        param($OS)
+
+        $override = @{ chezmoi = @{ os = $OS }; installType = 'full' } | ConvertTo-Json -Compress
+        Set-Content -LiteralPath $script:OverrideFile -Value $override -Encoding ASCII
+        $rendered = (chezmoi execute-template --source $script:RepoRoot --config $script:TestConfig --override-data-file $script:OverrideFile --file $script:SetupScriptPath) -join "`n"
+
+        $LASTEXITCODE | Should -Be 0
+        $rendered | Should -Not -Match '(?m)^(Uninstall|Install)-PowerShellModule'
+    }
+}
+
+Describe "PowerShell repository setup with <Manager>" -Tag "Unit" -ForEach @(
+    @{ Manager = 'PSResourceGet'; UsePSResourceGet = $true }
+    @{ Manager = 'PowerShellGet'; UsePSResourceGet = $false }
+) {
+    BeforeAll {
+        $start = $script:SetupScriptContent.IndexOf('# Set-PSResourceRepository ships')
+        $end = $script:SetupScriptContent.IndexOf('Write-Host "`nInstalling PowerShell Fonts..."')
+        $script:RepositorySetup = [scriptblock]::Create($script:SetupScriptContent.Substring($start, $end - $start))
+
+        function Get-PSResourceRepository { [CmdletBinding()] param() }
+        function Get-PSRepository { [CmdletBinding()] param() }
+        function Set-PSResourceRepository {
+            [CmdletBinding()]
+            param([string]$Name, [int]$Priority, [switch]$Trusted)
+        }
+        function Set-PSRepository {
+            [CmdletBinding()]
+            param([string]$Name, [string]$InstallationPolicy)
+        }
+    }
+
+    BeforeEach {
+        $script:UsePSResourceGet = $UsePSResourceGet
+        $script:Repositories = @([pscustomobject]@{ Name = 'PSGallery' })
+        Mock Get-Command {
+            if ($script:UsePSResourceGet) { [pscustomobject]@{ Name = 'Set-PSResourceRepository' } }
+        } -ParameterFilter { $Name -eq 'Set-PSResourceRepository' }
+        Mock Get-Command { [pscustomobject]@{ Name = 'Set-PSRepository' } } -ParameterFilter { $Name -eq 'Set-PSRepository' }
+        Mock Get-PSResourceRepository { $script:Repositories }
+        Mock Get-PSRepository { $script:Repositories }
+        Mock Set-PSResourceRepository {}
+        Mock Set-PSRepository {}
+        Mock New-Item {}
+        Mock Write-Host {}
+    }
+
+    It "Trusts PSGallery when it is registered" {
+        & $script:RepositorySetup
+
+        if ($UsePSResourceGet) {
+            Should -Invoke Set-PSResourceRepository -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'PSGallery' -and $Priority -eq 25 -and $Trusted -and $ErrorAction -eq 'Stop'
+            }
+            Should -Invoke Set-PSRepository -Times 0 -Exactly
+            Should -Invoke New-Item -Times 1 -Exactly -ParameterFilter { $ItemType -eq 'Directory' -and $Force }
+        }
+        else {
+            Should -Invoke Set-PSRepository -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'PSGallery' -and $InstallationPolicy -eq 'Trusted' -and $ErrorAction -eq 'Stop'
+            }
+            Should -Invoke Set-PSResourceRepository -Times 0 -Exactly
+        }
+    }
+
+    It "Preserves replacement repositories without changing trust or adding PSGallery" {
+        $script:Repositories = @([pscustomobject]@{ Name = 'CompanyGallery' })
+
+        & $script:RepositorySetup
+
+        Should -Invoke Set-PSResourceRepository -Times 0 -Exactly
+        Should -Invoke Set-PSRepository -Times 0 -Exactly
+        Should -Invoke New-Item -Times 0 -Exactly
+        Should -Invoke Write-Host -Times 1 -Exactly -ParameterFilter { "$Object" -like '*preserving configured repositories*' }
+    }
+
+    It "Fails explicitly when no repositories are registered" {
+        $script:Repositories = @()
+
+        { & $script:RepositorySetup } | Should -Throw '*No PowerShell repositories are registered*'
+        Should -Invoke Set-PSResourceRepository -Times 0 -Exactly
+        Should -Invoke Set-PSRepository -Times 0 -Exactly
+    }
+
+    It "Propagates repository inventory failures" {
+        Mock Get-PSResourceRepository { throw 'Cannot read repositories' }
+        Mock Get-PSRepository { throw 'Cannot read repositories' }
+
+        { & $script:RepositorySetup } | Should -Throw '*Cannot read repositories*'
+    }
+
+    It "Propagates repository configuration failures" {
+        Mock Set-PSResourceRepository { throw 'Cannot update repository' }
+        Mock Set-PSRepository { throw 'Cannot update repository' }
+
+        { & $script:RepositorySetup } | Should -Throw '*Cannot update repository*'
+    }
+
+    It "Fails explicitly when repository management is unavailable" {
+        Mock Get-Command { $null } -ParameterFilter { $Name -in 'Set-PSResourceRepository', 'Set-PSRepository' }
+
+        { & $script:RepositorySetup } | Should -Throw '*repository management is available*'
     }
 }
 
