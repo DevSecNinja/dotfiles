@@ -6,7 +6,7 @@
   // fresh, correctly detecting the runtime environment (CI, Codespaces, etc.)
   // Pinned by digest only (no tag): the devcontainers CLI cannot parse a
   // combined `:tag@sha256:...` reference, so Renovate keeps just the digest.
-  "image": "ghcr.io/devsecninja/dotfiles-devcontainer@sha256:f44bd7a4a273554349eb2a95641d018aa979c0454c6622a8f2d4ffeb98c76b28",
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer@sha256:20f0bb2f4d67a0e54d37e1da2e5194452b2e6d45efd1efd93926af32cd25fdac",
   "features": {
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "version": "latest"
