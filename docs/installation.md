@@ -122,8 +122,9 @@ the dotfiles.
 **Option 1 — Directly from GitHub (PowerShell 5.1+ or PowerShell 7+):**
 
 ```powershell
-# Using the official chezmoi installer (recommended)
-(irm -useb https://get.chezmoi.io/ps1) | powershell -c -; chezmoi init --apply DevSecNinja
+# Install chezmoi via winget (recommended), then open a new shell
+winget install twpayne.chezmoi
+chezmoi init --apply DevSecNinja
 ```
 
 **Option 2 — Clone and install locally:**
