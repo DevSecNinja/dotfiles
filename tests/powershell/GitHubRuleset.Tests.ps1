@@ -192,6 +192,14 @@ Describe "New-GitHubRulesetPayload" -Tag "Unit" {
         }
     }
 
+    It "sends the canonical lower-case rule type whatever the override's casing" {
+        InModuleScope DotfilesHelpers {
+            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ Rules = @('DELETION', 'Non_Fast_Forward') } }).Ruleset
+            $payload = New-GitHubRulesetPayload -Ruleset $ruleset
+            @($payload.rules | ForEach-Object { $_.type }) | Should -BeExactly @('deletion', 'non_fast_forward')
+        }
+    }
+
     It "serialises to JSON that GitHub's rulesets API accepts" {
         InModuleScope DotfilesHelpers {
             $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset

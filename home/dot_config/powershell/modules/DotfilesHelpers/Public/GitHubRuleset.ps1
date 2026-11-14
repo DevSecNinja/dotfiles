@@ -51,7 +51,11 @@ function Get-GitHubRulesetDesiredRule {
         throw "Unsupported ruleset rule type(s): $($unknown -join ', '). Supported: $($script:GitHubManagedBranchRuleTypes -join ', ')."
     }
 
-    return , [string[]]$wanted
+    # -contains is case-insensitive but GitHub's rule-type enum is not, so
+    # return the canonical spelling rather than whatever the override used.
+    $canonical = @($script:GitHubManagedBranchRuleTypes | Where-Object { $wanted -contains $_ })
+
+    return , [string[]]$canonical
 }
 
 function New-GitHubRulesetPayload {
