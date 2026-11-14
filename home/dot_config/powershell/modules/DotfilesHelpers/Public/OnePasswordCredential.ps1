@@ -9,6 +9,10 @@
 # entry fails immediately with a message naming what to create, rather
 # than surfacing as an empty secret partway through a bulk rollout.
 #
+# The GitHub App key can alternatively be read from the downloaded
+# `.private-key.pem` file (Get-GitHubAppCredential -PrivateKeyPath), for
+# machines without 1Password or for a one-off key rotation.
+#
 # Part of the GitHub repository configuration tooling; see
 # GitHubRepoConfig.ps1 for the public commands and docs/github-repo-config.md
 # for the user-facing guide.
@@ -205,18 +209,206 @@ function ConvertFrom-DotfilesSecureString {
     }
 }
 
+function Test-GitHubAppPrivateKeyDer {
+    <#
+    .SYNOPSIS
+        Structurally check that DER bytes encode an RSA private key.
+    .DESCRIPTION
+        Fallback for Windows PowerShell 5.1, whose .NET Framework cannot import
+        PEM keys. Verifies that the outer SEQUENCE spans the whole payload and
+        starts with version INTEGER 0, then that a PKCS#1 key continues with the
+        modulus INTEGER and a PKCS#8 key names the rsaEncryption algorithm. Not
+        a full parse, but it rejects empty bodies, base64-encoded text and
+        non-RSA keys.
+    .PARAMETER Der
+        The decoded PEM body.
+    .PARAMETER Label
+        The PEM label: 'RSA PRIVATE KEY' (PKCS#1) or 'PRIVATE KEY' (PKCS#8).
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [byte[]]$Der,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('RSA PRIVATE KEY', 'PRIVATE KEY')]
+        [string]$Label
+    )
+
+    if ($Der.Length -lt 16 -or $Der[0] -ne 0x30) { return $false }
+
+    $offset = 2
+    $length = [long]$Der[1]
+    if ($length -ge 0x80) {
+        $count = $length - 0x80
+        if ($count -lt 1 -or $count -gt 4) { return $false }
+        $length = 0
+        for ($i = 0; $i -lt $count; $i++) { $length = ($length * 256) + $Der[2 + $i] }
+        $offset = 2 + $count
+    }
+    if ($offset + $length -ne $Der.Length) { return $false }
+
+    if ($Der[$offset] -ne 0x02 -or $Der[$offset + 1] -ne 0x01 -or $Der[$offset + 2] -ne 0x00) { return $false }
+    $next = $offset + 3
+
+    if ($Label -eq 'RSA PRIVATE KEY') {
+        return ($Der[$next] -eq 0x02)
+    }
+
+    # AlgorithmIdentifier SEQUENCE { OID 1.2.840.113549.1.1.1 (rsaEncryption), NULL }
+    $rsaOid = [byte[]](0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01)
+    if ($Der[$next] -ne 0x30 -or $Der.Length -lt ($next + 2 + $rsaOid.Length)) { return $false }
+    for ($i = 0; $i -lt $rsaOid.Length; $i++) {
+        if ($Der[$next + 2 + $i] -ne $rsaOid[$i]) { return $false }
+    }
+    return $true
+}
+
+function Test-GitHubAppPrivateKeyBlock {
+    <#
+    .SYNOPSIS
+        Is this PEM block a usable RSA private key?
+    .DESCRIPTION
+        A block can carry the right header and still hold garbage - an empty
+        body or base64-encoded text - which would roll out as an unusable
+        secret. On PowerShell 7 the key is imported with .NET, which fully
+        validates it; Windows PowerShell 5.1 falls back to a structural DER
+        check. Returns a boolean and never surfaces the key or the parser's
+        message.
+    .PARAMETER Block
+        The PEM block, BEGIN and END lines included.
+    .PARAMETER Label
+        The PEM label: 'RSA PRIVATE KEY' or 'PRIVATE KEY'.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Block,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    $der = $null
+    try {
+        if ($null -ne $rsa.PSObject.Methods['ImportFromPem']) {
+            $rsa.ImportFromPem($Block)
+            return $true
+        }
+
+        $body = ($Block -replace '-----(BEGIN|END) [A-Z ]+-----', '') -replace '\s', ''
+        $der = [System.Convert]::FromBase64String($body)
+        return (Test-GitHubAppPrivateKeyDer -Der $der -Label $Label)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        if ($null -ne $der) { [Array]::Clear($der, 0, $der.Length) }
+        $rsa.Dispose()
+    }
+}
+
+function Read-GitHubAppPrivateKeyFile {
+    <#
+    .SYNOPSIS
+        Read and validate a GitHub App private key from a PEM file.
+    .DESCRIPTION
+        GitHub Apps authenticate with an RSA private key, which the App's
+        settings page issues as `<app>.<date>.private-key.pem`. Both the PKCS#1
+        (`BEGIN RSA PRIVATE KEY`) and PKCS#8 (`BEGIN PRIVATE KEY`) encodings
+        are accepted; certificates, encrypted keys, empty files and anything
+        else are rejected before a value is returned, and the block itself must
+        parse as an RSA key (Test-GitHubAppPrivateKeyBlock).
+
+        Error messages name the path and the problem but never echo the file
+        contents, so a wrong file cannot leak a key into the console, a
+        transcript or a log. Only the private-key block itself is kept.
+    .PARAMETER Path
+        Path to the PEM file. The extension does not matter.
+    .OUTPUTS
+        System.Security.SecureString
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The PEM is read from disk as plain text; converting it to a SecureString immediately is the hardening step, not a weakness.')]
+    [CmdletBinding()]
+    [OutputType([System.Security.SecureString])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Path
+    )
+
+    $howToGetOne = "Generate one on the GitHub App's settings page (General -> Private keys); the download is named like '<app>.<date>.private-key.pem'."
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "GitHub App private key file '$Path' was not found. $howToGetOne"
+    }
+
+    $resolved = (Resolve-Path -LiteralPath $Path).ProviderPath
+    $text = $null
+    $keys = $null
+
+    try {
+        try {
+            $text = [System.IO.File]::ReadAllText($resolved)
+        }
+        catch {
+            throw "GitHub App private key file '$resolved' could not be read: $($_.Exception.Message)"
+        }
+
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            throw "GitHub App private key file '$resolved' is empty. $howToGetOne"
+        }
+
+        # [regex]::IsMatch rather than -match, so $Matches never holds any of
+        # the file contents.
+        if ([regex]::IsMatch($text, '-----BEGIN [A-Z0-9 ]*CERTIFICATE-----')) {
+            throw "'$resolved' contains a certificate, not a private key. GitHub Apps authenticate with the App's private key ('-----BEGIN RSA PRIVATE KEY-----'). $howToGetOne"
+        }
+
+        if ([regex]::IsMatch($text, '-----BEGIN ENCRYPTED PRIVATE KEY-----|Proc-Type:\s*4,ENCRYPTED')) {
+            throw "'$resolved' holds a passphrase-protected private key. GitHub Actions needs the key unencrypted, exactly as GitHub issued it."
+        }
+
+        $keys = [regex]::Matches($text, '-----BEGIN (RSA PRIVATE KEY|PRIVATE KEY)-----\s+[A-Za-z0-9+/=\s]+?-----END \1-----')
+        if ($keys.Count -eq 0) {
+            throw "'$resolved' does not contain a PEM private key. Expected a '-----BEGIN RSA PRIVATE KEY-----' or '-----BEGIN PRIVATE KEY-----' block. $howToGetOne"
+        }
+        if ($keys.Count -gt 1) {
+            throw "'$resolved' contains $($keys.Count) private keys. Pass a file that holds exactly one."
+        }
+
+        $label = $keys[0].Groups[1].Value
+        if (-not (Test-GitHubAppPrivateKeyBlock -Block $keys[0].Value -Label $label)) {
+            throw "'$resolved' has a '-----BEGIN $label-----' block, but it does not hold a valid RSA private key. GitHub Apps sign with RSA keys. $howToGetOne"
+        }
+
+        return (ConvertTo-SecureString -String $keys[0].Value -AsPlainText -Force)
+    }
+    finally {
+        $text = $null
+        $keys = $null
+    }
+}
+
 function Get-GitHubAppCredential {
     <#
     .SYNOPSIS
-        Read a GitHub App ID and private key from 1Password.
+        Read a GitHub App ID and private key from 1Password or a PEM file.
 
     .DESCRIPTION
-        Resolves two 1Password secret references with `op read` and returns
-        them as an object. The private key is returned as a SecureString so it
-        is not left as a plain string in the session; the App ID is returned as
-        plain text because it is a non-secret identifier.
+        By default, resolves two 1Password secret references with `op read`
+        and returns them as an object. With -PrivateKeyPath, the key is read
+        from a local PEM file instead and the App ID is taken from -AppId, so
+        1Password is not needed at all.
 
-        Before reading anything, the 1Password CLI is checked for being
+        Either way the private key is returned as a SecureString so it is not
+        left as a plain string in the session; the App ID is returned as plain
+        text because it is a non-secret identifier. The key is never written to
+        any output stream.
+
+        When reading from 1Password, the CLI is first checked for being
         installed and unlocked, and both the item and the fields are verified to
         exist. A missing entry therefore fails immediately with a message naming
         exactly what to create, rather than surfacing as an empty value partway
@@ -234,6 +426,11 @@ function Get-GitHubAppCredential {
         variables. Secret references are non-secret identifiers, useless without
         authenticating to 1Password.
 
+        The PEM file passed to -PrivateKeyPath must hold exactly one unencrypted
+        private key, in PKCS#1 ('-----BEGIN RSA PRIVATE KEY-----') or PKCS#8
+        ('-----BEGIN PRIVATE KEY-----') form. A certificate, an encrypted key,
+        an empty file or any other content is rejected with an explanation.
+
     .PARAMETER AppIdReference
         1Password secret reference for the App ID, in `op://Vault/Item/field`
         form. Defaults to $env:OP_GITHUB_APP_ID_REF, then to
@@ -243,6 +440,15 @@ function Get-GitHubAppCredential {
         1Password secret reference for the PEM-encoded private key. Defaults to
         $env:OP_GITHUB_APP_KEY_REF, then to
         'op://Private/GitHub Automation App/private-key'.
+
+    .PARAMETER AppId
+        The numeric App ID from the App's settings page. Required with
+        -PrivateKeyPath.
+
+    .PARAMETER PrivateKeyPath
+        Path to the App's private key file, such as the downloaded
+        '<app>.<date>.private-key.pem'. Reads the key from disk instead of from
+        1Password.
 
     .EXAMPLE
         Get-GitHubAppCredential
@@ -260,20 +466,51 @@ function Get-GitHubAppCredential {
 
         Read the credential from a different vault or item.
 
+    .EXAMPLE
+        $cred = Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath ~/Downloads/automation-app.2026-11-14.private-key.pem
+        Get-GitHubRepoConfig -All -HasRelease -Check AppCredential | Set-GitHubRepoConfig -AppCredential $cred -WhatIf
+
+        Read the key from the downloaded file and preview rolling it out to the
+        repositories that publish releases.
+
     .OUTPUTS
         PSCustomObject with AppId (string) and PrivateKey (SecureString).
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Read-only; does not change system state.')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The 1Password CLI returns the PEM as plain text; converting it to a SecureString immediately is the hardening step, not a weakness.')]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'OnePassword')]
     [OutputType([PSCustomObject])]
     param(
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'OnePassword')]
         [string]$AppIdReference,
 
-        [Parameter(Mandatory = $false)]
-        [string]$PrivateKeyReference
+        [Parameter(Mandatory = $false, ParameterSetName = 'OnePassword')]
+        [string]$PrivateKeyReference,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'File')]
+        [string]$AppId,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'File')]
+        [ValidateNotNullOrEmpty()]
+        [string]$PrivateKeyPath
     )
+
+    if ($PSCmdlet.ParameterSetName -eq 'File') {
+        $AppId = $AppId.Trim()
+        if ($AppId -notmatch '^\d+$') {
+            throw "'$AppId' is not a numeric GitHub App ID. Use the 'App ID' from the App's settings page, not the client ID or slug."
+        }
+
+        Write-Verbose "Reading GitHub App private key from file '$PrivateKeyPath'"
+        $secure = Read-GitHubAppPrivateKeyFile -Path $PrivateKeyPath
+        Write-Verbose "Private key file validated for App ID $AppId"
+
+        return [PSCustomObject]@{
+            PSTypeName = 'Dotfiles.GitHubAppCredential'
+            AppId      = $AppId
+            PrivateKey = $secure
+        }
+    }
 
     if ([string]::IsNullOrWhiteSpace($AppIdReference)) {
         $AppIdReference = $env:OP_GITHUB_APP_ID_REF

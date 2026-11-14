@@ -161,6 +161,67 @@ function Test-GitHubPagesWorkflow {
     return $false
 }
 
+function Get-GitHubReleaseEvidence {
+    <#
+    .SYNOPSIS
+        Explain why a repository counts as one that publishes releases.
+    .DESCRIPTION
+        The Automation App credential is needed by repositories that cut
+        releases through the shared release-please workflow. A repository
+        qualifies when it has a root release-please-config.json, or at least
+        one published release whose tag looks like a version (v1.2, 1.2.3).
+
+        Data or state snapshots stored as GitHub releases - tags such as
+        db-2026-01-01 or news-state - do not look like versions, so they do
+        not qualify a repository on their own.
+
+        The config file is checked first because it is one cheap call and is
+        conclusive. Releases are then read a page of 100 at a time, newest
+        first, stopping at the first versioned one, so a repository whose
+        version release sits behind many data releases still qualifies.
+    .PARAMETER Repository
+        Repository in 'owner/name' form.
+    .PARAMETER VersionPattern
+        Regex a release tag must match to count as a version release.
+    .OUTPUTS
+        String describing the evidence, or $null when there is none. Throws
+        when the release list cannot be read, so an API, network or rate-limit
+        failure is never mistaken for "no releases".
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+
+        [Parameter(Mandatory = $false)]
+        [string]$VersionPattern = '^v?\d+\.\d+'
+    )
+
+    $config = Invoke-GitHubApi -Endpoint "repos/$Repository/contents/release-please-config.json" -AllowFailure
+    if ($null -ne $config) {
+        return 'release-please-config.json'
+    }
+
+    $pageSize = 100
+    for ($page = 1; ; $page++) {
+        $releases = Invoke-GitHubApi -Endpoint "repos/$Repository/releases?per_page=$pageSize&page=$page" -AllowFailure
+        if ($null -eq $releases) {
+            throw "Could not list releases for $Repository (page $page). Check the gh token, network access and API rate limit."
+        }
+        $releases = @($releases)
+
+        $versioned = @($releases | Where-Object {
+                $null -ne $_ -and -not $_.draft -and [string]$_.tag_name -match $VersionPattern
+            })
+        if ($versioned.Count -gt 0) {
+            return "release $($versioned[0].tag_name)"
+        }
+        if ($releases.Count -lt $pageSize) {
+            return $null
+        }
+    }
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

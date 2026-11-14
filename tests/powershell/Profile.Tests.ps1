@@ -320,6 +320,10 @@ Describe "DotfilesHelpers Module" {
             'Test-GitHubPagesWorkflow'
             'Get-GitHubCredentialScope'
             'Get-GitHubEnvironmentState'
+            'Get-GitHubReleaseEvidence'
+            'Read-GitHubAppPrivateKeyFile'
+            'Test-GitHubAppPrivateKeyBlock'
+            'Test-GitHubAppPrivateKeyDer'
         )
 
         # Discover every top-level function defined across the Public files using

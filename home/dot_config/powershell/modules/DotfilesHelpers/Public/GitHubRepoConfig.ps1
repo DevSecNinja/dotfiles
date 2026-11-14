@@ -238,6 +238,15 @@ function Get-GitHubRepoConfig {
         this to leave upstream clones alone. Every result carries an IsFork
         property, so forks can also be filtered after the fact.
 
+    .PARAMETER HasRelease
+        Keep only repositories that publish releases, when used with -All:
+        non-archived, non-fork repositories with a root
+        release-please-config.json or at least one published release whose
+        tag looks like a version (^v?\d+\.\d+). Data or state releases such as
+        db-2026-01-01 or news-state do not count. Use it to scope the
+        Automation App credential rollout to the repositories that need it.
+        Each result records why it qualified on ReleaseEvidence.
+
     .PARAMETER Check
         Categories to audit. Defaults to Settings, Actions and Ruleset.
         AppCredential is opt-in because listing secrets needs extra token
@@ -278,6 +287,13 @@ function Get-GitHubRepoConfig {
 
         Audit only the forks.
 
+    .EXAMPLE
+        Get-GitHubRepoConfig -All -HasRelease -Check AppCredential
+
+        Audit the App credential on the repositories that publish releases.
+        The number of repositories kept by the filter is reported on the
+        information stream.
+
     .NOTES
         A category that cannot be evaluated - a missing token permission, or a
         plan limitation such as rulesets on a private repository - is reported
@@ -315,6 +331,9 @@ function Get-GitHubRepoConfig {
         [Parameter(Mandatory = $false, ParameterSetName = 'All')]
         [switch]$ExcludeForks,
 
+        [Parameter(Mandatory = $false, ParameterSetName = 'All')]
+        [switch]$HasRelease,
+
         [Parameter(Mandatory = $false)]
         [ValidateSet('Settings', 'Actions', 'Ruleset', 'AppCredential', 'CloudflareCredential')]
         [string[]]$Check = @('Settings', 'Actions', 'Ruleset'),
@@ -326,6 +345,17 @@ function Get-GitHubRepoConfig {
     begin {
         Test-GitHubCliReady
 
+        if ($HasRelease -and $IncludeArchived) {
+            throw "-HasRelease only selects active repositories; it cannot be combined with -IncludeArchived."
+        }
+
+        # The release filter summary goes to the information stream, shown by
+        # default; -InformationAction SilentlyContinue mutes it.
+        if (-not $PSBoundParameters.ContainsKey('InformationAction')) {
+            $InformationPreference = 'Continue'
+        }
+
+        $releaseEvidence = @{}
         $desired = if ($PSBoundParameters.ContainsKey('Baseline')) {
             Get-GitHubRepoBaseline -Override $Baseline
         }
@@ -348,11 +378,42 @@ function Get-GitHubRepoConfig {
                     Write-Verbose "Skipping archived repository $($repo.nameWithOwner)"
                     continue
                 }
-                if ($repo.isFork -and $ExcludeForks) {
+                if ($repo.isFork -and ($ExcludeForks -or $HasRelease)) {
                     Write-Verbose "Skipping fork $($repo.nameWithOwner)"
                     continue
                 }
                 $targets.Add($repo.nameWithOwner)
+            }
+
+            if ($HasRelease) {
+                $listedCount = $targets.Count
+                $unreadable = 0
+                $releaseTargets = [System.Collections.Generic.List[string]]::new()
+                foreach ($candidate in $targets) {
+                    try {
+                        $evidence = Get-GitHubReleaseEvidence -Repository $candidate
+                    }
+                    catch {
+                        # Leaving it out is the safe default for a rollout,
+                        # but it must be visible rather than silent.
+                        Write-Warning "Release filter could not check ${candidate}, so it is left out of this run: $($_.Exception.Message)"
+                        $unreadable++
+                        continue
+                    }
+                    if ($null -eq $evidence) {
+                        Write-Verbose "Skipping ${candidate}: no release-please-config.json and no versioned release"
+                        continue
+                    }
+                    Write-Verbose "Keeping ${candidate}: $evidence"
+                    $releaseEvidence[$candidate] = $evidence
+                    $releaseTargets.Add($candidate)
+                }
+                $targets = $releaseTargets
+                $message = "Release filter: $($targets.Count) of $listedCount active, non-fork repositories in $Owner publish releases."
+                if ($unreadable -gt 0) {
+                    $message += " $unreadable could not be checked and were left out; see the warnings."
+                }
+                Write-Information -MessageData $message -Tags 'GitHubRepoConfig'
             }
         }
     }
@@ -643,6 +704,7 @@ function Get-GitHubRepoConfig {
                 ExtraBranchPolicies = $extraBranchPolicies
                 DefaultBranch = $repo.default_branch
                 UsesPagesWorkflow = $usesPagesWorkflow
+                ReleaseEvidence = $releaseEvidence[$target]
             }
         }
     }
@@ -659,6 +721,12 @@ function Set-GitHubRepoConfig {
 
         Supports -WhatIf for a dry run: every change is printed, nothing is
         sent. This is the recommended way to preview a bulk change.
+
+        A line per repository (what was applied or skipped) and a run summary
+        are written to the information stream and shown by default. Mute them
+        with -InformationAction SilentlyContinue, or capture them with
+        -InformationVariable. Only setting and secret names are logged, never
+        secret values.
 
         Authentication is delegated to the `gh` CLI. Writing repository
         settings requires a token with the fine-grained `administration:write`
@@ -774,6 +842,11 @@ function Set-GitHubRepoConfig {
     begin {
         Test-GitHubCliReady
         $pending = [System.Collections.Generic.List[PSObject]]::new()
+
+        if (-not $PSBoundParameters.ContainsKey('InformationAction')) {
+            $InformationPreference = 'Continue'
+        }
+        $summary = [ordered]@{ Repositories = 0; Compliant = 0; Unevaluated = 0; Archived = 0; Changed = 0; Applied = 0; Previewed = 0; Skipped = 0 }
     }
 
     process {
@@ -794,19 +867,35 @@ function Set-GitHubRepoConfig {
     end {
         foreach ($config in $pending) {
             $target = $config.Repository
+            $summary.Repositories++
 
             if ($config.IsArchived) {
                 Write-Warning "Skipping $target because it is archived and rejects writes."
+                $summary.Archived++
                 continue
             }
 
             $drift = @($config.Drift)
+            # A category the audit could not read has no drift recorded, which
+            # must not be mistaken for compliance.
+            $unevaluated = @($config.SkippedChecks | Select-Object -Unique)
             if ($PSBoundParameters.ContainsKey('Category')) {
                 $drift = @($drift | Where-Object { $Category -contains $_.Category })
+                $unevaluated = @($unevaluated | Where-Object { $Category -contains $_ })
             }
+            $notEvaluated = if ($unevaluated.Count -gt 0) { "; not evaluated [$($unevaluated -join ', ')]" } else { '' }
+            if ($unevaluated.Count -gt 0) { $summary.Unevaluated++ }
 
             if ($drift.Count -eq 0) {
-                Write-Verbose "$target is already compliant; nothing to do."
+                if ($unevaluated.Count -gt 0) {
+                    Write-Verbose "$target has no drift in the evaluated categories; nothing to do."
+                    Write-Information -MessageData "${target}: no drift found$notEvaluated" -Tags 'GitHubRepoConfig'
+                }
+                else {
+                    Write-Verbose "$target is already compliant; nothing to do."
+                    Write-Information -MessageData "${target}: already compliant" -Tags 'GitHubRepoConfig'
+                    $summary.Compliant++
+                }
                 if ($PassThru) {
                     [PSCustomObject]@{
                         PSTypeName = 'Dotfiles.GitHubRepoConfigResult'
@@ -952,6 +1041,13 @@ function Set-GitHubRepoConfig {
                         }
                     }
 
+                    if ($needsPin -and $WhatIfPreference) {
+                        # A dry run cannot create the pin, but the preview should
+                        # still list the writes that would follow it. Nothing is
+                        # written: every later step is behind ShouldProcess too.
+                        $environmentReady = $true
+                    }
+
                     if ($useEnv -and -not $environmentReady) {
                         Write-Warning "Not writing the App credential to ${target}: environment '$envName' is not pinned to the default branch, so an environment secret there would be no safer than a repository secret."
                         foreach ($item in $credentialDrift) {
@@ -1043,6 +1139,26 @@ function Set-GitHubRepoConfig {
                 }
             }
 
+            $changes = @($drift | ForEach-Object { "$($_.Category)/$($_.Setting)" })
+            $skippedNote = if ($skipped.Count -gt 0) { "; skipped [$($skipped -join ', ')]" } else { '' }
+            $summary.Skipped += $skipped.Count
+            if ($WhatIfPreference) {
+                # Items skipped before ShouldProcess (a missing credential, an
+                # environment that cannot be pinned) would not be written either.
+                $previewed = @($changes | Where-Object { $skipped -notcontains $_ })
+                $summary.Previewed += $previewed.Count
+                $message = "${target}: $($previewed.Count) change(s) previewed, none applied"
+                if ($previewed.Count -gt 0) { $message += " [$($previewed -join ', ')]" }
+                Write-Information -MessageData ($message + $skippedNote + $notEvaluated) -Tags 'GitHubRepoConfig'
+            }
+            else {
+                $summary.Applied += $applied.Count
+                if ($applied.Count -gt 0) { $summary.Changed++ }
+                $message = "${target}: applied $($applied.Count) of $($changes.Count) change(s)"
+                if ($applied.Count -gt 0) { $message += " [$($applied -join ', ')]" }
+                Write-Information -MessageData ($message + $skippedNote + $notEvaluated) -Tags 'GitHubRepoConfig'
+            }
+
             if ($PassThru) {
                 [PSCustomObject]@{
                     PSTypeName = 'Dotfiles.GitHubRepoConfigResult'
@@ -1052,6 +1168,15 @@ function Set-GitHubRepoConfig {
                 }
             }
         }
+
+        $message = "Summary: $($summary.Repositories) repositories, $($summary.Compliant) already compliant, $($summary.Unevaluated) not fully evaluated, $($summary.Archived) archived"
+        if ($WhatIfPreference) {
+            $message += ", $($summary.Previewed) change(s) previewed, $($summary.Skipped) item(s) skipped. WhatIf: nothing was written."
+        }
+        else {
+            $message += ", $($summary.Changed) changed ($($summary.Applied) change(s) applied), $($summary.Skipped) item(s) skipped."
+        }
+        Write-Information -MessageData $message -Tags 'GitHubRepoConfig'
     }
 }
 
