@@ -176,6 +176,14 @@ strip_template() {
 	grep -q 'index .packages.darwin.brew "app-store"' "$script"
 }
 
+@test "chezmoi-scripts: install-packages captures brew output via temp file (avoids broken pipe)" {
+	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
+	# Output must be redirected to a file, not captured through a
+	# command-substitution pipe (which triggers Homebrew "Broken pipe" on WSL).
+	grep -q 'brew install "\$pkg" >"\$brew_log" 2>&1' "$script"
+	! grep -q 'output=\$(brew install' "$script"
+}
+
 @test "chezmoi-scripts: install-packages references nested darwin brew formulas" {
 	local script="$LINUX_SCRIPTS_DIR/run_onchange_10-install-packages.sh.tmpl"
 	grep -q '\.packages\.darwin\.brew\.formulas\.' "$script"
