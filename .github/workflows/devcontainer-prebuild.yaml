@@ -29,6 +29,14 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
+# Cancel superseded PR builds (each pushes an amd64 + arm64 matrix, and the
+# arm64 leg runs on a dedicated runner) so repeated pushes to a PR don't stack
+# up parallel builds. Never cancels main / tag / schedule runs, which publish
+# and attest images and must always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   packages: write
