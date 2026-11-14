@@ -13,6 +13,47 @@
 # 5 = Repository admin, i.e. the repository owner on a personal account.
 $script:GitHubRepositoryRoleAdmin = 5
 
+# Parameterless branch rule types this baseline manages, mirroring repo-steward's
+# policy/baseline.toml [protection]. A managed type is added when the baseline
+# wants it and removed when it does not; every other rule type on an existing
+# ruleset (status checks, pull_request, Copilot review, code scanning, ...) is
+# carried over untouched.
+$script:GitHubManagedBranchRuleTypes = @('deletion', 'non_fast_forward', 'required_linear_history', 'required_signatures')
+
+function Get-GitHubRulesetDesiredRule {
+    <#
+    .SYNOPSIS
+        Return the branch rule types the baseline wants on a repository.
+    .DESCRIPTION
+        Forks get ForkRules instead of Rules: GitHub's "Sync fork" pushes
+        upstream commits straight to the default branch, and those are neither
+        signed nor guaranteed linear, so the stricter rules would block it.
+    .PARAMETER Ruleset
+        The Ruleset section of a baseline hashtable.
+    .PARAMETER IsFork
+        Whether the repository is a fork.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Ruleset,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$IsFork
+    )
+
+    $wanted = if ($IsFork) { @($Ruleset.ForkRules) } else { @($Ruleset.Rules) }
+    $wanted = @($wanted | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    $unknown = @($wanted | Where-Object { $script:GitHubManagedBranchRuleTypes -notcontains $_ })
+    if ($unknown.Count -gt 0) {
+        throw "Unsupported ruleset rule type(s): $($unknown -join ', '). Supported: $($script:GitHubManagedBranchRuleTypes -join ', ')."
+    }
+
+    return , [string[]]$wanted
+}
+
 function New-GitHubRulesetPayload {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a hashtable; does not change system state.')]
     <#
@@ -26,14 +67,17 @@ function New-GitHubRulesetPayload {
 
         That same replace-everything behaviour makes updates destructive, so
         when -ExistingRuleset is supplied any rule this baseline does not manage
-        (required_status_checks and its context list, copilot_code_review, and
-        so on) is carried over verbatim, and existing bypass actors are kept.
-        Only the managed rules - deletion, non_fast_forward and pull_request -
-        are replaced.
+        (required_status_checks and its context list, pull_request,
+        copilot_code_review, code_scanning and so on) is carried over verbatim,
+        and existing bypass actors are kept. Only the managed parameterless
+        rules - deletion, non_fast_forward, required_linear_history and
+        required_signatures - are replaced.
     .PARAMETER Ruleset
         The Ruleset section of a baseline hashtable.
     .PARAMETER ExistingRuleset
         The current ruleset as returned by the API, when updating in place.
+    .PARAMETER IsFork
+        Apply the fork rule set (ForkRules) instead of Rules.
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]
@@ -42,59 +86,26 @@ function New-GitHubRulesetPayload {
         $Ruleset,
 
         [Parameter(Mandatory = $false)]
-        $ExistingRuleset
+        $ExistingRuleset,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$IsFork
     )
 
-    # Rule types this baseline owns. Anything else found on an existing ruleset
-    # is preserved untouched.
-    $managedRuleTypes = @('deletion', 'non_fast_forward', 'pull_request')
+    $wantedRuleTypes = Get-GitHubRulesetDesiredRule -Ruleset $Ruleset -IsFork $IsFork
 
     $rules = [System.Collections.Generic.List[object]]::new()
-    $existingPullRequest = $null
 
     if ($null -ne $ExistingRuleset -and $null -ne $ExistingRuleset.rules) {
         foreach ($rule in $ExistingRuleset.rules) {
-            if ($managedRuleTypes -notcontains $rule.type) {
+            if ($script:GitHubManagedBranchRuleTypes -notcontains $rule.type) {
                 $rules.Add($rule)
             }
-            elseif ($rule.type -eq 'pull_request') {
-                $existingPullRequest = $rule
-            }
         }
     }
 
-    if ($Ruleset.BlockDeletion) {
-        $rules.Add(@{ type = 'deletion' })
-    }
-
-    if ($Ruleset.BlockForcePush) {
-        $rules.Add(@{ type = 'non_fast_forward' })
-    }
-
-    if ($Ruleset.RequirePullRequest) {
-        # Only two pull_request parameters belong to this baseline. Everything
-        # else - code-owner review, stale-review dismissal, last-push approval,
-        # thread resolution, and any parameter GitHub adds later - is carried
-        # over from the existing rule, so remediating a merge-method drift never
-        # silently switches someone's stricter review settings off.
-        $prParameters = [ordered]@{}
-        if ($null -ne $existingPullRequest -and $null -ne $existingPullRequest.parameters) {
-            foreach ($property in $existingPullRequest.parameters.PSObject.Properties) {
-                $prParameters[$property.Name] = $property.Value
-            }
-        }
-        else {
-            # No existing rule to inherit from: start from GitHub's defaults.
-            $prParameters['dismiss_stale_reviews_on_push'] = $false
-            $prParameters['require_code_owner_review'] = $false
-            $prParameters['require_last_push_approval'] = $false
-            $prParameters['required_review_thread_resolution'] = $false
-        }
-
-        $prParameters['allowed_merge_methods'] = @($Ruleset.AllowedMergeMethods)
-        $prParameters['required_approving_review_count'] = $Ruleset.RequiredApprovingReviews
-
-        $rules.Add(@{ type = 'pull_request'; parameters = $prParameters })
+    foreach ($type in $wantedRuleTypes) {
+        $rules.Add(@{ type = $type })
     }
 
     $bypassActors = [System.Collections.Generic.List[object]]::new()
@@ -112,7 +123,7 @@ function New-GitHubRulesetPayload {
 
     if ($Ruleset.AdminCanBypass -and -not $hasAdminBypass) {
         # Lets the repository admin (you) push directly to the default branch
-        # and merge without a PR when needed, while everything else - including
+        # when needed, while everything else - including
         # GitHub Actions - stays subject to the rules.
         $bypassActors.Add(@{
                 actor_id    = $script:GitHubRepositoryRoleAdmin

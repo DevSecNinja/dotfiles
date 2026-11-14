@@ -67,7 +67,7 @@ BeforeAll {
     function script:New-CompliantRulesetDetail {
         return [PSCustomObject]@{
             id            = 42
-            name          = 'Default'
+            name          = 'steward-default-branch'
             target        = 'branch'
             source_type   = 'Repository'
             enforcement   = 'active'
@@ -80,13 +80,8 @@ BeforeAll {
             rules         = @(
                 [PSCustomObject]@{ type = 'deletion' }
                 [PSCustomObject]@{ type = 'non_fast_forward' }
-                [PSCustomObject]@{
-                    type       = 'pull_request'
-                    parameters = [PSCustomObject]@{
-                        allowed_merge_methods           = @('squash')
-                        required_approving_review_count = 0
-                    }
-                }
+                [PSCustomObject]@{ type = 'required_linear_history' }
+                [PSCustomObject]@{ type = 'required_signatures' }
             )
         }
     }
@@ -95,7 +90,7 @@ BeforeAll {
     function script:New-RulesetListPresent {
         return [PSCustomObject]@{
             Available = $true
-            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'Default'; target = 'branch'; source_type = 'Repository' })
+            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'steward-default-branch'; target = 'branch'; source_type = 'Repository' })
         }
     }
 

@@ -67,7 +67,7 @@ BeforeAll {
     function script:New-CompliantRulesetDetail {
         return [PSCustomObject]@{
             id            = 42
-            name          = 'Default'
+            name          = 'steward-default-branch'
             target        = 'branch'
             source_type   = 'Repository'
             enforcement   = 'active'
@@ -80,13 +80,8 @@ BeforeAll {
             rules         = @(
                 [PSCustomObject]@{ type = 'deletion' }
                 [PSCustomObject]@{ type = 'non_fast_forward' }
-                [PSCustomObject]@{
-                    type       = 'pull_request'
-                    parameters = [PSCustomObject]@{
-                        allowed_merge_methods           = @('squash')
-                        required_approving_review_count = 0
-                    }
-                }
+                [PSCustomObject]@{ type = 'required_linear_history' }
+                [PSCustomObject]@{ type = 'required_signatures' }
             )
         }
     }
@@ -95,7 +90,7 @@ BeforeAll {
     function script:New-RulesetListPresent {
         return [PSCustomObject]@{
             Available = $true
-            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'Default'; target = 'branch'; source_type = 'Repository' })
+            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'steward-default-branch'; target = 'branch'; source_type = 'Repository' })
         }
     }
 
@@ -165,35 +160,35 @@ Describe "New-GitHubRulesetPayload" -Tag "Unit" {
         }
     }
 
-    It "emits the deletion, non_fast_forward and pull_request rules" {
+    It "emits the four steward-default-branch rules and no pull_request rule" {
         InModuleScope DotfilesHelpers {
             $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-            $types = @($payload.rules | ForEach-Object { $_.type })
-            $types | Should -Contain 'deletion'
-            $types | Should -Contain 'non_fast_forward'
-            $types | Should -Contain 'pull_request'
+            $payload.name | Should -Be 'steward-default-branch'
+            $types = @($payload.rules | ForEach-Object { $_.type }) | Sort-Object
+            $types | Should -Be @('deletion', 'non_fast_forward', 'required_linear_history', 'required_signatures')
         }
     }
 
-    It "drops rules that the baseline disables" {
+    It "keeps only deletion and non_fast_forward on a fork" {
         InModuleScope DotfilesHelpers {
-            $ruleset = (Get-GitHubRepoBaseline -Override @{
-                    Ruleset = @{ BlockDeletion = $false; RequirePullRequest = $false }
-                }).Ruleset
-            $payload = New-GitHubRulesetPayload -Ruleset $ruleset
-            $types = @($payload.rules | ForEach-Object { $_.type })
-            $types | Should -Not -Contain 'deletion'
-            $types | Should -Not -Contain 'pull_request'
-            $types | Should -Contain 'non_fast_forward'
+            $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -IsFork $true
+            $types = @($payload.rules | ForEach-Object { $_.type }) | Sort-Object
+            $types | Should -Be @('deletion', 'non_fast_forward')
         }
     }
 
-    It "carries the required approving review count into the pull_request rule" {
+    It "drops rules that the baseline does not list" {
         InModuleScope DotfilesHelpers {
-            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ RequiredApprovingReviews = 2 } }).Ruleset
+            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ Rules = @('non_fast_forward') } }).Ruleset
             $payload = New-GitHubRulesetPayload -Ruleset $ruleset
-            $prRule = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-            $prRule.parameters.required_approving_review_count | Should -Be 2
+            @($payload.rules | ForEach-Object { $_.type }) | Should -Be @('non_fast_forward')
+        }
+    }
+
+    It "rejects a rule type it cannot manage" {
+        InModuleScope DotfilesHelpers {
+            $ruleset = (Get-GitHubRepoBaseline -Override @{ Ruleset = @{ Rules = @('deletion', 'pull_request') } }).Ruleset
+            { New-GitHubRulesetPayload -Ruleset $ruleset } | Should -Throw -ExpectedMessage '*Unsupported ruleset rule type(s): pull_request*'
         }
     }
 
@@ -260,12 +255,50 @@ Describe "New-GitHubRulesetPayload" -Tag "Unit" {
                     rules = @(
                         [PSCustomObject]@{ type = 'deletion' }
                         [PSCustomObject]@{ type = 'non_fast_forward' }
+                        [PSCustomObject]@{ type = 'required_signatures' }
                     )
                 }
 
                 $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
                 @($payload.rules | Where-Object { $_.type -eq 'deletion' }).Count | Should -Be 1
                 @($payload.rules | Where-Object { $_.type -eq 'non_fast_forward' }).Count | Should -Be 1
+                @($payload.rules | Where-Object { $_.type -eq 'required_signatures' }).Count | Should -Be 1
+            }
+        }
+
+        It "carries an existing pull_request rule over verbatim" {
+            InModuleScope DotfilesHelpers {
+                $prRule = [PSCustomObject]@{
+                    type       = 'pull_request'
+                    parameters = [PSCustomObject]@{
+                        allowed_merge_methods           = @('merge', 'squash')
+                        required_approving_review_count = 1
+                        require_code_owner_review       = $true
+                    }
+                }
+                $existing = [PSCustomObject]@{ rules = @($prRule) }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
+                $kept = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })
+                $kept.Count | Should -Be 1
+                $kept[0] | Should -Be $prRule
+            }
+        }
+
+        It "removes linear history and signatures from a fork's ruleset" {
+            InModuleScope DotfilesHelpers {
+                $existing = [PSCustomObject]@{
+                    rules = @(
+                        [PSCustomObject]@{ type = 'deletion' }
+                        [PSCustomObject]@{ type = 'required_linear_history' }
+                        [PSCustomObject]@{ type = 'required_signatures' }
+                        [PSCustomObject]@{ type = 'copilot_code_review' }
+                    )
+                }
+
+                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing -IsFork $true
+                $types = @($payload.rules | ForEach-Object { $_.type }) | Sort-Object
+                $types | Should -Be @('copilot_code_review', 'deletion', 'non_fast_forward')
             }
         }
 
