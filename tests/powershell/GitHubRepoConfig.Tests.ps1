@@ -1343,6 +1343,7 @@ Describe "Get-GitHubAppCredential -PrivateKeyPath" -Tag "Unit" {
             @{ Case = 'a whitespace-only key body'; Content = "-----BEGIN RSA PRIVATE KEY-----`n   `n-----END RSA PRIVATE KEY-----"; Message = '*does not hold a valid RSA private key*' }
             @{ Case = 'base64-encoded text'; Content = "-----BEGIN RSA PRIVATE KEY-----`naGVsbG8gd29ybGQsIHRoaXMgaXMgbm90IGEga2V5`n-----END RSA PRIVATE KEY-----"; Message = '*does not hold a valid RSA private key*' }
             @{ Case = 'a truncated key'; Content = "-----BEGIN PRIVATE KEY-----`nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC`n-----END PRIVATE KEY-----"; Message = '*does not hold a valid RSA private key*' }
+            @{ Case = 'a minimal AAAA body'; Content = "-----BEGIN RSA PRIVATE KEY-----`nAAAA`n-----END RSA PRIVATE KEY-----"; Message = '*does not hold a valid RSA private key*' }
         ) {
             $path = script:New-KeyFile -Content $Content
             { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path } | Should -Throw -ExpectedMessage $Message
@@ -1573,6 +1574,29 @@ Describe "Release repository filter" -Tag "Unit" {
 
     It "refuses to combine -HasRelease with -IncludeArchived" {
         { Get-GitHubRepoConfig -All -HasRelease -IncludeArchived } | Should -Throw -ExpectedMessage '*-IncludeArchived*'
+    }
+
+    It "warns about and counts a repository whose releases cannot be read" {
+        Mock -ModuleName DotfilesHelpers Get-GitHubReleaseEvidence {
+            if ($Repository -eq 'DevSecNinja/data') { throw 'Could not list releases for DevSecNinja/data (page 1).' }
+            if ($Repository -eq 'DevSecNinja/app') { return 'release v1.2.0' }
+            return $null
+        }
+        $warnings = @()
+        $info = @()
+
+        $names = @(Get-GitHubRepoConfig -All -HasRelease -Check Settings -WarningVariable warnings -WarningAction SilentlyContinue -InformationVariable info -InformationAction SilentlyContinue).Repository
+
+        $names | Should -Be @('DevSecNinja/app')
+        ($warnings -join ' ') | Should -Match 'could not check DevSecNinja/data'
+        ($info.MessageData -join ' ') | Should -Match '1 could not be checked and were left out'
+    }
+
+    It "throws from the evidence lookup when the release list cannot be read" {
+        InModuleScope DotfilesHelpers {
+            Mock Invoke-GitHubApi { $null }
+            { Get-GitHubReleaseEvidence -Repository 'DevSecNinja/x' } | Should -Throw -ExpectedMessage '*Could not list releases*'
+        }
     }
 
     It "treats '<Tag>' as a version release: <Expected>" -ForEach @(

@@ -257,7 +257,9 @@ Get-GitHubRepoConfig -All -HasRelease -Check AppCredential |
     Select-Object Repository, ReleaseEvidence, DriftCount
 ```
 
-`-HasRelease` cannot be combined with `-IncludeArchived`.
+`-HasRelease` cannot be combined with `-IncludeArchived`. A repository whose
+release list cannot be read (token, network or rate-limit trouble) is left out
+with a warning and counted in the filter summary, never dropped silently.
 
 ### Logging
 

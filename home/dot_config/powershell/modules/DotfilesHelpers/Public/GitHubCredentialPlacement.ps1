@@ -184,7 +184,9 @@ function Get-GitHubReleaseEvidence {
     .PARAMETER VersionPattern
         Regex a release tag must match to count as a version release.
     .OUTPUTS
-        String describing the evidence, or $null when there is none.
+        String describing the evidence, or $null when there is none. Throws
+        when the release list cannot be read, so an API, network or rate-limit
+        failure is never mistaken for "no releases".
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -203,7 +205,9 @@ function Get-GitHubReleaseEvidence {
     $pageSize = 100
     for ($page = 1; ; $page++) {
         $releases = Invoke-GitHubApi -Endpoint "repos/$Repository/releases?per_page=$pageSize&page=$page" -AllowFailure
-        if ($null -eq $releases) { return $null }
+        if ($null -eq $releases) {
+            throw "Could not list releases for $Repository (page $page). Check the gh token, network access and API rate limit."
+        }
         $releases = @($releases)
 
         $versioned = @($releases | Where-Object {

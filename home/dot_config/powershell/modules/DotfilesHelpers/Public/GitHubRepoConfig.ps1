@@ -387,9 +387,19 @@ function Get-GitHubRepoConfig {
 
             if ($HasRelease) {
                 $listedCount = $targets.Count
+                $unreadable = 0
                 $releaseTargets = [System.Collections.Generic.List[string]]::new()
                 foreach ($candidate in $targets) {
-                    $evidence = Get-GitHubReleaseEvidence -Repository $candidate
+                    try {
+                        $evidence = Get-GitHubReleaseEvidence -Repository $candidate
+                    }
+                    catch {
+                        # Leaving it out is the safe default for a rollout,
+                        # but it must be visible rather than silent.
+                        Write-Warning "Release filter could not check ${candidate}, so it is left out of this run: $($_.Exception.Message)"
+                        $unreadable++
+                        continue
+                    }
                     if ($null -eq $evidence) {
                         Write-Verbose "Skipping ${candidate}: no release-please-config.json and no versioned release"
                         continue
@@ -399,7 +409,11 @@ function Get-GitHubRepoConfig {
                     $releaseTargets.Add($candidate)
                 }
                 $targets = $releaseTargets
-                Write-Information -MessageData "Release filter: $($targets.Count) of $listedCount active, non-fork repositories in $Owner publish releases." -Tags 'GitHubRepoConfig'
+                $message = "Release filter: $($targets.Count) of $listedCount active, non-fork repositories in $Owner publish releases."
+                if ($unreadable -gt 0) {
+                    $message += " $unreadable could not be checked and were left out; see the warnings."
+                }
+                Write-Information -MessageData $message -Tags 'GitHubRepoConfig'
             }
         }
     }
