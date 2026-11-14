@@ -176,7 +176,9 @@ function Get-GitHubReleaseEvidence {
         not qualify a repository on their own.
 
         The config file is checked first because it is one cheap call and is
-        conclusive. Only the 100 most recent releases are inspected after that.
+        conclusive. Releases are then read a page of 100 at a time, newest
+        first, stopping at the first versioned one, so a repository whose
+        version release sits behind many data releases still qualifies.
     .PARAMETER Repository
         Repository in 'owner/name' form.
     .PARAMETER VersionPattern
@@ -198,15 +200,22 @@ function Get-GitHubReleaseEvidence {
         return 'release-please-config.json'
     }
 
-    $releases = Invoke-GitHubApi -Endpoint "repos/$Repository/releases?per_page=100" -AllowFailure
-    $versioned = @(@($releases) | Where-Object {
-            $null -ne $_ -and -not $_.draft -and [string]$_.tag_name -match $VersionPattern
-        })
-    if ($versioned.Count -gt 0) {
-        return "release $($versioned[0].tag_name)"
-    }
+    $pageSize = 100
+    for ($page = 1; ; $page++) {
+        $releases = Invoke-GitHubApi -Endpoint "repos/$Repository/releases?per_page=$pageSize&page=$page" -AllowFailure
+        if ($null -eq $releases) { return $null }
+        $releases = @($releases)
 
-    return $null
+        $versioned = @($releases | Where-Object {
+                $null -ne $_ -and -not $_.draft -and [string]$_.tag_name -match $VersionPattern
+            })
+        if ($versioned.Count -gt 0) {
+            return "release $($versioned[0].tag_name)"
+        }
+        if ($releases.Count -lt $pageSize) {
+            return $null
+        }
+    }
 }
 
 # SIG # Begin signature block

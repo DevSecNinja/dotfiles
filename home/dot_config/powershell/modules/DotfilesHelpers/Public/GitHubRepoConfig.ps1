@@ -832,7 +832,7 @@ function Set-GitHubRepoConfig {
         if (-not $PSBoundParameters.ContainsKey('InformationAction')) {
             $InformationPreference = 'Continue'
         }
-        $summary = [ordered]@{ Repositories = 0; Compliant = 0; Archived = 0; Changed = 0; Applied = 0; Previewed = 0; Skipped = 0 }
+        $summary = [ordered]@{ Repositories = 0; Compliant = 0; Unevaluated = 0; Archived = 0; Changed = 0; Applied = 0; Previewed = 0; Skipped = 0 }
     }
 
     process {
@@ -862,14 +862,26 @@ function Set-GitHubRepoConfig {
             }
 
             $drift = @($config.Drift)
+            # A category the audit could not read has no drift recorded, which
+            # must not be mistaken for compliance.
+            $unevaluated = @($config.SkippedChecks | Select-Object -Unique)
             if ($PSBoundParameters.ContainsKey('Category')) {
                 $drift = @($drift | Where-Object { $Category -contains $_.Category })
+                $unevaluated = @($unevaluated | Where-Object { $Category -contains $_ })
             }
+            $notEvaluated = if ($unevaluated.Count -gt 0) { "; not evaluated [$($unevaluated -join ', ')]" } else { '' }
+            if ($unevaluated.Count -gt 0) { $summary.Unevaluated++ }
 
             if ($drift.Count -eq 0) {
-                Write-Verbose "$target is already compliant; nothing to do."
-                Write-Information -MessageData "${target}: already compliant" -Tags 'GitHubRepoConfig'
-                $summary.Compliant++
+                if ($unevaluated.Count -gt 0) {
+                    Write-Verbose "$target has no drift in the evaluated categories; nothing to do."
+                    Write-Information -MessageData "${target}: no drift found$notEvaluated" -Tags 'GitHubRepoConfig'
+                }
+                else {
+                    Write-Verbose "$target is already compliant; nothing to do."
+                    Write-Information -MessageData "${target}: already compliant" -Tags 'GitHubRepoConfig'
+                    $summary.Compliant++
+                }
                 if ($PassThru) {
                     [PSCustomObject]@{
                         PSTypeName = 'Dotfiles.GitHubRepoConfigResult'
@@ -1114,18 +1126,23 @@ function Set-GitHubRepoConfig {
             }
 
             $changes = @($drift | ForEach-Object { "$($_.Category)/$($_.Setting)" })
+            $skippedNote = if ($skipped.Count -gt 0) { "; skipped [$($skipped -join ', ')]" } else { '' }
+            $summary.Skipped += $skipped.Count
             if ($WhatIfPreference) {
-                $summary.Previewed += $changes.Count
-                Write-Information -MessageData "${target}: $($changes.Count) change(s) previewed, none applied [$($changes -join ', ')]" -Tags 'GitHubRepoConfig'
+                # Items skipped before ShouldProcess (a missing credential, an
+                # environment that cannot be pinned) would not be written either.
+                $previewed = @($changes | Where-Object { $skipped -notcontains $_ })
+                $summary.Previewed += $previewed.Count
+                $message = "${target}: $($previewed.Count) change(s) previewed, none applied"
+                if ($previewed.Count -gt 0) { $message += " [$($previewed -join ', ')]" }
+                Write-Information -MessageData ($message + $skippedNote + $notEvaluated) -Tags 'GitHubRepoConfig'
             }
             else {
                 $summary.Applied += $applied.Count
-                $summary.Skipped += $skipped.Count
                 if ($applied.Count -gt 0) { $summary.Changed++ }
                 $message = "${target}: applied $($applied.Count) of $($changes.Count) change(s)"
                 if ($applied.Count -gt 0) { $message += " [$($applied -join ', ')]" }
-                if ($skipped.Count -gt 0) { $message += "; skipped [$($skipped -join ', ')]" }
-                Write-Information -MessageData $message -Tags 'GitHubRepoConfig'
+                Write-Information -MessageData ($message + $skippedNote + $notEvaluated) -Tags 'GitHubRepoConfig'
             }
 
             if ($PassThru) {
@@ -1138,9 +1155,9 @@ function Set-GitHubRepoConfig {
             }
         }
 
-        $message = "Summary: $($summary.Repositories) repositories, $($summary.Compliant) already compliant, $($summary.Archived) archived"
+        $message = "Summary: $($summary.Repositories) repositories, $($summary.Compliant) already compliant, $($summary.Unevaluated) not fully evaluated, $($summary.Archived) archived"
         if ($WhatIfPreference) {
-            $message += ", $($summary.Previewed) change(s) previewed. WhatIf: nothing was written."
+            $message += ", $($summary.Previewed) change(s) previewed, $($summary.Skipped) item(s) skipped. WhatIf: nothing was written."
         }
         else {
             $message += ", $($summary.Changed) changed ($($summary.Applied) change(s) applied), $($summary.Skipped) item(s) skipped."

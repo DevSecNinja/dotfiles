@@ -271,8 +271,13 @@ the variables and secrets that were written. `-Verbose` adds per-step detail.
 ```text
 DevSecNinja/docker: applied 2 of 2 change(s) [AppCredential/AUTOMATION_APP_ID, AppCredential/AUTOMATION_APP_PRIVATE_KEY]
 DevSecNinja/blog: already compliant
-Summary: 2 repositories, 1 already compliant, 0 archived, 1 changed (2 change(s) applied), 0 item(s) skipped.
+Summary: 2 repositories, 1 already compliant, 0 not fully evaluated, 0 archived, 1 changed (2 change(s) applied), 0 item(s) skipped.
 ```
+
+A repository with no drift in the categories that could be read, but with a
+category that could not (`SkippedChecks`), is reported as `no drift found; not
+evaluated [...]` rather than as compliant. Under `-WhatIf`, items skipped for
+want of a credential are listed as skipped, not counted as previewed.
 
 `-Check` selects what to audit; `-Category` selects what to remediate.
 Repository names may be bare (`docker`), qualified (`DevSecNinja/docker`) or a
@@ -335,9 +340,11 @@ file GitHub issues (App settings → **General** → **Private keys** →
 $cred = Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath ~/Downloads/automation-app.2026-11-14.private-key.pem
 ```
 
-The file must hold exactly one unencrypted private key, in PKCS#1
+The file must hold exactly one unencrypted RSA private key, in PKCS#1
 (`-----BEGIN RSA PRIVATE KEY-----`, what GitHub issues) or PKCS#8
-(`-----BEGIN PRIVATE KEY-----`) form; the extension does not matter. A
+(`-----BEGIN PRIVATE KEY-----`) form; the extension does not matter. The key is
+parsed, not just pattern-matched, so a block with a garbled or non-RSA body is
+rejected too. A
 certificate (`-----BEGIN CERTIFICATE-----`), a passphrase-protected key, an
 empty file or anything else is rejected with a message saying why. Errors name
 the file, never its contents.

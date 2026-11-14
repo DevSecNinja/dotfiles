@@ -209,6 +209,107 @@ function ConvertFrom-DotfilesSecureString {
     }
 }
 
+function Test-GitHubAppPrivateKeyDer {
+    <#
+    .SYNOPSIS
+        Structurally check that DER bytes encode an RSA private key.
+    .DESCRIPTION
+        Fallback for Windows PowerShell 5.1, whose .NET Framework cannot import
+        PEM keys. Verifies that the outer SEQUENCE spans the whole payload and
+        starts with version INTEGER 0, then that a PKCS#1 key continues with the
+        modulus INTEGER and a PKCS#8 key names the rsaEncryption algorithm. Not
+        a full parse, but it rejects empty bodies, base64-encoded text and
+        non-RSA keys.
+    .PARAMETER Der
+        The decoded PEM body.
+    .PARAMETER Label
+        The PEM label: 'RSA PRIVATE KEY' (PKCS#1) or 'PRIVATE KEY' (PKCS#8).
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [byte[]]$Der,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('RSA PRIVATE KEY', 'PRIVATE KEY')]
+        [string]$Label
+    )
+
+    if ($Der.Length -lt 16 -or $Der[0] -ne 0x30) { return $false }
+
+    $offset = 2
+    $length = [long]$Der[1]
+    if ($length -ge 0x80) {
+        $count = $length - 0x80
+        if ($count -lt 1 -or $count -gt 4) { return $false }
+        $length = 0
+        for ($i = 0; $i -lt $count; $i++) { $length = ($length * 256) + $Der[2 + $i] }
+        $offset = 2 + $count
+    }
+    if ($offset + $length -ne $Der.Length) { return $false }
+
+    if ($Der[$offset] -ne 0x02 -or $Der[$offset + 1] -ne 0x01 -or $Der[$offset + 2] -ne 0x00) { return $false }
+    $next = $offset + 3
+
+    if ($Label -eq 'RSA PRIVATE KEY') {
+        return ($Der[$next] -eq 0x02)
+    }
+
+    # AlgorithmIdentifier SEQUENCE { OID 1.2.840.113549.1.1.1 (rsaEncryption), NULL }
+    $rsaOid = [byte[]](0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01)
+    if ($Der[$next] -ne 0x30 -or $Der.Length -lt ($next + 2 + $rsaOid.Length)) { return $false }
+    for ($i = 0; $i -lt $rsaOid.Length; $i++) {
+        if ($Der[$next + 2 + $i] -ne $rsaOid[$i]) { return $false }
+    }
+    return $true
+}
+
+function Test-GitHubAppPrivateKeyBlock {
+    <#
+    .SYNOPSIS
+        Is this PEM block a usable RSA private key?
+    .DESCRIPTION
+        A block can carry the right header and still hold garbage - an empty
+        body or base64-encoded text - which would roll out as an unusable
+        secret. On PowerShell 7 the key is imported with .NET, which fully
+        validates it; Windows PowerShell 5.1 falls back to a structural DER
+        check. Returns a boolean and never surfaces the key or the parser's
+        message.
+    .PARAMETER Block
+        The PEM block, BEGIN and END lines included.
+    .PARAMETER Label
+        The PEM label: 'RSA PRIVATE KEY' or 'PRIVATE KEY'.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Block,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    $der = $null
+    try {
+        if ($null -ne $rsa.PSObject.Methods['ImportFromPem']) {
+            $rsa.ImportFromPem($Block)
+            return $true
+        }
+
+        $body = ($Block -replace '-----(BEGIN|END) [A-Z ]+-----', '') -replace '\s', ''
+        $der = [System.Convert]::FromBase64String($body)
+        return (Test-GitHubAppPrivateKeyDer -Der $der -Label $Label)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        if ($null -ne $der) { [Array]::Clear($der, 0, $der.Length) }
+        $rsa.Dispose()
+    }
+}
+
 function Read-GitHubAppPrivateKeyFile {
     <#
     .SYNOPSIS
@@ -218,7 +319,8 @@ function Read-GitHubAppPrivateKeyFile {
         settings page issues as `<app>.<date>.private-key.pem`. Both the PKCS#1
         (`BEGIN RSA PRIVATE KEY`) and PKCS#8 (`BEGIN PRIVATE KEY`) encodings
         are accepted; certificates, encrypted keys, empty files and anything
-        else are rejected before a value is returned.
+        else are rejected before a value is returned, and the block itself must
+        parse as an RSA key (Test-GitHubAppPrivateKeyBlock).
 
         Error messages name the path and the problem but never echo the file
         contents, so a wrong file cannot leak a key into the console, a
@@ -275,6 +377,11 @@ function Read-GitHubAppPrivateKeyFile {
         }
         if ($keys.Count -gt 1) {
             throw "'$resolved' contains $($keys.Count) private keys. Pass a file that holds exactly one."
+        }
+
+        $label = $keys[0].Groups[1].Value
+        if (-not (Test-GitHubAppPrivateKeyBlock -Block $keys[0].Value -Label $label)) {
+            throw "'$resolved' has a '-----BEGIN $label-----' block, but it does not hold a valid RSA private key. GitHub Apps sign with RSA keys. $howToGetOne"
         }
 
         return (ConvertTo-SecureString -String $keys[0].Value -AsPlainText -Force)
