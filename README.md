@@ -1,6 +1,6 @@
 # 🐠 Dotfiles
 
-[![Docs](https://img.shields.io/badge/docs-dotfiles.ravensberg.org-blue?logo=materialformkdocs)](https://dotfiles.ravensberg.org)
+[![Docs](https://img.shields.io/badge/docs-dotfiles.ravensberg.org-blue?logo=materialformkdocs)](https://dotfiles.ravensberg.org) [![AI commits](https://dotfiles.ravensberg.org/badges/ai-commits.svg)](https://dotfiles.ravensberg.org/badges/ai-commits-stats.json)
 
 Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featuring [Fish shell](https://fishshell.com/) configuration and automated setup scripts.
 
@@ -391,6 +391,12 @@ chezmoi init --data=false
 - [Chezmoi Documentation](https://www.chezmoi.io/user-guide/command-overview/)
 - [Fish Shell Documentation](https://fishshell.com/docs/current/)
 - [Chezmoi Template Reference](https://www.chezmoi.io/reference/templates/)
+
+## 🤖 AI usage
+
+These figures count commits by recognized AI agents or with AI co-author trailers; merges and bot automation are excluded. Unmarked AI assistance is not counted, and commits are not a measure of lines written.
+
+[![Who wrote the commits?](https://dotfiles.ravensberg.org/badges/ai-commits-card.svg)](https://dotfiles.ravensberg.org/badges/ai-commits-stats.json)
 
 ## 🤝 Contributing
 
