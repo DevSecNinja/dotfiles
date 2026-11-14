@@ -68,7 +68,7 @@ dotfiles/
 │   │       ├── run_once_before_00-setup.ps1           # Initial directory creation
 │   │       ├── run_onchange_10-install-packages.ps1.tmpl # Development tools (winget, runs on packages.yaml change)
 │   │       ├── run_onchange_20-install-modules.ps1.tmpl # PowerShell modules/fonts (after packages so pwsh exists)
-│   │       └── run_once_setup-powershell-loader.ps1   # PowerShell profile loader
+│   │       └── run_onchange_05-setup-powershell-loader.ps1 # PowerShell profile loader
 │
 ├── 🧪 Validation & Testing
 │   └── tests/
