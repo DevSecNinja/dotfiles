@@ -161,6 +161,54 @@ function Test-GitHubPagesWorkflow {
     return $false
 }
 
+function Get-GitHubReleaseEvidence {
+    <#
+    .SYNOPSIS
+        Explain why a repository counts as one that publishes releases.
+    .DESCRIPTION
+        The Automation App credential is needed by repositories that cut
+        releases through the shared release-please workflow. A repository
+        qualifies when it has a root release-please-config.json, or at least
+        one published release whose tag looks like a version (v1.2, 1.2.3).
+
+        Data or state snapshots stored as GitHub releases - tags such as
+        db-2026-01-01 or news-state - do not look like versions, so they do
+        not qualify a repository on their own.
+
+        The config file is checked first because it is one cheap call and is
+        conclusive. Only the 100 most recent releases are inspected after that.
+    .PARAMETER Repository
+        Repository in 'owner/name' form.
+    .PARAMETER VersionPattern
+        Regex a release tag must match to count as a version release.
+    .OUTPUTS
+        String describing the evidence, or $null when there is none.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Repository,
+
+        [Parameter(Mandatory = $false)]
+        [string]$VersionPattern = '^v?\d+\.\d+'
+    )
+
+    $config = Invoke-GitHubApi -Endpoint "repos/$Repository/contents/release-please-config.json" -AllowFailure
+    if ($null -ne $config) {
+        return 'release-please-config.json'
+    }
+
+    $releases = Invoke-GitHubApi -Endpoint "repos/$Repository/releases?per_page=100" -AllowFailure
+    $versioned = @(@($releases) | Where-Object {
+            $null -ne $_ -and -not $_.draft -and [string]$_.tag_name -match $VersionPattern
+        })
+    if ($versioned.Count -gt 0) {
+        return "release $($versioned[0].tag_name)"
+    }
+
+    return $null
+}
+
 # SIG # Begin signature block
 # MIIfEQYJKoZIhvcNAQcCoIIfAjCCHv4CAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG

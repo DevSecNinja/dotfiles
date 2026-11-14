@@ -22,6 +22,10 @@ BeforeAll {
     Get-Module DotfilesHelpers -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module $modulePath -Force -DisableNameChecking
 
+    # Set-GitHubRepoConfig logs to the information stream by default; keep the
+    # test output quiet. Tests that assert on the log use -InformationVariable.
+    $global:PSDefaultParameterValues['Set-GitHubRepoConfig:InformationAction'] = 'SilentlyContinue'
+
     # A repository whose settings already match the baseline exactly.
     function script:New-CompliantRepoResponse {
         return [PSCustomObject]@{
@@ -136,6 +140,10 @@ BeforeAll {
             default { return $Repo }
         }
     }
+}
+
+AfterAll {
+    $global:PSDefaultParameterValues.Remove('Set-GitHubRepoConfig:InformationAction')
 }
 
 Describe "GitHub repo config command availability" -Tag "Unit" {
@@ -1248,6 +1256,331 @@ Describe "Rubber-duck regressions" -Tag "Unit" {
                 @($state.ExtraBranchPolicies).Count | Should -Be 0
             }
         }
+    }
+}
+
+Describe "Get-GitHubAppCredential -PrivateKeyPath" -Tag "Unit" {
+    BeforeAll {
+        # Not a real key: a recognisable, base64-alphabet sentinel, so any leak
+        # of the key material into an output stream is easy to detect.
+        $script:KeyBody = "MIIEowIBAAKCAQEAdotfilesSentinelKeyMaterial0123456789`nABCDEFsentinel+/abcdefghij=="
+        $script:RsaPem = "-----BEGIN RSA PRIVATE KEY-----`n$($script:KeyBody)`n-----END RSA PRIVATE KEY-----"
+        $script:Pkcs8Pem = "-----BEGIN PRIVATE KEY-----`n$($script:KeyBody)`n-----END PRIVATE KEY-----"
+        $script:CertPem = "-----BEGIN CERTIFICATE-----`nMIIDcertificateSentinelBody==`n-----END CERTIFICATE-----"
+
+        function script:New-KeyFile {
+            param([string]$Content, [string]$Name = 'automation-app.2026-11-14.private-key.pem')
+            $path = Join-Path $TestDrive $Name
+            [System.IO.File]::WriteAllText($path, $Content)
+            return $path
+        }
+
+        function script:ConvertFrom-TestSecureString {
+            param([System.Security.SecureString]$SecureString)
+            InModuleScope DotfilesHelpers -Parameters @{ S = $SecureString } {
+                param($S)
+                ConvertFrom-DotfilesSecureString -SecureString $S
+            }
+        }
+    }
+
+    Context "valid keys" {
+        It "reads a <Name> key into a SecureString" -ForEach @(
+            @{ Name = 'PKCS#1 RSA'; Pem = "-----BEGIN RSA PRIVATE KEY-----`nMIIEowIBAAKCAQEAdotfilesSentinelKeyMaterial0123456789`nABCDEFsentinel+/abcdefghij==`n-----END RSA PRIVATE KEY-----" }
+            @{ Name = 'PKCS#8'; Pem = "-----BEGIN PRIVATE KEY-----`nMIIEowIBAAKCAQEAdotfilesSentinelKeyMaterial0123456789`nABCDEFsentinel+/abcdefghij==`n-----END PRIVATE KEY-----" }
+            @{ Name = 'CRLF'; Pem = "-----BEGIN RSA PRIVATE KEY-----`r`nMIIEowIBAAKCAQEAdotfilesSentinelKeyMaterial0123456789`r`n-----END RSA PRIVATE KEY-----" }
+        ) {
+            $path = script:New-KeyFile -Content "$Pem`n"
+
+            $cred = Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath $path
+
+            $cred.AppId | Should -Be '3563533'
+            $cred.PrivateKey | Should -BeOfType [System.Security.SecureString]
+            script:ConvertFrom-TestSecureString -SecureString $cred.PrivateKey | Should -Be $Pem
+        }
+
+        It "accepts the '.private-key' extension" {
+            $path = script:New-KeyFile -Content $script:RsaPem -Name 'automation-app.private-key'
+            (Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path).AppId | Should -Be '1'
+        }
+
+        It "keeps only the key block, dropping text around it" {
+            $path = script:New-KeyFile -Content "Bag Attributes`n    localKeyID: 01`n$($script:RsaPem)`n`n"
+            $cred = Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path
+            script:ConvertFrom-TestSecureString -SecureString $cred.PrivateKey | Should -Be $script:RsaPem
+        }
+
+        It "does not touch 1Password" {
+            Mock -ModuleName DotfilesHelpers Invoke-OnePasswordCli { throw 'op must not be called' }
+            $path = script:New-KeyFile -Content $script:Pkcs8Pem
+
+            $null = Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-OnePasswordCli -Times 0 -Exactly
+        }
+    }
+
+    Context "rejected files" {
+        It "rejects <Case>" -ForEach @(
+            @{ Case = 'a certificate'; Content = "-----BEGIN CERTIFICATE-----`nMIIDcertificateSentinelBody==`n-----END CERTIFICATE-----"; Message = '*contains a certificate, not a private key*' }
+            @{ Case = 'a certificate bundled with a key'; Content = "-----BEGIN CERTIFICATE-----`nMIIDcert==`n-----END CERTIFICATE-----`n-----BEGIN RSA PRIVATE KEY-----`nMIIE==`n-----END RSA PRIVATE KEY-----"; Message = '*contains a certificate*' }
+            @{ Case = 'an empty file'; Content = ''; Message = '*is empty*' }
+            @{ Case = 'a whitespace-only file'; Content = "  `n`t`n"; Message = '*is empty*' }
+            @{ Case = 'arbitrary text'; Content = 'not a key at all'; Message = '*does not contain a PEM private key*' }
+            @{ Case = 'a public key'; Content = "-----BEGIN PUBLIC KEY-----`nMIIBIjAN==`n-----END PUBLIC KEY-----"; Message = '*does not contain a PEM private key*' }
+            @{ Case = 'mismatched BEGIN/END lines'; Content = "-----BEGIN RSA PRIVATE KEY-----`nMIIE==`n-----END PRIVATE KEY-----"; Message = '*does not contain a PEM private key*' }
+            @{ Case = 'an encrypted PKCS#8 key'; Content = "-----BEGIN ENCRYPTED PRIVATE KEY-----`nMIIE==`n-----END ENCRYPTED PRIVATE KEY-----"; Message = '*passphrase-protected*' }
+            @{ Case = 'an encrypted PKCS#1 key'; Content = "-----BEGIN RSA PRIVATE KEY-----`nProc-Type: 4,ENCRYPTED`nDEK-Info: AES-128-CBC,00`n`nMIIE==`n-----END RSA PRIVATE KEY-----"; Message = '*passphrase-protected*' }
+            @{ Case = 'two keys'; Content = "-----BEGIN RSA PRIVATE KEY-----`nMIIE==`n-----END RSA PRIVATE KEY-----`n-----BEGIN PRIVATE KEY-----`nMIIE==`n-----END PRIVATE KEY-----"; Message = '*contains 2 private keys*' }
+        ) {
+            $path = script:New-KeyFile -Content $Content
+            { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path } | Should -Throw -ExpectedMessage $Message
+        }
+
+        It "rejects a missing file" {
+            { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath (Join-Path $TestDrive 'missing.pem') } |
+                Should -Throw -ExpectedMessage '*was not found*'
+        }
+
+        It "rejects a directory" {
+            { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $TestDrive } |
+                Should -Throw -ExpectedMessage '*was not found*'
+        }
+
+        It "rejects an App ID that is not numeric" {
+            $path = script:New-KeyFile -Content $script:RsaPem
+            { Get-GitHubAppCredential -AppId 'Iv1.abc123' -PrivateKeyPath $path } |
+                Should -Throw -ExpectedMessage '*not a numeric GitHub App ID*'
+        }
+
+        It "cannot mix a file with 1Password references" {
+            $path = script:New-KeyFile -Content $script:RsaPem
+            { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path -PrivateKeyReference 'op://a/b/c' } | Should -Throw
+        }
+    }
+
+    Context "secrecy" {
+        It "writes no key material to any output stream" {
+            $path = script:New-KeyFile -Content $script:RsaPem
+            $info = @()
+
+            $streams = Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path -Verbose -InformationVariable info *>&1
+
+            ($streams | Out-String) | Should -Not -Match 'Sentinel'
+            ($info | Out-String) | Should -Not -Match 'Sentinel'
+        }
+
+        It "does not echo file contents in validation errors" {
+            $path = script:New-KeyFile -Content "-----BEGIN CERTIFICATE-----`nMIIDcertificateSentinelBody==`n-----END CERTIFICATE-----"
+            $message = try { Get-GitHubAppCredential -AppId 1 -PrivateKeyPath $path; '' } catch { $_.Exception.Message }
+            $message | Should -Not -BeNullOrEmpty
+            $message | Should -Not -Match 'Sentinel'
+        }
+    }
+
+    Context "rolling it out" {
+        BeforeEach {
+            Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
+            Mock -ModuleName DotfilesHelpers Get-GitHubCurrentOwner { 'DevSecNinja' }
+            Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListEmpty }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo (script:New-DriftedRepoResponse) `
+                    -Variables ([PSCustomObject]@{ variables = @() }) `
+                    -Secrets ([PSCustomObject]@{ secrets = @() }) `
+                    -EnvironmentDetail $null `
+                    -BranchPolicies ([PSCustomObject]@{ branch_policies = @([PSCustomObject]@{ name = 'main' }) })
+            }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+
+            $script:FileCredential = Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath (script:New-KeyFile -Content $script:RsaPem)
+        }
+
+        It "makes no writes under -WhatIf" {
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:FileCredential -WhatIf
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 0 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret' -or $Arguments -contains 'variable'
+            }
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 0 -Exactly -ParameterFilter {
+                $Method -in @('POST', 'PATCH', 'PUT', 'DELETE')
+            }
+        }
+
+        It "previews the credential writes under -WhatIf instead of refusing them" {
+            $warnings = @()
+            Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:FileCredential -WhatIf -WarningVariable warnings -WarningAction SilentlyContinue
+
+            ($warnings -join ' ') | Should -Not -Match 'Not writing the App credential'
+        }
+
+        It "hands the key to gh on stdin only, and logs none of it" {
+            $info = @()
+            $streams = Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential |
+                Set-GitHubRepoConfig -AppCredential $script:FileCredential -Confirm:$false -Verbose -InformationVariable info *>&1
+
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubCli -Times 1 -Exactly -ParameterFilter {
+                $Arguments -contains 'secret' -and $StdIn -match 'Sentinel' -and ($Arguments -join ' ') -notmatch 'Sentinel'
+            }
+            ($streams | Out-String) | Should -Not -Match 'Sentinel'
+            ($info | Out-String) | Should -Not -Match 'Sentinel'
+        }
+    }
+}
+
+Describe "Release repository filter" -Tag "Unit" {
+    BeforeEach {
+        Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
+        Mock -ModuleName DotfilesHelpers Get-GitHubCurrentOwner { 'DevSecNinja' }
+        Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListPresent }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubCli {
+            @(
+                @{ nameWithOwner = 'DevSecNinja/app'; isArchived = $false; isFork = $false }
+                @{ nameWithOwner = 'DevSecNinja/cfg'; isArchived = $false; isFork = $false }
+                @{ nameWithOwner = 'DevSecNinja/data'; isArchived = $false; isFork = $false }
+                @{ nameWithOwner = 'DevSecNinja/none'; isArchived = $false; isFork = $false }
+                @{ nameWithOwner = 'DevSecNinja/draft'; isArchived = $false; isFork = $false }
+                @{ nameWithOwner = 'DevSecNinja/forked'; isArchived = $false; isFork = $true }
+                @{ nameWithOwner = 'DevSecNinja/old'; isArchived = $true; isFork = $false }
+            ) | ConvertTo-Json -Compress
+        } -ParameterFilter { $Arguments -contains 'list' }
+
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            $release = { param($tag, $draft = $false) [PSCustomObject]@{ tag_name = $tag; draft = $draft } }
+            switch -Regex ($Endpoint) {
+                '/cfg/contents/release-please-config\.json$' { return [PSCustomObject]@{ name = 'release-please-config.json' } }
+                '/contents/release-please-config\.json$' { return $null }
+                '/app/releases' { return , @((& $release 'db-2026-11-01'), (& $release 'v1.2.0')) }
+                '/data/releases' { return , @((& $release 'db-2026-11-01'), (& $release 'news-state')) }
+                '/draft/releases' { return , @((& $release 'v1.0.0' $true)) }
+                '/(forked|old)/releases' { return , @((& $release 'v9.0.0')) }
+                '/releases' { return , @() }
+                default {
+                    script:Get-MockApiResponse -Endpoint $Endpoint `
+                        -Repo (script:New-CompliantRepoResponse) `
+                        -Actions (script:New-CompliantActionsResponse) `
+                        -RulesetDetail (script:New-CompliantRulesetDetail)
+                }
+            }
+        }
+    }
+
+    It "keeps repositories with a versioned release or a release-please config" {
+        $names = @(Get-GitHubRepoConfig -All -HasRelease -Check Settings -InformationAction SilentlyContinue).Repository
+        $names | Should -Be @('DevSecNinja/app', 'DevSecNinja/cfg')
+    }
+
+    It "ignores data and state releases, drafts and repositories without releases" {
+        $names = @(Get-GitHubRepoConfig -All -HasRelease -Check Settings -InformationAction SilentlyContinue).Repository
+        $names | Should -Not -Contain 'DevSecNinja/data'
+        $names | Should -Not -Contain 'DevSecNinja/draft'
+        $names | Should -Not -Contain 'DevSecNinja/none'
+    }
+
+    It "excludes forks and archived repositories without querying their releases" {
+        $null = Get-GitHubRepoConfig -All -HasRelease -Check Settings -InformationAction SilentlyContinue
+
+        Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 0 -Exactly -ParameterFilter {
+            $Endpoint -match '/(forked|old)/'
+        }
+    }
+
+    It "records why each repository qualified" {
+        $results = @(Get-GitHubRepoConfig -All -HasRelease -Check Settings -InformationAction SilentlyContinue)
+        ($results | Where-Object Name -EQ 'app').ReleaseEvidence | Should -Be 'release v1.2.0'
+        ($results | Where-Object Name -EQ 'cfg').ReleaseEvidence | Should -Be 'release-please-config.json'
+    }
+
+    It "reports how many repositories the filter kept" {
+        $info = @()
+        $null = Get-GitHubRepoConfig -All -HasRelease -Check Settings -InformationVariable info -InformationAction SilentlyContinue
+        ($info.MessageData -join ' ') | Should -Match '2 of 5 active, non-fork repositories'
+    }
+
+    It "leaves results unfiltered without -HasRelease" {
+        @(Get-GitHubRepoConfig -All -Check Settings).Count | Should -Be 6
+    }
+
+    It "refuses to combine -HasRelease with -IncludeArchived" {
+        { Get-GitHubRepoConfig -All -HasRelease -IncludeArchived } | Should -Throw -ExpectedMessage '*-IncludeArchived*'
+    }
+
+    It "treats '<Tag>' as a version release: <Expected>" -ForEach @(
+        @{ Tag = 'v1.2.0'; Expected = $true }
+        @{ Tag = '1.2'; Expected = $true }
+        @{ Tag = 'v10.0.0-rc.1'; Expected = $true }
+        @{ Tag = 'v1'; Expected = $false }
+        @{ Tag = 'db-2026-01-01'; Expected = $false }
+        @{ Tag = 'news-state'; Expected = $false }
+        @{ Tag = 'latest'; Expected = $false }
+    ) {
+        InModuleScope DotfilesHelpers -Parameters @{ Tag = $Tag; Expected = $Expected } {
+            param($Tag, $Expected)
+            Mock Invoke-GitHubApi {
+                if ($Endpoint -like '*/releases*') { return , @([PSCustomObject]@{ tag_name = $Tag; draft = $false }) }
+                return $null
+            }
+            $null -ne (Get-GitHubReleaseEvidence -Repository 'DevSecNinja/x') | Should -Be $Expected
+        }
+    }
+}
+
+Describe "Set-GitHubRepoConfig logging" -Tag "Unit" {
+    BeforeEach {
+        Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
+        Mock -ModuleName DotfilesHelpers Get-GitHubCurrentOwner { 'DevSecNinja' }
+        Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListEmpty }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint `
+                -Repo (script:New-DriftedRepoResponse) `
+                -Actions (script:New-CompliantActionsResponse) `
+                -Variables ([PSCustomObject]@{ variables = @() }) `
+                -Secrets ([PSCustomObject]@{ secrets = @() })
+        }
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubCli { 'ok' }
+    }
+
+    It "logs what was applied to each repository and a summary" {
+        $info = @()
+        Get-GitHubRepoConfig -Repository 'drifted' -Check Settings |
+            Set-GitHubRepoConfig -Confirm:$false -InformationVariable info -InformationAction SilentlyContinue
+
+        $log = $info.MessageData -join "`n"
+        $log | Should -Match 'DevSecNinja/drifted: applied 5 of 5 change\(s\) \[Settings/allow_merge_commit'
+        $log | Should -Match 'Summary: 1 repositories, 0 already compliant, 0 archived, 1 changed \(5 change\(s\) applied\), 0 item\(s\) skipped'
+    }
+
+    It "logs skipped items by name" {
+        $info = @()
+        Get-GitHubRepoConfig -Repository 'drifted' -Check AppCredential -WarningAction SilentlyContinue |
+            Set-GitHubRepoConfig -Confirm:$false -InformationVariable info -InformationAction SilentlyContinue -WarningAction SilentlyContinue
+
+        ($info.MessageData -join "`n") | Should -Match 'skipped \[.*AppCredential/AUTOMATION_APP_PRIVATE_KEY'
+    }
+
+    It "reports previewed changes under -WhatIf" {
+        $info = @()
+        Get-GitHubRepoConfig -Repository 'drifted' -Check Settings |
+            Set-GitHubRepoConfig -WhatIf -InformationVariable info -InformationAction SilentlyContinue
+
+        $log = $info.MessageData -join "`n"
+        $log | Should -Match 'drifted: 5 change\(s\) previewed, none applied'
+        $log | Should -Match 'WhatIf: nothing was written'
+    }
+
+    It "logs an already-compliant repository" {
+        Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+            script:Get-MockApiResponse -Endpoint $Endpoint -Repo (script:New-CompliantRepoResponse)
+        }
+        $info = @()
+        Get-GitHubRepoConfig -Repository 'compliant' -Check Settings |
+            Set-GitHubRepoConfig -Confirm:$false -InformationVariable info -InformationAction SilentlyContinue
+
+        $log = $info.MessageData -join "`n"
+        $log | Should -Match 'compliant: already compliant'
+        $log | Should -Match '1 already compliant'
     }
 }
 

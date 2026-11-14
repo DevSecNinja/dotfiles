@@ -6,12 +6,12 @@ drift apart across dozens of repos.
 
 Four functions in the `DotfilesHelpers` module:
 
-| Function                  | Purpose                                                |
-| ------------------------- | ------------------------------------------------------ |
-| `Get-GitHubRepoBaseline`  | The desired state — a single, editable source of truth |
-| `Get-GitHubRepoConfig`    | Read-only audit of one, several or all repositories    |
-| `Set-GitHubRepoConfig`    | Remediation, with `-WhatIf` dry runs                   |
-| `Get-GitHubAppCredential` | Reads a GitHub App ID and private key from 1Password   |
+| Function                  | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `Get-GitHubRepoBaseline`  | The desired state — a single, editable source of truth            |
+| `Get-GitHubRepoConfig`    | Read-only audit of one, several or all repositories               |
+| `Set-GitHubRepoConfig`    | Remediation, with `-WhatIf` dry runs                              |
+| `Get-GitHubAppCredential` | Reads a GitHub App ID and private key from 1Password or PEM file |
 
 ## Requirements
 
@@ -19,7 +19,8 @@ Four functions in the `DotfilesHelpers` module:
   `gh auth login`. All authentication is delegated to `gh`; no token is read,
   stored or logged by these functions.
 - The [1Password CLI](https://developer.1password.com/docs/cli/) (`op`), only
-  when rolling out GitHub App credentials.
+  when rolling out GitHub App credentials from 1Password. Not needed when the
+  key is read from a file with `-PrivateKeyPath`.
 
 Your `gh` token needs these fine-grained permissions:
 
@@ -236,6 +237,43 @@ Unlike archived repositories — which reject writes and are therefore excluded
 by default — forks are perfectly writable, so excluding them is a judgement
 call rather than a technical constraint.
 
+### Repositories that publish releases
+
+`-HasRelease` keeps only the active, non-fork repositories that cut releases —
+the ones that need the Automation App credential for the shared release-please
+workflow. A repository qualifies when it has either:
+
+- a root `release-please-config.json`, or
+- at least one published (non-draft) release whose tag looks like a version
+  (`^v?\d+\.\d+`, so `v1.2.0` and `1.2` but not `v1`)
+
+Data or state snapshots stored as releases, such as `db-2026-01-01` or
+`news-state`, do not count. Each result records why it qualified on
+`ReleaseEvidence`, and the number of repositories kept is reported on the
+information stream:
+
+```powershell
+Get-GitHubRepoConfig -All -HasRelease -Check AppCredential |
+    Select-Object Repository, ReleaseEvidence, DriftCount
+```
+
+`-HasRelease` cannot be combined with `-IncludeArchived`.
+
+### Logging
+
+`Set-GitHubRepoConfig` writes one line per repository (what was applied,
+previewed or skipped, by setting name) and a closing summary to the PowerShell
+information stream. It is shown by default; silence it with
+`-InformationAction SilentlyContinue` or capture it with
+`-InformationVariable log`. Secret values are never logged — only the names of
+the variables and secrets that were written. `-Verbose` adds per-step detail.
+
+```text
+DevSecNinja/docker: applied 2 of 2 change(s) [AppCredential/AUTOMATION_APP_ID, AppCredential/AUTOMATION_APP_PRIVATE_KEY]
+DevSecNinja/blog: already compliant
+Summary: 2 repositories, 1 already compliant, 0 archived, 1 changed (2 change(s) applied), 0 item(s) skipped.
+```
+
 `-Check` selects what to audit; `-Category` selects what to remediate.
 Repository names may be bare (`docker`), qualified (`DevSecNinja/docker`) or a
 full URL. Bare names are qualified with `-Owner`, which defaults to
@@ -286,6 +324,27 @@ Get-GitHubAppCredential -AppIdReference 'op://Work/Bot/app-id' -PrivateKeyRefere
 $env:OP_GITHUB_APP_ID_REF  = 'op://Work/Bot/app-id'
 $env:OP_GITHUB_APP_KEY_REF = 'op://Work/Bot/private-key'
 ```
+
+### Reading the key from a file
+
+Without 1Password, or for a one-off rotation, read the key straight from the
+file GitHub issues (App settings → **General** → **Private keys** →
+**Generate a private key**) and pass the App ID explicitly:
+
+```powershell
+$cred = Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath ~/Downloads/automation-app.2026-11-14.private-key.pem
+```
+
+The file must hold exactly one unencrypted private key, in PKCS#1
+(`-----BEGIN RSA PRIVATE KEY-----`, what GitHub issues) or PKCS#8
+(`-----BEGIN PRIVATE KEY-----`) form; the extension does not matter. A
+certificate (`-----BEGIN CERTIFICATE-----`), a passphrase-protected key, an
+empty file or anything else is rejected with a message saying why. Errors name
+the file, never its contents.
+
+The key is converted to a `SecureString` as soon as it is validated, exactly as
+with 1Password, and only the key block is kept. Delete the downloaded file once
+the rollout is done.
 
 ### Where the credential is stored
 
@@ -338,6 +397,16 @@ jobs:
 $cred = Get-GitHubAppCredential
 Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -AppCredential $cred -WhatIf
 ```
+
+To roll the key out to just the repositories that publish releases, from a
+downloaded key file:
+
+```powershell
+Get-GitHubRepoConfig -All -HasRelease -Check AppCredential |
+    Set-GitHubRepoConfig -AppCredential (Get-GitHubAppCredential -AppId 3563533 -PrivateKeyPath <file>) -WhatIf
+```
+
+Drop `-WhatIf` once the preview looks right.
 
 Remediation creates the environment, enables custom branch policies, pins it to
 the default branch, then writes the variable and secret into it — in that order,
