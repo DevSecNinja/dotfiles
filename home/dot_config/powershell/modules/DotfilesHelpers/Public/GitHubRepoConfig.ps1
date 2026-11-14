@@ -73,12 +73,19 @@ function Get-GitHubRepoBaseline {
             `environment:`, and the caller job does not either - so an
             environment secret would read as empty and silently disable
             deploys.
-          - The Ruleset name matches what GitHub's UI creates ('Default'), so
-            a repository that already has one is updated in place instead of
-            gaining a second, competing ruleset. Override Name if yours differs.
+          - The Ruleset mirrors the `[protection]` section of repo-steward's
+            policy/baseline.toml (DevSecNinja/repo-steward), which is the
+            reference; keep the two in sync. Its name, steward-default-branch,
+            is the one repo-steward manages, so an existing ruleset is updated
+            in place instead of gaining a second, competing one. Rules lists the
+            required rules, and ForkRules the subset that forks keep: GitHub's
+            "Sync fork" pushes upstream commits that are neither signed nor
+            linear. PR-only (steward-pull-request) and release-tag protection
+            (steward-release-tags) are separate rulesets owned by repo-steward;
+            a pull_request rule found on this ruleset is preserved, not managed.
           - The Ruleset section protects the default branch while listing the
             repository admin role as a bypass actor, so you keep the ability to
-            push directly or merge without a PR. Automation does not get that
+            push directly to the default branch. Automation does not get that
             bypass, which is the point: `contents: write` held by a workflow or
             a leaked App key stops being equivalent to "push to main".
 
@@ -99,9 +106,10 @@ function Get-GitHubRepoBaseline {
         Return the baseline with wikis permitted.
 
     .EXAMPLE
-        Get-GitHubRepoBaseline -Override @{ Ruleset = @{ RequiredApprovingReviews = 1 } }
+        Get-GitHubRepoBaseline -Override @{ Ruleset = @{ Rules = @('deletion', 'non_fast_forward') } }
 
-        Require one approving review on the default branch.
+        Protect the default branch without requiring linear history or signed
+        commits.
 
     .OUTPUTS
         System.Collections.Hashtable
@@ -135,14 +143,11 @@ function Get-GitHubRepoBaseline {
             can_approve_pull_request_reviews   = $false
         }
         Ruleset       = [ordered]@{
-            Name                     = 'Default'
-            Enforcement              = 'active'
-            RequirePullRequest       = $true
-            RequiredApprovingReviews = 0
-            BlockDeletion            = $true
-            BlockForcePush           = $true
-            AllowedMergeMethods      = @('squash')
-            AdminCanBypass           = $true
+            Name           = 'steward-default-branch'
+            Enforcement    = 'active'
+            Rules          = @('deletion', 'non_fast_forward', 'required_linear_history', 'required_signatures')
+            ForkRules      = @('deletion', 'non_fast_forward')
+            AdminCanBypass = $true
         }
         AppCredential = [ordered]@{
             VariableName = 'AUTOMATION_APP_ID'
@@ -512,16 +517,17 @@ function Get-GitHubRepoConfig {
                                 $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting 'ruleset_enforcement' -Current $detail.enforcement -Desired $wanted.Enforcement))
                             }
 
-                            $expectedRules = [ordered]@{
-                                pull_request     = [bool]$wanted.RequirePullRequest
-                                deletion         = [bool]$wanted.BlockDeletion
-                                non_fast_forward = [bool]$wanted.BlockForcePush
-                            }
-                            foreach ($ruleType in $expectedRules.Keys) {
+                            # Every managed rule type is checked both ways: a
+                            # wanted rule that is missing, and an unwanted one
+                            # (linear history or signatures on a fork) that is
+                            # present. Other rule types are not this baseline's.
+                            $wantedRuleTypes = Get-GitHubRulesetDesiredRule -Ruleset $wanted -IsFork ([bool]$repo.fork)
+                            foreach ($ruleType in $script:GitHubManagedBranchRuleTypes) {
                                 $present = $ruleTypes -contains $ruleType
+                                $desiredPresent = $wantedRuleTypes -contains $ruleType
                                 $current["ruleset_$ruleType"] = $present
-                                if ($present -ne $expectedRules[$ruleType]) {
-                                    $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting "ruleset_$ruleType" -Current $present -Desired $expectedRules[$ruleType]))
+                                if ($present -ne $desiredPresent) {
+                                    $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting "ruleset_$ruleType" -Current $present -Desired $desiredPresent))
                                 }
                             }
 
@@ -549,23 +555,6 @@ function Get-GitHubRepoConfig {
                             $current['ruleset_admin_bypass'] = $hasAdminBypass
                             if ($hasAdminBypass -ne [bool]$wanted.AdminCanBypass) {
                                 $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting 'ruleset_admin_bypass' -Current $hasAdminBypass -Desired ([bool]$wanted.AdminCanBypass)))
-                            }
-
-                            if ($wanted.RequirePullRequest -and ($ruleTypes -contains 'pull_request')) {
-                                $prRule = @($detail.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-
-                                $currentReviews = $prRule.parameters.required_approving_review_count
-                                $current['ruleset_required_approving_review_count'] = $currentReviews
-                                if ($currentReviews -ne $wanted.RequiredApprovingReviews) {
-                                    $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting 'ruleset_required_approving_review_count' -Current $currentReviews -Desired $wanted.RequiredApprovingReviews))
-                                }
-
-                                $currentMethods = @($prRule.parameters.allowed_merge_methods) | Sort-Object
-                                $wantedMethods = @($wanted.AllowedMergeMethods) | Sort-Object
-                                $current['ruleset_allowed_merge_methods'] = ($currentMethods -join ',')
-                                if (($currentMethods -join ',') -ne ($wantedMethods -join ',')) {
-                                    $drift.Add((New-GitHubConfigDrift -Category 'Ruleset' -Setting 'ruleset_allowed_merge_methods' -Current ($currentMethods -join ',') -Desired ($wantedMethods -join ',')))
-                                }
                             }
                         }
                     }
@@ -943,7 +932,7 @@ function Set-GitHubRepoConfig {
             # --- Default-branch ruleset: created or replaced wholesale ---
             $rulesetDrift = @($drift | Where-Object { $_.Category -eq 'Ruleset' })
             if ($rulesetDrift.Count -gt 0) {
-                $payloadArgs = @{ Ruleset = $config.Baseline.Ruleset }
+                $payloadArgs = @{ Ruleset = $config.Baseline.Ruleset; IsFork = [bool]$config.IsFork }
                 if ($null -ne $config.RulesetDetail) {
                     $payloadArgs['ExistingRuleset'] = $config.RulesetDetail
                 }

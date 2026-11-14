@@ -131,50 +131,56 @@ audit and the remediation read from it, so an edit propagates to both.
 
 Protects the default branch while keeping **you** able to bypass it.
 
-| Setting                    | Value     |
-| -------------------------- | --------- |
-| `Name`                     | `Default` |
-| `RequirePullRequest`       | `true`    |
-| `RequiredApprovingReviews` | `0`       |
-| `BlockDeletion`            | `true`    |
-| `BlockForcePush`           | `true`    |
-| `AllowedMergeMethods`      | `squash`  |
-| `AdminCanBypass`           | `true`    |
+!!! note "repo-steward is the reference"
 
-The name matches what GitHub's own UI creates, so a repository that already has
-a ruleset is updated in place rather than gaining a second, competing one. If
-yours is named differently, override it:
+    This section mirrors `[protection]` in
+    [DevSecNinja/repo-steward](https://github.com/DevSecNinja/repo-steward)'s
+    `policy/baseline.toml`, which manages the same ruleset. If the steward
+    policy changes, change this baseline to match, or the two tools will keep
+    undoing each other.
 
-```powershell
-Get-GitHubRepoConfig -All -Baseline @{ Ruleset = @{ Name = 'Protect main branch' } }
-```
+| Setting          | Value                                                                            |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `Name`           | `steward-default-branch`                                                         |
+| `Enforcement`    | `active`                                                                         |
+| `Rules`          | `deletion`, `non_fast_forward`, `required_linear_history`, `required_signatures` |
+| `ForkRules`      | `deletion`, `non_fast_forward`                                                   |
+| `AdminCanBypass` | `true`                                                                           |
+
+The name is the one repo-steward manages, so an existing
+`steward-default-branch` ruleset is updated in place rather than joined by a
+second, competing one.
+
+Forks get `ForkRules` instead of `Rules`. GitHub's **Sync fork** pushes upstream
+commits straight to the fork's default branch, and those are neither signed nor
+guaranteed to be linear. On a fork, linear history and required signatures are
+reported as drift and removed when remediating.
 
 `AdminCanBypass` adds the **Repository admin** role (`actor_id: 5`) as a
 `bypass_mode: always` actor. On a personal account that is you, so you keep the
-ability to push directly to `main` and merge without a PR.
+ability to push directly to `main`.
 
 Automation does **not** get that bypass, and that is the point: it means
 `contents: write` held by a workflow — or a leaked GitHub App key — stops being
 equivalent to "push straight to `main`".
 
-Set `RequiredApprovingReviews` above zero only if someone other than you
-reviews; on a solo repository a required approval you cannot self-grant will
-block your own PRs.
+!!! info "PR-only and tag protection belong to repo-steward"
+
+    repo-steward keeps the PR-only rule in a separate `steward-pull-request`
+    ruleset (so one repository can be exempted from it alone), and protects
+    `v*` tags with `steward-release-tags`. This baseline manages neither. A
+    `pull_request` rule found on `steward-default-branch` is preserved as-is,
+    not judged or rewritten.
 
 ### Existing rules are preserved
 
 The rulesets API replaces the whole object on update, which makes a naive PUT
-destructive. When updating in place, only the rules and parameters this baseline
-owns are replaced. Everything else is carried over verbatim:
+destructive. When updating in place, only the rules this baseline owns are
+replaced. Everything else is carried over verbatim:
 
 - `required_status_checks` keeps its full context list
-- `copilot_code_review` and any other rule type is left alone
-- Within `pull_request`, only `allowed_merge_methods` and
-  `required_approving_review_count` are set. `require_code_owner_review`,
-  `dismiss_stale_reviews_on_push`, `require_last_push_approval`,
-  `required_review_thread_resolution` and any parameter GitHub adds later are
-  inherited from the existing rule, so fixing a merge-method drift never
-  silently switches stricter review settings off
+- `pull_request`, `copilot_code_review`, `code_scanning` and any other rule type
+  are left alone, parameters included
 - Existing bypass actors (GitHub Apps, teams) are kept; the admin role is added
   only if it is missing
 - A custom `ref_name` condition is preserved. The one exception is a condition
@@ -199,8 +205,8 @@ override does not discard the rest:
 # Permit wikis everywhere
 Get-GitHubRepoConfig -All -Baseline @{ Settings = @{ has_wiki = $true } }
 
-# Require one approving review
-Get-GitHubRepoConfig -All -Baseline @{ Ruleset = @{ RequiredApprovingReviews = 1 } }
+# Protect the default branch without requiring linear history or signed commits
+Get-GitHubRepoConfig -All -Baseline @{ Ruleset = @{ Rules = @('deletion', 'non_fast_forward') } }
 ```
 
 ## Scoping a run

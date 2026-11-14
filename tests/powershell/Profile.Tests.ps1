@@ -316,6 +316,7 @@ Describe "DotfilesHelpers Module" {
             'Get-GitHubCurrentOwner'
             'ConvertFrom-DotfilesSecureString'
             'New-GitHubRulesetPayload'
+            'Get-GitHubRulesetDesiredRule'
             'New-GitHubConfigDrift'
             'Test-GitHubPagesWorkflow'
             'Get-GitHubCredentialScope'

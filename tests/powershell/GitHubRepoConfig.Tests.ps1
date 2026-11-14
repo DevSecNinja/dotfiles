@@ -71,7 +71,7 @@ BeforeAll {
     function script:New-CompliantRulesetDetail {
         return [PSCustomObject]@{
             id            = 42
-            name          = 'Default'
+            name          = 'steward-default-branch'
             target        = 'branch'
             source_type   = 'Repository'
             enforcement   = 'active'
@@ -84,13 +84,8 @@ BeforeAll {
             rules         = @(
                 [PSCustomObject]@{ type = 'deletion' }
                 [PSCustomObject]@{ type = 'non_fast_forward' }
-                [PSCustomObject]@{
-                    type       = 'pull_request'
-                    parameters = [PSCustomObject]@{
-                        allowed_merge_methods           = @('squash')
-                        required_approving_review_count = 0
-                    }
-                }
+                [PSCustomObject]@{ type = 'required_linear_history' }
+                [PSCustomObject]@{ type = 'required_signatures' }
             )
         }
     }
@@ -99,7 +94,7 @@ BeforeAll {
     function script:New-RulesetListPresent {
         return [PSCustomObject]@{
             Available = $true
-            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'Default'; target = 'branch'; source_type = 'Repository' })
+            Rulesets  = @([PSCustomObject]@{ id = 42; name = 'steward-default-branch'; target = 'branch'; source_type = 'Repository' })
         }
     }
 
@@ -215,8 +210,8 @@ Describe "Get-GitHubRepoBaseline" -Tag "Unit" {
         (Get-GitHubRepoBaseline).Ruleset.AdminCanBypass | Should -BeTrue
     }
 
-    It "requires a pull request on the default branch" {
-        (Get-GitHubRepoBaseline).Ruleset.RequirePullRequest | Should -BeTrue
+    It "manages repo-steward's steward-default-branch ruleset rather than a competing one" {
+        (Get-GitHubRepoBaseline).Ruleset.Name | Should -Be 'steward-default-branch'
     }
 
     It "merges an override into a single section without discarding the rest" {
@@ -227,8 +222,9 @@ Describe "Get-GitHubRepoBaseline" -Tag "Unit" {
     }
 
     It "merges an override into the Ruleset section" {
-        $baseline = Get-GitHubRepoBaseline -Override @{ Ruleset = @{ RequiredApprovingReviews = 1 } }
-        $baseline.Ruleset.RequiredApprovingReviews | Should -Be 1
+        $baseline = Get-GitHubRepoBaseline -Override @{ Ruleset = @{ Rules = @('deletion') } }
+        $baseline.Ruleset.Rules | Should -Be @('deletion')
+        $baseline.Ruleset.ForkRules | Should -Be @('deletion', 'non_fast_forward')
         $baseline.Ruleset.AdminCanBypass | Should -BeTrue
     }
 
@@ -371,12 +367,14 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
         }
     }
 
-    Context "when the ruleset allows merge methods outside the baseline" {
+    Context "when the ruleset is missing a steward rule" {
         BeforeEach {
             Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListPresent }
             Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
                 $detail = script:New-CompliantRulesetDetail
-                $detail.rules[2].parameters.allowed_merge_methods = @('merge', 'squash', 'rebase')
+                $detail.rules = @($detail.rules | Where-Object { $_.type -ne 'required_signatures' }) + @(
+                    [PSCustomObject]@{ type = 'pull_request'; parameters = [PSCustomObject]@{ allowed_merge_methods = @('merge') } }
+                )
                 script:Get-MockApiResponse -Endpoint $Endpoint `
                     -Repo (script:New-CompliantRepoResponse) `
                     -Actions (script:New-CompliantActionsResponse) `
@@ -384,9 +382,37 @@ Describe "Get-GitHubRepoConfig" -Tag "Unit" {
             }
         }
 
-        It "flags the merge methods as drifted" {
+        It "flags the missing rule" {
             $drift = @((Get-GitHubRepoConfig -Repository 'compliant').Drift)
-            @($drift | Where-Object { $_.Setting -eq 'ruleset_allowed_merge_methods' }).Count | Should -Be 1
+            $missing = @($drift | Where-Object { $_.Setting -eq 'ruleset_required_signatures' })
+            $missing.Count | Should -Be 1
+            $missing[0].Desired | Should -BeTrue
+        }
+
+        It "does not judge a pull_request rule that repo-steward owns elsewhere" {
+            $drift = @((Get-GitHubRepoConfig -Repository 'compliant').Drift)
+            @($drift | Where-Object { $_.Setting -match 'pull_request|merge_methods|review' }).Count | Should -Be 0
+        }
+    }
+
+    Context "when a fork carries the full steward rule set" {
+        BeforeEach {
+            Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListPresent }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                $repo = script:New-CompliantRepoResponse
+                $repo | Add-Member -NotePropertyName fork -NotePropertyValue $true
+                script:Get-MockApiResponse -Endpoint $Endpoint `
+                    -Repo $repo `
+                    -Actions (script:New-CompliantActionsResponse) `
+                    -RulesetDetail (script:New-CompliantRulesetDetail)
+            }
+        }
+
+        It "flags linear history and signatures as unwanted, since they block Sync fork" {
+            $drift = @((Get-GitHubRepoConfig -Repository 'compliant').Drift)
+            @($drift | ForEach-Object Setting) | Sort-Object |
+                Should -Be @('ruleset_required_linear_history', 'ruleset_required_signatures')
+            @($drift | Where-Object { $_.Desired -ne $false }).Count | Should -Be 0
         }
     }
 
@@ -1105,76 +1131,35 @@ Describe "Skipped check reporting" -Tag "Unit" {
 }
 
 Describe "Rubber-duck regressions" -Tag "Unit" {
-    Context "pull_request parameters the baseline does not own" {
-        It "preserves require_code_owner_review when remediating merge methods" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules = @(
-                        [PSCustomObject]@{
-                            type       = 'pull_request'
-                            parameters = [PSCustomObject]@{
-                                allowed_merge_methods             = @('merge', 'squash', 'rebase')
-                                required_approving_review_count   = 0
-                                require_code_owner_review         = $true
-                                dismiss_stale_reviews_on_push     = $true
-                                require_last_push_approval        = $true
-                                required_review_thread_resolution = $true
-                            }
-                        }
-                    )
-                }
-
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-
-                $pr.parameters['require_code_owner_review'] | Should -BeTrue
-                $pr.parameters['dismiss_stale_reviews_on_push'] | Should -BeTrue
-                $pr.parameters['require_last_push_approval'] | Should -BeTrue
-                $pr.parameters['required_review_thread_resolution'] | Should -BeTrue
-                # ...while the two the baseline owns are still applied.
-                $pr.parameters['allowed_merge_methods'] | Should -Be @('squash')
+    Context "fork remediation" {
+        It "writes only the fork rules when remediating a fork" {
+            Mock -ModuleName DotfilesHelpers Test-GitHubCliReady { }
+            Mock -ModuleName DotfilesHelpers Get-GitHubCurrentOwner { 'DevSecNinja' }
+            Mock -ModuleName DotfilesHelpers Get-GitHubRulesetList { script:New-RulesetListEmpty }
+            Mock -ModuleName DotfilesHelpers Invoke-GitHubApi {
+                $repo = script:New-CompliantRepoResponse
+                $repo | Add-Member -NotePropertyName fork -NotePropertyValue $true
+                script:Get-MockApiResponse -Endpoint $Endpoint -Repo $repo
             }
-        }
 
-        It "carries over a parameter the baseline has never heard of" {
-            InModuleScope DotfilesHelpers {
-                $existing = [PSCustomObject]@{
-                    rules = @(
-                        [PSCustomObject]@{
-                            type       = 'pull_request'
-                            parameters = [PSCustomObject]@{
-                                allowed_merge_methods       = @('merge')
-                                some_future_github_setting  = 'keep-me'
-                            }
-                        }
-                    )
-                }
+            Get-GitHubRepoConfig -Repository 'forked' -Check Ruleset |
+                Set-GitHubRepoConfig -Confirm:$false
 
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset -ExistingRuleset $existing
-                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-                $pr.parameters['some_future_github_setting'] | Should -Be 'keep-me'
-            }
-        }
-
-        It "falls back to GitHub defaults when there is no existing rule" {
-            InModuleScope DotfilesHelpers {
-                $payload = New-GitHubRulesetPayload -Ruleset (Get-GitHubRepoBaseline).Ruleset
-                $pr = @($payload.rules | Where-Object { $_.type -eq 'pull_request' })[0]
-                $pr.parameters['require_code_owner_review'] | Should -BeFalse
-                $pr.parameters['required_approving_review_count'] | Should -Be 0
+            Should -Invoke -ModuleName DotfilesHelpers Invoke-GitHubApi -Times 1 -Exactly -ParameterFilter {
+                $Method -eq 'POST' -and $Endpoint -like '*/rulesets' -and
+                (@($Body['rules'] | ForEach-Object { $_.type }) | Sort-Object) -join ',' -eq 'deletion,non_fast_forward'
             }
         }
     }
-
     Context "ruleset identity" {
         It "ignores a tag ruleset that shares the baseline name" {
             InModuleScope DotfilesHelpers {
                 $list = [PSCustomObject]@{
                     Available = $true
-                    Rulesets  = @([PSCustomObject]@{ id = 9; name = 'Default'; target = 'tag'; source_type = 'Repository' })
+                    Rulesets  = @([PSCustomObject]@{ id = 9; name = 'steward-default-branch'; target = 'tag'; source_type = 'Repository' })
                 }
                 @($list.Rulesets | Where-Object {
-                        $_.name -eq 'Default' -and $_.target -eq 'branch' -and
+                        $_.name -eq 'steward-default-branch' -and $_.target -eq 'branch' -and
                         ($null -eq $_.source_type -or $_.source_type -eq 'Repository')
                     }).Count | Should -Be 0
             }
@@ -1182,9 +1167,9 @@ Describe "Rubber-duck regressions" -Tag "Unit" {
 
         It "ignores an organisation-inherited ruleset that shares the name" {
             InModuleScope DotfilesHelpers {
-                $rulesets = @([PSCustomObject]@{ id = 9; name = 'Default'; target = 'branch'; source_type = 'Organization' })
+                $rulesets = @([PSCustomObject]@{ id = 9; name = 'steward-default-branch'; target = 'branch'; source_type = 'Organization' })
                 @($rulesets | Where-Object {
-                        $_.name -eq 'Default' -and $_.target -eq 'branch' -and
+                        $_.name -eq 'steward-default-branch' -and $_.target -eq 'branch' -and
                         ($null -eq $_.source_type -or $_.source_type -eq 'Repository')
                     }).Count | Should -Be 0
             }
