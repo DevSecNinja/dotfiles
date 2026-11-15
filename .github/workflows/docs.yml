@@ -7,14 +7,12 @@ on:
       - docs/**
       - mkdocs.yml
       - .github/workflows/docs.yml
-      - .github/scripts/ai-commits-badge.py
   pull_request:
     branches: [main]
     paths:
       - docs/**
       - mkdocs.yml
       - .github/workflows/docs.yml
-      - .github/scripts/ai-commits-badge.py
   workflow_dispatch:
   schedule:
     - cron: '23 5 * * *'
@@ -53,7 +51,10 @@ jobs:
         run: mkdocs build --strict
 
       - name: Generate AI commits badge
-        run: python3 .github/scripts/ai-commits-badge.py --name "$GITHUB_REPOSITORY" --out site/badges
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/ai-commits-badge@19b7e3c8460e63bbb0966a73297b83f4606b1e95 # v3.7.0
+        with:
+          out: site/badges
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
