@@ -12,6 +12,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Least privilege for the GITHUB_TOKEN. Jobs that need more (GHCR pulls, test
+# result checks and PR comments) grant it in their own `permissions:` block.
+permissions:
+  contents: read
+
 env:
   # Single source of truth for the mise binary version across every job
   # (including the bats.yml caller input below). Renovate keeps it patched.
