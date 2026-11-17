@@ -13,4 +13,18 @@
     "github>DevSecNinja/.github//.renovate/packageRules.json5",
     "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
   ],
+  customManagers: [
+    {
+      // The devcontainer manager doesn't read feature options, so the Pester
+      // pin of the PowerShell feature, e.g. "modules": "Pester==5.7.1", needs
+      // its own manager. Pester is published on the PowerShell Gallery, a
+      // NuGet v2 feed.
+      customType: "regex",
+      description: "Update the Pester pin of the devcontainer PowerShell feature",
+      managerFilePatterns: ["/^\\.devcontainer/devcontainer(-prebuild)?\\.json$/"],
+      matchStrings: ["\"modules\":\\s*\"(?<depName>Pester)==(?<currentValue>[^\"]+)\""],
+      datasourceTemplate: "nuget",
+      registryUrlTemplate: "https://www.powershellgallery.com/api/v2/",
+    },
+  ],
 }

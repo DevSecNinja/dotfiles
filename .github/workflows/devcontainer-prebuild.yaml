@@ -72,8 +72,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Dev Container CLI
-        # renovate: datasource=npm depName=@devcontainers/cli
-        run: npm install -g @devcontainers/cli@0.87.0
+        env:
+          # The shared workflow custom manager tracks an annotated `*version:`
+          # key; it doesn't read versions inside `run:` scripts.
+          # renovate: datasource=npm depName=@devcontainers/cli
+          devcontainers_cli_version: "0.87.0"
+        run: npm install -g "@devcontainers/cli@${devcontainers_cli_version}"
 
       - name: Set up Docker Buildx
         # push-by-digest=true (used in the pre-build step) requires the
