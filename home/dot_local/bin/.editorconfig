@@ -1,0 +1,7 @@
+# Scripts in ~/.local/bin are extensionless, so the root [*.sh] section misses
+# them. Keep them indented like every other shell script in the repo. No
+# `root = true`: the repo root .editorconfig still applies. chezmoi ignores
+# dot-prefixed source files, so this file is not deployed.
+
+[*]
+indent_size = 4
