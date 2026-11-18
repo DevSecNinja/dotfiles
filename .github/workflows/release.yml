@@ -99,6 +99,9 @@ jobs:
           # CHANGELOG slice as plain markdown.
           gh release view "${TAG}" --repo "${REPO}" --json body --jq '.body' >/tmp/release-notes.md
           # Append the log.sh consumption + provenance verification block.
+          # The single-quoted printf lines print a shell snippet whose $tmp and
+          # $HOME must stay literal, so SC2016 doesn't apply.
+          # shellcheck disable=SC2016
           {
             printf '\n\n---\n\n'
             printf '## log.sh distribution\n\n'
