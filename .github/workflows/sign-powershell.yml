@@ -1,3 +1,4 @@
+---
 name: Sign PowerShell Scripts
 
 on:
@@ -6,7 +7,7 @@ on:
       - main
     paths:
       - '**.ps1'
-      - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
+      - '!**.ps1.tmpl' # Exclude templates - they change after chezmoi processing
   workflow_dispatch:
 
 concurrency:

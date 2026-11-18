@@ -136,17 +136,17 @@ groups) are listed and the helper refuses to guess.
 
 Environment variables:
 
-| Variable                        | Default | Effect                                          |
-| ------------------------------- | ------- | ----------------------------------------------- |
-| `COPILOT_SSH_SKIP_PREFLIGHT`    | unset   | `1` skips the reachability check entirely       |
-| `COPILOT_SSH_PREFLIGHT_TIMEOUT` | `3`     | TCP probe timeout in seconds                    |
-| `COPILOT_SSH_START_TIMEOUT`     | `180`   | How long to wait for SSH after `az vm start`    |
-| `COPILOT_SSH_ASSUME_YES`        | unset   | `1` auto-confirms starting a stopped VM         |
-| `COPILOT_SSH_ASSUME_NO`         | unset   | `1` never starts a VM, even on a TTY            |
+| Variable                        | Default | Effect                                       |
+| ------------------------------- | ------- | -------------------------------------------- |
+| `COPILOT_SSH_SKIP_PREFLIGHT`    | unset   | `1` skips the reachability check entirely    |
+| `COPILOT_SSH_PREFLIGHT_TIMEOUT` | `3`     | TCP probe timeout in seconds                 |
+| `COPILOT_SSH_START_TIMEOUT`     | `180`   | How long to wait for SSH after `az vm start` |
+| `COPILOT_SSH_ASSUME_YES`        | unset   | `1` auto-confirms starting a stopped VM      |
+| `COPILOT_SSH_ASSUME_NO`         | unset   | `1` never starts a VM, even on a TTY         |
 
 ## Local authentication with the 1Password shell plugin
 
-`copilot-ssh` solves the *remote* case: forwarding a token to a headless
+`copilot-ssh` solves the _remote_ case: forwarding a token to a headless
 server. On your **workstation** you don't need to forward anything — the
 [1Password Copilot shell plugin][opcopilot] authenticates the local `copilot`
 command with biometrics, injecting the same `COPILOT_GITHUB_TOKEN` for the
@@ -156,10 +156,10 @@ This repo wraps `copilot` (and `gh`) automatically; see
 [1password-shell-plugins.md](1password-shell-plugins.md). The two mechanisms
 are complementary and use the same variable name:
 
-| Where | Mechanism | Token source |
-| --- | --- | --- |
-| Workstation | `op plugin run -- copilot` | 1Password item, per command |
-| Headless server | `copilot-ssh` + SSH `SendEnv` | 1Password Environment |
+| Where           | Mechanism                     | Token source                |
+| --------------- | ----------------------------- | --------------------------- |
+| Workstation     | `op plugin run -- copilot`    | 1Password item, per command |
+| Headless server | `copilot-ssh` + SSH `SendEnv` | 1Password Environment       |
 
 Note that the plugin wrappers are not applied on WSL, where shell plugins are
 unsupported — `copilot-ssh` still works there.
@@ -172,10 +172,10 @@ for biometric unlock, which a headless server does not have, so a wrapper on
 the far side of `copilot-ssh` would replace a working CLI with one that always
 fails — exactly the situation `copilot-ssh` exists to avoid.
 
-| Session | `copilot` resolves to | Credential |
-| --- | --- | --- |
-| Local workstation | `op plugin run -- copilot` | 1Password, per command |
-| Inside `copilot-ssh` | the real `copilot` binary | forwarded `COPILOT_GITHUB_TOKEN` |
+| Session              | `copilot` resolves to      | Credential                       |
+| -------------------- | -------------------------- | -------------------------------- |
+| Local workstation    | `op plugin run -- copilot` | 1Password, per command           |
+| Inside `copilot-ssh` | the real `copilot` binary  | forwarded `COPILOT_GITHUB_TOKEN` |
 
 In practice the remote host usually has no `op` installed either, which is a
 second, independent guard. The same reasoning applies to `gh` and `GH_TOKEN`.

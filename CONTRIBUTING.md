@@ -55,6 +55,7 @@ vim dot_config/fish/functions/mynewfunction.fish
 ### Testing Changes
 
 The CI pipeline runs automatically on push and will:
+
 - 🎯 Run lefthook hooks (formatting, linting)
 - ✅ Validate all shell script syntax
 - ✅ Check Fish configuration files

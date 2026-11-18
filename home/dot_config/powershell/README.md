@@ -46,6 +46,7 @@ After installation, start a new PowerShell session. Type `aliases` to see all av
 - `Invoke-WingetUpgrade` - Full upgrade function with customizable options
 
 **Examples:**
+
 ```powershell
 # Check for updates
 Test-WingetUpdates

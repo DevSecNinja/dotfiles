@@ -68,6 +68,6 @@ jobs:
 
       - name: Report failure
         if: failure()
-        run: |
+        run: |-
           echo "❌ Failed to sync develop branch"
           echo "May require manual intervention if there are merge conflicts"

@@ -14,12 +14,12 @@ variable and stays the default until you flip it.
 When `useYubiKey: true`, `chezmoi apply` also installs `ykman` (yubikey-manager)
 and the smart-card daemon needed for OATH:
 
-| OS        | Package(s)                                  |
-| --------- | ------------------------------------------- |
-| macOS     | `ykman`, `openssh` (Homebrew — Apple's bundled OpenSSH lacks FIDO2) |
-| Debian/Ubuntu | `yubikey-manager`, `pcscd`, `scdaemon`  |
-| Fedora    | `yubikey-manager`, `pcsc-lite`              |
-| Windows   | `Yubico.YubikeyManagerCLI` (winget)         |
+| OS            | Package(s)                                                          |
+| ------------- | ------------------------------------------------------------------- |
+| macOS         | `ykman`, `openssh` (Homebrew — Apple's bundled OpenSSH lacks FIDO2) |
+| Debian/Ubuntu | `yubikey-manager`, `pcscd`, `scdaemon`                              |
+| Fedora        | `yubikey-manager`, `pcsc-lite`                                      |
+| Windows       | `Yubico.YubikeyManagerCLI` (winget)                                 |
 
 Set `useYubiKey: false` (the default) and none of these are touched.
 
@@ -145,7 +145,7 @@ For FIDO2 (`*-sk`) keys, the file at `~/.ssh/id_ed25519_sk_<serial>` is
 private key never leaves the hardware and is gated by touch + your
 FIDO2 PIN. Encrypting the handle with a passphrase therefore adds
 friction on every `ssh` without any cryptographic benefit — someone
-with your handle file *and* your YubiKey *and* your PIN already has
+with your handle file _and_ your YubiKey _and_ your PIN already has
 everything.
 
 `yk-ssh-new` (and by extension `yk-enroll`) passes `-N ""` to
@@ -170,9 +170,10 @@ sign_and_send_pubkey: signing failed for ED25519-SK "..." from agent: agent refu
 ```
 
 Letting OpenSSH talk to the YubiKey directly each time keeps the touch
-+ PIN dance interactive and reliable. If you ever land in the broken
-state (e.g. you ran an older config that did `AddKeysToAgent yes`),
-clear the agent and you're back in business:
+
+- PIN dance interactive and reliable. If you ever land in the broken
+  state (e.g. you ran an older config that did `AddKeysToAgent yes`),
+  clear the agent and you're back in business:
 
 ```bash
 ssh-add -D                   # drop all cached keys
@@ -214,18 +215,18 @@ its own "Done." footer so you don't miss it.
 
 ## Helpers (Bash/Zsh + Fish)
 
-| Bash/Zsh                | Fish                | Purpose                                                    |
-| ----------------------- | ------------------- | ---------------------------------------------------------- |
-| `yk-enroll`             | `yk_enroll`         | **Wizard**: end-to-end enrollment + health check, idempotent |
-| `yk-status`             | `yk_status`         | Per-device health: firmware, FIPS, PIN status, SSH key check |
-| `yk-pick`               | `yk_pick`           | Pick one serial when multiple keys are connected           |
-| `yk-ssh-new`            | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key   |
-| `work-checklist`        | `work_checklist`    | Print manual post-install steps for work machines          |
-| `clipboard-copy`        | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`           |
-| `pubkey`                | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`     |
-| `yk-git-sign-setup`     | `yk_git_sign_setup` | Register your SSH pubkey for git commit signing            |
-| `yk-otp`                | `yk_otp`            | TOTP code from the OATH applet (fzf + clipboard)           |
-| `yk-touch-watch`        | `yk_touch_watch`    | Notify when a YubiKey is waiting for a touch               |
+| Bash/Zsh            | Fish                | Purpose                                                      |
+| ------------------- | ------------------- | ------------------------------------------------------------ |
+| `yk-enroll`         | `yk_enroll`         | **Wizard**: end-to-end enrollment + health check, idempotent |
+| `yk-status`         | `yk_status`         | Per-device health: firmware, FIPS, PIN status, SSH key check |
+| `yk-pick`           | `yk_pick`           | Pick one serial when multiple keys are connected             |
+| `yk-ssh-new`        | `yk_ssh_new`        | Low-level: generate `ed25519-sk` / `ecdsa-sk` on the key     |
+| `work-checklist`    | `work_checklist`    | Print manual post-install steps for work machines            |
+| `clipboard-copy`    | `clipboard_copy`    | Cross-platform clipboard helper used by `pubkey`             |
+| `pubkey`            | `pubkey`            | Print + copy the highest-priority pubkey from `~/.ssh`       |
+| `yk-git-sign-setup` | `yk_git_sign_setup` | Register your SSH pubkey for git commit signing              |
+| `yk-otp`            | `yk_otp`            | TOTP code from the OATH applet (fzf + clipboard)             |
+| `yk-touch-watch`    | `yk_touch_watch`    | Notify when a YubiKey is waiting for a touch                 |
 
 `pubkey` discovers per-serial files: it picks the first match of
 `id_ed25519_sk_*.pub` → `id_ed25519_sk.pub` → `id_ecdsa_sk_*.pub` →
@@ -234,12 +235,12 @@ follows you onto a YubiKey enrolled with `yk-enroll`.
 
 ## Firmware compatibility
 
-| Feature                        | Min fw   | Notes                                |
-| ------------------------------ | -------- | ------------------------------------ |
-| `ed25519-sk` SSH keys          | 5.2.3    | Both 5.4.3 and 5.7.4 supported       |
-| Resident credentials + `-K`    | 5.2.3    | Both 5.4.3 and 5.7.4 supported       |
-| PIV `ed25519`                  | 5.7      | Not used by these helpers (yet)      |
-| FIPS-approved algorithms only  | FIPS sku | `yk-status` flags FIPS devices       |
+| Feature                       | Min fw   | Notes                           |
+| ----------------------------- | -------- | ------------------------------- |
+| `ed25519-sk` SSH keys         | 5.2.3    | Both 5.4.3 and 5.7.4 supported  |
+| Resident credentials + `-K`   | 5.2.3    | Both 5.4.3 and 5.7.4 supported  |
+| PIV `ed25519`                 | 5.7      | Not used by these helpers (yet) |
+| FIPS-approved algorithms only | FIPS sku | `yk-status` flags FIPS devices  |
 
 `yk-status` warns when a device is below 5.7 so you remember which
 features are available on which key.
@@ -305,7 +306,7 @@ git commit -S --allow-empty -m "test signing"
 git log --show-signature -1
 ```
 
-> **Uploading a *signing* key isn't optional** — the whole point of signing is
+> **Uploading a _signing_ key isn't optional** — the whole point of signing is
 > the verified badge. `yk-enroll`'s "Done." block lists both `gh ssh-key add`
 > commands explicitly, and `work-checklist` includes them as separate
 > checklist items.
@@ -343,5 +344,5 @@ The current flow is preserved as-is until you flip the switch:
    and the macOS `IdentityAgent` line are removed; `IdentityFile` lines
    for `id_ed25519_sk` / `id_ecdsa_sk` are added under `Host *`.
 5. Apple Passwords does not provide an SSH agent; on macOS the OS keychain
-   + ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`) can
-   stand in for `op` when scripts need secrets.
+   - ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`) can
+     stand in for `op` when scripts need secrets.

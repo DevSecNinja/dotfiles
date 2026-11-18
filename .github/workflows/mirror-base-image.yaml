@@ -32,7 +32,8 @@ on:
   workflow_dispatch:
   # Re-mirror immediately whenever Renovate bumps the pinned upstream digest.
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '.github/workflows/mirror-base-image.yaml'
 
@@ -87,7 +88,7 @@ jobs:
           SOURCE: ${{ matrix.source }}
           MIRROR_REPO: ${{ matrix.mirror-repo }}
           TAG: ${{ matrix.tag }}
-        run: |
+        run: |-
           set -euo pipefail
 
           mirror="ghcr.io/${OWNER}/${MIRROR_REPO}"
@@ -131,4 +132,3 @@ jobs:
             echo "- Source: \`${SOURCE}\`"
             echo "- Mirror: \`${mirror}:${TAG}@${ghcr_digest}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-

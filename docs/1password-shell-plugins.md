@@ -14,11 +14,11 @@ version control, so a new machine silently loses the configuration.
 1Password documents an alternative: [define the wrapper functions yourself and
 track them in your dotfiles][opdotfiles]. That is what this repo does.
 
-| | `op plugin init` default | This repo |
-| --- | --- | --- |
-| Wrapper location | `~/.config/op/plugins.sh` | `~/.config/shell/functions/op-plugins.sh`, `~/.config/fish/conf.d/op-plugins.fish` |
-| Tracked in git | ❌ | ✅ (generated from chezmoi templates) |
-| New machine | re-run `op plugin init` per CLI | wrappers apply with `chezmoi apply` |
+|                  | `op plugin init` default        | This repo                                                                          |
+| ---------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| Wrapper location | `~/.config/op/plugins.sh`       | `~/.config/shell/functions/op-plugins.sh`, `~/.config/fish/conf.d/op-plugins.fish` |
+| Tracked in git   | ❌                              | ✅ (generated from chezmoi templates)                                              |
+| New machine      | re-run `op plugin init` per CLI | wrappers apply with `chezmoi apply`                                                |
 
 `OP_PLUGIN_ALIASES_SOURCED=1` is exported alongside the wrappers, which tells
 1Password CLI the aliases are already set up so it stops asking you to source
@@ -54,8 +54,8 @@ CLIs.
 
 ## First-time setup per CLI
 
-The wrappers only decide *how* a CLI is invoked. You still tell 1Password
-*which* item holds the credential, once per CLI and machine:
+The wrappers only decide _how_ a CLI is invoked. You still tell 1Password
+_which_ item holds the credential, once per CLI and machine:
 
 ```bash
 op signin
@@ -79,7 +79,7 @@ still lying around (for example `~/.config/gh/hosts.yml`).
 ## Safety rails
 
 The generated wrappers are deliberately defensive, because a wrapper that
-cannot run would otherwise *replace* a working CLI:
+cannot run would otherwise _replace_ a working CLI:
 
 - **No `op`, no wrappers.** If the 1Password CLI is not on `PATH`, nothing is
   defined at all and every CLI behaves normally.
@@ -88,7 +88,7 @@ cannot run would otherwise *replace* a working CLI:
   "is it installed?" checks, so each wrapper is guarded on the real CLI
   existing.
 - **Completions keep working.** The fish wrappers use `--wraps`, and the
-  bash/zsh completion files load *before* the wrappers, so generating
+  bash/zsh completion files load _before_ the wrappers, so generating
   completions never triggers a 1Password prompt at shell startup.
 - **Not in SSH sessions.** `op plugin run` needs the 1Password desktop app for
   biometric unlock, which a headless host does not have. The wrappers are
@@ -109,8 +109,8 @@ the plugin still authenticates you with biometrics.
 
 ## WSL is not supported
 
-`op plugin run` refuses to run under WSL — you get *"Shell Plugins are
-currently not supported on this operating system"* (tracked upstream in
+`op plugin run` refuses to run under WSL — you get _"Shell Plugins are
+currently not supported on this operating system"_ (tracked upstream in
 [1Password/shell-plugins#402][issue402]). Wrapping a CLI with a command that
 always fails is worse than not wrapping it, so chezmoi skips both wrapper
 files on WSL hosts via `.chezmoiignore`.

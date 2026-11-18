@@ -1,8 +1,10 @@
+---
 name: Prebuild Devcontainer
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     # Tag pushes (v*) build a release-pinned multi-arch manifest list tagged
     # as :vX.Y.Z, plus a build-provenance attestation for the manifest digest.
     # Source must be the tagged commit so the
@@ -17,7 +19,8 @@ on:
       - 'script/devcontainer-image-size.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '.devcontainer/**'
       - 'home/**'

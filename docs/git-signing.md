@@ -14,10 +14,10 @@ The repository owner's public keys ship as the defaults for `gitSigningKey`, so
 signing switches itself on as soon as a 1Password signer binary is present —
 nothing to configure. Which default applies depends on the machine:
 
-| Machine | Default key |
-| --- | --- |
-| Entra ID tenant ending in `Microsoft` (`isWork = true`) | work key |
-| Everything else | personal key ([published][keys]) |
+| Machine                                                 | Default key                      |
+| ------------------------------------------------------- | -------------------------------- |
+| Entra ID tenant ending in `Microsoft` (`isWork = true`) | work key                         |
+| Everything else                                         | personal key ([published][keys]) |
 
 [keys]: https://github.com/DevSecNinja.keys
 
@@ -63,8 +63,8 @@ gives it — with or without a trailing comment.
 
 Holding the right key is not enough: the 1Password SSH agent only offers keys
 from the vaults listed in its config, so the signer can hold a perfectly good
-key and still fail with *"No SSH private key found for the specified public
-key"*.
+key and still fail with _"No SSH private key found for the specified public
+key"_.
 
 On Windows that config is managed by this repo at
 `%LOCALAPPDATA%\1Password\config\ssh\agent.toml`, rendered from the
@@ -73,7 +73,7 @@ elsewhere. WSL benefits too, since it reaches the same Windows agent
 (see [wsl.md](wsl.md)).
 
 Watch out for a bare `ssh-keys = []`, which 1Password writes on a fresh
-install. That is an explicit *empty* list, not "the default set", so the agent
+install. That is an explicit _empty_ list, not "the default set", so the agent
 offers nothing at all and `ssh-add -l` reports no identities. Adding at least
 one `[[ssh-keys]]` entry is what fixes it.
 
@@ -89,12 +89,12 @@ data:
 1Password ships a different binary per platform, and the repo auto-detects the
 right one:
 
-| Platform | Binary | Auto-detected from |
-| --- | --- | --- |
-| WSL | `op-ssh-sign-wsl.exe` | Current Windows user's `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then the pre-8.11.18 `…\1Password\app\8\` |
-| Native Windows | `op-ssh-sign.exe` | `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then `%LOCALAPPDATA%\1Password\app\8\` |
-| macOS | `op-ssh-sign` | `/Applications/1Password.app/Contents/MacOS/` |
-| Linux | — | no standard path; set it explicitly |
+| Platform       | Binary                | Auto-detected from                                                                                        |
+| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------- |
+| WSL            | `op-ssh-sign-wsl.exe` | Current Windows user's `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then the pre-8.11.18 `…\1Password\app\8\` |
+| Native Windows | `op-ssh-sign.exe`     | `%LOCALAPPDATA%\Microsoft\WindowsApps\`, then `%LOCALAPPDATA%\1Password\app\8\`                           |
+| macOS          | `op-ssh-sign`         | `/Applications/1Password.app/Contents/MacOS/`                                                             |
+| Linux          | —                     | no standard path; set it explicitly                                                                       |
 
 Paths are emitted with forward slashes, because git config treats a backslash
 as an escape character. That is also the form 1Password's own snippet uses.
@@ -129,8 +129,8 @@ git log --show-signature -1
 A good signature shows `Good "git" signature`. In WSL the approval prompt
 appears on the Windows host — see [wsl.md](wsl.md).
 
-If signing fails with *"No SSH private key found for the specified public
-key"*, check what the agent is actually offering:
+If signing fails with _"No SSH private key found for the specified public
+key"_, check what the agent is actually offering:
 
 ```bash
 ssh-add -l
