@@ -21,7 +21,7 @@ env:
   # Single source of truth for the mise binary version across every job
   # (including the bats.yml caller input below). Renovate keeps it patched.
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION: "2026.5.15"
+  MISE_VERSION: "2026.11.1"
   # Devcontainer base image consumed by the container-based test jobs. This is
   # the GHCR MIRROR of mcr.microsoft.com/devcontainers/base, kept current by
   # the scheduled mirror-base-image.yaml workflow. CI never pulls from MCR
@@ -529,7 +529,7 @@ jobs:
       # Keep in sync with MISE_VERSION above. The env context is not available
       # in a reusable-workflow `with:` input, so this pin is tracked separately.
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.10.19"
+      mise-version: "2026.11.1"
       test-dirs: "tests/bash/"
       check-name: "Bash Test Results (Bats)"
 

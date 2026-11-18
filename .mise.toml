@@ -4,14 +4,14 @@
 # Global tool versions used in this project
 [tools]
 # Python for validation scripts and tooling
-python = "3.15.1"
+python = "3.15.2"
 
 # Go Task for task runner
 task = "latest"
 
 # Chezmoi for dotfile management
 # renovate: datasource=github-releases depName=twpayne/chezmoi extractVersion=^v(?<version>.+)$
-chezmoi = "2.73.3"
+chezmoi = "2.74.0"
 
 # Bats for bash testing
 bats = "1.14.0"

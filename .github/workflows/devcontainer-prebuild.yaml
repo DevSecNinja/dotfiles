@@ -76,7 +76,7 @@ jobs:
           # The shared workflow custom manager tracks an annotated `*version:`
           # key; it doesn't read versions inside `run:` scripts.
           # renovate: datasource=npm depName=@devcontainers/cli
-          devcontainers_cli_version: "0.87.0"
+          devcontainers_cli_version: "0.90.0"
         run: npm install -g "@devcontainers/cli@${devcontainers_cli_version}"
 
       - name: Set up Docker Buildx
