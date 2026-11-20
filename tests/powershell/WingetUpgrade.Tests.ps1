@@ -255,6 +255,14 @@ Describe "Winget Soak" -Tag "Unit" {
             Should -Invoke Invoke-RestMethod -Times 2 -Exactly -ModuleName DotfilesHelpers
         }
 
+        It "falls back to unauthenticated requests when the gh call itself throws" {
+            Mock Invoke-WingetPkgsGh { throw 'gh: Resource protected by organization SAML enforcement. (HTTP 403)' } -ModuleName DotfilesHelpers
+
+            $result = InModuleScope DotfilesHelpers { @(Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits') }
+
+            $result[0].sha | Should -Be 'from-rest'
+        }
+
         It "treats a gh 404 as a missing path without falling back" {
             Mock Invoke-WingetPkgsGh { [PSCustomObject]@{ ExitCode = 1; Output = 'gh: Not Found (HTTP 404)' } } -ModuleName DotfilesHelpers
 

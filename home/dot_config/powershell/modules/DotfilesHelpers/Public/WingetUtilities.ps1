@@ -113,6 +113,9 @@ function Invoke-WingetPkgsGh {
         [string]$Endpoint
     )
 
+    # Native stderr becomes an ErrorRecord; under a caller's 'Stop' preference,
+    # Windows PowerShell 5.1 would turn it into a terminating error.
+    $ErrorActionPreference = 'Continue'
     $output = & gh api $Endpoint 2>&1
     return [PSCustomObject]@{
         ExitCode = $LASTEXITCODE
@@ -138,7 +141,12 @@ function Invoke-WingetPkgsApi {
     )
 
     if (-not $script:WingetPkgsGhDisabled -and (Get-Command gh -ErrorAction SilentlyContinue)) {
-        $result = Invoke-WingetPkgsGh -Endpoint $Endpoint
+        try {
+            $result = Invoke-WingetPkgsGh -Endpoint $Endpoint
+        }
+        catch {
+            $result = [PSCustomObject]@{ ExitCode = 1; Output = "$_" }
+        }
         if ($result.ExitCode -eq 0) {
             return ($result.Output | ConvertFrom-Json)
         }
