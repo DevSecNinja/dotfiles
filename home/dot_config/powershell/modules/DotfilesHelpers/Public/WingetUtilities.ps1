@@ -85,14 +85,276 @@ function Test-WingetUpdates {
     return $false
 }
 
+# Soak time: only upgrade to package versions that have been published in
+# microsoft/winget-pkgs for at least N days. winget has no native minimum
+# package age yet (see microsoft/winget-cli#6178), so the age is derived from
+# the community repository: a version folder that already existed in the
+# repository N days ago was first committed at least N days ago.
+
+function Get-WingetManifestPath {
+    # Private helper: 'Git.Git' -> 'manifests/g/Git/Git'.
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$PackageId
+    )
+
+    $first = $PackageId.Substring(0, 1).ToLowerInvariant()
+    return "manifests/$first/$(($PackageId -split '\.') -join '/')"
+}
+
+function Invoke-WingetPkgsGh {
+    # Private helper: single `gh api` call so tests can mock the process launch.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Endpoint
+    )
+
+    # Native stderr becomes an ErrorRecord; under a caller's 'Stop' preference,
+    # Windows PowerShell 5.1 would turn it into a terminating error.
+    $ErrorActionPreference = 'Continue'
+    $output = & gh api --hostname github.com $Endpoint 2>&1
+    return [PSCustomObject]@{
+        ExitCode = $LASTEXITCODE
+        Output   = ($output | Out-String).Trim()
+    }
+}
+
+function Invoke-WingetPkgsApi {
+    <#
+    .SYNOPSIS
+        Private helper: GET a GitHub REST endpoint for the public winget-pkgs repo.
+    .DESCRIPTION
+        Uses `gh api` when gh is available, which gets the authenticated rate
+        limit. When gh fails (SAML enforcement on the microsoft org, a bad
+        token, rate limiting), the rest of the run falls back to unauthenticated
+        requests, which work because winget-pkgs is public (60 requests/hour).
+        Returns $null for HTTP 404 and throws on any other failure.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Endpoint
+    )
+
+    if (-not $script:WingetPkgsGhDisabled -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+        try {
+            $result = Invoke-WingetPkgsGh -Endpoint $Endpoint
+        }
+        catch {
+            $result = [PSCustomObject]@{ ExitCode = 1; Output = "$_" }
+        }
+        if ($result.ExitCode -eq 0) {
+            return ($result.Output | ConvertFrom-Json)
+        }
+        if ($result.Output -match 'HTTP 404') {
+            return $null
+        }
+        Write-Verbose "gh api $Endpoint failed; using unauthenticated requests for the rest of this run: $($result.Output)"
+        $script:WingetPkgsGhDisabled = $true
+    }
+
+    $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'DevSecNinja-dotfiles-winget-soak' }
+    try {
+        return (Invoke-RestMethod -Uri "https://api.github.com/$Endpoint" -Headers $headers -ErrorAction Stop)
+    }
+    catch {
+        $statusCode = $null
+        try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = $null }
+        if ($statusCode -eq 404) {
+            return $null
+        }
+        if ("$_" -match 'rate limit') {
+            throw "GitHub API rate limit reached (unauthenticated: 60 requests/hour)"
+        }
+        throw "GitHub API request for $Endpoint failed: $($_.Exception.Message)"
+    }
+}
+
+function Get-WingetSoakCutoffRef {
+    # Private helper: the winget-pkgs master commit as of the cutoff time.
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [datetime]$Cutoff
+    )
+
+    $until = $Cutoff.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ', [System.Globalization.CultureInfo]::InvariantCulture)
+    $commits = @(Invoke-WingetPkgsApi -Endpoint "repos/microsoft/winget-pkgs/commits?sha=master&until=$until&per_page=1")
+    if ($commits.Count -eq 0 -or -not $commits[0].sha) {
+        throw "No winget-pkgs commit found before $until"
+    }
+    return [string]$commits[0].sha
+}
+
+function Get-WingetSoakedVersion {
+    # Private helper: version folders that existed for a package at the cutoff commit.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PackageId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Ref
+    )
+
+    $path = Get-WingetManifestPath -PackageId $PackageId
+    # A 404 means the package was not in winget-pkgs yet at the cutoff.
+    $entries = @(Invoke-WingetPkgsApi -Endpoint "repos/microsoft/winget-pkgs/contents/$path`?ref=$Ref")
+    return @($entries | Where-Object { $_ -and $_.type -eq 'dir' } | ForEach-Object { [string]$_.name })
+}
+
+function Select-WingetSoakTarget {
+    <#
+    .SYNOPSIS
+        Private helper: pick the newest upgrade that has soaked long enough.
+    .DESCRIPTION
+        Walks AvailableVersions (newest first, as winget returns them) and
+        returns the first version that is newer than the installed one and
+        present in SoakedVersions. Version ordering is left to winget via the
+        package's CompareToVersion method, which also understands installed
+        versions such as '< 8.12.46.29'.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Package,
+
+        [Parameter(Mandatory = $false)]
+        [AllowEmptyCollection()]
+        [string[]]$SoakedVersions = @()
+    )
+
+    $soaked = @{}
+    foreach ($version in $SoakedVersions) { $soaked[$version] = $true }
+
+    foreach ($version in @($Package.AvailableVersions)) {
+        if ("$($Package.CompareToVersion($version))" -ne 'Lesser') {
+            continue
+        }
+        if ($soaked.ContainsKey($version)) {
+            return $version
+        }
+    }
+    return $null
+}
+
+function Get-WingetSoakPlan {
+    <#
+    .SYNOPSIS
+        Private helper: decide which version to upgrade each package to.
+    .DESCRIPTION
+        Returns one object per package with Target set to the version to
+        install, or Target $null and a Reason when the package is skipped.
+        Fails closed: when the manifest dates cannot be determined, the package
+        is skipped with a warning.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$Packages,
+
+        [Parameter(Mandatory = $true)]
+        [int]$SoakDays,
+
+        [Parameter(Mandatory = $true)]
+        [datetime]$Cutoff
+    )
+
+    $script:WingetPkgsGhDisabled = $false
+    $refError = $null
+    $ref = $null
+    try {
+        $ref = Get-WingetSoakCutoffRef -Cutoff $Cutoff
+    }
+    catch {
+        $refError = $_.Exception.Message
+    }
+
+    foreach ($package in $Packages) {
+        $newest = @($package.AvailableVersions) | Select-Object -First 1
+        $item = [PSCustomObject]@{
+            Id               = $package.Id
+            Name             = $package.Name
+            InstalledVersion = $package.InstalledVersion
+            Newest           = $newest
+            Target           = $null
+            Reason           = $null
+        }
+
+        $lookupError = $refError
+        if (-not $lookupError) {
+            try {
+                $soaked = @(Get-WingetSoakedVersion -PackageId $package.Id -Ref $ref)
+                $item.Target = Select-WingetSoakTarget -Package $package -SoakedVersions $soaked
+                if (-not $item.Target) {
+                    $item.Reason = "no update is $SoakDays+ days old yet (newest: $newest)"
+                }
+            }
+            catch {
+                $lookupError = $_.Exception.Message
+            }
+        }
+
+        if ($lookupError) {
+            $item.Reason = "could not determine manifest dates: $lookupError"
+            Write-Warning "Skipping $($package.Id): $($item.Reason)"
+        }
+
+        $item
+    }
+}
+
+function Invoke-WingetCountdown {
+    # Private helper: cancellable countdown, skipped in CI/non-interactive sessions.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$Seconds
+    )
+
+    if ($Seconds -le 0) { return }
+
+    if ([bool]$env:CI -or -not [Environment]::UserInteractive) {
+        Write-Host "`n[SKIP] Skipping countdown (CI/non-interactive environment)" -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "`nExecution Phase: Starting upgrade in $Seconds seconds..." -ForegroundColor Yellow
+    Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
+    for ($i = $Seconds; $i -gt 0; $i--) {
+        Write-Host "   $i..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+    }
+    Write-Host "   GO!" -ForegroundColor Green
+}
+
 function Invoke-WingetUpgrade {
     <#
     .SYNOPSIS
-    Upgrades all winget packages after a countdown timer.
+    Upgrades winget packages to versions that have soaked for a number of days.
 
     .DESCRIPTION
     Performs winget package upgrades with a 3-second countdown that can be cancelled.
     Only runs if updates are detected. Uses Microsoft.WinGet.Client module when available.
+
+    By default each package is upgraded to the newest available version that has
+    been published in microsoft/winget-pkgs for at least SoakDays days (7 by
+    default), so brand-new releases get time to be pulled or fixed before they
+    land on this machine. Packages without such a version are skipped and listed
+    in the summary. A version's age is the time since its manifest folder was
+    added to winget-pkgs, looked up through the GitHub API (gh api when signed
+    in, unauthenticated requests otherwise). When the age cannot be determined,
+    the package is skipped (fail closed). Soak requires the Microsoft.WinGet.Client
+    module.
+
+    winget has no native minimum package age yet; see
+    https://github.com/microsoft/winget-cli/issues/6178.
 
     .PARAMETER CountdownSeconds
     Number of seconds to wait before starting the upgrade. Defaults to 3.
@@ -105,9 +367,28 @@ function Invoke-WingetUpgrade {
     Use the Microsoft.WinGet.Client PowerShell module instead of winget.exe.
     Defaults to true for better performance and compatibility.
 
+    .PARAMETER SoakDays
+    Minimum number of days a package version must have been published in
+    winget-pkgs before it is installed. Defaults to 7. 0 disables the soak.
+
+    .PARAMETER NoSoak
+    Disable the soak and upgrade every package to its newest version.
+
     .EXAMPLE
     Invoke-WingetUpgrade
-    Checks for updates, then upgrades all packages after 3-second countdown.
+    Checks for updates, then upgrades packages to versions at least 7 days old after a 3-second countdown.
+
+    .EXAMPLE
+    Invoke-WingetUpgrade -WhatIf
+    Shows which packages would be upgraded, to which version, and which are skipped.
+
+    .EXAMPLE
+    Invoke-WingetUpgrade -SoakDays 14
+    Only installs versions that have been published for at least 14 days.
+
+    .EXAMPLE
+    Invoke-WingetUpgrade -NoSoak
+    Upgrades all packages to their newest version, regardless of age.
 
     .EXAMPLE
     Invoke-WingetUpgrade -CountdownSeconds 0
@@ -121,7 +402,7 @@ function Invoke-WingetUpgrade {
     Requires Microsoft.WinGet.Client module or winget.exe to be installed.
     Press Ctrl+C during countdown to cancel.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $false)]
         [int]$CountdownSeconds = 3,
@@ -130,11 +411,25 @@ function Invoke-WingetUpgrade {
         [switch]$Force,
 
         [Parameter(Mandatory = $false)]
-        [bool]$UseWingetModule = $true
+        [bool]$UseWingetModule = $true,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(0, 365)]
+        [int]$SoakDays = 7,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$NoSoak
     )
+
+    $soakEnabled = (-not $NoSoak) -and $SoakDays -gt 0
+    $isWhatIf = [bool]$WhatIfPreference
+    $countdown = if ($isWhatIf) { 0 } else { $CountdownSeconds }
 
     Write-Host "`n>> Winget Package Upgrade" -ForegroundColor Cyan
     Write-Host "================================" -ForegroundColor Cyan
+    if ($soakEnabled) {
+        Write-Host "Soak: only versions published $SoakDays+ days ago (use -NoSoak to disable)" -ForegroundColor Gray
+    }
 
     # Detection phase (skip if Force is specified)
     if (-not $Force) {
@@ -150,30 +445,6 @@ function Invoke-WingetUpgrade {
         Write-Host "`n[WARN] Skipping detection phase (Force mode)" -ForegroundColor Yellow
     }
 
-    # Countdown phase
-    if ($CountdownSeconds -gt 0) {
-        # Skip countdown in CI or non-interactive environments
-        $isCI = [bool]$env:CI
-        $isNonInteractive = -not [Environment]::UserInteractive
-
-        if ($isCI -or $isNonInteractive) {
-            Write-Host "`n[SKIP] Skipping countdown (CI/non-interactive environment)" -ForegroundColor Yellow
-        }
-        else {
-            Write-Host "`nExecution Phase: Starting upgrade in $CountdownSeconds seconds..." -ForegroundColor Yellow
-            Write-Host "   Press Ctrl+C to cancel" -ForegroundColor Gray
-
-            for ($i = $CountdownSeconds; $i -gt 0; $i--) {
-                Write-Host "   $i..." -ForegroundColor Yellow
-                Start-Sleep -Seconds 1
-            }
-            Write-Host "   GO!" -ForegroundColor Green
-        }
-    }
-
-    # Execution phase
-    Write-Host "`n>> Starting package upgrades..." -ForegroundColor Cyan
-
     # Check if Microsoft.WinGet.Client is available
     $wingetModule = Get-Module -Name Microsoft.WinGet.Client -ListAvailable -ErrorAction SilentlyContinue
 
@@ -181,40 +452,108 @@ function Invoke-WingetUpgrade {
         try {
             Import-Module Microsoft.WinGet.Client -ErrorAction Stop
 
+            Write-Host "`n>> Planning package upgrades..." -ForegroundColor Cyan
             Write-Host "   Using Microsoft.WinGet.Client module..." -ForegroundColor Gray
 
             # Get packages with updates
-            $packagesToUpdate = Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable }
+            $packagesToUpdate = @(Get-WinGetPackage -Source winget | Where-Object { $_.IsUpdateAvailable })
 
-            if (-not $packagesToUpdate -or $packagesToUpdate.Count -eq 0) {
+            if ($packagesToUpdate.Count -eq 0) {
                 Write-Host "[OK] No packages to upgrade" -ForegroundColor Green
                 return
             }
 
-            Write-Host "   Found $($packagesToUpdate.Count) package(s) to upgrade`n" -ForegroundColor Gray
+            if ($soakEnabled) {
+                $cutoff = (Get-Date).ToUniversalTime().AddDays(-$SoakDays)
+                Write-Host "   Checking winget-pkgs for versions published before $($cutoff.ToString('yyyy-MM-dd HH:mm')) UTC..." -ForegroundColor Gray
+                $plan = @(Get-WingetSoakPlan -Packages $packagesToUpdate -SoakDays $SoakDays -Cutoff $cutoff)
+            }
+            else {
+                $plan = @($packagesToUpdate | ForEach-Object {
+                        [PSCustomObject]@{
+                            Id               = $_.Id
+                            Name             = $_.Name
+                            InstalledVersion = $_.InstalledVersion
+                            Newest           = @($_.AvailableVersions) | Select-Object -First 1
+                            Target           = $null
+                            Reason           = $null
+                        }
+                    })
+            }
+
+            $toUpgrade = @($plan | Where-Object { -not $_.Reason })
+            $skipped = @($plan | Where-Object { $_.Reason })
+
+            Write-Host "`nUpgrade plan:" -ForegroundColor Cyan
+            foreach ($item in $toUpgrade) {
+                $version = if ($item.Target) { $item.Target } else { $item.Newest }
+                $note = if ($item.Target -and $item.Target -ne $item.Newest) { "  (newest $($item.Newest) is under $SoakDays days old)" } else { '' }
+                Write-Host ("   {0,-40} {1} -> {2}{3}" -f $item.Id, $item.InstalledVersion, $version, $note)
+            }
+            if ($toUpgrade.Count -eq 0) {
+                Write-Host "   (nothing to upgrade)" -ForegroundColor Gray
+            }
+            if ($skipped.Count -gt 0) {
+                Write-Host "Skipped:" -ForegroundColor Yellow
+                foreach ($item in $skipped) {
+                    Write-Host ("   {0,-40} {1}" -f $item.Id, $item.Reason) -ForegroundColor Yellow
+                }
+            }
+
+            if ($toUpgrade.Count -eq 0) {
+                Write-Host "`n[OK] Nothing to upgrade yet" -ForegroundColor Green
+                return
+            }
+
+            Invoke-WingetCountdown -Seconds $countdown
+            if (-not $isWhatIf) {
+                Write-Host "`n>> Starting package upgrades..." -ForegroundColor Cyan
+            }
 
             # Upgrade each package
             $successCount = 0
             $failCount = 0
 
-            foreach ($package in $packagesToUpdate) {
-                Write-Host "   Upgrading $($package.Name)..." -NoNewline
+            foreach ($item in $toUpgrade) {
+                $action = if ($item.Target) { "Upgrade to $($item.Target)" } else { 'Upgrade to latest' }
+                if (-not $PSCmdlet.ShouldProcess($item.Id, $action)) {
+                    continue
+                }
+
+                Write-Host "   Upgrading $($item.Name)..." -NoNewline
+
+                $updateParams = @{
+                    Id          = $item.Id
+                    Source      = 'winget'
+                    Mode        = 'Silent'
+                    Force       = $true
+                    ErrorAction = 'Stop'
+                }
+                if ($item.Target) {
+                    $updateParams['Version'] = $item.Target
+                    $updateParams['MatchOption'] = 'Equals'
+                }
 
                 try {
-                    Update-WinGetPackage -Id $package.Id -Source winget -Mode Silent -Force -ErrorAction Stop | Out-Null
+                    Update-WinGetPackage @updateParams | Out-Null
                     Write-Host " OK" -ForegroundColor Green
                     $successCount++
                 }
                 catch {
                     Write-Host " FAIL" -ForegroundColor Red
-                    Write-Warning "Failed to upgrade $($package.Name): $_"
+                    Write-Warning "Failed to upgrade $($item.Name): $_"
                     $failCount++
                 }
+            }
+
+            if ($isWhatIf) {
+                return
             }
 
             Write-Host "`nUpgrade Summary:" -ForegroundColor Cyan
             Write-Host "   Successful: $successCount" -ForegroundColor Green
             Write-Host "   Failed: $failCount" -ForegroundColor $(if ($failCount -gt 0) { 'Red' } else { 'Gray' })
+            Write-Host "   Skipped: $($skipped.Count)" -ForegroundColor $(if ($skipped.Count -gt 0) { 'Yellow' } else { 'Gray' })
         }
         catch {
             Write-Warning "Failed to use Microsoft.WinGet.Client module: $_"
@@ -225,12 +564,23 @@ function Invoke-WingetUpgrade {
 
     # Fallback to winget.exe if module not available or failed
     if (-not $UseWingetModule -or -not $wingetModule) {
+        if ($soakEnabled) {
+            Write-Warning "Soak requires the Microsoft.WinGet.Client module (Install-Module -Name Microsoft.WinGet.Client). Rerun with -NoSoak to upgrade everything with winget.exe."
+            return
+        }
+
         if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
             Write-Error "Neither Microsoft.WinGet.Client module nor winget.exe is available."
             Write-Error "Please install Microsoft.WinGet.Client: Install-Module -Name Microsoft.WinGet.Client"
             return
         }
 
+        if (-not $PSCmdlet.ShouldProcess('all winget packages', 'winget upgrade --all')) {
+            return
+        }
+
+        Invoke-WingetCountdown -Seconds $countdown
+        Write-Host "`n>> Starting package upgrades..." -ForegroundColor Cyan
         Write-Host "   Using winget.exe..." -ForegroundColor Gray
         winget upgrade --all --source winget --silent --accept-package-agreements --accept-source-agreements
 

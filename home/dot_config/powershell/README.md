@@ -41,17 +41,38 @@ After installation, start a new PowerShell session. Type `aliases` to see all av
 
 ### Winget Upgrade Commands
 
-- `wup` or `winup` - Check for and upgrade all winget packages with a 3-second countdown
+- `wup` or `winup` - Check for and upgrade winget packages with a 3-second countdown
 - `Test-WingetUpdates` - Check if any package updates are available (returns true/false)
 - `Invoke-WingetUpgrade` - Full upgrade function with customizable options
+
+**Soak time:** by default, `Invoke-WingetUpgrade` only installs package versions
+that have been published in [winget-pkgs](https://github.com/microsoft/winget-pkgs)
+for at least 7 days. Each package is pinned to the newest version that is old
+enough; packages without one are skipped and listed in the summary. A version's
+age is when its manifest folder was added to winget-pkgs, looked up through the
+GitHub API (`gh api` when signed in, otherwise unauthenticated requests, which
+also covers a gh token blocked by SAML enforcement). When the age can't be
+determined, the package is skipped. Soak needs the Microsoft.WinGet.Client
+module. winget has no native minimum package age yet; once
+[microsoft/winget-cli#6178](https://github.com/microsoft/winget-cli/issues/6178)
+lands, this can move to winget's own setting.
 
 **Examples:**
 ```powershell
 # Check for updates
 Test-WingetUpdates
 
-# Upgrade all packages (3-second countdown)
+# Upgrade packages to versions at least 7 days old (3-second countdown)
 wup
+
+# Preview what would be upgraded, to which version, and what is skipped
+Invoke-WingetUpgrade -WhatIf
+
+# Require versions to be at least 14 days old
+Invoke-WingetUpgrade -SoakDays 14
+
+# Upgrade everything to the newest version, regardless of age
+Invoke-WingetUpgrade -NoSoak
 
 # Upgrade immediately without countdown
 Invoke-WingetUpgrade -CountdownSeconds 0

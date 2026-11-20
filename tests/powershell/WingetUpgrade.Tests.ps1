@@ -163,6 +163,219 @@ Describe "Winget Upgrade Functions" -Tag "Unit" {
     }
 }
 
+Describe "Winget Soak" -Tag "Unit" {
+    BeforeAll {
+        # Stubs for CI runners without Microsoft.WinGet.Client. Pinned upgrades
+        # pass -Version/-MatchOption, so the stub must declare them for mocking.
+        $updateCmd = Get-Command Update-WinGetPackage -ErrorAction SilentlyContinue
+        if (-not $updateCmd -or -not $updateCmd.Parameters.ContainsKey('Version')) {
+            function global:Update-WinGetPackage {
+                [CmdletBinding()]
+                param([string]$Id, [string]$Source, [string]$Mode, [switch]$Force, [string]$Version, [string]$MatchOption)
+            }
+        }
+        if (-not (Get-Command Get-WinGetPackage -ErrorAction SilentlyContinue)) {
+            function global:Get-WinGetPackage { param([string]$Source) }
+        }
+
+        # Mimics PSInstalledCatalogPackage, including winget's CompareToVersion.
+        function New-TestWingetPackage {
+            param([string]$Id, [string]$Installed, [string[]]$Available)
+            $pkg = [PSCustomObject]@{
+                Id                = $Id
+                Name              = $Id
+                InstalledVersion  = $Installed
+                AvailableVersions = $Available
+                IsUpdateAvailable = $true
+            }
+            $pkg | Add-Member -MemberType ScriptMethod -Name CompareToVersion -Value {
+                param($Other)
+                $mine = [version]$this.InstalledVersion
+                $theirs = [version]$Other
+                if ($mine -lt $theirs) { 'Lesser' } elseif ($mine -gt $theirs) { 'Greater' } else { 'Equal' }
+            }
+            return $pkg
+        }
+
+        $script:FixedNow = [datetime]::new(2026, 11, 20, 12, 0, 0, [DateTimeKind]::Utc)
+    }
+
+    Context "Version selection" {
+        It "maps package IDs to winget-pkgs manifest paths" {
+            InModuleScope DotfilesHelpers {
+                Get-WingetManifestPath -PackageId 'Git.Git' | Should -Be 'manifests/g/Git/Git'
+                Get-WingetManifestPath -PackageId 'Microsoft.VisualStudio.2022.Community' |
+                    Should -Be 'manifests/m/Microsoft/VisualStudio/2022/Community'
+            }
+        }
+
+        It "picks the newest version that is old enough, not the newest overall" {
+            $pkg = New-TestWingetPackage -Id 'Test.Pkg' -Installed '1.0.0' -Available @('1.3.0', '1.2.0', '1.1.0', '1.0.0')
+            InModuleScope DotfilesHelpers -Parameters @{ Pkg = $pkg } {
+                Select-WingetSoakTarget -Package $Pkg -SoakedVersions @('1.0.0', '1.1.0', '1.2.0') | Should -Be '1.2.0'
+            }
+        }
+
+        It "returns nothing when only the installed or older versions are old enough" {
+            $pkg = New-TestWingetPackage -Id 'Test.Pkg' -Installed '1.0.0' -Available @('1.1.0', '1.0.0', '0.9.0')
+            InModuleScope DotfilesHelpers -Parameters @{ Pkg = $pkg } {
+                Select-WingetSoakTarget -Package $Pkg -SoakedVersions @('0.9.0', '1.0.0') | Should -BeNullOrEmpty
+            }
+        }
+    }
+
+    Context "GitHub API transport" {
+        BeforeEach {
+            InModuleScope DotfilesHelpers { $script:WingetPkgsGhDisabled = $false }
+            Mock Get-Command { [PSCustomObject]@{ Name = 'gh' } } -ParameterFilter { $Name -eq 'gh' } -ModuleName DotfilesHelpers
+            Mock Invoke-RestMethod { @([PSCustomObject]@{ sha = 'from-rest' }) } -ModuleName DotfilesHelpers
+        }
+
+        It "uses gh api when it works" {
+            Mock Invoke-WingetPkgsGh { [PSCustomObject]@{ ExitCode = 0; Output = '[{"sha":"from-gh"}]' } } -ModuleName DotfilesHelpers
+
+            $result = InModuleScope DotfilesHelpers { @(Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits') }
+
+            $result[0].sha | Should -Be 'from-gh'
+            Should -Invoke Invoke-RestMethod -Times 0 -ModuleName DotfilesHelpers
+        }
+
+        It "falls back to unauthenticated requests on a SAML 403 and stops using gh" {
+            Mock Invoke-WingetPkgsGh {
+                [PSCustomObject]@{ ExitCode = 1; Output = 'gh: Resource protected by organization SAML enforcement. (HTTP 403)' }
+            } -ModuleName DotfilesHelpers
+
+            $result = InModuleScope DotfilesHelpers {
+                $null = Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits'
+                @(Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits')
+            }
+
+            $result[0].sha | Should -Be 'from-rest'
+            Should -Invoke Invoke-WingetPkgsGh -Times 1 -Exactly -ModuleName DotfilesHelpers
+            Should -Invoke Invoke-RestMethod -Times 2 -Exactly -ModuleName DotfilesHelpers
+        }
+
+        It "falls back to unauthenticated requests when the gh call itself throws" {
+            Mock Invoke-WingetPkgsGh { throw 'gh: Resource protected by organization SAML enforcement. (HTTP 403)' } -ModuleName DotfilesHelpers
+
+            $result = InModuleScope DotfilesHelpers { @(Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits') }
+
+            $result[0].sha | Should -Be 'from-rest'
+        }
+
+        It "treats a gh 404 as a missing path without falling back" {
+            Mock Invoke-WingetPkgsGh { [PSCustomObject]@{ ExitCode = 1; Output = 'gh: Not Found (HTTP 404)' } } -ModuleName DotfilesHelpers
+
+            InModuleScope DotfilesHelpers { Invoke-WingetPkgsApi -Endpoint 'repos/x/y/contents/z' } | Should -BeNullOrEmpty
+            Should -Invoke Invoke-RestMethod -Times 0 -ModuleName DotfilesHelpers
+        }
+
+        It "reports an unauthenticated rate limit clearly" {
+            Mock Invoke-WingetPkgsGh { [PSCustomObject]@{ ExitCode = 1; Output = 'gh: API rate limit exceeded (HTTP 403)' } } -ModuleName DotfilesHelpers
+            Mock Invoke-RestMethod { throw 'API rate limit exceeded for 203.0.113.1.' } -ModuleName DotfilesHelpers
+
+            { InModuleScope DotfilesHelpers { Invoke-WingetPkgsApi -Endpoint 'repos/microsoft/winget-pkgs/commits' } } |
+                Should -Throw '*rate limit reached*'
+        }
+    }
+
+    Context "Invoke-WingetUpgrade" {
+        BeforeEach {
+            Mock Get-Module { [PSCustomObject]@{ Name = 'Microsoft.WinGet.Client' } } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' } -ModuleName DotfilesHelpers
+            Mock Import-Module { } -ModuleName DotfilesHelpers
+            Mock Get-Date { $script:FixedNow } -ModuleName DotfilesHelpers
+            Mock Update-WinGetPackage { } -ModuleName DotfilesHelpers
+            $script:hostOutput = @()
+            Mock Write-Host { $script:hostOutput += "$Object" } -ModuleName DotfilesHelpers
+
+            $script:testPackages = @(
+                New-TestWingetPackage -Id 'Old.Enough' -Installed '1.0.0' -Available @('1.2.0', '1.1.0', '1.0.0')
+                New-TestWingetPackage -Id 'Too.Fresh' -Installed '2.0.0' -Available @('2.1.0', '2.0.0')
+            )
+            Mock Get-WinGetPackage { $script:testPackages } -ModuleName DotfilesHelpers
+
+            # At the cutoff, Old.Enough 1.1.0 existed but 1.2.0 and Too.Fresh 2.1.0 did not.
+            Mock Invoke-WingetPkgsApi {
+                if ($Endpoint -like '*/commits*') { return [PSCustomObject]@{ sha = 'cutoff-sha' } }
+                if ($Endpoint -like '*/o/Old/Enough*') {
+                    return @('1.0.0', '1.1.0') | ForEach-Object { [PSCustomObject]@{ name = $_; type = 'dir' } }
+                }
+                return [PSCustomObject]@{ name = '2.0.0'; type = 'dir' }
+            } -ModuleName DotfilesHelpers
+        }
+
+        It "soaks 7 days by default and pins each upgrade to the soaked version" {
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0
+
+            Should -Invoke Invoke-WingetPkgsApi -ModuleName DotfilesHelpers -Times 1 -Exactly -ParameterFilter {
+                $Endpoint -like '*until=2026-11-13T12:00:00Z*'
+            }
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 1 -Exactly -ParameterFilter {
+                $Id -eq 'Old.Enough' -and $Version -eq '1.1.0' -and $MatchOption -eq 'Equals'
+            }
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 0 -ParameterFilter { $Id -eq 'Too.Fresh' }
+            ($script:hostOutput -join "`n") | Should -Match 'Too\.Fresh\s+no update is 7\+ days old yet \(newest: 2\.1\.0\)'
+        }
+
+        It "honours -SoakDays" {
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 -SoakDays 14
+
+            Should -Invoke Invoke-WingetPkgsApi -ModuleName DotfilesHelpers -Times 1 -Exactly -ParameterFilter {
+                $Endpoint -like '*until=2026-11-06T12:00:00Z*'
+            }
+        }
+
+        It "upgrades everything to the newest version with <Name>" -TestCases @(
+            @{ Name = '-NoSoak'; Params = @{ NoSoak = $true } }
+            @{ Name = '-SoakDays 0'; Params = @{ SoakDays = 0 } }
+        ) {
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 @Params
+
+            Should -Invoke Invoke-WingetPkgsApi -ModuleName DotfilesHelpers -Times 0
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 2 -Exactly -ParameterFilter { -not $Version }
+        }
+
+        It "skips only the package whose dates cannot be determined (fail closed)" {
+            Mock Invoke-WingetPkgsApi {
+                if ($Endpoint -like '*/commits*') { return [PSCustomObject]@{ sha = 'cutoff-sha' } }
+                if ($Endpoint -like '*/t/Too/Fresh*') { throw 'GitHub API request failed: 500' }
+                return [PSCustomObject]@{ name = '1.1.0'; type = 'dir' }
+            } -ModuleName DotfilesHelpers
+
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningVariable warnings -WarningAction SilentlyContinue
+
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 1 -Exactly -ParameterFilter { $Id -eq 'Old.Enough' }
+            ($warnings -join "`n") | Should -Match 'Skipping Too\.Fresh: could not determine manifest dates'
+        }
+
+        It "skips every package when the cutoff commit cannot be found" {
+            Mock Invoke-WingetPkgsApi { throw 'GitHub API rate limit reached' } -ModuleName DotfilesHelpers
+
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningAction SilentlyContinue
+
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 0
+            ($script:hostOutput -join "`n") | Should -Match 'Nothing to upgrade yet'
+        }
+
+        It "shows the plan without upgrading under -WhatIf" {
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WhatIf
+
+            Should -Invoke Update-WinGetPackage -ModuleName DotfilesHelpers -Times 0
+            ($script:hostOutput -join "`n") | Should -Match 'Old\.Enough\s+1\.0\.0 -> 1\.1\.0'
+        }
+
+        It "does not fall back to an unsoaked winget.exe upgrade without the module" {
+            Mock Get-Module { $null } -ParameterFilter { $Name -eq 'Microsoft.WinGet.Client' } -ModuleName DotfilesHelpers
+            Mock Get-Command { $null } -ParameterFilter { $Name -eq 'winget' } -ModuleName DotfilesHelpers
+
+            Invoke-WingetUpgrade -Force -CountdownSeconds 0 -WarningVariable warnings -WarningAction SilentlyContinue -ErrorVariable errors -ErrorAction SilentlyContinue
+
+            ($warnings -join "`n") | Should -Match 'Soak requires the Microsoft\.WinGet\.Client module'
+            $errors | Should -BeNullOrEmpty
+        }
+    }
+}
+
 Describe "Winget Upgrade Script" -Tag "Integration" {
     Context "Decoupled from chezmoi update" {
         # The winget upgrade is intentionally NOT wired into 'chezmoi apply' /
@@ -356,8 +569,8 @@ Describe "E2E: Winget Upgrade Workflow" -Tag "E2E" {
             $hasUpdates = Test-WingetUpdates -UseWingetModule $true
             $hasUpdates | Should -Be $true
 
-            # Run upgrade with no countdown
-            { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true } | Should -Not -Throw
+            # Run upgrade with no countdown (soak covered in "Winget Soak" tests)
+            { Invoke-WingetUpgrade -CountdownSeconds 0 -UseWingetModule $true -NoSoak } | Should -Not -Throw
 
             # Verify upgrade was called
             Should -Invoke Update-WinGetPackage -Times 1 -ModuleName DotfilesHelpers
