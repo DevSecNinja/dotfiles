@@ -172,7 +172,7 @@ jobs:
 
   merge:
     name: Create Multi-Platform Manifest
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: prebuild
     # Merge when images were actually pushed: main, schedule, dispatch, or v* tag.
     if: |
@@ -334,7 +334,7 @@ jobs:
       - prebuild
       - merge
     if: ${{ always() && github.event_name != 'pull_request' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
