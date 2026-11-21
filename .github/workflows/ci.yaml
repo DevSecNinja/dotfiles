@@ -21,7 +21,7 @@ env:
   # Single source of truth for the mise binary version across every job
   # (including the bats.yml caller input below). Renovate keeps it patched.
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION: "2026.11.1"
+  MISE_VERSION: "2026.11.3"
   # Devcontainer base image consumed by the container-based test jobs. This is
   # the GHCR MIRROR of mcr.microsoft.com/devcontainers/base, kept current by
   # the scheduled mirror-base-image.yaml workflow. CI never pulls from MCR
@@ -116,7 +116,7 @@ jobs:
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -529,7 +529,7 @@ jobs:
       # Keep in sync with MISE_VERSION above. The env context is not available
       # in a reusable-workflow `with:` input, so this pin is tracked separately.
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.11.1"
+      mise-version: "2026.11.3"
       test-dirs: "tests/bash/"
       check-name: "Bash Test Results (Bats)"
 
@@ -575,7 +575,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/windows@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2.25.0
+        uses: EnricoMi/publish-unit-test-result-action/windows@da5b7be67623cd59bbbd1a0ce4f022050a55605f # v2.26.0
         if: always()
         with:
           files: test-results.xml
