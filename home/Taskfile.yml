@@ -1,3 +1,4 @@
+---
 version: '3'
 
 vars:
@@ -15,7 +16,8 @@ tasks:
     desc: Set up and chat with local Qwen3.5 (Apple Silicon, thinking disabled)
     interactive: true
     silent: true
-    deps: [llm:setup]
+    deps:
+      - llm:setup
     cmds:
       - >-
         "{{.MLX_VENV}}/bin/python" "{{.ROOT_DIR}}/.config/mlx/chat.py"
@@ -43,7 +45,8 @@ tasks:
 
   llm:setup:
     internal: true
-    deps: [llm:storage]
+    deps:
+      - llm:storage
     preconditions:
       - sh: |
           for path in "{{.MLX_CACHE_DIR}}" "{{.MLX_CACHE_DIR}}/hub" "{{.MLX_CACHE_DIR}}/xet" "{{.MLX_CACHE_DIR}}/pip" "{{.MLX_CACHE_DIR}}/tmp"; do
@@ -71,7 +74,8 @@ tasks:
       - sh: >-
           (test ! -e "{{.MLX_VENV}}" && test ! -L "{{.MLX_VENV}}") ||
           "{{.MLX_VENV}}/bin/python" -c '{{.MLX_VENV_CHECK}}'
-        msg: 'Existing {{.MLX_VENV}} is not a usable Python 3.11+ arm64 venv. Repair it or move it aside; it will not be deleted automatically.'
+        msg: 'Existing {{.MLX_VENV}} is not a usable Python 3.11+ arm64 venv. Repair it or move it aside; it will not be deleted
+          automatically.'
     status:
       - '"{{.MLX_VENV}}/bin/python" -c ''{{.MLX_VENV_CHECK}}'''
     cmds:
@@ -88,7 +92,8 @@ tasks:
     internal: true
     preconditions:
       - sh: python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null || command -v brew
-        msg: 'A native Python 3.11+ or Homebrew is required. Install Homebrew using the existing dotfiles setup; this task cannot safely bootstrap Homebrew.'
+        msg: 'A native Python 3.11+ or Homebrew is required. Install Homebrew using the existing dotfiles setup; this task
+          cannot safely bootstrap Homebrew.'
     status:
       - |
         python3 -c '{{.MLX_PYTHON_CHECK}}' 2>/dev/null ||

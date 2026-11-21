@@ -1,8 +1,10 @@
+---
 name: Prebuild Devcontainer
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     # Tag pushes (v*) build a release-pinned multi-arch manifest list tagged
     # as :vX.Y.Z, plus a build-provenance attestation for the manifest digest.
     # Source must be the tagged commit so the
@@ -17,7 +19,8 @@ on:
       - 'script/devcontainer-image-size.sh'
       - '.github/workflows/devcontainer-prebuild.yaml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '.devcontainer/**'
       - 'home/**'
@@ -62,7 +65,7 @@ jobs:
 
       - name: Set lowercase repository owner
         id: lowercase
-        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
@@ -199,7 +202,7 @@ jobs:
 
       - name: Set lowercase repository owner
         id: lowercase
-        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Determine release context
         id: release

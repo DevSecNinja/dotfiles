@@ -10,6 +10,7 @@
 **Target Runtimes**: Fish 3.6+, PowerShell 5.1+/7+, Bash, Chezmoi 2.69+
 
 **Key Features**:
+
 - Fish shell configuration (Linux/macOS/WSL)
 - PowerShell profiles (Windows)
 - Vim, Tmux, Git configurations
@@ -293,10 +294,10 @@ PowerShell on Windows may load scripts without UTF-8 BOM encoding, causing multi
 | --------- | ----------- |
 | ✅        | `[OK]`      |
 | ❌        | `[FAIL]`    |
-| ⚠️        | `[WARN]`    |
-| 🔍 🚀 📊 | `>>`        |
+| ⚠️         | `[WARN]`    |
+| 🔍 🚀 📊  | `>>`        |
 | ━━━━━━    | `========`  |
-| ⏱️        | `[SKIP]`    |
+| ⏱️         | `[SKIP]`    |
 
 **Emoji is fine in**: `.fish`, `.sh`, `.md`, and other UTF-8 native files. Only `.ps1` files are affected.
 

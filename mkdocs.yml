@@ -1,7 +1,8 @@
 ---
 site_name: Dotfiles
 site_url: https://dotfiles.ravensberg.org/
-site_description: Modern dotfiles repository managed with Chezmoi, featuring Fish shell, PowerShell, and automated setup scripts for Linux, macOS, Windows, and WSL
+site_description: Modern dotfiles repository managed with Chezmoi, featuring Fish shell, PowerShell, and automated setup scripts
+  for Linux, macOS, Windows, and WSL
 site_author: DevSecNinja
 repo_url: https://github.com/DevSecNinja/dotfiles
 repo_name: DevSecNinja/dotfiles

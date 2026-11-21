@@ -1,3 +1,4 @@
+---
 name: Sign PowerShell Scripts
 
 on:
@@ -6,7 +7,7 @@ on:
       - main
     paths:
       - '**.ps1'
-      - '!**.ps1.tmpl'  # Exclude templates - they change after chezmoi processing
+      - '!**.ps1.tmpl' # Exclude templates - they change after chezmoi processing
   workflow_dispatch:
 
 concurrency:
@@ -84,18 +85,6 @@ jobs:
 
             Merging this PR replaces the direct push the workflow used to
             perform, which is blocked by branch protection on `main`.
-
-      - name: Comment on PR
-        if: steps.check_changes.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ PowerShell scripts have been signed. Please pull the latest changes after merge.'
-            })
 
   # --- Page on main-branch script-signing failure (homelab IRM pager) ---
   notify-irm:
