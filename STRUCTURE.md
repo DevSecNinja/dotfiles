@@ -6,15 +6,15 @@ Quick reference guide for the dotfiles repository structure and Chezmoi naming c
 
 Chezmoi uses special prefixes in filenames to determine how files are managed:
 
-| Prefix | Target | Example |
-|--------|--------|---------|
-| `dot_` | `.` (hidden file) | `dot_vimrc` → `~/.vimrc` |
-| `private_` | File with 0600 permissions | `private_ssh_config` |
-| `executable_` | File with +x permissions | `executable_script.sh` |
-| `run_once_` | Script that runs once | `run_once_install.sh` |
-| `run_onchange_` | Script that runs on change | `run_onchange_update.sh` |
-| `run_` | Script that runs every apply | `run_backup.sh` |
-| `.tmpl` | Template file | `config.tmpl` (processes Chezmoi templates) |
+| Prefix          | Target                       | Example                                     |
+| --------------- | ---------------------------- | ------------------------------------------- |
+| `dot_`          | `.` (hidden file)            | `dot_vimrc` → `~/.vimrc`                    |
+| `private_`      | File with 0600 permissions   | `private_ssh_config`                        |
+| `executable_`   | File with +x permissions     | `executable_script.sh`                      |
+| `run_once_`     | Script that runs once        | `run_once_install.sh`                       |
+| `run_onchange_` | Script that runs on change   | `run_onchange_update.sh`                    |
+| `run_`          | Script that runs every apply | `run_backup.sh`                             |
+| `.tmpl`         | Template file                | `config.tmpl` (processes Chezmoi templates) |
 
 ## 📁 Directory Structure
 
@@ -121,6 +121,7 @@ chezmoi add --template ~/.local/bin/script.sh
 ### Script Execution Order
 
 Scripts run in this order:
+
 1. `run_once_before_*` - Before applying dotfiles (runs once)
 2. Apply dotfiles
 3. `run_once_after_*` - After applying dotfiles (runs once)
@@ -136,16 +137,16 @@ Numerical prefixes ensure order: `00-`, `01-`, `02-`, etc.
 Each package manager in `home/.chezmoidata/packages.yaml` supports an
 `uninstall` list alongside its installation lists:
 
-| Configuration key | Uninstall entries |
-| --- | --- |
-| `packages.windows.winget.uninstall` | Exact WinGet IDs, e.g. `Vendor.Application` |
-| `packages.windows.powershell_modules.uninstall` | PowerShellGet module names |
-| `packages.linux.apt.uninstall` | APT names, optionally `name:architecture` |
-| `packages.linux.dnf.uninstall` | RPM package names |
-| `packages.linux.brew.uninstall` | Homebrew formula names |
-| `packages.darwin.brew.formulas.uninstall` | Homebrew formula names |
-| `packages.darwin.brew.cask.uninstall` | Homebrew cask names |
-| `packages.darwin.brew.app-store.uninstall` | `{name, id}` entries, like the installation lists |
+| Configuration key                               | Uninstall entries                                 |
+| ----------------------------------------------- | ------------------------------------------------- |
+| `packages.windows.winget.uninstall`             | Exact WinGet IDs, e.g. `Vendor.Application`       |
+| `packages.windows.powershell_modules.uninstall` | PowerShellGet module names                        |
+| `packages.linux.apt.uninstall`                  | APT names, optionally `name:architecture`         |
+| `packages.linux.dnf.uninstall`                  | RPM package names                                 |
+| `packages.linux.brew.uninstall`                 | Homebrew formula names                            |
+| `packages.darwin.brew.formulas.uninstall`       | Homebrew formula names                            |
+| `packages.darwin.brew.cask.uninstall`           | Homebrew cask names                               |
+| `packages.darwin.brew.app-store.uninstall`      | `{name, id}` entries, like the installation lists |
 
 These lists apply in **both light and full modes**, regardless of `useYubiKey`.
 Move retired entries out of `light`, `full`, and `yubikey` before listing them
@@ -284,23 +285,23 @@ chezmoi init --data=false
 
 ### Unix/Linux/macOS/WSL
 
-| Source File | Target Location |
-|-------------|----------------|
-| `dot_vimrc` | `~/.vimrc` |
-| `dot_tmux.conf` | `~/.tmux.conf` |
+| Source File                   | Target Location              |
+| ----------------------------- | ---------------------------- |
+| `dot_vimrc`                   | `~/.vimrc`                   |
+| `dot_tmux.conf`               | `~/.tmux.conf`               |
 | `dot_config/fish/config.fish` | `~/.config/fish/config.fish` |
-| `dot_config/git/config.tmpl` | `~/.config/git/config` |
-| `run_once_*.sh.tmpl` | Executed once, not copied |
+| `dot_config/git/config.tmpl`  | `~/.config/git/config`       |
+| `run_once_*.sh.tmpl`          | Executed once, not copied    |
 
 ### Windows
 
-| Source File | Target Location |
-|-------------|----------------|
+| Source File                         | Target Location                    |
+| ----------------------------------- | ---------------------------------- |
 | `dot_config/powershell/profile.ps1` | `~/.config/powershell/profile.ps1` |
 | `dot_config/powershell/aliases.ps1` | `~/.config/powershell/aliases.ps1` |
-| `dot_config/git/config.tmpl` | `~/.config/git/config` |
-| `AppData/.../settings.json` | `%LOCALAPPDATA%/.../settings.json` |
-| `run_once_*.ps1.tmpl` | Executed once, not copied |
+| `dot_config/git/config.tmpl`        | `~/.config/git/config`             |
+| `AppData/.../settings.json`         | `%LOCALAPPDATA%/.../settings.json` |
+| `run_once_*.ps1.tmpl`               | Executed once, not copied          |
 
 **Note**: Platform-specific files are filtered via `.chezmoiignore` (supports templates natively).
 

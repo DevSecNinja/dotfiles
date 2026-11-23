@@ -1,3 +1,4 @@
+---
 # Cross-platform package definitions for Chezmoi dotfiles
 # Packages are organized by OS and package manager
 # Installation modes: light (essential) + full (light + additional packages)
@@ -159,10 +160,10 @@ packages:
     powershell_git_modules:
       light: []
       full:
-        # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
-        # - name: "Office 365 Mail Alias"
-        #   url: "https://github.com/DevSecNinja/Office365AliasModule.git"
-        #   destination: "DevSecNinja.Office365AliasModule"
+      # Path relative to PowerShell modules directory (~\Documents\PowerShell\Modules\)
+      # - name: "Office 365 Mail Alias"
+      #   url: "https://github.com/DevSecNinja/Office365AliasModule.git"
+      #   destination: "DevSecNinja.Office365AliasModule"
 
 # VS Code extensions (optional, separate from package installation)
 # Note: GitHub.copilot and GitHub.copilot-chat are now bundled as built-in

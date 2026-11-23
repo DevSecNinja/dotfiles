@@ -6,11 +6,11 @@ drift apart across dozens of repos.
 
 Four functions in the `DotfilesHelpers` module:
 
-| Function                  | Purpose                                                           |
-| ------------------------- | ----------------------------------------------------------------- |
-| `Get-GitHubRepoBaseline`  | The desired state — a single, editable source of truth            |
-| `Get-GitHubRepoConfig`    | Read-only audit of one, several or all repositories               |
-| `Set-GitHubRepoConfig`    | Remediation, with `-WhatIf` dry runs                              |
+| Function                  | Purpose                                                          |
+| ------------------------- | ---------------------------------------------------------------- |
+| `Get-GitHubRepoBaseline`  | The desired state — a single, editable source of truth           |
+| `Get-GitHubRepoConfig`    | Read-only audit of one, several or all repositories              |
+| `Set-GitHubRepoConfig`    | Remediation, with `-WhatIf` dry runs                             |
 | `Get-GitHubAppCredential` | Reads a GitHub App ID and private key from 1Password or PEM file |
 
 ## Requirements

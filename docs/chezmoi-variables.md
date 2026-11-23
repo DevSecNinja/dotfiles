@@ -67,7 +67,7 @@ templates and scripts.
   already published at <https://github.com/DevSecNinja.keys> — so they are safe
   to ship in the repo. Override it per-machine by setting `gitSigningKey` in
   your local chezmoi config to your own key — copy it from the 1Password app,
-  *item → ⋮ → Configure Commit Signing → Copy Snippet*. An empty value falls
+  _item → ⋮ → Configure Commit Signing → Copy Snippet_. An empty value falls
   back to the work/personal default, as does a value that still equals one of
   the shipped defaults (so a config written by an earlier `chezmoi init` never
   pins the wrong one). Ignored when `useYubiKey` is `true`, since
