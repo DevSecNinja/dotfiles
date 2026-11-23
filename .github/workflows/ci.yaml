@@ -12,8 +12,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Least privilege for the GITHUB_TOKEN. Jobs that need more (GHCR pulls, test
-# result checks and PR comments) grant it in their own `permissions:` block.
+# Least privilege for the GITHUB_TOKEN. Jobs that need more (GHCR pulls)
+# grant it in their own `permissions:` block.
 permissions:
   contents: read
 
@@ -522,8 +522,6 @@ jobs:
     needs: validate
     permissions:
       contents: read
-      checks: write
-      pull-requests: write
     uses: ./.github/workflows/bats.yml
     with:
       # Keep in sync with MISE_VERSION above. The env context is not available
@@ -540,8 +538,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      checks: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -575,9 +571,8 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/windows@da5b7be67623cd59bbbd1a0ce4f022050a55605f # v2.26.0
+        uses: DevSecNinja/.github/actions/test-report@5452dbd33d61b4fc58b1780f57e0b60ff131be75 # v4.10.0
         if: always()
         with:
-          files: test-results.xml
-          check_name: 'Pester Test Results'
-          comment_mode: off
+          paths: test-results.xml
+          title: Pester Test Results
