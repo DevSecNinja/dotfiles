@@ -132,6 +132,14 @@ prune() {
 	[[ "$output" == *"::error::Could not read the manifest of sha256:latest; nothing was deleted."* ]]
 }
 
+@test "prune-untagged-images: a malformed index of a kept image deletes nothing" {
+	echo 'not json' >"${FIXTURES}/manifests/sha256_latest.json"
+	DRY_RUN=false run prune
+	[ "$status" -ne 0 ]
+	[ ! -s "${FIXTURES}/deletes" ]
+	[[ "$output" == *"::error::The manifest of sha256:latest is not a JSON object; nothing was deleted."* ]]
+}
+
 @test "prune-untagged-images: an unreadable candidate deletes nothing" {
 	rm "${FIXTURES}/manifests/sha256_orphan.json"
 	DRY_RUN=false run prune

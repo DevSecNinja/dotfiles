@@ -20,7 +20,8 @@ name: Cleanup Devcontainer Packages
 #   provenance whose subject is a kept image. It is fail-closed: if it cannot
 #   read any manifest it deletes nothing. The cut-off keeps in-flight
 #   builds/pulls safe, and GHCR keeps deleted versions restorable for 30 days.
-#   Pull requests that change this workflow or the script run it as a dry run.
+#   Pull requests that change this workflow or the script run it as a dry run
+#   in a separate job whose token can only read packages.
 #
 # TOKEN NOTE:
 #   We authenticate with the built-in GITHUB_TOKEN, so the repository must
@@ -47,7 +48,36 @@ permissions:
   contents: read
 
 jobs:
+  preview:
+    # Pull requests run the changed script read-only: it can list, not delete.
+    if: github.event_name == 'pull_request'
+    name: Preview prune of untagged devcontainer digests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Preview untagged versions to prune (dry run)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_NAME: dotfiles-devcontainer
+          CUT_OFF_DAYS: "7"
+          DRY_RUN: "true"
+        run: bash .github/scripts/prune-untagged-images.sh
+
   cleanup:
+    if: github.event_name != 'pull_request'
     name: Prune untagged devcontainer digests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -70,6 +100,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           IMAGE_NAME: dotfiles-devcontainer
           CUT_OFF_DAYS: "7"
-          # Pull requests always preview; only DRY_RUN=false deletes.
-          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry-run == true }}
+          # Only DRY_RUN=false deletes.
+          DRY_RUN: ${{ inputs.dry-run == true }}
         run: bash .github/scripts/prune-untagged-images.sh

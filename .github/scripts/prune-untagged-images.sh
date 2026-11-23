@@ -54,36 +54,44 @@ read_manifest() {
         "https://ghcr.io/v2/${owner}/${IMAGE_NAME}/manifests/${digest}")"; then
         fail "Could not read the manifest of ${digest}"
     fi
+    jq -e 'type == "object"' >/dev/null 2>&1 <<<"${body}" || fail "The manifest of ${digest} is not a JSON object"
     manifests["${digest}"]="${body}"
 }
 
 declare -A protected=()
 # Protects digest $1 and, through manifest indexes, everything it references.
 protect() {
-    local queue=("$1") digest child
+    local queue=("$1") digest child children
     while [ "${#queue[@]}" -gt 0 ]; do
         digest="${queue[0]}"
         queue=("${queue[@]:1}")
         [ -n "${protected[${digest}]+set}" ] && continue
         protected["${digest}"]=1
         read_manifest "${digest}"
+        children="$(jq -r '.manifests[]?.digest' <<<"${manifests[${digest}]}")" ||
+            fail "Could not read the index of ${digest}"
         while IFS= read -r child; do
-            [ -n "${child}" ] && queue+=("${child}")
-        done < <(jq -r '.manifests[]?.digest' <<<"${manifests[${digest}]}")
+            if [ -n "${child}" ]; then
+                queue+=("${child}")
+            fi
+        done <<<"${children}"
     done
 }
 
 # Kept roots: tagged versions and versions newer than the cut-off.
-while IFS= read -r digest; do
-    protect "${digest}"
-done < <(jq -r --argjson cut_off "${cut_off}" '.[]
+roots="$(jq -r --argjson cut_off "${cut_off}" '.[]
     | select((.metadata.container.tags | length) > 0 or (.updated_at | fromdateiso8601) >= $cut_off)
-    | .name' <<<"${versions}")
+    | .name' <<<"${versions}")" || fail "Could not read the versions of ${IMAGE_NAME}"
+while IFS= read -r digest; do
+    if [ -n "${digest}" ]; then
+        protect "${digest}"
+    fi
+done <<<"${roots}"
 
 # Candidates: untagged and older than the cut-off, as "id digest updated_at" lines.
 candidates="$(jq -r --argjson cut_off "${cut_off}" '.[]
     | select((.metadata.container.tags | length) == 0 and (.updated_at | fromdateiso8601) < $cut_off)
-    | "\(.id) \(.name) \(.updated_at)"' <<<"${versions}")"
+    | "\(.id) \(.name) \(.updated_at)"' <<<"${versions}")" || fail "Could not read the versions of ${IMAGE_NAME}"
 
 # A candidate whose subject is protected (an attestation or signature of a
 # kept image) is protected too; repeat until nothing changes.
@@ -94,7 +102,8 @@ while [ "${changed}" = true ]; do
         [ -z "${digest}" ] && continue
         [ -n "${protected[${digest}]+set}" ] && continue
         read_manifest "${digest}"
-        subject="$(jq -r '.subject.digest // empty' <<<"${manifests[${digest}]}")"
+        subject="$(jq -r '.subject.digest // empty' <<<"${manifests[${digest}]}")" ||
+            fail "Could not read the subject of ${digest}"
         if [ -n "${subject}" ] && [ -n "${protected[${subject}]+set}" ]; then
             protect "${digest}"
             changed=true
