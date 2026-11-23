@@ -11,19 +11,21 @@ name: Cleanup Devcontainer Packages
 #   otherwise accumulate forever.
 #
 # WHY THIS IS SAFE:
-#   snok/container-retention-policy (>= v3.1.0) automatically protects the
-#   per-arch CHILD manifests of every retained tag (:latest, :vX.Y.Z) and is
-#   fail-closed: if it cannot fetch a manifest it skips deletion entirely
-#   rather than risk orphaning a live multi-arch image. We additionally:
-#     * only ever select `untagged` versions (tagged releases are never touched)
-#     * apply a `cut-off` time buffer so in-flight builds/pulls are never pruned
-#   GHCR also keeps deleted versions restorable for 30 days.
+#   .github/scripts/prune-untagged-images.sh (tests:
+#   tests/bash/prune-untagged-images.bats) only deletes versions that are
+#   untagged, older than the cut-off, and not referenced by a kept image. It
+#   reads the manifest index of every tagged (:latest, :vX.Y.Z) and recent
+#   version from ghcr.io and protects every per-arch CHILD manifest and
+#   attestation it references (nested indexes included), plus registry-pushed
+#   provenance whose subject is a kept image. It is fail-closed: if it cannot
+#   read any manifest it deletes nothing. The cut-off keeps in-flight
+#   builds/pulls safe, and GHCR keeps deleted versions restorable for 30 days.
+#   Pull requests that change this workflow or the script run it as a dry run.
 #
 # TOKEN NOTE:
-#   We authenticate with the built-in GITHUB_TOKEN ("temporal token"). This
-#   means image-names must be an EXACT name (no `*`/`!` operators) and the
-#   repository must hold the `Admin` role on the package
-#   (Package settings -> Manage Actions access).
+#   We authenticate with the built-in GITHUB_TOKEN, so the repository must
+#   hold the `Admin` role on the package (Package settings -> Manage Actions
+#   access).
 
 on:
   schedule:
@@ -36,6 +38,10 @@ on:
         description: 'Preview deletions without removing anything'
         type: boolean
         default: false
+  pull_request:
+    paths:
+      - .github/workflows/cleanup-packages.yaml
+      - .github/scripts/prune-untagged-images.sh
 
 permissions:
   contents: read
@@ -54,18 +60,16 @@ jobs:
         # renovate: datasource=github-tags depName=DevSecNinja/.github
         uses: DevSecNinja/.github/actions/harden-runner@bf22fcfcb4ef94a359eed55cea4b5ce7f5b98167 # main
 
-      - name: Prune untagged versions (multi-arch aware)
-        # renovate: datasource=github-tags depName=snok/container-retention-policy
-        uses: snok/container-retention-policy@d3bdcf5ce9b05f685154e4a16c39233b245e3d53 # v3.1.0
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          account: user
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Exact image name is required for the built-in GITHUB_TOKEN.
-          image-names: dotfiles-devcontainer
-          # Only ever target untagged versions; :latest and :vX.Y.Z are never
-          # selected, and their per-arch children are auto-protected.
-          tag-selection: untagged
-          # Time buffer so a just-pushed (still in-flight) digest is never
-          # pruned before its multi-arch manifest is published.
-          cut-off: 1w
-          dry-run: ${{ inputs.dry-run || false }}
+          persist-credentials: false
+
+      - name: Prune untagged versions (multi-arch aware)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_NAME: dotfiles-devcontainer
+          CUT_OFF_DAYS: "7"
+          # Pull requests always preview; only DRY_RUN=false deletes.
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry-run == true }}
+        run: bash .github/scripts/prune-untagged-images.sh
