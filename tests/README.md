@@ -14,7 +14,7 @@ Enable it locally with:
 ```
 
 **Bash**: Bats does not have built-in code coverage. Test results (JUnit XML)
-are published to PR checks via `EnricoMi/publish-unit-test-result-action`.
+are summarized on the run page by `DevSecNinja/.github/actions/test-report`.
 
 ## Directory Structure
 
@@ -216,7 +216,7 @@ The CI pipeline:
   - Bash: `tests/bash/**/*.bats` ✨
   - Python: `tests/python/**/test_*.py` (future)
 - Runs tests with appropriate runners/frameworks
-- Publishes JUnit XML reports (Bats via `mikepenz/action-junit-report`)
+- Summarizes JUnit XML reports on the run page (`DevSecNinja/.github/actions/test-report`)
 - Uploads test results as artifacts
 - Fails the build if any tests fail
 
@@ -227,7 +227,7 @@ The CI pipeline:
 2. Click on the latest workflow run
 3. Download test result artifacts:
    - `bats-test-results` - Bash test results (TAP format) ✨
-   - `pester-test-results` - PowerShell test results (NUnit XML)
+   - `pester-test-results` - PowerShell test results (JUnit XML)
 
 **Test Summary**:
 - Displayed in workflow run logs

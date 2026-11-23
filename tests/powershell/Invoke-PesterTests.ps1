@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Discovers and executes all Pester test files (*.Tests.ps1) in the PowerShell tests directory.
-    Generates test results in NUnit XML format and provides detailed console output.
+    Generates test results in JUnit XML format and provides detailed console output.
     Used by both CI/CD pipelines and local development.
 
 .PARAMETER TestPath
@@ -172,7 +172,7 @@ $config.Output.Verbosity = 'Detailed'
 
 # Test result settings
 $config.TestResult.Enabled = $true
-$config.TestResult.OutputFormat = 'NUnitXml'
+$config.TestResult.OutputFormat = 'JUnitXml'
 $config.TestResult.OutputPath = $OutputPath
 
 # Error handling
