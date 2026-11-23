@@ -126,11 +126,11 @@ The optional `[tag]` segment helps you tell scripts apart in log files. In
 priority order:
 
 1. **Explicit `LOG_TAG`** — validated against `^[A-Za-z0-9._-]{1,32}$`. Tags
-   starting with `-` or `.` are rejected (would resemble flags or hidden
-   files).
+    starting with `-` or `.` are rejected (would resemble flags or hidden
+    files).
 2. **Auto-detected basename** — when `log.sh` is sourced from a real script,
-   the script's `$0` basename (without `.sh`/`.bash`/`.zsh`/`.ksh`) is used.
-   Common shell names (`bash`, `zsh`, `log`, `log.sh`, …) are filtered out.
+    the script's `$0` basename (without `.sh`/`.bash`/`.zsh`/`.ksh`) is used.
+    Common shell names (`bash`, `zsh`, `log`, `log.sh`, …) are filtered out.
 3. **Empty** — no tag rendered. This is the default for interactive shells.
 
 This means `log_info hello` from a fish/zsh/bash prompt produces identical
@@ -162,7 +162,7 @@ Multi-byte styles (`unicode`, `box`, `rule`) automatically fall back to
 - `LANG=C` / `LC_ALL=C` (no UTF-8 locale),
 - `TERM=dumb`,
 - `LOG_FORMAT=json` (banners collapse to a single JSON object with
-  `kind=BANNER`).
+    `kind=BANNER`).
 
 This guarantees `LOG_FILE` output stays grep-friendly and pure ASCII.
 
@@ -190,8 +190,8 @@ log_kv "msg=hello world" status=ok           # values with spaces auto-quoted
 ### `log_data` — multiline payloads with continuation prefix
 
 Reads the payload from stdin. On a TTY the payload lines are prefixed with
-`│` so they visually belong to the previous header line; in `LOG_FILE` the
-prefix is `|` (ASCII). The whole block shares **one timestamp**, which is
+`│ ` so they visually belong to the previous header line; in `LOG_FILE` the
+prefix is `| ` (ASCII). The whole block shares **one timestamp**, which is
 what groups it.
 
 The primary use case is wrapping the output of another command without
@@ -450,12 +450,12 @@ completions, README, and license.
 Why not GitHub Packages, npm, or Homebrew?
 
 - **GitHub Packages** does not host plain shell tarballs; the available
-  formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency
-  that conflicts with the "works in offline / locked-down containers"
-  constraint.
+    formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency
+    that conflicts with the "works in offline / locked-down containers"
+    constraint.
 - **npm / pip** are the wrong ecosystem for POSIX shell.
 - **Homebrew** is great for dev machines but useless on minimal
-  containers and most servers.
+    containers and most servers.
 
 GitHub Release assets (`https://github.com/.../releases/download/...`) are
 versioned, immutable, public, cacheable, and require nothing more than

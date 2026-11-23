@@ -31,15 +31,15 @@ one — only a key of your own is treated as an override.
 
 1. In the 1Password app, open the SSH key item.
 2. Choose **⋮ → Configure Commit Signing**. On Windows, tick
-   **Configure for Windows Subsystem for Linux (WSL)** if you want the WSL
-   variant.
+    **Configure for Windows Subsystem for Linux (WSL)** if you want the WSL
+    variant.
 3. Select **Copy Snippet** and take the public key from it.
 4. Put that key in your local chezmoi config, which overrides the default:
 
-   ```yaml
-   data:
-     gitSigningKey: "ssh-ed25519 AAAA… comment"
-   ```
+    ```yaml
+    data:
+      gitSigningKey: "ssh-ed25519 AAAA… comment"
+    ```
 
 5. Run `chezmoi apply`.
 

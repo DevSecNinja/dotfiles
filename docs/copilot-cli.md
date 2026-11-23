@@ -38,43 +38,43 @@ workstation                                   headless server (svldev, …)
 ```
 
 - **Token source:** a 1Password [Environment][openv] with a variable named
-  exactly `COPILOT_GITHUB_TOKEN` (required) and, optionally, `GH_TOKEN` for the
-  `gh` CLI. Same names end-to-end, so nothing is remapped. Keeping them separate
-  lets each tool's token be scoped and rotated independently.
+    exactly `COPILOT_GITHUB_TOKEN` (required) and, optionally, `GH_TOKEN` for the
+    `gh` CLI. Same names end-to-end, so nothing is remapped. Keeping them separate
+    lets each tool's token be scoped and rotated independently.
 - **Workstation:** the `copilot-ssh` (bash/zsh) / `copilot_ssh` (fish) /
-  `copilot-ssh` (PowerShell) helper reads the token(s) via `op run` and forwards
-  them with SSH `SendEnv`.
+    `copilot-ssh` (PowerShell) helper reads the token(s) via `op run` and forwards
+    them with SSH `SendEnv`.
 - **Server:** `sshd` opts in with `AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN`.
-  SSH's secure default is to drop all client-sent env vars, so this server-side
-  allow-list is required — it is managed by the `system_setup` role in the
-  `docker` repo.
+    SSH's secure default is to drop all client-sent env vars, so this server-side
+    allow-list is required — it is managed by the `system_setup` role in the
+    `docker` repo.
 - **Tools:** Copilot CLI reads `COPILOT_GITHUB_TOKEN` (it takes precedence over
-  `GH_TOKEN`); the `gh` CLI reads `GH_TOKEN`. They do not interfere with each
-  other.
+    `GH_TOKEN`); the `gh` CLI reads `GH_TOKEN`. They do not interfere with each
+    other.
 
 ## One-time setup
 
 1. **Create the token(s).** A fine-grained
-   [Personal Access Token](https://github.com/settings/personal-access-tokens/new)
-   with the **"Copilot Requests"** permission for Copilot. Optionally create a
-   **second** fine-grained PAT scoped to what you need `gh` to do on the servers
-   (e.g. repository contents, pull requests). Give them an expiry and rotate
-   periodically. Keeping them separate keeps each token least-privilege.
+    [Personal Access Token](https://github.com/settings/personal-access-tokens/new)
+    with the **"Copilot Requests"** permission for Copilot. Optionally create a
+    **second** fine-grained PAT scoped to what you need `gh` to do on the servers
+    (e.g. repository contents, pull requests). Give them an expiry and rotate
+    periodically. Keeping them separate keeps each token least-privilege.
 2. **Store them in 1Password.** In the desktop app: **Developer → View
-   Environments → New environment** (e.g. "Development Machine"), then add a
-   variable named `COPILOT_GITHUB_TOKEN` with the Copilot PAT as its value. To
-   also authenticate `gh`, add a second variable named `GH_TOKEN` with the `gh`
-   PAT (optional — omit it if you only want Copilot).
+    Environments → New environment** (e.g. "Development Machine"), then add a
+    variable named `COPILOT_GITHUB_TOKEN` with the Copilot PAT as its value. To
+    also authenticate `gh`, add a second variable named `GH_TOKEN` with the `gh`
+    PAT (optional — omit it if you only want Copilot).
 3. **Get the Environment ID.** Open the Environment → **Manage environment →
-   Copy environment ID**. This ID is not a secret.
+    Copy environment ID**. This ID is not a secret.
 4. **Tell chezmoi (usually nothing to do).** The Environment ID is a non-secret
-   identifier, so a shared default is hardcoded in `.chezmoi.yaml.tmpl` and
-   exported as `OP_COPILOT_ENVIRONMENT_ID`. To use a different Environment,
-   override `opCopilotEnvironmentId` in your local chezmoi config or at the
-   interactive init prompt (`chezmoi init --data=false` to re-enter).
+    identifier, so a shared default is hardcoded in `.chezmoi.yaml.tmpl` and
+    exported as `OP_COPILOT_ENVIRONMENT_ID`. To use a different Environment,
+    override `opCopilotEnvironmentId` in your local chezmoi config or at the
+    interactive init prompt (`chezmoi init --data=false` to re-enter).
 5. **1Password CLI.** Install the [1Password CLI][opcli] **beta ≥ 2.33.0-beta.02**
-   and enable the **desktop-app integration** (so `op run` unlocks with
-   biometrics — no service-account token needed). Environment support is beta.
+    and enable the **desktop-app integration** (so `op run` unlocks with
+    biometrics — no service-account token needed). Environment support is beta.
 
 The server side needs no manual steps — the `docker` repo's Ansible pull adds
 `AcceptEnv COPILOT_GITHUB_TOKEN GH_TOKEN` to `sshd` automatically.
@@ -116,20 +116,20 @@ an unreachable host fails in about three seconds instead of hanging on ssh's
 own connect timeout:
 
 1. The destination is resolved with `ssh -G <args>`, so `~/.ssh/config`
-   aliases, `HostName`/`Port` overrides and `-o` flags are all honoured.
+    aliases, `HostName`/`Port` overrides and `-o` flags are all honoured.
 2. Its TCP port is probed with a hard timeout (`nc`, or bash `/dev/tcp`, or a
-   .NET `TcpClient` on Windows). If nothing can probe, the check is skipped and
-   `ssh` decides.
+    .NET `TcpClient` on Windows). If nothing can probe, the check is skipped and
+    `ssh` decides.
 3. When the probe fails **and** the Azure CLI (`az`) is installed, the host is
-   looked up with `az vm list -d`: first by VM name — matching both the full
-   host and its short form, so `vm01.example.com` also matches a VM named
-   `vm01` — then by the VM's public/private IP addresses.
+    looked up with `az vm list -d`: first by VM name — matching both the full
+    host and its short form, so `vm01.example.com` also matches a VM named
+    `vm01` — then by the VM's public/private IP addresses.
 4. If that VM is **stopped** or **deallocated**, you are asked whether to start
-   it. On yes, the helper runs `az vm start`, waits for the SSH port to answer
-   and then connects as usual. On no (or in a non-interactive shell, which
-   always answers no) it aborts.
+    it. On yes, the helper runs `az vm start`, waits for the SSH port to answer
+    and then connects as usual. On no (or in a non-interactive shell, which
+    always answers no) it aborts.
 5. If the VM is **running** but the port is closed, it says so and points at
-   NSG rules, the VPN/network path or `sshd` — no VM is touched.
+    NSG rules, the VPN/network path or `sshd` — no VM is touched.
 
 Ambiguous matches (several VMs with the same name in different resource
 groups) are listed and the helper refuses to guess.
@@ -185,15 +185,15 @@ second, independent guard. The same reasoning applies to `gh` and `GH_TOKEN`.
 ## Security notes
 
 - The tokens live only in 1Password (at rest), transiently in the helper's
-  memory, the encrypted SSH channel, and the server **session's** environment
-  for that session's lifetime. Nothing is persisted on the server.
+    memory, the encrypted SSH channel, and the server **session's** environment
+    for that session's lifetime. Nothing is persisted on the server.
 - `AcceptEnv` is scoped to the specific variables `COPILOT_GITHUB_TOKEN` and
-  `GH_TOKEN` — never a wildcard, which the OpenSSH docs warn can be used to
-  bypass restricted environments.
+    `GH_TOKEN` — never a wildcard, which the OpenSSH docs warn can be used to
+    bypass restricted environments.
 - During a live session the tokens are readable via `/proc/<pid>/environ` by
-  same-user processes and root on that server — the same trust boundary as the
-  logged-in user. Use least-privilege, expiring PATs (separate ones for Copilot
-  and `gh`) to limit blast radius.
+    same-user processes and root on that server — the same trust boundary as the
+    logged-in user. Use least-privilege, expiring PATs (separate ones for Copilot
+    and `gh`) to limit blast radius.
 
 [openv]: https://www.1password.dev/environments
 [opcli]: https://developer.1password.com/docs/cli/

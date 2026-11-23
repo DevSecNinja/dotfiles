@@ -19,7 +19,7 @@ The repository supports two installation modes:
 
 - **Light mode** (servers, CI, codespaces) — Essential tools only.
 - **Full mode** (dev servers, workstations) — Full development tooling
-  including Task and mise.
+    including Task and mise.
 
 On Windows, Microsoft Surface Laptop models always have the hardware power
 button set to **Do nothing** for both AC and battery power, preventing an
@@ -78,19 +78,19 @@ runs three steps and **stops at the first failure**, so a failed pull can never
 be followed by an apply of half-updated source:
 
 0. **Branch guard** — `chezmoi update` pulls whichever branch is checked out,
-   so a feature branch you forgot about would be applied to the machine
-   silently. When the source repo is not on its default branch you get a
-   warning and an offer to switch and pull. See
-   [Branch guard](#branch-guard) below.
+    so a feature branch you forgot about would be applied to the machine
+    silently. When the source repo is not on its default branch you get a
+    warning and an offer to switch and pull. See
+    [Branch guard](#branch-guard) below.
 1. `chezmoi update --apply=false` — pull the source repo only. Applying here
-   would use the _old_ config, which breaks when the pull introduces a
-   template variable your current config does not have yet.
+    would use the _old_ config, which breaks when the pull introduces a
+    template variable your current config does not have yet.
 2. `chezmoi init` — **only when the config template actually changed.** It
-   compares the SHA256 chezmoi recorded in its `configState` bucket (the same
-   data behind its _"config file template has changed"_ warning) with the
-   template on disk. When it skips, it says so; when the state cannot be read
-   it re-inits anyway, since a redundant init is harmless and a skipped one is
-   not.
+    compares the SHA256 chezmoi recorded in its `configState` bucket (the same
+    data behind its _"config file template has changed"_ warning) with the
+    template on disk. When it skips, it says so; when the state cannot be read
+    it re-inits anyway, since a redundant init is harmless and a skipped one is
+    not.
 3. `chezmoi apply` — apply with the freshly generated config.
 
 Pass `--force-init` (`-ForceInit` in PowerShell) to regenerate the config even
@@ -217,13 +217,13 @@ fastfetch already reports the shell version and everything else worth knowing,
 so the noise around it is turned off rather than printed twice:
 
 - `PowerShell 7.6.4` and `Loading personal and system profiles took 1513ms.` are
-  printed by pwsh itself, before and after the profile runs. They cannot be
-  suppressed from `profile.ps1`, so the Windows Terminal PowerShell profile is
-  launched as `pwsh.exe -NoLogo -NoProfileLoadTime` instead (set by
-  `run_onchange_set-windows-terminal-powershell-args.ps1`).
+    printed by pwsh itself, before and after the profile runs. They cannot be
+    suppressed from `profile.ps1`, so the Windows Terminal PowerShell profile is
+    launched as `pwsh.exe -NoLogo -NoProfileLoadTime` instead (set by
+    `run_onchange_set-windows-terminal-powershell-args.ps1`).
 - The dotfiles' own `[OK] PowerShell Profile Loaded` and `Type 'aliases'` lines
-  are skipped whenever the fastfetch banner rendered. On a light install without
-  fastfetch they stay, so an interactive shell still confirms the profile loaded.
+    are skipped whenever the fastfetch banner rendered. On a light install without
+    fastfetch they stay, so an interactive shell still confirms the profile loaded.
 
 ## Projects folder and Dev Drive
 
@@ -244,11 +244,12 @@ present, so a fresh machine with a Dev Drive gets `D:\projects` instead of
 `%USERPROFILE%\projects`.
 
 !!! note "How the Dev Drive is detected"
-`fsutil devdrv query` is the authoritative check, but it needs an elevated
-shell — unusable from a profile. Fixed, ready ReFS volumes are used as the
-heuristic instead. If that guesses wrong (a plain ReFS data volume, or
-several Dev Drives), pin the right one with `$env:DEV_DRIVE`, or skip
-detection entirely with `$env:PROJECTS_PATH`.
+
+    `fsutil devdrv query` is the authoritative check, but it needs an elevated
+    shell — unusable from a profile. Fixed, ready ReFS volumes are used as the
+    heuristic instead. If that guesses wrong (a plain ReFS data volume, or
+    several Dev Drives), pin the right one with `$env:DEV_DRIVE`, or skip
+    detection entirely with `$env:PROJECTS_PATH`.
 
 The Linux/macOS shell configs (`fish`, `bash`, `zsh`) always use
 `$HOME/projects`; Dev Drive is a Windows-only feature.
