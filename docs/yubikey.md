@@ -342,6 +342,6 @@ The current flow is preserved as-is until you flip the switch:
 4. `chezmoi apply` — the 1Password `Include ~/.ssh/1Password/config` line
     and the macOS `IdentityAgent` line are removed; `IdentityFile` lines
     for `id_ed25519_sk` / `id_ecdsa_sk` are added under `Host *`.
-5. Apple Passwords does not provide an SSH agent; on macOS the OS keychain
-    - ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`) can
-        stand in for `op` when scripts need secrets.
+5. Apple Passwords does not provide an SSH agent; on macOS the OS
+    keychain + ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`)
+    can stand in for `op` when scripts need secrets.
