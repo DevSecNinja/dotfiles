@@ -1,0 +1,47 @@
+---
+# Lint caller that repo-steward adds to public repos without one (rule
+# baseline/required-file#lint, policy/baseline.toml [[files]]). It follows
+# DevSecNinja/.github workflow-templates/lint.yml and
+# docs/workflow-trigger-conventions.md. Private repos get lint-private.yml.
+# Renovate keeps the pin and the mise version current. When steward opens the
+# PR, main becomes the repo's default branch.
+name: Lint
+
+on:
+  # gitleaks scans only the PR's own commits here. The full history is
+  # scanned by secret-scan.yml (DevSecNinja/.github#520); this workflow's
+  # push run scans it too, as the reusable workflow does on every non-PR event.
+  pull_request:
+  # Public repos upload SARIF to code scanning, which needs a default-branch
+  # analysis as the baseline for PR alerts.
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# One run per PR (or branch). A newer push to a PR cancels its running run; a
+# running push run is never cancelled, a queued one is superseded.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@231c380d4f75486e159ed2e3d806bc76ff193a43 # v4.7.0
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.11.9"
+      # The linters run from the repo's own mise config (.mise.toml): pin the
+      # tools it needs there. Every linter is on by default; turning off
+      # gitleaks, trivy, zizmor or checkov needs a repo-steward exception
+      # (rule security/ci-scanners). See DevSecNinja/.github
+      # workflow-templates/lint.yml for the other inputs.
+      # Spec Kit output (vendored scripts) is not linted, as the central dprint
+      # and yamlfmt configs exclude .specify/**. The linters stay on for the rest.
+      lint-shellcheck-exclude: ".specify/*"
+      lint-shfmt-exclude: ".specify/*"
