@@ -80,17 +80,17 @@ done < <(jq -r --argjson cut_off "${cut_off}" '.[]
     | select((.metadata.container.tags | length) > 0 or (.updated_at | fromdateiso8601) >= $cut_off)
     | .name' <<<"${versions}")
 
-# Candidates: untagged and older than the cut-off, as "id digest" lines.
+# Candidates: untagged and older than the cut-off, as "id digest updated_at" lines.
 candidates="$(jq -r --argjson cut_off "${cut_off}" '.[]
     | select((.metadata.container.tags | length) == 0 and (.updated_at | fromdateiso8601) < $cut_off)
-    | "\(.id) \(.name)"' <<<"${versions}")"
+    | "\(.id) \(.name) \(.updated_at)"' <<<"${versions}")"
 
 # A candidate whose subject is protected (an attestation or signature of a
 # kept image) is protected too; repeat until nothing changes.
 changed=true
 while [ "${changed}" = true ]; do
     changed=false
-    while read -r _ digest; do
+    while read -r _ digest _; do
         [ -z "${digest}" ] && continue
         [ -n "${protected[${digest}]+set}" ] && continue
         read_manifest "${digest}"
@@ -103,22 +103,21 @@ while [ "${changed}" = true ]; do
 done
 
 deletable=()
-while read -r id digest; do
+while read -r id digest updated; do
     [ -z "${digest}" ] && continue
     [ -n "${protected[${digest}]+set}" ] && continue
-    deletable+=("${id} ${digest}")
+    deletable+=("${id} ${digest} ${updated}")
 done <<<"${candidates}"
 
 echo "${IMAGE_NAME}: $(jq 'length' <<<"${versions}") versions, ${#protected[@]} kept or referenced," \
     "${#deletable[@]} untagged and unreferenced older than ${cut_off_days} days."
 
 for entry in "${deletable[@]}"; do
-    id="${entry%% *}"
-    digest="${entry#* }"
+    read -r id digest updated <<<"${entry}"
     if [ "${dry_run}" = "false" ]; then
-        echo "- delete ${digest} (version ${id})"
+        echo "- delete ${digest} (version ${id}, updated ${updated})"
         gh api --method DELETE "${versions_api}/${id}" >/dev/null
     else
-        echo "- would delete ${digest} (version ${id})"
+        echo "- would delete ${digest} (version ${id}, updated ${updated})"
     fi
 done

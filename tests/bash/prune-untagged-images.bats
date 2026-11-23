@@ -108,14 +108,14 @@ prune() {
 		/user/packages/container/dotfiles-devcontainer/versions/8 \
 		/user/packages/container/dotfiles-devcontainer/versions/9)" ]
 	[[ "$output" == *"12 versions, 9 kept or referenced, 3 untagged and unreferenced older than 7 days."* ]]
-	[[ "$output" == *"- delete sha256:orphan (version 8)"* ]]
+	[[ "$output" == *"- delete sha256:orphan (version 8, updated 2026-11-01T00:00:00Z)"* ]]
 }
 
 @test "prune-untagged-images: dry run is the default" {
 	run prune
 	[ "$status" -eq 0 ]
 	[ ! -s "${FIXTURES}/deletes" ]
-	[[ "$output" == *"- would delete sha256:orphan-index (version 9)"* ]]
+	[[ "$output" == *"- would delete sha256:orphan-index (version 9, updated 2026-11-01T00:00:00Z)"* ]]
 }
 
 @test "prune-untagged-images: only DRY_RUN=false deletes" {
