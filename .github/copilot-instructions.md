@@ -10,6 +10,7 @@
 **Target Runtimes**: Fish 3.6+, PowerShell 5.1+/7+, Bash, Chezmoi 2.69+
 
 **Key Features**:
+
 - Fish shell configuration (Linux/macOS/WSL)
 - PowerShell profiles (Windows)
 - Vim, Tmux, Git configurations
@@ -289,12 +290,13 @@ PowerShell on Windows may load scripts without UTF-8 BOM encoding, causing multi
 
 **Use ASCII-safe alternatives instead**:
 
+<!-- dprint-ignore -->
 | Don't use | Use instead |
 | --------- | ----------- |
 | ✅        | `[OK]`      |
 | ❌        | `[FAIL]`    |
 | ⚠️        | `[WARN]`    |
-| 🔍 🚀 📊 | `>>`        |
+| 🔍 🚀 📊  | `>>`        |
 | ━━━━━━    | `========`  |
 | ⏱️        | `[SKIP]`    |
 

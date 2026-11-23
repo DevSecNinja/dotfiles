@@ -24,12 +24,14 @@ Modern dotfiles repository managed with [Chezmoi](https://chezmoi.io/), featurin
 The dotfiles repository provides several variables that can be used in templates and scripts:
 
 ### User Information
+
 - `firstname` / `lastname` / `name` - Your name (prompted on first run)
 - `username` - System username (prompted on first run)
 - `email` - Your email address (prompted on first run)
 - `githubUsername` - Your GitHub username (auto-detected from email or git remote)
 
 ### Environment Detection
+
 - `codespaces` - Running in GitHub Codespaces (`true`/`false`)
 - `devcontainer` - Running in a dev container (`true`/`false`)
 - `wsl` - Running in Windows Subsystem for Linux (`true`/`false`)
@@ -37,6 +39,7 @@ The dotfiles repository provides several variables that can be used in templates
 - `installType` - Installation mode (`light` or `full`)
 
 ### Windows Enterprise (Windows and WSL)
+
 - `isEntraIDJoined` - Device is Entra ID (Azure AD) joined (`true`/`false`)
 - `isIntuneJoined` - Device is Intune (MDM) enrolled (`true`/`false`)
 - `isEntraRegistered` - Device is Entra ID registered/workplace joined (`true`/`false`)
@@ -46,6 +49,7 @@ The dotfiles repository provides several variables that can be used in templates
 - `isWork` - Device is joined to a `*Microsoft` tenant (`true`/`false`)
 
 These variables are automatically exposed as environment variables in your shell:
+
 - **PowerShell**: `$env:CHEZMOI_*` (e.g., `$env:CHEZMOI_IS_ENTRA_ID_JOINED`, `$env:CHEZMOI_ENTRA_ID_TENANT_NAME`)
 - **Bash/Zsh**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_ENTRA_ID_TENANT_NAME`)
 - **Fish**: `$CHEZMOI_*` (e.g., `$CHEZMOI_IS_ENTRA_ID_JOINED`, `$CHEZMOI_ENTRA_ID_TENANT_NAME`)
@@ -187,6 +191,7 @@ For more information, see the [Coder Dotfiles Documentation](https://coder.com/d
 This repository includes a complete [DevContainer](https://containers.dev/) configuration for Visual Studio Code and GitHub Codespaces. The devcontainer provides a fully configured development environment with:
 
 **Pre-installed Features:**
+
 - 🍺 Homebrew package manager
 - 📦 Git LFS (Large File Storage)
 - 💻 PowerShell with Pester testing framework
@@ -194,12 +199,14 @@ This repository includes a complete [DevContainer](https://containers.dev/) conf
 - 🐙 GitHub CLI
 
 **Automatic Setup:**
+
 - ✅ Dotfiles automatically installed via `postCreateCommand`
 - ✅ Fish shell configured as default terminal
 - ✅ All configurations applied and verified
 - ✅ VSCode extensions pre-installed (GitHub Copilot, Pester)
 
 **Prebuilt Images:**
+
 - 🚀 Prebuilt devcontainer images are automatically built and published to GitHub Container Registry
 - 🏗️ Images are rebuilt weekly and on every devcontainer configuration change
 - ⚡ CI workflows use prebuilt images for faster test execution
@@ -253,10 +260,12 @@ The CI pipeline automatically tests the complete devcontainer deployment, includ
 ### Personal Information
 
 On first run, Chezmoi will prompt for:
+
 - **Name**: Used in Git commits
 - **Email**: Used in Git commits
 
 To re-enter this information:
+
 ```bash
 chezmoi init --data=false
 ```
@@ -302,6 +311,7 @@ lefthook run pre-commit --all-files
 ```
 
 Hooks will automatically run on `git commit`. The checks include:
+
 - 🐚 Shell script linting (shellcheck)
 - 🎨 Shell script formatting (shfmt)
 - 🔧 Executable bit enforcement on shell scripts
@@ -378,11 +388,13 @@ On Windows, Microsoft Surface Laptop models always have the hardware power
 button set to **Do nothing** for both AC and battery power.
 
 The mode is auto-detected based on:
+
 - Hostname patterns (SVLDEV* = full, SVL* = light)
 - Environment (codespaces, devcontainer, CI = light)
 - Default = full mode
 
 To change modes:
+
 ```bash
 chezmoi init --data=false
 ```

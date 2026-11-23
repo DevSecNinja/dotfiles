@@ -19,7 +19,7 @@ The repository supports two installation modes:
 
 - **Light mode** (servers, CI, codespaces) — Essential tools only.
 - **Full mode** (dev servers, workstations) — Full development tooling
-  including Task and mise.
+    including Task and mise.
 
 On Windows, Microsoft Surface Laptop models always have the hardware power
 button set to **Do nothing** for both AC and battery power, preventing an
@@ -78,19 +78,19 @@ runs three steps and **stops at the first failure**, so a failed pull can never
 be followed by an apply of half-updated source:
 
 0. **Branch guard** — `chezmoi update` pulls whichever branch is checked out,
-   so a feature branch you forgot about would be applied to the machine
-   silently. When the source repo is not on its default branch you get a
-   warning and an offer to switch and pull. See
-   [Branch guard](#branch-guard) below.
+    so a feature branch you forgot about would be applied to the machine
+    silently. When the source repo is not on its default branch you get a
+    warning and an offer to switch and pull. See
+    [Branch guard](#branch-guard) below.
 1. `chezmoi update --apply=false` — pull the source repo only. Applying here
-   would use the _old_ config, which breaks when the pull introduces a
-   template variable your current config does not have yet.
+    would use the _old_ config, which breaks when the pull introduces a
+    template variable your current config does not have yet.
 2. `chezmoi init` — **only when the config template actually changed.** It
-   compares the SHA256 chezmoi recorded in its `configState` bucket (the same
-   data behind its _"config file template has changed"_ warning) with the
-   template on disk. When it skips, it says so; when the state cannot be read
-   it re-inits anyway, since a redundant init is harmless and a skipped one is
-   not.
+    compares the SHA256 chezmoi recorded in its `configState` bucket (the same
+    data behind its _"config file template has changed"_ warning) with the
+    template on disk. When it skips, it says so; when the state cannot be read
+    it re-inits anyway, since a redundant init is harmless and a skipped one is
+    not.
 3. `chezmoi apply` — apply with the freshly generated config.
 
 Pass `--force-init` (`-ForceInit` in PowerShell) to regenerate the config even
@@ -180,10 +180,10 @@ Instead the numbers come from a small cache that is refreshed in the background:
 the banner shows the previous result instantly while a fresh one is computed for
 the next login.
 
-| Platform    | Cache                                  | Filled by                                                                |
-| ----------- | -------------------------------------- | ------------------------------------------------------------------------ |
-| Linux/macOS | `~/.cache/fastfetch-status/`           | `~/.config/fastfetch/status.sh`, which self-spawns its own refresh        |
-| Windows     | `%LOCALAPPDATA%\fastfetch-status\`     | `~/.config/fastfetch/status.ps1`, spawned detached by the PowerShell profile |
+| Platform    | Cache                              | Filled by                                                                    |
+| ----------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+| Linux/macOS | `~/.cache/fastfetch-status/`       | `~/.config/fastfetch/status.sh`, which self-spawns its own refresh           |
+| Windows     | `%LOCALAPPDATA%\fastfetch-status\` | `~/.config/fastfetch/status.ps1`, spawned detached by the PowerShell profile |
 
 On Windows fastfetch reads the cache with `cmd /c type` rather than starting
 PowerShell, which keeps the line free (a few milliseconds).
@@ -204,12 +204,12 @@ Refresh by hand — useful right after installing updates:
 ~/.config/fastfetch/status.ps1 refresh       # Windows
 ```
 
-| Variable                     | Effect                                                       |
-| ---------------------------- | ------------------------------------------------------------ |
-| `FASTFETCH_STATUS_TTL`       | Cache lifetime in seconds (default 3600)                     |
-| `FASTFETCH_STATUS_DISABLE=1` | Print no status lines at all                                 |
-| `FASTFETCH_STATUS_CACHE_DIR` | Override the cache directory (Windows; testing)              |
-| `ANSIBLE_PULL_WORKDIR`       | ansible-pull checkout (default `/var/lib/ansible/local`)      |
+| Variable                     | Effect                                                   |
+| ---------------------------- | -------------------------------------------------------- |
+| `FASTFETCH_STATUS_TTL`       | Cache lifetime in seconds (default 3600)                 |
+| `FASTFETCH_STATUS_DISABLE=1` | Print no status lines at all                             |
+| `FASTFETCH_STATUS_CACHE_DIR` | Override the cache directory (Windows; testing)          |
+| `ANSIBLE_PULL_WORKDIR`       | ansible-pull checkout (default `/var/lib/ansible/local`) |
 
 ### A quiet PowerShell startup
 
@@ -217,13 +217,13 @@ fastfetch already reports the shell version and everything else worth knowing,
 so the noise around it is turned off rather than printed twice:
 
 - `PowerShell 7.6.4` and `Loading personal and system profiles took 1513ms.` are
-  printed by pwsh itself, before and after the profile runs. They cannot be
-  suppressed from `profile.ps1`, so the Windows Terminal PowerShell profile is
-  launched as `pwsh.exe -NoLogo -NoProfileLoadTime` instead (set by
-  `run_onchange_set-windows-terminal-powershell-args.ps1`).
+    printed by pwsh itself, before and after the profile runs. They cannot be
+    suppressed from `profile.ps1`, so the Windows Terminal PowerShell profile is
+    launched as `pwsh.exe -NoLogo -NoProfileLoadTime` instead (set by
+    `run_onchange_set-windows-terminal-powershell-args.ps1`).
 - The dotfiles' own `[OK] PowerShell Profile Loaded` and `Type 'aliases'` lines
-  are skipped whenever the fastfetch banner rendered. On a light install without
-  fastfetch they stay, so an interactive shell still confirms the profile loaded.
+    are skipped whenever the fastfetch banner rendered. On a light install without
+    fastfetch they stay, so an interactive shell still confirms the profile loaded.
 
 ## Projects folder and Dev Drive
 
@@ -244,6 +244,7 @@ present, so a fresh machine with a Dev Drive gets `D:\projects` instead of
 `%USERPROFILE%\projects`.
 
 !!! note "How the Dev Drive is detected"
+
     `fsutil devdrv query` is the authoritative check, but it needs an elevated
     shell — unusable from a profile. Fixed, ready ReFS volumes are used as the
     heuristic instead. If that guesses wrong (a plain ReFS data volume, or
@@ -265,20 +266,20 @@ when OneDrive is configured.
 On Windows, `run_onchange_40-set-current-user-personalization.ps1` applies the
 opinionated settings below to the invoking user's profile without elevation:
 
-| Preference | Applied value | Evidence/source | Normal alternative or reversal |
-| ---------- | ------------- | --------------- | ------------------------------ |
-| App and Windows theme | Dark (`AppsUseLightTheme=0`, `SystemUsesLightTheme=0`) | Grade 3: related [Microsoft theme guidance](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes), but the registry mappings are community-documented | Choose Light in Settings > Personalization > Colors, delete the values, or set both to `1` |
-| Lock-screen Spotlight overlays | Off (`RotatingLockScreenOverlayEnabled=0`) | Grade 3: [Microsoft Community mapping](https://learn.microsoft.com/en-us/answers/questions/1326668/how-to-disable-windows-spotlight-via-registry) | Re-enable lock-screen tips, delete the value, or set it to `1` |
-| Task View button | Hidden (`ShowTaskViewButton=0`) | Grade 1: [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11) | Enable Task view in taskbar settings, delete the value, or set it to `1` |
-| Taskbar search | Hidden (`SearchboxTaskbarMode=0`) | Grade 2: modes correspond to the [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but this value is not a documented policy | Select Search box in taskbar settings, delete the value, or set it to `3` |
-| Taskbar battery percentage | Shown (`IsBatteryPercentageEnabled=1`) | Grade 3: [community-documented Windows 11 preference](https://www.elevenforum.com/t/enable-or-disable-show-battery-percentage-on-taskbar-in-windows-11.32691/) | Turn off Battery percentage in Settings > System > Power & battery, delete the value, or set it to `0` |
-| File-name extensions | Shown (`HideFileExt=0`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's File name extensions option, delete the value, or set it to `1` |
-| Hidden files and folders | Shown (`Hidden=1`) | Grade 3: exact registry mapping is unverified | Clear File Explorer's Hidden items option, delete the value, or set it to `2` |
-| Desktop background | Windows Spotlight (`BackgroundType=3`) | Grade 3: Spotlight is documented in the [settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but the registry mirror is best-effort | Choose another background, delete the value, or set image mode (`1`) |
-| Regional format | Dutch (Netherlands), `nl-NL` | Grade 1: [`Set-Culture`](https://learn.microsoft.com/en-us/powershell/module/international/set-culture) | Select another regional format or run `Set-Culture -CultureInfo en-US` |
-| Home location | Netherlands, GeoID `176` | Grade 1: [`Set-WinHomeLocation`](https://learn.microsoft.com/en-us/powershell/module/international/set-winhomelocation) | Select another country or run `Set-WinHomeLocation -GeoId 244` for the US |
-| Languages and keyboards | `en-US`, then `nl-NL`; both US-International (`00020409`) | Grade 1: [`Set-WinUserLanguageList`](https://learn.microsoft.com/en-us/powershell/module/international/set-winuserlanguagelist) | Edit Language & region settings or run `Set-WinUserLanguageList en-US -Force` |
-| Number and CSV separators | Decimal `.`, thousands `,`, list `,` | Grade 2: [Windows locale constants](https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants) document the fields; registry behavior is vendor-observed | Restore Dutch defaults: decimal `,`, thousands `.`, list `;` |
+| Preference                     | Applied value                                             | Evidence/source                                                                                                                                                                                  | Normal alternative or reversal                                                                         |
+| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| App and Windows theme          | Dark (`AppsUseLightTheme=0`, `SystemUsesLightTheme=0`)    | Grade 3: related [Microsoft theme guidance](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes), but the registry mappings are community-documented           | Choose Light in Settings > Personalization > Colors, delete the values, or set both to `1`             |
+| Lock-screen Spotlight overlays | Off (`RotatingLockScreenOverlayEnabled=0`)                | Grade 3: [Microsoft Community mapping](https://learn.microsoft.com/en-us/answers/questions/1326668/how-to-disable-windows-spotlight-via-registry)                                                | Re-enable lock-screen tips, delete the value, or set it to `1`                                         |
+| Task View button               | Hidden (`ShowTaskViewButton=0`)                           | Grade 1: [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11)                                                                    | Enable Task view in taskbar settings, delete the value, or set it to `1`                               |
+| Taskbar search                 | Hidden (`SearchboxTaskbarMode=0`)                         | Grade 2: modes correspond to the [Windows 11 settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but this value is not a documented policy | Select Search box in taskbar settings, delete the value, or set it to `3`                              |
+| Taskbar battery percentage     | Shown (`IsBatteryPercentageEnabled=1`)                    | Grade 3: [community-documented Windows 11 preference](https://www.elevenforum.com/t/enable-or-disable-show-battery-percentage-on-taskbar-in-windows-11.32691/)                                   | Turn off Battery percentage in Settings > System > Power & battery, delete the value, or set it to `0` |
+| File-name extensions           | Shown (`HideFileExt=0`)                                   | Grade 3: exact registry mapping is unverified                                                                                                                                                    | Clear File Explorer's File name extensions option, delete the value, or set it to `1`                  |
+| Hidden files and folders       | Shown (`Hidden=1`)                                        | Grade 3: exact registry mapping is unverified                                                                                                                                                    | Clear File Explorer's Hidden items option, delete the value, or set it to `2`                          |
+| Desktop background             | Windows Spotlight (`BackgroundType=3`)                    | Grade 3: Spotlight is documented in the [settings reference](https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11), but the registry mirror is best-effort        | Choose another background, delete the value, or set image mode (`1`)                                   |
+| Regional format                | Dutch (Netherlands), `nl-NL`                              | Grade 1: [`Set-Culture`](https://learn.microsoft.com/en-us/powershell/module/international/set-culture)                                                                                          | Select another regional format or run `Set-Culture -CultureInfo en-US`                                 |
+| Home location                  | Netherlands, GeoID `176`                                  | Grade 1: [`Set-WinHomeLocation`](https://learn.microsoft.com/en-us/powershell/module/international/set-winhomelocation)                                                                          | Select another country or run `Set-WinHomeLocation -GeoId 244` for the US                              |
+| Languages and keyboards        | `en-US`, then `nl-NL`; both US-International (`00020409`) | Grade 1: [`Set-WinUserLanguageList`](https://learn.microsoft.com/en-us/powershell/module/international/set-winuserlanguagelist)                                                                  | Edit Language & region settings or run `Set-WinUserLanguageList en-US -Force`                          |
+| Number and CSV separators      | Decimal `.`, thousands `,`, list `,`                      | Grade 2: [Windows locale constants](https://learn.microsoft.com/en-us/windows/win32/intl/locale-custom-constants) document the fields; registry behavior is vendor-observed                      | Restore Dutch defaults: decimal `,`, thousands `.`, list `;`                                           |
 
 The script checks exact desired state before every change and preserves
 unrelated registry values. It intentionally replaces the input-language list
@@ -308,10 +309,10 @@ script to use a different intensity.
 Night Light has no supported configuration API. Windows persists it as two
 `REG_BINARY` CloudStore values under `HKEY_CURRENT_USER`:
 
-| Value | Contents |
-| ----- | -------- |
-| `...\default$windows.data.bluelightreduction.settings\windows.data.bluelightreduction.settings` | Schedule mode, colour temperature, schedule times, cached sunset/sunrise times |
-| `...\default$windows.data.bluelightreduction.bluelightreductionstate\windows.data.bluelightreduction.bluelightreductionstate` | Whether Night Light is currently on |
+| Value                                                                                                                         | Contents                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `...\default$windows.data.bluelightreduction.settings\windows.data.bluelightreduction.settings`                               | Schedule mode, colour temperature, schedule times, cached sunset/sunrise times |
+| `...\default$windows.data.bluelightreduction.bluelightreductionstate\windows.data.bluelightreduction.bluelightreductionstate` | Whether Night Light is currently on                                            |
 
 Both are [Microsoft Bond CompactBinary v1][bond] payloads inside a CloudStore
 envelope. The script implements just enough of that codec to decode the

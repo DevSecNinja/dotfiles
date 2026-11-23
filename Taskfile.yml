@@ -1,3 +1,4 @@
+---
 # Taskfile for dotfiles repository
 # https://taskfile.dev
 version: '3'
@@ -254,7 +255,7 @@ tasks:
   info:packages:
     desc: Show packages that would be installed
     cmds:
-      - |
+      - |-
         echo "📦 Package Information"
         echo "====================="
         if command -v yq >/dev/null 2>&1; then

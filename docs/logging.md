@@ -32,23 +32,23 @@ docker compose pull 2>&1 | log_data INFO "Pulling images for adguard"
 Reach for the helper that best matches **what you're saying**, not just the
 severity:
 
-| You want to log…                                | Helper                            |
-| ----------------------------------------------- | --------------------------------- |
-| A plain informational fact                      | `log_info`                        |
-| The action the script is currently taking       | `log_state "Deploying app"`       |
-| The outcome of an operation (counts, totals)    | `log_result "30 deployed, 0 failed"` |
-| A suggestion for the reader                     | `log_hint "Re-run with -v"`       |
-| One step in a numbered / wizard-style sequence  | `log_step "Pulling images"`       |
-| A noteworthy event that isn't a problem         | `log_notice`                      |
-| A recoverable problem / fallback engaged        | `log_warn`                        |
-| A failed operation; script may continue         | `log_error`                       |
-| A failure the script will exit on               | `log_fatal`                       |
-| An implementation detail (off by default)       | `log_debug` / `log_trace`         |
-| Telemetry as flat key/value pairs               | `log_kv k=v k=v …`                |
-| Multi-line payload (YAML/JSON/command output)   | `… \| log_data KIND "header"`     |
-| Unbroken divider between groups                 | `log_sep`                         |
-| Titled divider for a phase change               | `log_rule KIND "phase 1"`         |
-| Boxed/wrapped title for a top-level boundary    | `log_banner "Done" RESULT`        |
+| You want to log…                               | Helper                               |
+| ---------------------------------------------- | ------------------------------------ |
+| A plain informational fact                     | `log_info`                           |
+| The action the script is currently taking      | `log_state "Deploying app"`          |
+| The outcome of an operation (counts, totals)   | `log_result "30 deployed, 0 failed"` |
+| A suggestion for the reader                    | `log_hint "Re-run with -v"`          |
+| One step in a numbered / wizard-style sequence | `log_step "Pulling images"`          |
+| A noteworthy event that isn't a problem        | `log_notice`                         |
+| A recoverable problem / fallback engaged       | `log_warn`                           |
+| A failed operation; script may continue        | `log_error`                          |
+| A failure the script will exit on              | `log_fatal`                          |
+| An implementation detail (off by default)      | `log_debug` / `log_trace`            |
+| Telemetry as flat key/value pairs              | `log_kv k=v k=v …`                   |
+| Multi-line payload (YAML/JSON/command output)  | `… \| log_data KIND "header"`        |
+| Unbroken divider between groups                | `log_sep`                            |
+| Titled divider for a phase change              | `log_rule KIND "phase 1"`            |
+| Boxed/wrapped title for a top-level boundary   | `log_banner "Done" RESULT`           |
 
 `STATE` / `RESULT` / `HINT` / `STEP` are info-priority kinds — they never
 change filtering behaviour, only color and label. Use them so `grep RESULT`
@@ -59,31 +59,31 @@ finds outcomes and `grep HINT` finds suggestions.
 The library separates **severity** (controls filtering) from **kind**
 (controls visual category). Both are first-class concepts.
 
-| Concept  | Examples                              | Filtered by `LOG_LEVEL`? | Syslog priority |
-| -------- | ------------------------------------- | ------------------------ | --------------- |
+| Concept  | Examples                                               | Filtered by `LOG_LEVEL`? | Syslog priority |
+| -------- | ------------------------------------------------------ | ------------------------ | --------------- |
 | Severity | `TRACE` `DEBUG` `INFO` `NOTICE` `WARN` `ERROR` `FATAL` | yes                      | matches         |
-| Kind     | `STATE` `RESULT` `HINT` `STEP`        | rendered at `INFO`       | always `info`   |
+| Kind     | `STATE` `RESULT` `HINT` `STEP`                         | rendered at `INFO`       | always `info`   |
 
 Helpers:
 
-| Function       | Severity | Kind     | Stream | Color (default)  |
-| -------------- | -------- | -------- | ------ | ---------------- |
-| `log_trace`    | TRACE    | TRACE    | stdout | dim              |
-| `log_debug`    | DEBUG    | DEBUG    | stdout | dim cyan         |
-| `log_info`     | INFO     | INFO     | stdout | none             |
-| `log_notice`   | NOTICE   | NOTICE   | stdout | bold blue        |
-| `log_warn`     | WARN     | WARN     | stderr | bold yellow      |
-| `log_error`    | ERROR    | ERROR    | stderr | bold red         |
-| `log_fatal`    | FATAL    | FATAL    | stderr | white on red     |
-| `log_state`    | INFO     | STATE    | stdout | cyan             |
-| `log_result`   | INFO     | RESULT   | stdout | green            |
-| `log_hint`     | INFO     | HINT     | stdout | magenta          |
-| `log_step`     | INFO     | STEP     | stdout | dim white        |
-| `log_kv`       | INFO     | INFO     | stdout | none             |
-| `log_data`     | (any)    | (any)    | stdout | per kind         |
-| `log_sep`      | (any)    | (any)    | stdout | per kind         |
-| `log_rule`     | (any)    | (any)    | stdout | per kind         |
-| `log_banner`   | (any)    | STATE\*  | stdout | per kind         |
+| Function     | Severity | Kind    | Stream | Color (default) |
+| ------------ | -------- | ------- | ------ | --------------- |
+| `log_trace`  | TRACE    | TRACE   | stdout | dim             |
+| `log_debug`  | DEBUG    | DEBUG   | stdout | dim cyan        |
+| `log_info`   | INFO     | INFO    | stdout | none            |
+| `log_notice` | NOTICE   | NOTICE  | stdout | bold blue       |
+| `log_warn`   | WARN     | WARN    | stderr | bold yellow     |
+| `log_error`  | ERROR    | ERROR   | stderr | bold red        |
+| `log_fatal`  | FATAL    | FATAL   | stderr | white on red    |
+| `log_state`  | INFO     | STATE   | stdout | cyan            |
+| `log_result` | INFO     | RESULT  | stdout | green           |
+| `log_hint`   | INFO     | HINT    | stdout | magenta         |
+| `log_step`   | INFO     | STEP    | stdout | dim white       |
+| `log_kv`     | INFO     | INFO    | stdout | none            |
+| `log_data`   | (any)    | (any)   | stdout | per kind        |
+| `log_sep`    | (any)    | (any)   | stdout | per kind        |
+| `log_rule`   | (any)    | (any)   | stdout | per kind        |
+| `log_banner` | (any)    | STATE\* | stdout | per kind        |
 
 \* `log_banner` defaults to `STATE` kind; pass an explicit kind as the second
 argument to override.
@@ -126,11 +126,11 @@ The optional `[tag]` segment helps you tell scripts apart in log files. In
 priority order:
 
 1. **Explicit `LOG_TAG`** — validated against `^[A-Za-z0-9._-]{1,32}$`. Tags
-   starting with `-` or `.` are rejected (would resemble flags or hidden
-   files).
+    starting with `-` or `.` are rejected (would resemble flags or hidden
+    files).
 2. **Auto-detected basename** — when `log.sh` is sourced from a real script,
-   the script's `$0` basename (without `.sh`/`.bash`/`.zsh`/`.ksh`) is used.
-   Common shell names (`bash`, `zsh`, `log`, `log.sh`, …) are filtered out.
+    the script's `$0` basename (without `.sh`/`.bash`/`.zsh`/`.ksh`) is used.
+    Common shell names (`bash`, `zsh`, `log`, `log.sh`, …) are filtered out.
 3. **Empty** — no tag rendered. This is the default for interactive shells.
 
 This means `log_info hello` from a fish/zsh/bash prompt produces identical
@@ -147,13 +147,13 @@ log_banner "Deploying app" STATE
 
 The `LOG_BANNER_STYLE` env var selects the visual style:
 
-| Style     | Sample (40-wide)                                                   |
-| --------- | ------------------------------------------------------------------ |
-| `unicode` (default) | `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`             |
-| `ascii`   | `========================================`                         |
-| `heavy`   | `########################################`                         |
-| `box`     | `┌──────────────────────────────────────┐` … `└──────────────────┘` |
-| `rule`    | `────────────────────────────────────────`                         |
+| Style               | Sample (40-wide)                                                    |
+| ------------------- | ------------------------------------------------------------------- |
+| `unicode` (default) | `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`                          |
+| `ascii`             | `========================================`                          |
+| `heavy`             | `########################################`                          |
+| `box`               | `┌──────────────────────────────────────┐` … `└──────────────────┘` |
+| `rule`              | `────────────────────────────────────────`                          |
 
 Multi-byte styles (`unicode`, `box`, `rule`) automatically fall back to
 `ascii` when:
@@ -162,7 +162,7 @@ Multi-byte styles (`unicode`, `box`, `rule`) automatically fall back to
 - `LANG=C` / `LC_ALL=C` (no UTF-8 locale),
 - `TERM=dumb`,
 - `LOG_FORMAT=json` (banners collapse to a single JSON object with
-  `kind=BANNER`).
+    `kind=BANNER`).
 
 This guarantees `LOG_FILE` output stays grep-friendly and pure ASCII.
 
@@ -237,21 +237,21 @@ renders the header and continuation lines in green.
 
 ## Configuration env vars
 
-| Var                  | Default      | Purpose                                                |
-| -------------------- | ------------ | ------------------------------------------------------ |
-| `LOG_LEVEL`          | `INFO`       | Minimum severity to emit                               |
-| `LOG_TAG`            | (auto)       | Explicit tag, `[A-Za-z0-9._-]{1,32}`                   |
-| `LOG_FORMAT`         | `text`       | `text` or `json`                                       |
-| `LOG_COLOR`          | `auto`       | `auto`, `always`, `never` (also `NO_COLOR`)            |
-| `LOG_BANNER_STYLE`   | `unicode`    | `unicode`, `ascii`, `heavy`, `box`, `rule`             |
-| `LOG_RULE_WIDTH`     | `40`         | Banner / rule width                                    |
-| `LOG_RULE_CHAR`      | per style    | Override the separator character                       |
-| `LOG_MAX_BYTES`      | `8192`       | Per-line byte cap; longer lines are truncated         |
-| `LOG_FILE`           | (none)       | Optional log file path                                 |
-| `LOG_FILE_MAX_BYTES` | (none)       | Rotate when file exceeds this size                     |
-| `LOG_FILE_TTL_DAYS`  | (none)       | Delete file when older than N days                     |
-| `LOG_JOURNAL`        | `auto`       | `auto`, `always`, `never` — `logger(1)` integration   |
-| `LOG_TO_STDIO`       | `1`          | Set to `0` to suppress stdout/stderr writes           |
+| Var                  | Default   | Purpose                                             |
+| -------------------- | --------- | --------------------------------------------------- |
+| `LOG_LEVEL`          | `INFO`    | Minimum severity to emit                            |
+| `LOG_TAG`            | (auto)    | Explicit tag, `[A-Za-z0-9._-]{1,32}`                |
+| `LOG_FORMAT`         | `text`    | `text` or `json`                                    |
+| `LOG_COLOR`          | `auto`    | `auto`, `always`, `never` (also `NO_COLOR`)         |
+| `LOG_BANNER_STYLE`   | `unicode` | `unicode`, `ascii`, `heavy`, `box`, `rule`          |
+| `LOG_RULE_WIDTH`     | `40`      | Banner / rule width                                 |
+| `LOG_RULE_CHAR`      | per style | Override the separator character                    |
+| `LOG_MAX_BYTES`      | `8192`    | Per-line byte cap; longer lines are truncated       |
+| `LOG_FILE`           | (none)    | Optional log file path                              |
+| `LOG_FILE_MAX_BYTES` | (none)    | Rotate when file exceeds this size                  |
+| `LOG_FILE_TTL_DAYS`  | (none)    | Delete file when older than N days                  |
+| `LOG_JOURNAL`        | `auto`    | `auto`, `always`, `never` — `logger(1)` integration |
+| `LOG_TO_STDIO`       | `1`       | Set to `0` to suppress stdout/stderr writes         |
 
 `LOG_FILE` is only created when at least one of `LOG_FILE_MAX_BYTES` or
 `LOG_FILE_TTL_DAYS` is set, so every log file has an explicit lifecycle.
@@ -262,15 +262,15 @@ The logger is hardened against the following classes of attack — relevant
 when log content is influenced by untrusted input (CI artifacts, container
 labels, web requests, etc.).
 
-| Risk                                            | Mitigation                                                          |
-| ----------------------------------------------- | ------------------------------------------------------------------- |
-| ANSI escape injection (terminal hijacking)      | `\033`, `\007`, `\000` stripped from messages before output         |
-| Newline / CR smuggling (multi-line forge)       | `\n` and `\r` escaped to literal two-char sequences; one entry = one line |
-| Format-string attacks (`%s`, `%n`, …)           | Every emitter uses `printf '%s'`; user data never becomes a format  |
-| `logger -t` flag injection via `LOG_TAG`        | Tag validated against strict regex; bad values silently dropped     |
-| Bash-style flag injection (`--inject` as tag)   | Tags starting with `-` or `.` rejected                              |
-| `LOG_FILE` symlink redirection                  | Refused if the path resolves through a symlink                      |
-| DoS via huge payload                            | Lines truncated at `LOG_MAX_BYTES` (default 8 KiB) with marker      |
+| Risk                                          | Mitigation                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| ANSI escape injection (terminal hijacking)    | `\033`, `\007`, `\000` stripped from messages before output               |
+| Newline / CR smuggling (multi-line forge)     | `\n` and `\r` escaped to literal two-char sequences; one entry = one line |
+| Format-string attacks (`%s`, `%n`, …)         | Every emitter uses `printf '%s'`; user data never becomes a format        |
+| `logger -t` flag injection via `LOG_TAG`      | Tag validated against strict regex; bad values silently dropped           |
+| Bash-style flag injection (`--inject` as tag) | Tags starting with `-` or `.` rejected                                    |
+| `LOG_FILE` symlink redirection                | Refused if the path resolves through a symlink                            |
+| DoS via huge payload                          | Lines truncated at `LOG_MAX_BYTES` (default 8 KiB) with marker            |
 
 These guarantees apply to **the message and tag**. Environment variables
 (LOG_FILE, LOG_FORMAT, …) are configuration surface — keep them under your
@@ -450,12 +450,12 @@ completions, README, and license.
 Why not GitHub Packages, npm, or Homebrew?
 
 - **GitHub Packages** does not host plain shell tarballs; the available
-  formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency
-  that conflicts with the "works in offline / locked-down containers"
-  constraint.
+    formats (npm / NuGet / Maven / OCI) all add a client-tooling dependency
+    that conflicts with the "works in offline / locked-down containers"
+    constraint.
 - **npm / pip** are the wrong ecosystem for POSIX shell.
 - **Homebrew** is great for dev machines but useless on minimal
-  containers and most servers.
+    containers and most servers.
 
 GitHub Release assets (`https://github.com/.../releases/download/...`) are
 versioned, immutable, public, cacheable, and require nothing more than
