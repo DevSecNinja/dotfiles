@@ -61,7 +61,7 @@ The default setup uses:
 
 - `~/mlx-qwen/.venv/bin/python` with `mlx-lm` 0.32.2 or newer (developed against 0.32.2).
 - The `mlx-community/Qwen3.5-9B-4bit` model in
-  `/Volumes/External Disk Data/AI/huggingface/hub`.
+    `/Volumes/External Disk Data/AI/huggingface/hub`.
 - `/Volumes/External Disk Data/AI/huggingface/xet` on the same external SSD.
 
 **Setup order:** native Apple Silicon and the mounted SSD are checked first.

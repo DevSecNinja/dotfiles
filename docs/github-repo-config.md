@@ -16,11 +16,11 @@ Four functions in the `DotfilesHelpers` module:
 ## Requirements
 
 - The [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with
-  `gh auth login`. All authentication is delegated to `gh`; no token is read,
-  stored or logged by these functions.
+    `gh auth login`. All authentication is delegated to `gh`; no token is read,
+    stored or logged by these functions.
 - The [1Password CLI](https://developer.1password.com/docs/cli/) (`op`), only
-  when rolling out GitHub App credentials from 1Password. Not needed when the
-  key is read from a file with `-PrivateKeyPath`.
+    when rolling out GitHub App credentials from 1Password. Not needed when the
+    key is read from a file with `-PrivateKeyPath`.
 
 Your `gh` token needs these fine-grained permissions:
 
@@ -180,12 +180,12 @@ replaced. Everything else is carried over verbatim:
 
 - `required_status_checks` keeps its full context list
 - `pull_request`, `copilot_code_review`, `code_scanning` and any other rule type
-  are left alone, parameters included
+    are left alone, parameters included
 - Existing bypass actors (GitHub Apps, teams) are kept; the admin role is added
-  only if it is missing
+    only if it is missing
 - A custom `ref_name` condition is preserved. The one exception is a condition
-  that does not cover the default branch at all — `~DEFAULT_BRANCH` is added to
-  it, since leaving the branch unprotected would defeat the purpose
+    that does not cover the default branch at all — `~DEFAULT_BRANCH` is added to
+    it, since leaving the branch unprotected would defeat the purpose
 
 The ruleset is matched by name **and** by being a repository-owned `branch`
 ruleset, so a tag ruleset or an organisation-inherited one that happens to share
@@ -251,7 +251,7 @@ workflow. A repository qualifies when it has either:
 
 - a root `release-please-config.json`, or
 - at least one published (non-draft) release whose tag looks like a version
-  (`^v?\d+\.\d+`, so `v1.2.0` and `1.2` but not `v1`)
+    (`^v?\d+\.\d+`, so `v1.2.0` and `1.2` but not `v1`)
 
 Data or state snapshots stored as releases, such as `db-2026-01-01` or
 `news-state`, do not count. Each result records why it qualified on

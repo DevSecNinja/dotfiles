@@ -30,7 +30,7 @@ The list comes from the chezmoi `opShellPlugins` variable and defaults to:
 
 - **`gh`** — [GitHub CLI][opgh]
 - **`copilot`** — [GitHub Copilot CLI][opcopilot], which the plugin
-  authenticates with a `COPILOT_GITHUB_TOKEN`
+    authenticates with a `COPILOT_GITHUB_TOKEN`
 
 Override it per machine in your local chezmoi config, as a list:
 
@@ -82,18 +82,18 @@ The generated wrappers are deliberately defensive, because a wrapper that
 cannot run would otherwise _replace_ a working CLI:
 
 - **No `op`, no wrappers.** If the 1Password CLI is not on `PATH`, nothing is
-  defined at all and every CLI behaves normally.
+    defined at all and every CLI behaves normally.
 - **Only installed CLIs are wrapped.** Defining a `gh` function on a machine
-  without `gh` would make `command -v gh` succeed and break the usual
-  "is it installed?" checks, so each wrapper is guarded on the real CLI
-  existing.
+    without `gh` would make `command -v gh` succeed and break the usual
+    "is it installed?" checks, so each wrapper is guarded on the real CLI
+    existing.
 - **Completions keep working.** The fish wrappers use `--wraps`, and the
-  bash/zsh completion files load _before_ the wrappers, so generating
-  completions never triggers a 1Password prompt at shell startup.
+    bash/zsh completion files load _before_ the wrappers, so generating
+    completions never triggers a 1Password prompt at shell startup.
 - **Not in SSH sessions.** `op plugin run` needs the 1Password desktop app for
-  biometric unlock, which a headless host does not have. The wrappers are
-  therefore guarded on `SSH_CONNECTION`, so they never shadow a CLI on a
-  server — see below.
+    biometric unlock, which a headless host does not have. The wrappers are
+    therefore guarded on `SSH_CONNECTION`, so they never shadow a CLI on a
+    server — see below.
 
 ## Interaction with `copilot-ssh`
 

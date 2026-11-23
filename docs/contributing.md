@@ -9,23 +9,23 @@ the key workflows.
 
 1. **Edit files in the repository** (not in your home directory):
 
-   ```bash
-   cd /path/to/dotfiles
-   vim home/dot_config/fish/config.fish
-   ```
+    ```bash
+    cd /path/to/dotfiles
+    vim home/dot_config/fish/config.fish
+    ```
 
 2. **Test your changes** with a dry run, then apply locally:
 
-   ```bash
-   chezmoi apply --dry-run --source=.
-   chezmoi apply --source=.
-   ```
+    ```bash
+    chezmoi apply --dry-run --source=.
+    chezmoi apply --source=.
+    ```
 
 3. **Verify everything still works**:
 
-   ```bash
-   chezmoi verify
-   ```
+    ```bash
+    chezmoi verify
+    ```
 
 ## Validate Before Committing
 

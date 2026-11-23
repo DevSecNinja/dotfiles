@@ -106,20 +106,20 @@ yk-enroll --rotate-pin # change FIDO2 PIN even if one is already set
 The wizard runs five steps:
 
 1. **Preflight** — confirms `ykman` and a FIDO2-capable `ssh-keygen` are
-   on your PATH (catches the macOS Apple-OpenSSH trap from the previous
-   section).
+    on your PATH (catches the macOS Apple-OpenSSH trap from the previous
+    section).
 2. **Detect** — refuses to proceed unless **exactly one** YubiKey is
-   plugged in, so it's never ambiguous which key is being enrolled.
+    plugged in, so it's never ambiguous which key is being enrolled.
 3. **Capability check** — fails fast if firmware is too old for the
-   requested key type (suggests `--type ecdsa-sk` for fw <5.2.3).
+    requested key type (suggests `--type ecdsa-sk` for fw <5.2.3).
 4. **FIDO2 PIN** — sets one if missing; reports it as set otherwise.
-   On **FIPS** YubiKeys it explicitly warns about the factory default
-   (see below) and tells you to use `--rotate-pin`.
+    On **FIPS** YubiKeys it explicitly warns about the factory default
+    (see below) and tells you to use `--rotate-pin`.
 5. **SSH key** — generates a resident `ed25519-sk` key at
-   `~/.ssh/id_ed25519_sk_<serial>`; skips if already present. After
-   `ssh-keygen` returns the wizard verifies the key file actually exists
-   on disk before declaring success — so cancelling the FIDO2 PIN prompt
-   (Ctrl+C) is reported as an abort, never as a successful enrollment.
+    `~/.ssh/id_ed25519_sk_<serial>`; skips if already present. After
+    `ssh-keygen` returns the wizard verifies the key file actually exists
+    on disk before declaring success — so cancelling the FIDO2 PIN prompt
+    (Ctrl+C) is reported as an abort, never as a successful enrollment.
 
 It then prints the exact `gh ssh-key add` and `ssh-add` commands you
 should run.
@@ -187,10 +187,10 @@ for SSH:
 
 1. Plug in **only the first** YubiKey, run `yk-enroll`.
 2. Repeat for each additional YubiKey. Each gets its own
-   `~/.ssh/id_ed25519_sk_<serial>` (private + public).
+    `~/.ssh/id_ed25519_sk_<serial>` (private + public).
 3. Add **every resulting `.pub`** to GitHub (`gh ssh-key add` for each).
 4. From then on, any plugged-in YubiKey can authenticate / commit. SSH
-   picks whichever is touched.
+    picks whichever is touched.
 
 > **Don't try to "expand" an existing key onto a second YubiKey** — the
 > hardware doesn't allow it. Enrolling a second key is the supported
@@ -340,8 +340,8 @@ The current flow is preserved as-is until you flip the switch:
 2. Add the public key to GitHub (or wherever): `gh ssh-key add ~/.ssh/id_ed25519_sk.pub`.
 3. Set `useYubiKey: true` in your chezmoi data.
 4. `chezmoi apply` — the 1Password `Include ~/.ssh/1Password/config` line
-   and the macOS `IdentityAgent` line are removed; `IdentityFile` lines
-   for `id_ed25519_sk` / `id_ecdsa_sk` are added under `Host *`.
+    and the macOS `IdentityAgent` line are removed; `IdentityFile` lines
+    for `id_ed25519_sk` / `id_ecdsa_sk` are added under `Host *`.
 5. Apple Passwords does not provide an SSH agent; on macOS the OS keychain
-   - ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`) can
-     stand in for `op` when scripts need secrets.
+    - ssh-agent handle the FIDO2 key directly. Bitwarden CLI (`bw`) can
+        stand in for `op` when scripts need secrets.
