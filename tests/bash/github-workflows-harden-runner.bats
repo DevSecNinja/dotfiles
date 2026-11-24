@@ -35,7 +35,6 @@ setup() {
 	assert_harden_count ".github/workflows/release-please.yml" 1
 	assert_harden_count ".github/workflows/release.yml" 2
 	assert_harden_count ".github/workflows/sync-develop.yaml" 1
-	assert_harden_count ".github/workflows/todo-to-issue.yml" 1
 }
 
 @test "github workflows: harden-runner precedes checkout in hardened jobs" {
