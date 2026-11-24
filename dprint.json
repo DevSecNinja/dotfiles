@@ -21,5 +21,7 @@
     ".specify/**",
     ".venv*/**"
   ],
-  "plugins": ["https://plugins.dprint.dev/markdown-0.29.0.wasm"]
+  "plugins": [
+    "https://plugins.dprint.dev/markdown-0.29.0.wasm"
+  ]
 }
