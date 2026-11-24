@@ -257,10 +257,14 @@ jobs:
           ARM64_DIGEST: ${{ steps.digests.outputs.arm64 }}
         run: |
           set -euo pipefail
+          # The digest this run pushed, from its own create result: re-reading the
+          # tag could return another run's manifest if runs overlap.
+          metadata="${RUNNER_TEMP}/latest-manifest.json"
           docker buildx imagetools create --tag "${IMAGE}:latest" \
+            --metadata-file "${metadata}" \
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
-          digest="$(docker buildx imagetools inspect "${IMAGE}:latest" --format '{{.Manifest.Digest}}')"
+          digest="$(jq -r '.["containerimage.descriptor"].digest // empty' "${metadata}")"
           if [ -z "${digest}" ]; then
             echo "::error::Failed to capture manifest digest for :latest"
             exit 1
@@ -282,10 +286,14 @@ jobs:
           ARM64_DIGEST: ${{ steps.digests.outputs.arm64 }}
         run: |
           set -euo pipefail
+          # The digest this run pushed, from its own create result: re-reading the
+          # tag could return another run's manifest if runs overlap.
+          metadata="${RUNNER_TEMP}/release-manifest.json"
           docker buildx imagetools create --tag "${IMAGE}:${VERSION}" \
+            --metadata-file "${metadata}" \
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
-          digest="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          digest="$(jq -r '.["containerimage.descriptor"].digest // empty' "${metadata}")"
           if [ -z "${digest}" ]; then
             echo "::error::Failed to capture manifest digest for ${VERSION}"
             exit 1
@@ -293,6 +301,36 @@ jobs:
           echo "Pushed ${IMAGE}:${VERSION} -> ${digest}"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest devcontainer image build provenance
+        # Provenance for every pushed multi-arch manifest list, so :latest and
+        # digest pins (main, schedule, dispatch) verify too, not only releases.
+        # A release run attests the release manifest; when it has the same
+        # digest as :latest (same per-arch inputs), that covers both. The
+        # prune workflow drops these referrers with the manifest they attest.
+        # Runs before the reporting steps so a reporting failure can't leave a
+        # pushed digest unattested.
+        # Verify with:
+        #   gh attestation verify \
+        #     oci://ghcr.io/devsecninja/dotfiles-devcontainer@sha256:<digest> \
+        #     --repo DevSecNinja/dotfiles
+        # renovate: datasource=github-tags depName=actions/attest-build-provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.latest-manifest.outputs.image }}
+          subject-digest: ${{ steps.release-manifest.outputs.digest || steps.latest-manifest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest :latest manifest when it differs from the release manifest
+        if: >-
+          steps.release.outputs.is-release == 'true'
+          && steps.release-manifest.outputs.digest != steps.latest-manifest.outputs.digest
+        # renovate: datasource=github-tags depName=actions/attest-build-provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.latest-manifest.outputs.image }}
+          subject-digest: ${{ steps.latest-manifest.outputs.digest }}
+          push-to-registry: true
 
       - name: Export devcontainer release notes
         env:
@@ -324,34 +362,6 @@ jobs:
           name: devcontainer-${{ steps.release.outputs.version || 'latest' }}-software-manifest
           path: dist/devcontainer/*.md
           if-no-files-found: error
-
-      - name: Attest devcontainer image build provenance
-        # Provenance for every pushed multi-arch manifest list, so :latest and
-        # digest pins (main, schedule, dispatch) verify too, not only releases.
-        # A release run attests the release manifest; when it has the same
-        # digest as :latest (same per-arch inputs), that covers both. The
-        # prune workflow drops these referrers with the manifest they attest.
-        # Verify with:
-        #   gh attestation verify \
-        #     oci://ghcr.io/devsecninja/dotfiles-devcontainer@sha256:<digest> \
-        #     --repo DevSecNinja/dotfiles
-        # renovate: datasource=github-tags depName=actions/attest-build-provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ steps.latest-manifest.outputs.image }}
-          subject-digest: ${{ steps.release-manifest.outputs.digest || steps.latest-manifest.outputs.digest }}
-          push-to-registry: true
-
-      - name: Attest :latest manifest when it differs from the release manifest
-        if: >-
-          steps.release.outputs.is-release == 'true'
-          && steps.release-manifest.outputs.digest != steps.latest-manifest.outputs.digest
-        # renovate: datasource=github-tags depName=actions/attest-build-provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ steps.latest-manifest.outputs.image }}
-          subject-digest: ${{ steps.latest-manifest.outputs.digest }}
-          push-to-registry: true
 
   # --- Page on main-branch / scheduled / dispatch / tag failure (homelab IRM pager) ---
   # PR runs are excluded — they only build for validation and a red PR check
