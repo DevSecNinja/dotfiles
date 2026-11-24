@@ -19,9 +19,20 @@ bats = "1.14.0"
 # Lefthook for managing git hooks
 lefthook = "latest"
 
-# Shell linting and formatting (used by lefthook hooks)
-shellcheck = "latest"
-shfmt = "latest"
+# Shell linting and formatting (used by lefthook hooks and
+# .github/workflows/lint.yml, which needs exact versions; Renovate keeps them current)
+shellcheck = "0.11.0"
+shfmt = "3.14.1"
+
+# The other lint tools run by .github/workflows/lint.yml (Renovate keeps them current)
+dprint = "0.64.3"
+yamlfmt = "0.21.0"
+actionlint = "1.7.12"
+gitleaks = "8.30.1"
+trivy = "0.76.2"
+zizmor = "1.32.0"
+"pipx:yamllint" = "1.38.0"
+"pipx:checkov" = "3.4.3"
 
 # Release tooling: cocogitto drives `cog bump`, git-cliff renders CHANGELOG.md
 # and release notes. See cog.toml, cliff.toml, .github/workflows/release.yml.
