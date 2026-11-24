@@ -10,15 +10,15 @@ in the repository.
 Chezmoi uses special prefixes in filenames to determine how files are
 managed:
 
-| Prefix | Target | Example |
-| --- | --- | --- |
-| `dot_` | `.` (hidden file) | `dot_vimrc` → `~/.vimrc` |
-| `private_` | File with `0600` permissions | `private_ssh_config` |
-| `executable_` | File with `+x` permissions | `executable_script.sh` |
-| `run_once_` | Script that runs once | `run_once_install.sh` |
-| `run_onchange_` | Script that runs on change | `run_onchange_update.sh` |
-| `run_` | Script that runs every apply | `run_backup.sh` |
-| `.tmpl` | Template file | `config.tmpl` (Chezmoi templates) |
+| Prefix          | Target                       | Example                           |
+| --------------- | ---------------------------- | --------------------------------- |
+| `dot_`          | `.` (hidden file)            | `dot_vimrc` → `~/.vimrc`          |
+| `private_`      | File with `0600` permissions | `private_ssh_config`              |
+| `executable_`   | File with `+x` permissions   | `executable_script.sh`            |
+| `run_once_`     | Script that runs once        | `run_once_install.sh`             |
+| `run_onchange_` | Script that runs on change   | `run_onchange_update.sh`          |
+| `run_`          | Script that runs every apply | `run_backup.sh`                   |
+| `.tmpl`         | Template file                | `config.tmpl` (Chezmoi templates) |
 
 ## Repository Layout
 

@@ -35,6 +35,7 @@ tests/
 **Framework**: [Pester 5.x](https://pester.dev/)
 
 **Coverage**:
+
 - PowerShell utility scripts
 - **Packages YAML validation** (cross-platform package configuration) ✨
 - Code signing certificate generation (`New-SigningCert.ps1.tmpl`)
@@ -43,6 +44,7 @@ tests/
 - CI/CD pipeline validation
 
 **Run locally**:
+
 ```powershell
 # Using the test runner script (recommended)
 .\tests\powershell\Invoke-PesterTests.ps1
@@ -74,6 +76,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 **Framework**: [Bats 1.13+](https://github.com/bats-core/bats-core)
 
 **Coverage**:
+
 - Shell function utilities (`find-broken-symlinks`, `git-https-to-ssh`, `git-ssh-to-https`, etc.)
 - **Configuration validation** (Chezmoi, Fish, shell scripts) ✨
 - **Dotfiles verification** (applied files existence) ✨
@@ -83,6 +86,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - Error handling and edge cases
 
 **Test Files** (utility functions):
+
 - `brewup.bats` - Tests Homebrew update/upgrade wrapper
 - `macup.bats` - Tests macOS update wrapper (brewup + softwareupdate)
 - `file-set-execution-bit.bats` - Tests shell script executable bit management
@@ -97,6 +101,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - `git-ssh-to-https.bats` - Tests Git SSH-to-HTTPS remote URL conversion
 
 **Test Files** (validation & integration):
+
 - `validate-chezmoi.bats` - Validates Chezmoi configuration syntax
 - `validate-shell-scripts.bats` - Validates all shell script syntax
 - `validate-fish-config.bats` - Validates Fish configuration files
@@ -110,6 +115,7 @@ Invoke-Pester -Path ./tests/powershell -Tag "Pipeline"
 - `verify-dotfiles.bats` - Verifies applied dotfiles exist
 
 **Run locally**:
+
 ```bash
 # Using the test runner script (recommended)
 ./tests/bash/run-tests.sh
@@ -164,12 +170,14 @@ Existing plain-BATS tests keep working unchanged; `helpers/common.bash`
 auto-installs missing libraries on first run.
 
 **Test features**:
+
 - Comprehensive coverage of all function options (--dry-run, --yes, --verbose)
 - Edge cases (special characters, nested directories, mixed symlinks)
 - Error conditions (nonexistent directories, permission issues)
 - Output validation and behavior verification
 
 **Validation tests** (new):
+
 - `validate-chezmoi.bats` - Validates Chezmoi configuration syntax and structure
 - `validate-shell-scripts.bats` - Checks all shell scripts for syntax errors
 - `validate-fish-config.bats` - Validates Fish configuration files
@@ -184,6 +192,7 @@ auto-installs missing libraries on first run.
 **Planned Framework**: [pytest](https://pytest.org/)
 
 **Planned Coverage**:
+
 - Python utilities
 - Validation scripts
 - Configuration helpers
@@ -205,6 +214,7 @@ All tests run automatically in GitHub Actions on every push and pull request.
 ### Test Execution
 
 The CI pipeline:
+
 - Uses dedicated test runner scripts for each language:
   - PowerShell: `tests/powershell/Invoke-PesterTests.ps1`
   - Bash: reusable `.github/workflows/bats.yml` (mise-managed bats, mirrors
@@ -223,6 +233,7 @@ The CI pipeline:
 ### Viewing Results
 
 **Test Artifacts**:
+
 1. Go to [Actions](../../actions) tab in GitHub
 2. Click on the latest workflow run
 3. Download test result artifacts:
@@ -230,6 +241,7 @@ The CI pipeline:
    - `pester-test-results` - PowerShell test results (JUnit XML)
 
 **Test Summary**:
+
 - Displayed in workflow run logs
 - Shows pass/fail/skip counts
 - Includes detailed output for failures
@@ -302,6 +314,7 @@ The CI pipeline:
 Use tags to organize and filter tests:
 
 **PowerShell Tags**:
+
 - `Platform` - Platform/environment checks
 - `Integration` - Integration tests that create resources
 - `E2E` - End-to-end workflow tests
@@ -318,6 +331,7 @@ tag filters during discovery, but top-level `BeforeAll` blocks still execute,
 so tag filtering alone will not stop certificates from being provisioned.
 
 **Example**:
+
 ```powershell
 Describe "My Feature" -Tag "Integration", "Security" {
     It "Should be secure" { ... }

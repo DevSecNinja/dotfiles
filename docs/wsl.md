@@ -90,12 +90,12 @@ stays inert on a native Linux session or when [interop][interop] is disabled.
 Two deliberate choices in that script:
 
 - **It only accepts `http(s)` URLs or files that exist.** `Start-Process` is
-  Windows' general "run this" verb, not a browser — handed `calc.exe` or a path
-  to an executable, it would _run_ it. Since `$BROWSER` is invoked by other
-  programs, anything else is refused rather than quietly launched.
+    Windows' general "run this" verb, not a browser — handed `calc.exe` or a path
+    to an executable, it would _run_ it. Since `$BROWSER` is invoked by other
+    programs, anything else is refused rather than quietly launched.
 - **The URL is passed through `WSLENV`, not interpolated** into the PowerShell
-  command string, so a URL containing quotes or semicolons is always data and
-  never code.
+    command string, so a URL containing quotes or semicolons is always data and
+    never code.
 
 ### Why not wslu?
 

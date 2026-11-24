@@ -58,6 +58,7 @@ module. winget has no native minimum package age yet; once
 lands, this can move to winget's own setting.
 
 **Examples:**
+
 ```powershell
 # Check for updates
 Test-WingetUpdates

@@ -54,15 +54,16 @@ the dotfiles.
     ```
 
     !!! warning "Don't use `AllSigned`"
-        `AllSigned` refuses to run `install.ps1` with *"a certificate chain
-        processed, but terminated in a root certificate which is not trusted"*
+
+        `AllSigned` refuses to run `install.ps1` with _"a certificate chain
+        processed, but terminated in a root certificate which is not trusted"_
         because these scripts are signed with a personal code-signing
         certificate whose root isn't in your trust store. Use `RemoteSigned`,
         or import the signing certificate first (see
         [`Import-SigningCert.ps1`](https://github.com/DevSecNinja/dotfiles/blob/main/home/dot_config/powershell/scripts/Import-SigningCert.ps1)).
 
 3. **Clone over HTTPS the first time.** SSH access to GitHub depends on your
-    SSH config and agent — both of which are provided *by* these dotfiles, so
+    SSH config and agent — both of which are provided _by_ these dotfiles, so
     they don't exist yet on a fresh machine. Clone over HTTPS to break the
     chicken-and-egg:
 
@@ -73,6 +74,7 @@ the dotfiles.
     ```
 
     !!! tip "Using a Dev Drive"
+
         If you have a [Dev Drive](https://learn.microsoft.com/en-us/windows/dev-drive/),
         clone into `<Dev Drive>\projects` instead (for example `D:\projects`) —
         that's the folder the PowerShell profile will `cd` into afterwards. See
@@ -95,6 +97,7 @@ the dotfiles.
     ```
 
 !!! note "PowerShell 7 (`pwsh`) is installed for you"
+
     Several steps (PowerShell modules, Nerd Fonts) require PowerShell 7. The
     package-install step installs it via winget **before** the module step, and
     the module script refreshes `PATH` so the freshly installed `pwsh` is
@@ -102,9 +105,10 @@ the dotfiles.
     first with `winget install Microsoft.PowerShell` and open a new shell.
 
 !!! tip "WSL may need elevation and a reboot"
+
     The WSL step runs `wsl --install -d Debian`, which requires administrator
-    privileges. On some machines the first run reports *"WSL installation
-    appears to be corrupted"* and only updates the WSL engine instead of
+    privileges. On some machines the first run reports _"WSL installation
+    appears to be corrupted"_ and only updates the WSL engine instead of
     installing the distro — this needs a reboot to finish:
 
     ```powershell
@@ -134,7 +138,6 @@ git clone https://github.com/DevSecNinja/dotfiles.git
 cd dotfiles
 .\install.ps1
 ```
-
 
 ## WSL (Windows Subsystem for Linux)
 

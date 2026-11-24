@@ -21,9 +21,9 @@ fish/
 
 ## 🔄 Load Order
 
-1. **conf.d/*.fish** - Loaded first, in alphabetical order (includes tool initializations)
+1. **conf.d/\*.fish** - Loaded first, in alphabetical order (includes tool initializations)
 2. **config.fish** - Main config file
-3. **completions/*.fish** - Shell completions loaded on-demand
+3. **completions/\*.fish** - Shell completions loaded on-demand
 4. **functions/** - Functions loaded on-demand
 
 ## ✏️ Customization
@@ -85,17 +85,20 @@ complete -c mycommand -s h -l help -d 'Show help'
 ## 🚀 Useful Fish Features
 
 ### Command Substitution
+
 ```fish
 echo (date)
 ```
 
 ### Variables
+
 ```fish
 set -gx MY_VAR "value"  # Global export
 set -l my_var "value"   # Local variable
 ```
 
 ### Conditionals
+
 ```fish
 if test -f myfile
     echo "File exists"
@@ -103,6 +106,7 @@ end
 ```
 
 ### Loops
+
 ```fish
 for file in *.txt
     echo $file
