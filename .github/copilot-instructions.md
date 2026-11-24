@@ -497,7 +497,9 @@ The push of the `v*` tag triggers two workflows:
 2. **[`devcontainer-prebuild.yaml`](../.github/workflows/devcontainer-prebuild.yaml)** —
    rebuilds the dev container from the tagged source, publishes
    `:vX.Y.Z` / `:X.Y.Z` manifest tags alongside `:latest`, and attests
-   the multi-arch manifest digest in the registry.
+   the multi-arch manifest digest in the registry. Main, scheduled and
+   dispatched builds attest their `:latest` manifest too, so every
+   digest a consumer can pin verifies.
 
 `release-please-config.json` sets `"skip-github-release": true` so
 release-please only owns the bump+tag; the GitHub Release itself is

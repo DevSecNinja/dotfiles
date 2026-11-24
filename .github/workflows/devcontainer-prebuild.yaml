@@ -187,10 +187,11 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # Required for actions/attest-build-provenance on tag pushes
-      # (no-op for main/schedule/dispatch since the step is gated).
+      # actions/attest-build-provenance: every pushed manifest list (:latest
+      # and release tags) gets a signed attestation pushed to the registry.
       id-token: write
       attestations: write
+      artifact-metadata: write
 
     steps:
       - name: Harden runner
@@ -245,6 +246,7 @@ jobs:
           echo "arm64=${arm64}" >> "$GITHUB_OUTPUT"
 
       - name: Create and push :latest manifest
+        id: latest-manifest
         # :latest is always refreshed from the per-arch images built in THIS
         # run, referenced by their immutable digests. No separate :amd64 /
         # :arm64 tags exist — the per-arch images are stored untagged and are
@@ -258,6 +260,14 @@ jobs:
           docker buildx imagetools create --tag "${IMAGE}:latest" \
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
+          digest="$(docker buildx imagetools inspect "${IMAGE}:latest" --format '{{.Manifest.Digest}}')"
+          if [ -z "${digest}" ]; then
+            echo "::error::Failed to capture manifest digest for :latest"
+            exit 1
+          fi
+          echo "Pushed ${IMAGE}:latest -> ${digest}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       - name: Create and push release manifest tags
         if: steps.release.outputs.is-release == 'true'
@@ -316,16 +326,31 @@ jobs:
           if-no-files-found: error
 
       - name: Attest devcontainer image build provenance
-        if: steps.release.outputs.is-release == 'true'
-        # Provenance for the multi-arch release manifest. Verify with:
+        # Provenance for every pushed multi-arch manifest list, so :latest and
+        # digest pins (main, schedule, dispatch) verify too, not only releases.
+        # A release run attests the release manifest; when it has the same
+        # digest as :latest (same per-arch inputs), that covers both. The
+        # prune workflow drops these referrers with the manifest they attest.
+        # Verify with:
         #   gh attestation verify \
-        #     oci://ghcr.io/devsecninja/dotfiles-devcontainer:vX.Y.Z \
+        #     oci://ghcr.io/devsecninja/dotfiles-devcontainer@sha256:<digest> \
         #     --repo DevSecNinja/dotfiles
         # renovate: datasource=github-tags depName=actions/attest-build-provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ${{ steps.release-manifest.outputs.image }}
-          subject-digest: ${{ steps.release-manifest.outputs.digest }}
+          subject-name: ${{ steps.latest-manifest.outputs.image }}
+          subject-digest: ${{ steps.release-manifest.outputs.digest || steps.latest-manifest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest :latest manifest when it differs from the release manifest
+        if: >-
+          steps.release.outputs.is-release == 'true'
+          && steps.release-manifest.outputs.digest != steps.latest-manifest.outputs.digest
+        # renovate: datasource=github-tags depName=actions/attest-build-provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.latest-manifest.outputs.image }}
+          subject-digest: ${{ steps.latest-manifest.outputs.digest }}
           push-to-registry: true
 
   # --- Page on main-branch / scheduled / dispatch / tag failure (homelab IRM pager) ---
