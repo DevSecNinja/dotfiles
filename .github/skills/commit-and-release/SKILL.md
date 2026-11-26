@@ -291,7 +291,10 @@ the rolling `:amd64` / `:arm64` tags get overwritten by a future main
 build.
 
 The multi-arch manifest digest gets a Sigstore build-provenance
-attestation pushed to the registry. Consumers can verify with:
+attestation pushed to the registry. Main, scheduled and dispatched
+builds attest their `:latest` manifest the same way, so a digest pin
+(as in `.devcontainer/devcontainer.json`) verifies too. Consumers can
+verify with:
 
 ```sh
 gh attestation verify \

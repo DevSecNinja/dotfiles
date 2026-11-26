@@ -87,6 +87,26 @@ setup() {
 	[ "$status" -ne 0 ]
 }
 
+@test "validate-devcontainer: every pushed manifest list is attested, not only releases" {
+	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
+
+	[ -f "$workflow" ]
+
+	# The main attestation step covers :latest on main, schedule and dispatch
+	# runs, and the release manifest on tag runs.
+	run grep -F 'subject-digest: ${{ steps.release-manifest.outputs.digest || steps.latest-manifest.outputs.digest }}' "$workflow"
+	[ "$status" -eq 0 ]
+
+	run awk '/- name: Attest devcontainer image build provenance/{f=1;next} f&&/- name:/{exit} f' "$workflow"
+	[ "$status" -eq 0 ]
+	[ -n "$output" ]
+	[[ "$output" != *"if:"* ]]
+
+	# A release run also attests :latest when its digest differs.
+	run grep -F 'subject-digest: ${{ steps.latest-manifest.outputs.digest }}' "$workflow"
+	[ "$status" -eq 0 ]
+}
+
 @test "validate-devcontainer: workflow creates buildx builder without setup-buildx-action" {
 	workflow="$REPO_ROOT/.github/workflows/devcontainer-prebuild.yaml"
 
