@@ -18,15 +18,22 @@ jobs:
   sign-scripts:
     runs-on: windows-latest
     timeout-minutes: 20
+    # The Automation App credentials live in the `production` environment
+    # (default branch only). deployment: false reads them without recording
+    # a deployment on every run.
+    environment:
+      name: production
+      deployment: false
+    # The App token opens the PR; GITHUB_TOKEN only reads the code.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Sign PowerShell scripts
         shell: pwsh
@@ -63,14 +70,28 @@ jobs:
       # events (any PR author would otherwise get their scripts signed with
       # the maintainer's certificate). Instead, after a push to `main`, open a
       # follow-up PR with the signed files so the change still goes through
-      # the protected-branch flow. The PR is created with the default
-      # GITHUB_TOKEN, so the bot's commit will not retrigger workflows on
-      # push (preventing signing loops). When the PR is merged, this workflow
-      # re-runs but the composite finds no diff and exits as a no-op.
+      # the protected-branch flow. The PR is opened with an Automation App
+      # token: this repository doesn't let GITHUB_TOKEN create pull requests,
+      # and the App's commit runs the PR checks. GitHub signs the commit
+      # (commit-method: api), as the signed-commit rule requires. The push
+      # trigger only covers `main`, so the PR branch never re-signs; when the
+      # PR is merged, this workflow re-runs, finds no diff and opens no PR.
+      - name: Mint Automation App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Open PR with signed scripts
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/open-pr@6764c0fb5ffc25207571b159dc255c8f77922c62 # main
+        uses: DevSecNinja/.github/actions/open-pr@2af80ab424c47cb8fb112240986f6fec864d883f # v5.0.1
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          commit-method: api
           branch: chore/sign-powershell-scripts
           title: 'chore: sign PowerShell scripts'
           paths: '**/*.ps1'
