@@ -11,7 +11,7 @@ task = "latest"
 
 # Chezmoi for dotfile management
 # renovate: datasource=github-releases depName=twpayne/chezmoi extractVersion=^v(?<version>.+)$
-chezmoi = "2.74.0"
+chezmoi = "2.74.1"
 
 # Bats for bash testing
 bats = "1.14.0"
@@ -32,7 +32,7 @@ gitleaks = "8.30.1"
 trivy = "0.76.2"
 zizmor = "1.32.0"
 "pipx:yamllint" = "1.38.0"
-"pipx:checkov" = "3.4.3"
+"pipx:checkov" = "3.4.5"
 
 # Release tooling: cocogitto drives `cog bump`, git-cliff renders CHANGELOG.md
 # and release notes. See cog.toml, cliff.toml, .github/workflows/release.yml.
@@ -50,7 +50,7 @@ uv = "latest"
 # release is a PyInstaller bundle that mise's github/ubi backends extract
 # incompletely, so pipx is the working install path.
 # renovate: datasource=pypi depName=apm-cli
-"pipx:apm-cli" = "0.35.0"
+"pipx:apm-cli" = "0.35.1"
 
 # Additional tools for development (commented out by default)
 # Uncomment based on your needs
